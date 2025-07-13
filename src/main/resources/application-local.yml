@@ -10,14 +10,13 @@ spring:
     hikari:
       connection-init-sql: SET search_path TO public
 
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    open-in-view: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+  jdbc:
+    template:
+      query-timeout: 5s
 
   flyway:
     clean-disabled: false
     baseline-on-migrate: false
+
+mapstruct:
+  defaultComponentModel: spring
