@@ -1,0 +1,12 @@
+spring:
+  profiles:
+    active: local
+
+  datasource:
+    url: jdbc:postgresql://dev-db.internal:5432/inventory
+    username: inventory_app
+    password: ${INVENTORY_DB_PASSWORD}
+
+  flyway:
+    clean-disabled: true
+    baseline-on-migrate: true
