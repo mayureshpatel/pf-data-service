@@ -3,9 +3,9 @@ spring:
     active: local
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/inventory_local
+    url: jdbc:postgresql://localhost:5432/personal-finance
     username: postgres
-    password: postgres
+    password: admin
 
   flyway:
     clean-disabled: false
