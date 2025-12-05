@@ -80,4 +80,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             String description,
             TransactionType type
     );
+
+    @Query("""
+            select t
+            from Transaction t
+                join t.tags tag
+            where t.account.user.id = :userId
+                and tag.name IN :tagNames
+            group by t.id
+            having count(distinct tag.id) = :tagCount
+            """)
+    List<Transaction> findByTagsAndLogic(
+            @Param("userId") Long userId,
+            @Param("tagNames") List<String> tagNames,
+            @Param("tagCount") Long tagCount
+    );
 }
