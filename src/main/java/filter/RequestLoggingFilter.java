@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Component
 @Slf4j
-public class RequestLogginFilter extends OncePerRequestFilter {
+public class RequestLoggingFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
