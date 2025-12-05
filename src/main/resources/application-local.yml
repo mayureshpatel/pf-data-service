@@ -1,12 +1,1 @@
 spring:
-  profiles:
-    active: local
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/inventory_local
-    username: postgres
-    password: postgres
-
-  flyway:
-    clean-disabled: false
-    baseline-on-migrate: false
