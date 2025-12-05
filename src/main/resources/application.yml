@@ -29,6 +29,8 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [TraceID:%X{correlationId}] %logger{36} - %msg%n"
   level:
     root: info
     com.mayureshpatel.pfdataservice: debug
