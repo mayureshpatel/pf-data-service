@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.MonthlySpending;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import org.springframework.data.domain.Page;
@@ -47,5 +48,28 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+            select sum(t.amount)
+            from Transaction t
+            where t.account.user.id = :userId
+                and t.category is null
+                and t.type = 'EXPENSE'
+            """)
+    BigDecimal getUncategorizedExpenseTotals(@Param("userId") Long userId);
+
+    @Query("""
+                SELECT new com.mayureshpatel.pfdataservice.dto.MonthlySpending(YEAR(t.date), MONTH(t.date), SUM(t.amount))
+                FROM Transaction t
+                WHERE t.account.user.id = :userId
+                  AND t.date >= :startDate
+                  AND t.type = 'EXPENSE'
+                GROUP BY YEAR(t.date), MONTH(t.date)
+                ORDER BY YEAR(t.date), MONTH(t.date)
+            """)
+    List<MonthlySpending> getMonthlySpending(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate
     );
 }

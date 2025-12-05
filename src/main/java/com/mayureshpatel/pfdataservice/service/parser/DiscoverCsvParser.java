@@ -1,0 +1,138 @@
+package com.mayureshpatel.pfdataservice.service.parser;
+
+import com.mayureshpatel.pfdataservice.model.Transaction;
+import com.mayureshpatel.pfdataservice.model.TransactionType;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Component
+public class DiscoverCsvParser implements TransactionParser {
+
+    private static final String HEADER_DATE = "Trans. Date";
+    private static final String HEADER_DESC = "Description";
+    private static final String HEADER_AMOUNT = "Amount";
+    private static final String HEADER_CATEGORY = "Category";
+    private static final String BANK_NAME = "DISCOVER";
+
+    // Flexible formatter for M/d/yyyy
+    private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
+            .appendPattern("[M/d/yyyy][MM/dd/yyyy][yyyy-MM-dd]")
+            .toFormatter();
+
+    private static final CSVFormat CSV_FORMAT = CSVFormat.DEFAULT.builder()
+            .setHeader()
+            .setSkipHeaderRecord(true)
+            .setIgnoreHeaderCase(true)
+            .setTrim(true)
+            .setIgnoreSurroundingSpaces(true)
+            .build();
+
+    @Override
+    public String getBankName() {
+        return BANK_NAME;
+    }
+
+    @Override
+    public List<Transaction> parse(Long accountId, InputStream inputStream) {
+        List<Transaction> transactions = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+             CSVParser csvParser = new CSVParser(reader, CSV_FORMAT)) {
+
+            for (CSVRecord csvRecord : csvParser) {
+                if (isValidRecord(csvRecord)) {
+                    parseTransaction(csvRecord).ifPresent(transactions::add);
+                }
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to parse Discover CSV", e);
+        }
+
+        return transactions;
+    }
+
+    private boolean isValidRecord(CSVRecord csvRecord) {
+        return csvRecord.isMapped(HEADER_DATE) && StringUtils.hasText(csvRecord.get(HEADER_DATE));
+    }
+
+    private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
+        try {
+            Transaction transaction = new Transaction();
+            transaction.setDate(parseDate(csvRecord.get(HEADER_DATE)));
+            transaction.setDescription(buildDescription(csvRecord));
+
+            BigDecimal rawAmount = parseAmount(csvRecord);
+            configureTransactionTypeAndAmount(transaction, rawAmount);
+
+            transaction.setCategory(null);
+            return Optional.of(transaction);
+
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    private LocalDate parseDate(String dateStr) {
+        return LocalDate.parse(dateStr, DATE_FORMATTER);
+    }
+
+    private String buildDescription(CSVRecord csvRecord) {
+        String description = csvRecord.get(HEADER_DESC);
+        String bankCategory = csvRecord.isMapped(HEADER_CATEGORY) ? csvRecord.get(HEADER_CATEGORY) : null;
+
+        if (StringUtils.hasText(bankCategory)) {
+            return description + " (" + bankCategory + ")";
+        }
+        return description;
+    }
+
+    private BigDecimal parseAmount(CSVRecord csvRecord) {
+        if (!csvRecord.isMapped(HEADER_AMOUNT)) {
+            return BigDecimal.ZERO;
+        }
+        String val = csvRecord.get(HEADER_AMOUNT);
+        if (!StringUtils.hasText(val)) {
+            return BigDecimal.ZERO;
+        }
+        // Remove currency symbols, preserve negative sign
+        String cleanVal = val.replaceAll("[^\\d.-]", "");
+        try {
+            return new BigDecimal(cleanVal);
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private void configureTransactionTypeAndAmount(Transaction transaction, BigDecimal rawAmount) {
+        // Discover Logic:
+        // Positive Amount = Expense (Increase in debt)
+        // Negative Amount = Payment/Credit (Decrease in debt)
+
+        if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
+            // Negative (-843) -> Income/Payment of 843
+            transaction.setType(TransactionType.INCOME);
+            transaction.setAmount(rawAmount.abs());
+        } else {
+            // Positive (6.44) -> Expense of 6.44
+            transaction.setType(TransactionType.EXPENSE);
+            transaction.setAmount(rawAmount);
+        }
+    }
+}
