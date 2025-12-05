@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.mayureshpatel.pfdataservice.dto.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +40,7 @@ public class TransactionController {
     @PostMapping("/transactions")
     public ResponseEntity<String> saveTransactions(
             @PathVariable Long accountId,
-            @RequestBody SaveTransactionRequest request
+            @RequestBody @Valid SaveTransactionRequest request
     ) {
         int count = transactionImportService.saveTransactions(
                 accountId,
