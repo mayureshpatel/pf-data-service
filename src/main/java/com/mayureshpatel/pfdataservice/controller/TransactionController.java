@@ -1,67 +1,53 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.model.Category;
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
-import com.mayureshpatel.pfdataservice.service.TransactionService;
+import com.mayureshpatel.pfdataservice.dto.SaveTransactionRequest;
+import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
+import com.mayureshpatel.pfdataservice.service.TransactionImportService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.awt.*;
+import java.io.IOException;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/transactions")
+@RequestMapping("/api/v1/accounts/{accountId}")
 @RequiredArgsConstructor
 public class TransactionController {
 
-    private final TransactionService transactionService;
-    private final TransactionRepository transactionRepository;
+    private final TransactionImportService transactionImportService;
 
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadCsv(
-            @RequestParam("accountId") Long accountId,
-            @RequestParam("file") MultipartFile file) {
-
+    @PostMapping("/upload")
+    public ResponseEntity<List<TransactionPreview>> uploadTransactions(
+            @PathVariable Long accountId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("bankName") String bankName
+    ) throws IOException {
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Please upload a CSV file");
+            throw new IllegalArgumentException("File must not be empty");
         }
 
-        try {
-            int count = this.transactionService.importCsv(accountId, file.getInputStream());
-            return ResponseEntity.ok("Successfully imported " + count + " transactions");
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error importing transactions: " + e.getMessage());
-        }
+        byte[] fileContent = file.getBytes();
+        String fileName = file.getOriginalFilename();
+
+        List<TransactionPreview> preview = transactionImportService.previewTransactions(accountId, bankName, fileContent, fileName);
+
+        return ResponseEntity.ok(preview);
     }
 
-    @GetMapping
-    public ResponseEntity<Page<Transaction>> getAllTransactions(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "1") Long userId) {
-
-        Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(
-                this.transactionRepository.findByAccount_User_IdOrderByDateDesc(userId, pageable)
+    @PostMapping("/transactions")
+    public ResponseEntity<String> saveTransactions(
+            @PathVariable Long accountId,
+            @RequestBody SaveTransactionRequest request
+    ) {
+        int count = transactionImportService.saveTransactions(
+                accountId,
+                request.getTransactions(),
+                request.getFileName(),
+                request.getFileHash()
         );
-    }
 
-    @PatchMapping("/{id}/category")
-    public ResponseEntity<Void> updateCategory(@PathVariable Long id, @RequestBody Long categoryId) {
-        Transaction transaction = this.transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found"));
-
-        Category category = new Category();
-        category.setId(categoryId);
-
-        transaction.setCategory(category);
-        this.transactionRepository.save(transaction);
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("Successfully saved " + count + " transactions.");
     }
 }

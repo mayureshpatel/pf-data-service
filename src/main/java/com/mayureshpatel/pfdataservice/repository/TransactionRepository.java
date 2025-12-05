@@ -72,4 +72,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate
     );
+
+    boolean existsByAccountIdAndDateAndAmountAndDescriptionAndType(
+            Long accountId,
+            LocalDate date,
+            BigDecimal amount,
+            String description,
+            TransactionType type
+    );
 }
