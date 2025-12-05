@@ -20,16 +20,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+        log.warn("Entity Not Found: {} at {}", ex.getMessage(), request.getRequestURI());
         return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Illegal Argument: {} at {}", ex.getMessage(), request.getRequestURI());
         return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        log.warn("Validation Failed at {}: {}", request.getRequestURI(), ex.getBindingResult());
+
         List<ApiErrorResponse.ValidationError> validationErrors = ex.getBindingResult().getFieldErrors()
                 .stream()
                 .map(error -> ApiErrorResponse.ValidationError.builder()
@@ -52,6 +56,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleMaxSizeException(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        log.warn("Upload Size Exceeded at {}", request.getRequestURI());
+
         String message = "File too large. Please upload a file smaller than the configured limit.";
         ApiErrorResponse response = ApiErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -66,10 +72,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleRuntimeException(Exception ex, HttpServletRequest request) {
-        // Log the full stack trace for debugging (CRITICAL)
-        log.error("Unhandled exception occurred at {}: ", request.getRequestURI(), ex);
+        log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);
 
-        // Return a generic safe message to the client (Security Best Practice)
         return buildErrorResponse(
                 new RuntimeException("An unexpected internal error occurred. Please contact support."),
                 HttpStatus.INTERNAL_SERVER_ERROR,

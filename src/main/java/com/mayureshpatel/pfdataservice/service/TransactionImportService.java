@@ -12,6 +12,7 @@ import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategor
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Slf4j
 public class TransactionImportService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
@@ -46,8 +48,11 @@ public class TransactionImportService {
 
     @Transactional(readOnly = true)
     public List<TransactionPreview> previewTransactions(Long accountId, String bankName, byte[] fileContent, String fileName) {
+        log.info("Starting transaction preview for Account ID: {}, Bank: {}, File: {}", accountId, bankName, fileName);
+
         String fileHash = calculateFileHash(fileContent);
         if (fileImportHistoryRepository.existsByAccountIdAndFileHash(accountId, fileHash)) {
+            log.warn("Duplicate file upload attempt detected. Account ID: {}, Hash: {}", accountId, fileHash);
             throw new IllegalArgumentException("This file has already been imported for this account.");
         }
 
@@ -55,8 +60,9 @@ public class TransactionImportService {
 
         try (InputStream inputStream = new ByteArrayInputStream(fileContent)) {
             List<Transaction> rawTransactions = parser.parse(accountId, inputStream);
+            log.debug("Parsed {} raw transactions from file", rawTransactions.size());
 
-            return rawTransactions.stream()
+            List<TransactionPreview> previews = rawTransactions.stream()
                     .map(t -> TransactionPreview.builder()
                             .date(t.getDate())
                             .description(t.getDescription())
@@ -65,21 +71,32 @@ public class TransactionImportService {
                             .suggestedCategory(categorizer.guessCategory(t))
                             .build())
                     .toList();
+
+            log.info("Generated {} transaction previews successfully", previews.size());
+            return previews;
         } catch (Exception e) {
+            log.error("Failed to process transaction preview for Account ID: {}", accountId, e);
             throw new RuntimeException("Error processing transaction file", e);
         }
     }
 
     @Transactional
     public int saveTransactions(Long accountId, List<Transaction> approvedTransactions, String fileName, String fileHash) {
+        log.info("Saving {} transactions for Account ID: {}", approvedTransactions.size(), accountId);
+
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new EntityNotFoundException("Account not found with ID: " + accountId));
+                .orElseThrow(() -> {
+                    log.error("Account not found during save operation. ID: {}", accountId);
+                    return new EntityNotFoundException("Account not found with ID: " + accountId);
+                });
 
         if (fileHash != null && fileImportHistoryRepository.existsByAccountIdAndFileHash(accountId, fileHash)) {
+            log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);
             throw new IllegalArgumentException("This file has already been imported.");
         }
 
         List<Transaction> uniqueTransactions = new ArrayList<>();
+        int duplicateCount = 0;
 
         for (Transaction t : approvedTransactions) {
             boolean exists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
@@ -89,6 +106,11 @@ public class TransactionImportService {
             if (!exists) {
                 t.setAccount(account);
                 uniqueTransactions.add(t);
+            } else {
+                duplicateCount++;
+                if (log.isTraceEnabled()) {
+                    log.trace("Skipping duplicate transaction: {} - {} - {}", t.getDate(), t.getDescription(), t.getAmount());
+                }
             }
         }
 
@@ -96,7 +118,6 @@ public class TransactionImportService {
             transactionRepository.saveAll(uniqueTransactions);
             updateAccountBalance(account, uniqueTransactions);
 
-            // Record successful import
             if (fileName != null && fileHash != null) {
                 FileImportHistory history = new FileImportHistory();
                 history.setAccountId(accountId);
@@ -105,6 +126,9 @@ public class TransactionImportService {
                 history.setTransactionCount(uniqueTransactions.size());
                 fileImportHistoryRepository.save(history);
             }
+            log.info("Successfully saved {} new transactions. Skipped {} duplicates.", uniqueTransactions.size(), duplicateCount);
+        } else {
+            log.info("No new transactions to save. All {} inputs were duplicates.", duplicateCount);
         }
 
         return uniqueTransactions.size();
@@ -115,11 +139,16 @@ public class TransactionImportService {
                 .map(t -> t.getType() == TransactionType.INCOME ? t.getAmount() : t.getAmount().negate())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        account.setCurrentBalance(account.getCurrentBalance().add(netChange));
+        BigDecimal oldBalance = account.getCurrentBalance();
+        BigDecimal newBalance = oldBalance.add(netChange);
+
+        account.setCurrentBalance(newBalance);
         accountRepository.save(account);
+
+        log.info("Updated Account ID: {} balance. Old: {}, Net Change: {}, New: {}", account.getId(), oldBalance, netChange, newBalance);
     }
 
     public String calculateFileHash(byte[] content) {
-        return DigestUtils.md5DigestAsHex(content); // Or sha256Hex
+        return DigestUtils.md5DigestAsHex(content);
     }
 }
