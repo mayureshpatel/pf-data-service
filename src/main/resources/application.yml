@@ -2,11 +2,16 @@ spring:
   application:
     name: pf-data-service
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/pf_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/personal-finance}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:admin}
     hikari:
       maximum-pool-size: 10
       connection-timeout: 30000
@@ -26,4 +31,4 @@ spring:
 logging:
   level:
     org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace
+#    org.hibernate.orm.jdbc.bind: trace
