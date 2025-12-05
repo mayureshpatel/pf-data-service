@@ -34,14 +34,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     );
 
     @Query("""
-            SELECT c.name as categoryName, SUM(t.amount) as totalAmount
+            SELECT new com.mayureshpatel.pfdataservice.dto.CategoryTotal(c.name, SUM(t.amount))
             FROM Transaction t
                 JOIN t.category c
             WHERE t.account.user.id = :userId
                 AND t.date BETWEEN :startDate AND :endDate
                 AND t.type = 'EXPENSE'
             GROUP BY c.name
-            ORDER BY totalAmount DESC
+            ORDER BY SUM(t.amount) DESC
             """)
     List<CategoryTotal> findCategoryTotals(
             @Param("userId") Long userId,

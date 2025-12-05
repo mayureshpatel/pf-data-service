@@ -1,11 +1,13 @@
 -- 1. Create Users Table
 CREATE TABLE users
 (
-    id            BIGSERIAL PRIMARY KEY,
-    username      VARCHAR(50)  NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    email         VARCHAR(100) NOT NULL UNIQUE,
-    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id                     BIGSERIAL PRIMARY KEY,
+    username               VARCHAR(50)  NOT NULL UNIQUE,
+    password_hash          VARCHAR(255) NOT NULL,
+    email                  VARCHAR(100) NOT NULL UNIQUE,
+    last_updated_by        VARCHAR(255) NOT NULL,
+    last_updated_timestamp TIMESTAMP,
+    created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. Create Categories Table

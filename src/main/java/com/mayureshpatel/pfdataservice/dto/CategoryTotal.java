@@ -1,10 +1,16 @@
 package com.mayureshpatel.pfdataservice.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
-public interface CategoryTotal {
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class CategoryTotal {
 
-    String getCategoryName();
-
-    BigDecimal getTotalAmount();
+    private String categoryName;
+    private BigDecimal total;
 }
