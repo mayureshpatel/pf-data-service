@@ -1,9 +1,11 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.DashboardData;
+import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,8 +22,8 @@ public class DashboardController {
     public ResponseEntity<DashboardData> getDashboardData(
             @RequestParam int month,
             @RequestParam int year,
-            @RequestParam(defaultValue = "1") Long userId) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        return ResponseEntity.ok(this.transactionService.getDashboardData(userId, month, year));
+        return ResponseEntity.ok(this.transactionService.getDashboardData(userDetails.getId(), month, year));
     }
 }

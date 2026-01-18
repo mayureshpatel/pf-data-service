@@ -68,12 +68,16 @@ This roadmap outlines the steps to address the findings from the Code Review. We
 ## Phase 7: Final Polish & Performance (Round 3 Findings)
 *Goal: Fix remaining security gaps, improve performance, and enable frontend integration.*
 
-- [ ] **11. Fix Dashboard Security**
-    - [ ] Refactor `DashboardController` to remove `userId` param and use `@AuthenticationPrincipal`.
-- [ ] **12. Database Performance**
-    - [ ] Create Flyway V7 migration to add indices on `transactions(account_id, date)` and `categories(user_id)`.
-- [ ] **13. Developer Experience**
-    - [ ] Add `springdoc-openapi-starter-webmvc-ui` dependency for Swagger.
-    - [ ] Add `spring-boot-starter-actuator` for health checks.
-- [ ] **14. Dashboard Testing**
-    - [ ] Add unit tests for `TransactionService.getDashboardData` to ensure aggregation logic is correct.
+- [x] **11. Fix Dashboard Security**
+    - [x] Refactor `DashboardController` to remove `userId` param and use `@AuthenticationPrincipal`.
+- [x] **12. Database Performance**
+    - [x] Create Flyway V7 migration to add indices on `transactions(account_id, date)` and `categories(user_id)`.
+- [x] **13. Developer Experience**
+    - [x] Add `springdoc-openapi-starter-webmvc-ui` dependency for Swagger.
+    - [x] Add `spring-boot-starter-actuator` for health checks.
+    - [x] Update SecurityConfig to permit access to Swagger/Actuator.
+- [x] **14. Dashboard Testing**
+    - [x] Add unit tests for `TransactionService.getDashboardData` to ensure aggregation logic is correct.
+
+---
+**Status:** All tasks across all phases are now complete. The project is secure, performant, and production-ready (for an MVP).
