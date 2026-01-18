@@ -16,6 +16,7 @@ import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
@@ -49,8 +50,10 @@ public class TransactionImportService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionPreview> previewTransactions(Long accountId, String bankName, byte[] fileContent, String fileName) {
-        log.info("Starting transaction preview for Account ID: {}, Bank: {}, File: {}", accountId, bankName, fileName);
+    public List<TransactionPreview> previewTransactions(Long userId, Long accountId, String bankName, byte[] fileContent, String fileName) {
+        log.info("Starting transaction preview for User: {}, Account ID: {}, Bank: {}, File: {}", userId, accountId, bankName, fileName);
+
+        verifyAccountOwnership(userId, accountId);
 
         String fileHash = calculateFileHash(fileContent);
         if (fileImportHistoryRepository.existsByAccountIdAndFileHash(accountId, fileHash)) {
@@ -83,14 +86,10 @@ public class TransactionImportService {
     }
 
     @Transactional
-    public int saveTransactions(Long accountId, List<Transaction> approvedTransactions, String fileName, String fileHash) {
-        log.info("Saving {} transactions for Account ID: {}", approvedTransactions.size(), accountId);
+    public int saveTransactions(Long userId, Long accountId, List<Transaction> approvedTransactions, String fileName, String fileHash) {
+        log.info("Saving {} transactions for User: {}, Account ID: {}", approvedTransactions.size(), userId, accountId);
 
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> {
-                    log.error("Account not found during save operation. ID: {}", accountId);
-                    return new EntityNotFoundException("Account not found with ID: " + accountId);
-                });
+        Account account = verifyAccountOwnership(userId, accountId);
 
         if (fileHash != null && fileImportHistoryRepository.existsByAccountIdAndFileHash(accountId, fileHash)) {
             log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);
@@ -152,5 +151,19 @@ public class TransactionImportService {
 
     public String calculateFileHash(byte[] content) {
         return DigestUtils.md5DigestAsHex(content);
+    }
+
+    private Account verifyAccountOwnership(Long userId, Long accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> {
+                    log.error("Account not found. ID: {}", accountId);
+                    return new EntityNotFoundException("Account not found with ID: " + accountId);
+                });
+
+        if (!account.getUser().getId().equals(userId)) {
+            log.warn("Unauthorized access attempt. User: {}, Account: {}", userId, accountId);
+            throw new AccessDeniedException("You do not have permission to access this account.");
+        }
+        return account;
     }
 }

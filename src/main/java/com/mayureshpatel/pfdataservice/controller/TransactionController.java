@@ -4,10 +4,12 @@ import com.mayureshpatel.pfdataservice.dto.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
 import com.mayureshpatel.pfdataservice.model.Transaction;
+import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,7 +27,8 @@ public class TransactionController {
     public ResponseEntity<List<TransactionPreview>> uploadTransactions(
             @PathVariable Long accountId,
             @RequestParam("file") MultipartFile file,
-            @RequestParam("bankName") String bankName
+            @RequestParam("bankName") String bankName,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("File must not be empty");
@@ -34,7 +37,8 @@ public class TransactionController {
         byte[] fileContent = file.getBytes();
         String fileName = file.getOriginalFilename();
 
-        List<TransactionPreview> preview = transactionImportService.previewTransactions(accountId, bankName, fileContent, fileName);
+        List<TransactionPreview> preview = transactionImportService.previewTransactions(
+                userDetails.getId(), accountId, bankName, fileContent, fileName);
 
         return ResponseEntity.ok(preview);
     }
@@ -42,13 +46,15 @@ public class TransactionController {
     @PostMapping("/transactions")
     public ResponseEntity<String> saveTransactions(
             @PathVariable Long accountId,
-            @RequestBody @Valid SaveTransactionRequest request
+            @RequestBody @Valid SaveTransactionRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         List<Transaction> transactions = request.getTransactions().stream()
                 .map(this::mapToEntity)
                 .toList();
 
         int count = transactionImportService.saveTransactions(
+                userDetails.getId(),
                 accountId,
                 transactions,
                 request.getFileName(),

@@ -17,7 +17,7 @@ import java.util.List;
 public class TransactionCategorizer {
 
     private final CategoryRuleRepository categoryRuleRepository;
-    private List<CategoryRule> cachedRules = Collections.emptyList();
+    private volatile List<CategoryRule> cachedRules = Collections.emptyList();
 
     @PostConstruct
     public void init() {

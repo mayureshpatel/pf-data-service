@@ -42,24 +42,28 @@ This roadmap outlines the steps to address the findings from the Code Review. We
 ## Phase 5: Architecture & Data Safety (Round 2 Findings)
 *Goal: Decouple API from DB and fix Hibernate/Lombok pitfalls.*
 
-- [ ] **6. DTO Separation**
-    - [ ] Create `TransactionDto` (or `TransactionInput`) with validation annotations.
-    - [ ] Update `SaveTransactionRequest` to use `List<TransactionDto>`.
-    - [ ] Update `TransactionImportService` and `TransactionController` to map DTOs to Entities.
-- [ ] **7. JPA Entity Best Practices**
-    - [ ] Refactor `Transaction` (and other entities) to replace `@Data` with `@Getter` + `@Setter`.
-    - [ ] Implement robust `equals()` and `hashCode()` using only the ID.
-    - [ ] Exclude lazy-loaded fields from `@ToString`.
-- [ ] **8. Concurrency Safety**
-    - [ ] Mark `cachedRules` in `TransactionCategorizer` as `volatile`.
+- [x] **6. DTO Separation**
+    - [x] Create `TransactionDto` (or `TransactionInput`) with validation annotations.
+    - [x] Update `SaveTransactionRequest` to use `List<TransactionDto>`.
+    - [x] Update `TransactionImportService` and `TransactionController` to map DTOs to Entities.
+- [x] **7. JPA Entity Best Practices**
+    - [x] Refactor `Transaction` (and other entities) to replace `@Data` with `@Getter` + `@Setter`.
+    - [x] Implement robust `equals()` and `hashCode()` using only the ID.
+    - [x] Exclude lazy-loaded fields from `@ToString`.
+- [x] **8. Concurrency Safety**
+    - [x] Mark `cachedRules` in `TransactionCategorizer` as `volatile`.
 
 ## Phase 6: Security (Critical)
 *Goal: Secure user data and endpoints.*
 
-- [ ] **9. Externalize Configuration**
-    - [ ] Move CORS origins to `application.yml` and inject them via `@Value`.
-- [ ] **10. Implement Spring Security**
-    - [ ] Add `spring-boot-starter-security` and `spring-boot-starter-oauth2-resource-server` (or simple JWT lib).
-    - [ ] Configure `SecurityFilterChain` to require authentication for `/api/**`.
-    - [ ] Remove `userId` and `accountId` parameters from Controllers; extract them from the authenticated Principal.
-    - [ ] Update Tests to use `@WithMockUser`.
+- [x] **9. Externalize Configuration**
+    - [x] Move CORS origins to `application.yml` and inject them via `@Value`.
+- [x] **10. Implement Spring Security**
+    - [x] Add `spring-boot-starter-security`.
+    - [x] Configure `SecurityFilterChain` to require authentication for `/api/**` (Basic Auth enabled).
+    - [x] Implement `CustomUserDetailsService` to load users from DB.
+    - [x] Remove `userId` parameters from Controllers; extract them from the authenticated Principal to fix IDOR.
+    - [x] Update Tests to use `@WithCustomMockUser`.
+
+---
+**Status:** All critical refactoring, architectural improvements, and security implementation tasks are complete.

@@ -21,6 +21,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,6 +40,7 @@ class TransactionControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
+    @WithCustomMockUser(id = 10L)
     void uploadTransactions_ShouldReturnPreview() throws Exception {
         Long accountId = 1L;
         MockMultipartFile file = new MockMultipartFile(
@@ -53,18 +55,20 @@ class TransactionControllerTest {
                 .suggestedCategory("Groceries")
                 .build();
 
-        when(transactionImportService.previewTransactions(eq(accountId), eq("BANK"), any(), any()))
+        when(transactionImportService.previewTransactions(eq(10L), eq(accountId), eq("BANK"), any(), any()))
                 .thenReturn(List.of(preview));
 
         mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", accountId)
                         .file(file)
-                        .param("bankName", "BANK"))
+                        .param("bankName", "BANK")
+                        .with(csrf())) 
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].description").value("Test Transaction"))
                 .andExpect(jsonPath("$[0].suggestedCategory").value("Groceries"));
     }
 
     @Test
+    @WithCustomMockUser
     void uploadTransactions_ShouldReturnBadRequest_WhenFileIsEmpty() throws Exception {
         Long accountId = 1L;
         MockMultipartFile file = new MockMultipartFile(
@@ -73,13 +77,15 @@ class TransactionControllerTest {
 
         mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", accountId)
                         .file(file)
-                        .param("bankName", "BANK"))
+                        .param("bankName", "BANK")
+                        .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").value("File must not be empty"));
     }
 
     @Test
+    @WithCustomMockUser(id = 10L)
     void saveTransactions_ShouldReturnSuccessMessage() throws Exception {
         Long accountId = 1L;
         TransactionDto t = TransactionDto.builder()
@@ -94,12 +100,13 @@ class TransactionControllerTest {
         request.setFileName("test.csv");
         request.setFileHash("hash123");
 
-        when(transactionImportService.saveTransactions(eq(accountId), any(), eq("test.csv"), eq("hash123")))
+        when(transactionImportService.saveTransactions(eq(10L), eq(accountId), any(), eq("test.csv"), eq("hash123")))
                 .thenReturn(1);
 
         mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", accountId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").value("Successfully saved 1 transactions."));
     }

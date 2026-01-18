@@ -21,3 +21,6 @@ spring:
       hibernate:
         ddl-auto: validate
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+cors:
+  allowed-origins: http://localhost:4200
