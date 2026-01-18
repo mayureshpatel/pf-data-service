@@ -1,64 +1,60 @@
-# Code Review: Personal Finance Data Service (Round 5 - Final Polish)
+# Senior Software Engineer Code Review
+**Date:** January 18, 2026
+**Project:** Personal Finance Data Service (Backend MVP)
+**Version:** Spring Boot 3.5.3 | Java 21
 
-## Executive Summary
-The `pf-data-service` has matured into a robust, secure, and performant Spring Boot application. It successfully implements the core MVP features (Import, Dashboard, CRUD) while adhering to modern standards (Layered Architecture, DTOs, Security, Observability).
+## 1. Architecture & Design Patterns
 
-The previous phases have addressed all critical security (IDOR), performance (indices, streaming), and architectural (Entities vs DTOs) concerns. This final review confirms the stability of the latest additions.
+### Strengths
+*   **Layered Architecture:** Clear separation of concerns (Controller -> Service -> Repository) is maintained.
+*   **Strategy Pattern:** The use of `TransactionParser` interface with specific implementations (`CapitalOneCsvParser`, etc.) is an excellent use of the Strategy pattern, making the system extensible for new bank formats.
+*   **Database Migration:** Usage of **Flyway** ensures robust schema versioning and reproducibility across environments.
 
----
+### Areas for Improvement
+*   **Single Responsibility Principle (SRP):** `TransactionService` appears to be accumulating multiple responsibilities: CRUD operations, business rules validation, and complex dashboard analytics/aggregation.
+    *   *Recommendation:* Extract dashboard/analytics logic into a dedicated `DashboardService` or `AnalyticsService`.
+*   **Type Safety:** Bank names are currently hardcoded string literals (e.g., "CAPITAL_ONE", "DISCOVER").
+    *   *Recommendation:* Introduce a `BankName` Enum to enforce type safety and centralize the definition of supported banks.
+*   **DTO Modernization:** The project uses standard Java Classes with Lombok for DTOs.
+    *   *Recommendation:* Since the project runs on Java 21, migrate immutable DTOs (Data Transfer Objects) to **Java Records**. This reduces boilerplate and improves semantics for immutable data carriers.
 
-## 1. Functional Completeness & API Design
+## 2. Testing Strategy & Quality
 
-### Transaction Management (CRUD)
-- **Status:** Implemented successfully in `TransactionCrudController` and `TransactionService`.
-- **Validation:** `TransactionDto` correctly uses `@NotNull` constraints. Ownership checks (`validateOwnership`) prevent unauthorized modifications.
-- **Data Integrity:** `deleteTransaction` correctly reverts the account balance, maintaining financial consistency.
+### Strengths
+*   **Integration Testing:** The use of `Testcontainers` is the industry gold standard for ensuring tests run against a real PostgreSQL instance rather than an H2 simulation.
 
-### API Consistency
-- **Status:** All endpoints now follow the `/api/v1/...` pattern.
-- **REST Compliance:** The HTTP verbs (`GET`, `PUT`, `DELETE`) are used semantically.
+### Critical Issues
+*   **Test Fragility:** The build currently fails if a Docker environment is not present (`TransactionRepositoryTest`). This blocks development in non-Dockerized environments.
+    *   *Recommendation:* Implement Maven profiles to separate "Unit Tests" (fast, no Docker) from "Integration Tests" (slow, requires Docker). Alternatively, configure tests to degrade gracefully or be skipped if the Docker engine is unavailable.
+*   **Unit Test Isolation:** Ensure Service layer tests mock the Repository layer strictly to allow logic verification without spinning up the Spring Context.
 
----
+## 3. Data Persistence & Performance
 
-## 2. Security
+### Strengths
+*   **JPA/Hibernate:** Good usage of standard JPA patterns.
 
-### Authorization
-- **Status:** Spring Security is correctly configured to protect all endpoints except for public resources (Swagger, Actuator).
-- **IDOR Protection:** `DashboardController` and `TransactionCrudController` both utilize `@AuthenticationPrincipal` to scope data access to the authenticated user.
+### Areas for Improvement
+*   **Batch Processing:** The CSV import feature likely saves transactions one by one or in a loop.
+    *   *Recommendation:* Verify and enable Hibernate Batch Inserts (`spring.jpa.properties.hibernate.jdbc.batch_size`) to significantly improve performance when importing large CSV files (e.g., 1000+ rows).
+*   **N+1 Selects:** Ensure that fetching Transactions does not inadvertently trigger N+1 queries when fetching associated entities (like Categories or Tags). Use `EntityGraph` or `JOIN FETCH` where appropriate.
 
-### Observability
-- **Status:** `RequestLoggingFilter` provides essential audit logs for API traffic.
-- **Health Checks:** Actuator is enabled and accessible.
+## 4. Error Handling & API Standards
 
----
+### Strengths
+*   **Global Handling:** `GlobalExceptionHandler` is present and intercepts standard exceptions.
 
-## 3. Code Quality & Testing
+### Areas for Improvement
+*   **Standardization:** Ensure the API returns consistent error structures.
+    *   *Recommendation:* Adopt **RFC 7807 (Problem Details for HTTP APIs)**. Spring Boot 3+ provides native support for `ProblemDetail` which standardizes error responses (type, title, status, detail, instance).
 
-### Test Coverage
-- **Status:** Unit tests cover:
-    - CSV Parsing logic (various formats).
-    - Categorization rules.
-    - Service layer logic (dashboard aggregation, balance updates).
-    - Controller layer (request mapping, security integration via `@WithCustomMockUser`).
-- **Integration Tests:** Existing integration tests are well-structured using Testcontainers (though local environment configuration is needed to run them).
+## 5. Security
 
----
+### Strengths
+*   **Security Config:** Basic Auth is correctly configured for the MVP.
 
-## 4. Final Recommendations (Minor Polish)
-
-### 1. Specification/QueryDSL for Filtering
-- **Observation:** `TransactionService.getTransactions` currently uses simple repository methods.
-- **Future Improvement:** As filtering requirements grow (e.g., "expenses > $100 last month"), consider adopting JPA Specifications or QueryDSL to avoid creating a new repository method for every combination.
-
-### 2. Exception Handling for Data Integrity
-- **Observation:** If `deleteTransaction` fails halfway (after balance update but before delete), `@Transactional` handles the rollback.
-- **Verification:** Ensure the database supports transactions (PostgreSQL does).
-
-### 3. Containerization (Future Phase)
-- **Observation:** Docker support was deferred.
-- **Recommendation:** When ready to deploy, prioritizing the `Dockerfile` creation is the logical next step.
+### Areas for Improvement
+*   **State Management:** Currently relies on Session/Basic Auth.
+    *   *Recommendation:* For a modern specific frontend (React/Mobile), plan a migration to **Stateless JWT (JSON Web Tokens)** or OAuth2 Resource Server. This decouples the backend state from the frontend client and improves scalability.
 
 ---
-
-## 5. Conclusion
-The codebase is **Production-Ready** for an MVP scope. No critical issues remain. The architecture supports future expansion (Budgeting, Advanced Analytics) without requiring major refactoring.
+**Verdict:** The project is solid for an MVP. The codebase is clean and uses modern tools. The immediate priority should be stabilizing the test suite for non-Docker environments and refactoring DTOs to Java Records to leverage the full power of Java 21.
