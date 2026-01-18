@@ -2,8 +2,8 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.dto.SaveTransactionRequest;
+import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
-import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;
 import org.junit.jupiter.api.Test;
@@ -82,9 +82,12 @@ class TransactionControllerTest {
     @Test
     void saveTransactions_ShouldReturnSuccessMessage() throws Exception {
         Long accountId = 1L;
-        Transaction t = new Transaction();
-        t.setDescription("Saved Txn");
-        t.setAmount(BigDecimal.valueOf(100));
+        TransactionDto t = TransactionDto.builder()
+                .date(LocalDate.now())
+                .description("Saved Txn")
+                .amount(BigDecimal.valueOf(100))
+                .type(TransactionType.EXPENSE)
+                .build();
 
         SaveTransactionRequest request = new SaveTransactionRequest();
         request.setTransactions(List.of(t));

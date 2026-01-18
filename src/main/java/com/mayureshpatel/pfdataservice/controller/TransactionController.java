@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.SaveTransactionRequest;
+import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
+import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,13 +44,26 @@ public class TransactionController {
             @PathVariable Long accountId,
             @RequestBody @Valid SaveTransactionRequest request
     ) {
+        List<Transaction> transactions = request.getTransactions().stream()
+                .map(this::mapToEntity)
+                .toList();
+
         int count = transactionImportService.saveTransactions(
                 accountId,
-                request.getTransactions(),
+                transactions,
                 request.getFileName(),
                 request.getFileHash()
         );
 
         return ResponseEntity.ok("Successfully saved " + count + " transactions.");
+    }
+
+    private Transaction mapToEntity(TransactionDto dto) {
+        Transaction transaction = new Transaction();
+        transaction.setDate(dto.getDate());
+        transaction.setDescription(dto.getDescription());
+        transaction.setAmount(dto.getAmount());
+        transaction.setType(dto.getType());
+        return transaction;
     }
 }
