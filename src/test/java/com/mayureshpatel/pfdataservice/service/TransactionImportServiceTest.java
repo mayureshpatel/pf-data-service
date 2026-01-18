@@ -20,6 +20,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -70,32 +72,20 @@ class TransactionImportServiceTest {
         when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
         
         Long otherUserId = 99L;
+        InputStream is = new ByteArrayInputStream(new byte[0]);
 
-        assertThatThrownBy(() -> importService.previewTransactions(otherUserId, 1L, "BANK", new byte[0], "test.csv"))
+        assertThatThrownBy(() -> importService.previewTransactions(otherUserId, 1L, "BANK", is, "test.csv"))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("permission");
     }
 
-    @Test
-    void previewTransactions_ShouldThrowIfFileAlreadyImported() {
-        byte[] content = "test data".getBytes();
-        String hash = importService.calculateFileHash(content);
-
-        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
-        when(fileImportHistoryRepository.existsByAccountIdAndFileHash(1L, hash)).thenReturn(true);
-
-        assertThatThrownBy(() -> importService.previewTransactions(10L, 1L, "BANK", content, "test.csv"))
-                .isInstanceOf(DuplicateImportException.class)
-                .hasMessageContaining("already been imported");
-    }
-
+    // Skipped hash check test for preview since we removed it for streaming
+    
     @Test
     void previewTransactions_ShouldParseAndCategorize() {
-        byte[] content = "test data".getBytes();
-        String hash = importService.calculateFileHash(content);
+        InputStream is = new ByteArrayInputStream("test data".getBytes());
 
         when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
-        when(fileImportHistoryRepository.existsByAccountIdAndFileHash(1L, hash)).thenReturn(false);
         when(parserFactory.getTransactionParser("BANK")).thenReturn(parser);
 
         List<Transaction> parsedTransactions = new ArrayList<>();
@@ -109,7 +99,7 @@ class TransactionImportServiceTest {
         when(parser.parse(eq(1L), any(InputStream.class))).thenReturn(parsedTransactions);
         when(categorizer.guessCategory(t1)).thenReturn("Groceries");
 
-        List<TransactionPreview> result = importService.previewTransactions(10L, 1L, "BANK", content, "test.csv");
+        List<TransactionPreview> result = importService.previewTransactions(10L, 1L, "BANK", is, "test.csv");
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getDescription()).isEqualTo("Grocery Store");

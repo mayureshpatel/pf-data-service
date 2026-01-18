@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -34,13 +35,12 @@ public class TransactionController {
             throw new IllegalArgumentException("File must not be empty");
         }
 
-        byte[] fileContent = file.getBytes();
-        String fileName = file.getOriginalFilename();
-
-        List<TransactionPreview> preview = transactionImportService.previewTransactions(
-                userDetails.getId(), accountId, bankName, fileContent, fileName);
-
-        return ResponseEntity.ok(preview);
+        try (InputStream inputStream = file.getInputStream()) {
+            String fileName = file.getOriginalFilename();
+            List<TransactionPreview> preview = transactionImportService.previewTransactions(
+                    userDetails.getId(), accountId, bankName, inputStream, fileName);
+            return ResponseEntity.ok(preview);
+        }
     }
 
     @PostMapping("/transactions")

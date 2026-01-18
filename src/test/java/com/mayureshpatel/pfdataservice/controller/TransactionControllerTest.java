@@ -14,6 +14,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -55,7 +56,8 @@ class TransactionControllerTest {
                 .suggestedCategory("Groceries")
                 .build();
 
-        when(transactionImportService.previewTransactions(eq(10L), eq(accountId), eq("BANK"), any(), any()))
+        // Match against InputStream now
+        when(transactionImportService.previewTransactions(eq(10L), eq(accountId), eq("BANK"), any(InputStream.class), any()))
                 .thenReturn(List.of(preview));
 
         mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", accountId)
