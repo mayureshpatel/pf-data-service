@@ -1,61 +1,66 @@
-# Code Review: Personal Finance Data Service (Round 3)
+# Code Review: Personal Finance Data Service (Round 4)
 
 ## Executive Summary
-The backend has matured significantly with the addition of Spring Security, DTOs, and improved JPA practices. The application is now "Secure by Design" regarding IDOR and Mass Assignment.
+The `pf-data-service` has reached a stable and secure MVP state. The architecture is sound, leveraging Spring Boot best practices, robust security, and efficient database interactions.
 
-However, three key areas still require attention:
-1.  **Incomplete Security Rollout:** The `DashboardController` was missed during the security refactoring and still exposes an IDOR vulnerability.
-2.  **Database Performance:** The dashboard relies on multiple aggregate queries over what will likely be the largest table (`transactions`). Missing indices will cause performance degradation.
-3.  **Observability & Documentation:** The project lacks API documentation (OpenAPI/Swagger) and health checks (Actuator), making it hard to integrate with a frontend or monitor in production.
+However, to transition from a "Backend MVP" to a fully functional "Application Backend," we need to address specific functional gaps (CRUD), enforce stricter transactional boundaries, and improve resource handling for scale.
 
 ---
 
-## 1. Security (Critical Remnants)
+## 1. Functional Gaps (The Missing Features)
 
-### Dashboard IDOR Vulnerability
-- **Issue:** `DashboardController` still accepts `userId` as a request parameter: `@RequestParam(defaultValue = "1") Long userId`.
-- **Risk:** Any authenticated user can view another user's dashboard by changing this parameter.
-- **Recommendation:** Refactor `DashboardController` to use `@AuthenticationPrincipal CustomUserDetails userDetails` and pass `userDetails.getId()` to the service, exactly as implemented in `TransactionController`.
+### Missing CRUD Operations
+- **Issue:** The current API allows *importing* (bulk create) via CSV and JSON, but offers no way to:
+    - List transactions (paginated).
+    - Edit a specific transaction (e.g., correct a category).
+    - Delete a transaction.
+- **Impact:** The frontend will be read-only (Dashboard) and write-only (Import), with no management capabilities.
+- **Recommendation:** Implement `GET /api/v1/transactions` (paginated), `PUT /api/v1/transactions/{id}`, and `DELETE /api/v1/transactions/{id}`.
 
----
-
-## 2. Database & Performance
-
-### Missing Indices
-- **Issue:** The dashboard performs heavy aggregation (SUM, GROUP BY) filtering by `account.user.id`, `date`, and `type`.
-- **Current Schema:** Foreign keys exist, but there are no composite indices optimized for these specific queries.
-- **Risk:** As transaction volume grows, dashboard load times will increase linearly (Full Table Scans).
-- **Recommendation:** Add a Flyway migration (`V7__add_performance_indices.sql`) to create indices on:
-    - `transactions(account_id, date)`: For range queries.
-    - `categories(user_id)`: For lookups.
-    - `accounts(user_id)`: For ownership checks.
+### API Versioning Consistency
+- **Issue:** `TransactionController` is mapped to `/api/v1/...`, but `DashboardController` is mapped to `/api/dashboard` (no version).
+- **Impact:** Inconsistent API surface. Harder to manage future breaking changes.
+- **Recommendation:** Move `DashboardController` to `/api/v1/dashboard`.
 
 ---
 
-## 3. Developer Experience & Observability
+## 2. Resource Management & Performance
 
-### Missing API Documentation
-- **Issue:** There is no automatic documentation for the new `TransactionDto` or the endpoints. Frontend developers will have to guess the JSON structure.
-- **Recommendation:** Add `springdoc-openapi-starter-webmvc-ui`.
+### Large File Handling
+- **Issue:** `TransactionController` reads the entire `MultipartFile` into a `byte[]` (`file.getBytes()`) before passing it to the service.
+- **Risk:** High memory pressure. If 10 users upload 10MB files simultaneously, that's 100MB+ of heap churn instantly.
+- **Recommendation:** Refactor `TransactionImportService` to accept an `InputStream` instead of `byte[]`. Stream the file processing.
 
-### Missing Health Checks
-- **Issue:** No way to verify if the DB is connected or the app is healthy without hitting a business endpoint.
-- **Recommendation:** Add `spring-boot-starter-actuator`.
+### Transactional Boundaries
+- **Issue:** `TransactionService.getDashboardData` performs multiple repository calls (`getSumByDateRange`, `findCategoryTotals`). It is **missing** the `@Transactional(readOnly = true)` annotation.
+- **Risk:**
+    - Each repository call might acquire/release a database connection separately (connection pool thrashing).
+    - No read-consistency guarantee between the three queries (e.g., if a transaction is inserted mid-request).
+- **Recommendation:** Add `@Transactional(readOnly = true)` to `TransactionService` class or method.
+
+---
+
+## 3. Observability & Logging
+
+### Missing Request Logging
+- **Issue:** The file structure scan reveals `LoggingAspect` exists, but the `RequestLoggingFilter` (which was seen in earlier file lists) seems to be missing from the `src/main/.../filter` directory in the latest scan, or simply not registered.
+- **Recommendation:** Ensure a standard Request/Response logging filter is present and registered to trace incoming API calls in production.
 
 ---
 
 ## 4. Testing
 
-### Gap in Service Layer Testing
-- **Issue:** `TransactionService.getDashboardData` is not fully covered by unit tests mocking the repository responses.
-- **Recommendation:** Add `TransactionServiceTest` to verify that `DashboardData` is constructed correctly from the repository's partial results (handling nulls, zero values).
+### Controller Testing & Security
+- **Strength:** The use of `@WithCustomMockUser` is excellent.
+- **Gap:** We verify `status().isOk()`, but we should also verify that the `transactionService` is called with the *correct* `userId` extracted from the principal.
+- **Recommendation:** Add `verify(transactionService).getDashboardData(eq(10L), ...)` to `DashboardControllerTest`.
 
 ---
 
 ## 5. Summary of New Recommendations
 
-1.  **Fix Dashboard Security:** Update `DashboardController` to use `CustomUserDetails`.
-2.  **Optimize DB:** Add indices for dashboard queries.
-3.  **Add OpenAPI:** Install Swagger UI.
-4.  **Add Actuator:** Enable health endpoints.
-5.  **Expand Tests:** Unit test the Dashboard logic.
+1.  **Consistency:** Move `DashboardController` to `/api/v1/dashboard`.
+2.  **Performance:** Add `@Transactional(readOnly = true)` to `TransactionService`.
+3.  **Scalability:** Refactor file upload to use `InputStream` instead of `byte[]`.
+4.  **Feature:** Implement Paginated List, Edit, and Delete endpoints for Transactions.
+5.  **Quality:** Restore/Implement `RequestLoggingFilter`.
