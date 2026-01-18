@@ -19,6 +19,8 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
     Page<Transaction> findByAccount_User_IdOrderByDateDesc(Long userId, Pageable pageable);
+    
+    Page<Transaction> findByAccount_User_IdAndType(Long userId, TransactionType type, Pageable pageable);
 
     @Query("""
             SELECT SUM(t.amount)

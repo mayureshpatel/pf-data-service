@@ -39,7 +39,7 @@ class DashboardControllerTest {
         when(transactionService.getDashboardData(eq(10L), eq(1), eq(2026)))
                 .thenReturn(data);
 
-        mockMvc.perform(get("/api/dashboard")
+        mockMvc.perform(get("/api/v1/dashboard")
                         .param("month", "1")
                         .param("year", "2026"))
                 .andExpect(status().isOk())
@@ -48,7 +48,7 @@ class DashboardControllerTest {
 
     @Test
     void getDashboardData_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
-        mockMvc.perform(get("/api/dashboard")
+        mockMvc.perform(get("/api/v1/dashboard")
                         .param("month", "1")
                         .param("year", "2026"))
                 .andExpect(status().isUnauthorized());
