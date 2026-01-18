@@ -1,40 +1,37 @@
-# Technical Roadmap: Refactoring & Modernization
+# Technical Roadmap: Deployment Readiness
 
-This roadmap focuses on technical excellence, stability, and preparing the codebase for scale, based on the Senior Code Review.
+This roadmap focuses on operational excellence and preparing the application for a secure production release, now that the core architectural refactoring is complete.
 
-## Phase 1: Stability & Testing Infrastructure
-*Goal: Ensure the build passes reliably in all environments.*
+## Phase 1: Operational Stability (High Priority)
+*Goal: Ensure the build pipeline is robust and environment-agnostic.*
 
-- [ ] **1. Test Suite Resilience**
-    - [ ] Create a specific Maven profile for Integration Tests (requiring Docker).
-    - [ ] Ensure `mvn test` (default) runs fast Unit Tests (Mockito) without requiring Testcontainers.
-    - [ ] Add `@Tag("integration")` to container-dependent tests.
+- [ ] **1. Resilient Test Infrastructure**
+    - [ ] Configure Maven Profiles: Create a `docker` profile that activates Testcontainers.
+    - [ ] Configure `mvn test` (default) to skip container-dependent tests if Docker is unavailable, ensuring the build succeeds based on Unit Tests alone.
 
-## Phase 2: Java 21 Modernization & Clean Code
-*Goal: Leverage modern Java features for more concise and readable code.*
+## Phase 2: Security & Configuration Hardening
+*Goal: Secure sensitive data and prepare for cloud deployment.*
 
-- [ ] **2. Adopt Java Records**
-    - [ ] Refactor immutable DTOs (`TransactionDto`, `DashboardData`, `CategoryTotal`) from Lombok `@Data/@Value` classes to Java `record` types.
-- [ ] **3. Type Safety Refactoring**
-    - [ ] Create `BankName` Enum.
-    - [ ] Refactor Parsers and the Factory to use the Enum instead of raw Strings.
+- [ ] **2. Secrets Management**
+    - [ ] Remove the hardcoded JWT Secret from `application.yml`.
+    - [ ] Replace it with an Environment Variable reference (`${JWT_SECRET_KEY}`).
+    - [ ] Update documentation to instruct developers how to set this key locally.
+- [ ] **3. CORS Configuration**
+    - [ ] Verify CORS settings for the frontend integration (React/Angular). Currently allows `localhost:4200`, ensure this is configurable via environment variables for production domains.
 
-## Phase 3: Architecture & Performance
-*Goal: Improve separation of concerns and data throughput.*
+## Phase 3: Architectural Polish
+*Goal: Consistency across layers.*
 
-- [ ] **4. Service Decomposition**
-    - [ ] Extract Dashboard/Analytics logic from `TransactionService` into `DashboardService`.
-    - [ ] Ensure `TransactionService` focuses strictly on Transaction CRUD and Import orchestration.
-- [ ] **5. Database Optimization**
-    - [ ] Enable Hibernate Batch Inserts in `application.yml`.
-    - [ ] Verify `saveAll` behavior during CSV import to ensure bulk inserts are actually occurring.
+- [ ] **4. Mapping Layer Refactoring**
+    - [ ] Refactor `TransactionImportService` to accept `TransactionDto` instead of `Transaction` entities.
+    - [ ] Move the DTO -> Entity conversion logic from `TransactionController` into the Service layer.
 
-## Phase 4: API Standardization
-*Goal: Align with industry standards for error handling.*
+## Phase 4: Containerization (Deployment)
+*Goal: Ship the application.*
 
-- [ ] **6. RFC 7807 Error Handling**
-    - [ ] Refactor `GlobalExceptionHandler` to return `ProblemDetail` objects instead of custom error wrappers where applicable.
+- [ ] **5. Docker Support**
+    - [ ] Create a multi-stage `Dockerfile` (Build -> Run) to minimize image size.
+    - [ ] Create a `docker-compose.yml` that spins up the Application and a PostgreSQL database container with the correct networking and environment variables.
 
-## Phase 5: Security Hardening (Post-MVP)
-- [ ] **7. JWT Authentication**
-    - [ ] Migrate from Basic Auth to stateless JWT Authentication to better support the frontend.
+---
+**Status:** Phases 2-5 of the previous roadmap are **Complete**. The focus now shifts to Operations and Consistency.
