@@ -49,27 +49,14 @@ public class TransactionController {
             @RequestBody @Valid SaveTransactionRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<Transaction> transactions = request.transactions().stream()
-                .map(this::mapToEntity)
-                .toList();
-
         int count = transactionImportService.saveTransactions(
                 userDetails.getId(),
                 accountId,
-                transactions,
+                request.transactions(),
                 request.fileName(),
                 request.fileHash()
         );
 
         return ResponseEntity.ok("Successfully saved " + count + " transactions.");
-    }
-
-    private Transaction mapToEntity(TransactionDto dto) {
-        Transaction transaction = new Transaction();
-        transaction.setDate(dto.date());
-        transaction.setDescription(dto.description());
-        transaction.setAmount(dto.amount());
-        transaction.setType(dto.type());
-        return transaction;
     }
 }

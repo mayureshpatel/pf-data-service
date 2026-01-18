@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
@@ -95,8 +96,8 @@ public class TransactionImportService {
     }
 
     @Transactional
-    public int saveTransactions(Long userId, Long accountId, List<Transaction> approvedTransactions, String fileName, String fileHash) {
-        log.info("Saving {} transactions for User: {}, Account ID: {}", approvedTransactions.size(), userId, accountId);
+    public int saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash) {
+        log.info("Saving {} transactions for User: {}, Account ID: {}", approvedDtos.size(), userId, accountId);
 
         Account account = verifyAccountOwnership(userId, accountId);
 
@@ -108,18 +109,19 @@ public class TransactionImportService {
         List<Transaction> uniqueTransactions = new ArrayList<>();
         int duplicateCount = 0;
 
-        for (Transaction t : approvedTransactions) {
+        for (TransactionDto dto : approvedDtos) {
             boolean exists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
-                    accountId, t.getDate(), t.getAmount(), t.getDescription(), t.getType()
+                    accountId, dto.date(), dto.amount(), dto.description(), dto.type()
             );
 
             if (!exists) {
+                Transaction t = mapToEntity(dto);
                 t.setAccount(account);
                 uniqueTransactions.add(t);
             } else {
                 duplicateCount++;
                 if (log.isTraceEnabled()) {
-                    log.trace("Skipping duplicate transaction: {} - {} - {}", t.getDate(), t.getDescription(), t.getAmount());
+                    log.trace("Skipping duplicate transaction: {} - {} - {}", dto.date(), dto.description(), dto.amount());
                 }
             }
         }
@@ -142,6 +144,15 @@ public class TransactionImportService {
         }
 
         return uniqueTransactions.size();
+    }
+
+    private Transaction mapToEntity(TransactionDto dto) {
+        Transaction transaction = new Transaction();
+        transaction.setDate(dto.date());
+        transaction.setDescription(dto.description());
+        transaction.setAmount(dto.amount());
+        transaction.setType(dto.type());
+        return transaction;
     }
 
     private void updateAccountBalance(Account account, List<Transaction> newTransactions) {
