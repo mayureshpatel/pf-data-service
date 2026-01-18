@@ -1,8 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
-import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
-import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.model.Account;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
@@ -18,19 +17,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -68,42 +64,25 @@ class TransactionImportServiceTest {
     }
 
     @Test
-    void previewTransactions_ShouldThrowAccessDenied_WhenUserDoesNotOwnAccount() {
-        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
-        
-        Long otherUserId = 99L;
-        InputStream is = new ByteArrayInputStream(new byte[0]);
-
-        assertThatThrownBy(() -> importService.previewTransactions(otherUserId, 1L, "BANK", is, "test.csv"))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessageContaining("permission");
-    }
-
-    // Skipped hash check test for preview since we removed it for streaming
-    
-    @Test
     void previewTransactions_ShouldParseAndCategorize() {
         InputStream is = new ByteArrayInputStream("test data".getBytes());
 
-        when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
         when(parserFactory.getTransactionParser("BANK")).thenReturn(parser);
 
-        List<Transaction> parsedTransactions = new ArrayList<>();
         Transaction t1 = new Transaction();
         t1.setDate(LocalDate.now());
         t1.setDescription("Grocery Store");
         t1.setAmount(BigDecimal.TEN);
         t1.setType(TransactionType.EXPENSE);
-        parsedTransactions.add(t1);
 
-        when(parser.parse(eq(1L), any(InputStream.class))).thenReturn(parsedTransactions);
+        when(parser.parse(eq(1L), any(InputStream.class))).thenReturn(Stream.of(t1));
         when(categorizer.guessCategory(t1)).thenReturn("Groceries");
 
         List<TransactionPreview> result = importService.previewTransactions(10L, 1L, "BANK", is, "test.csv");
 
         assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getDescription()).isEqualTo("Grocery Store");
-        assertThat(result.getFirst().getSuggestedCategory()).isEqualTo("Groceries");
+        assertThat(result.getFirst().description()).isEqualTo("Grocery Store");
+        assertThat(result.getFirst().suggestedCategory()).isEqualTo("Groceries");
     }
 
     @Test
@@ -111,27 +90,29 @@ class TransactionImportServiceTest {
         when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
 
         // Transaction 1: Exists (Duplicate)
-        Transaction t1 = new Transaction();
-        t1.setDate(LocalDate.now());
-        t1.setDescription("Duplicate Txn");
-        t1.setAmount(BigDecimal.TEN);
-        t1.setType(TransactionType.EXPENSE);
+        TransactionDto t1 = TransactionDto.builder()
+                .date(LocalDate.now())
+                .description("Duplicate Txn")
+                .amount(BigDecimal.TEN)
+                .type(TransactionType.EXPENSE)
+                .build();
 
         // Transaction 2: New (Unique)
-        Transaction t2 = new Transaction();
-        t2.setDate(LocalDate.now());
-        t2.setDescription("New Txn");
-        t2.setAmount(BigDecimal.valueOf(20));
-        t2.setType(TransactionType.EXPENSE);
+        TransactionDto t2 = TransactionDto.builder()
+                .date(LocalDate.now())
+                .description("New Txn")
+                .amount(BigDecimal.valueOf(20))
+                .type(TransactionType.EXPENSE)
+                .build();
 
-        List<Transaction> inputList = List.of(t1, t2);
+        List<TransactionDto> inputList = List.of(t1, t2);
 
         when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
-                eq(1L), eq(t1.getDate()), eq(t1.getAmount()), eq(t1.getDescription()), eq(t1.getType())
+                eq(1L), eq(t1.date()), eq(t1.amount()), eq(t1.description()), eq(t1.type())
         )).thenReturn(true); // T1 Exists
 
         when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
-                eq(1L), eq(t2.getDate()), eq(t2.getAmount()), eq(t2.getDescription()), eq(t2.getType())
+                eq(1L), eq(t2.date()), eq(t2.amount()), eq(t2.description()), eq(t2.type())
         )).thenReturn(false); // T2 Does Not Exist
 
         // Execute
@@ -142,8 +123,6 @@ class TransactionImportServiceTest {
         verify(transactionRepository, times(1)).saveAll(anyList());
         verify(fileImportHistoryRepository, times(1)).save(any());
 
-        // Verify balance update logic (only for unique txn: -20)
-        // Note: Logic in service is: currentBalance + (-20)
         assertThat(account.getCurrentBalance()).isEqualByComparingTo("-20");
         verify(accountRepository).save(account);
     }

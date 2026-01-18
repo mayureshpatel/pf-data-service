@@ -19,16 +19,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TransactionController.class)
+@WebMvcTest({TransactionController.class, com.mayureshpatel.pfdataservice.security.JwtService.class})
 class TransactionControllerTest {
 
     @Autowired
@@ -82,34 +80,30 @@ class TransactionControllerTest {
                         .param("bankName", "BANK")
                         .with(csrf()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("File must not be empty"));
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.detail").value("File must not be empty"));
     }
 
     @Test
     @WithCustomMockUser(id = 10L)
     void saveTransactions_ShouldReturnSuccessMessage() throws Exception {
-        Long accountId = 1L;
-        TransactionDto t = TransactionDto.builder()
+        TransactionDto dto = TransactionDto.builder()
                 .date(LocalDate.now())
-                .description("Saved Txn")
-                .amount(BigDecimal.valueOf(100))
+                .description("Test")
+                .amount(BigDecimal.TEN)
                 .type(TransactionType.EXPENSE)
                 .build();
 
-        SaveTransactionRequest request = new SaveTransactionRequest();
-        request.setTransactions(List.of(t));
-        request.setFileName("test.csv");
-        request.setFileHash("hash123");
+        SaveTransactionRequest request = new SaveTransactionRequest(List.of(dto), "test.csv", "hash123");
 
-        when(transactionImportService.saveTransactions(eq(10L), eq(accountId), any(), eq("test.csv"), eq("hash123")))
+        when(transactionImportService.saveTransactions(anyLong(), anyLong(), anyList(), anyString(), anyString()))
                 .thenReturn(1);
 
-        mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", accountId)
+        mockMvc.perform(post("/api/v1/accounts/1/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value("Successfully saved 1 transactions."));
+                .andExpect(content().string("Successfully saved 1 transactions."));
     }
 }

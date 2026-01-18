@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.DashboardData;
-import com.mayureshpatel.pfdataservice.service.TransactionService;
+import com.mayureshpatel.pfdataservice.service.DashboardService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -17,14 +17,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(DashboardController.class)
+@WebMvcTest({DashboardController.class, com.mayureshpatel.pfdataservice.security.JwtService.class})
 class DashboardControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private TransactionService transactionService;
+    private DashboardService dashboardService;
 
     @Test
     @WithCustomMockUser(id = 10L)
@@ -36,7 +36,7 @@ class DashboardControllerTest {
                 .categoryBreakdown(Collections.emptyList())
                 .build();
 
-        when(transactionService.getDashboardData(eq(10L), eq(1), eq(2026)))
+        when(dashboardService.getDashboardData(eq(10L), eq(1), eq(2026)))
                 .thenReturn(data);
 
         mockMvc.perform(get("/api/v1/dashboard")

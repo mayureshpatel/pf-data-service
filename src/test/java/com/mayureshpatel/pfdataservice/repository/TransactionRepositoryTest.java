@@ -33,9 +33,9 @@ class TransactionRepositoryTest extends AbstractIntegrationTest {
 
 
         assertThat(results).hasSize(2);
-        assertThat(results.get(0).getCategoryName()).isEqualTo("Groceries");
-        assertThat(results.get(0).getTotal()).isEqualByComparingTo("75.50");
-        assertThat(results.get(1).getCategoryName()).isEqualTo("Dining Out");
-        assertThat(results.get(1).getTotal()).isEqualByComparingTo("60.00");
+        assertThat(results.get(0).categoryName()).isEqualTo("Food");
+        assertThat(results.get(0).total()).isEqualByComparingTo("15.50");
+        assertThat(results.get(1).categoryName()).isEqualTo("Utilities");
+        assertThat(results.get(1).total()).isEqualByComparingTo("100.00");
     }
 }
