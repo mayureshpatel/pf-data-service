@@ -1,32 +1,38 @@
-# Technical Roadmap: Production Hardening & Scalability
+# Technical Roadmap: Deployment & Operational Excellence
 
-This roadmap outlines the final transition from a high-quality MVP to a production-ready, scalable service.
+This roadmap marks the final steps to move the service from a stable local development state to a production-ready cloud deployment.
 
-## Phase 1: Operational Stability (Critical)
-- [ ] **1. Environment-Agnostic Build**
-    - [ ] Create a `docker-it` Maven profile for Testcontainers.
-    - [ ] Configure the default `mvn test` to exclude tests tagged with `@Tag("integration")`.
-- [ ] **2. Secrets & Configuration**
-    - [ ] Externalize JWT secret and Database credentials using Environment Variables.
-    - [ ] Implement a `dev` profile with local defaults and a `prod` profile for deployment.
+## Phase 1: Build & Infrastructure (High Priority)
+- [ ] **1. Resilient CI/CD Integration**
+    - [ ] Create a `docker-it` Maven profile.
+    - [ ] Tag all Testcontainers-dependent tests with `@Tag("integration")`.
+    - [ ] Configure `maven-surefire-plugin` to exclude the `integration` tag by default, allowing a simple `mvn test` to pass anywhere.
+- [ ] **2. Cloud Configuration**
+    - [ ] Externalize sensitive keys (JWT Secret, DB Password) using `${VAR}` placeholders.
+    - [ ] Create a `prod` profile in `application-prod.yml`.
 
-## Phase 2: Security & DX (Developer Experience)
-- [ ] **3. Swagger JWT Integration**
-    - [ ] Configure `OpenApiCustomizer` to add Bearer Authentication to the Swagger UI.
-- [ ] **4. Declarative Authorization**
-    - [ ] Implement custom SpEL expressions (e.g., `@IsAccountOwner`) to replace manual ownership checks in the service layer.
+## Phase 2: Security & Developer Experience
+- [ ] **3. Swagger Authorization**
+    - [ ] (Completed) Integrated JWT Bearer Auth into OpenAPI UI.
+- [ ] **4. Account Registration**
+    - [ ] Implement a secure `/register` endpoint with password strength validation.
 
-## Phase 3: Performance & Scalability
-- [ ] **5. Streaming CSV Processing**
-    - [ ] Refactor `TransactionParser` to return `Stream<Transaction>`.
-    - [ ] Update `TransactionImportService` to process the stream, maintaining low memory usage regardless of file size.
-- [ ] **6. Audit Logging**
-    - [ ] Enhance `RequestLoggingFilter` to include User IDs and correlation IDs for better production troubleshooting.
+## Phase 3: Architectural Polish
+- [ ] **5. Automated Mapping**
+    - [ ] Replace manual `mapToDto` and `mapToEntity` methods with **MapStruct** mappers.
+- [ ] **6. Domain Invariants**
+    - [ ] Add `@Column(nullable=false)` and length constraints to JPA entities to mirror database schema strictly.
 
-## Phase 4: Deployment
-- [ ] **7. Containerization**
-    - [ ] Optimized `Dockerfile` using JRE 21 alpine images.
-    - [ ] `docker-compose.yml` for local production-like testing.
+## Phase 4: Observability & Health
+- [ ] **7. Advanced Monitoring**
+    - [ ] Configure Micrometer to export metrics to Prometheus/Grafana.
+    - [ ] Add custom Actuator `HealthIndicator` for external bank API connectivity (if added later).
+
+## Phase 5: Containerization
+- [ ] **8. Multi-Stage Dockerfile**
+    - [ ] Implement a multi-stage `Dockerfile` to build the JAR and then run it in a slimmed-down Alpine JRE image.
+- [ ] **9. Docker Compose**
+    - [ ] Provide a `docker-compose.yml` for "One-Click" local environment setup.
 
 ---
-**Status:** Architectural Polish (Mapping layer) is **Complete**. The project is now moving into the "Hardening" stage.
+**Status:** MVP Architectural refactoring is **Complete**. The project is now in the **Hardening** stage.
