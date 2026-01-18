@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
+import com.mayureshpatel.pfdataservice.model.BankName;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import org.apache.commons.csv.CSVFormat;
@@ -28,7 +29,7 @@ public class DiscoverCsvParser implements TransactionParser {
     private static final String HEADER_DESC = "Description";
     private static final String HEADER_AMOUNT = "Amount";
     private static final String HEADER_CATEGORY = "Category";
-    private static final String BANK_NAME = "DISCOVER";
+    private static final BankName BANK_NAME = BankName.DISCOVER;
 
     // Flexible formatter for M/d/yyyy
     private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
@@ -44,7 +45,7 @@ public class DiscoverCsvParser implements TransactionParser {
             .get();
 
     @Override
-    public String getBankName() {
+    public BankName getBankName() {
         return BANK_NAME;
     }
 

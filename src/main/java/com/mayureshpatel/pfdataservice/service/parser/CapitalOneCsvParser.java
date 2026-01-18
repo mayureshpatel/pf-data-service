@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
+import com.mayureshpatel.pfdataservice.model.BankName;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import org.apache.commons.csv.CSVFormat;
@@ -28,7 +29,7 @@ public class CapitalOneCsvParser implements TransactionParser {
     private static final String HEADER_CATEGORY = "Category";
     private static final String HEADER_DEBIT = "Debit";
     private static final String HEADER_CREDIT = "Credit";
-    private static final String BANK_NAME = "CAPITAL_ONE";
+    private static final BankName BANK_NAME = BankName.CAPITAL_ONE;
 
     private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendPattern("[yyyy-MM-dd][M/d/yyyy][MM/dd/yyyy]")
@@ -43,7 +44,7 @@ public class CapitalOneCsvParser implements TransactionParser {
             .get();
 
     @Override
-    public String getBankName() {
+    public BankName getBankName() {
         return BANK_NAME;
     }
 

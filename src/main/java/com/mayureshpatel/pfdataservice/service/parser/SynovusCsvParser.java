@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
+import com.mayureshpatel.pfdataservice.model.BankName;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import org.apache.commons.csv.CSVFormat;
@@ -42,8 +43,8 @@ public class SynovusCsvParser implements TransactionParser {
             .get();
 
     @Override
-    public String getBankName() {
-        return "SYNOVUS";
+    public BankName getBankName() {
+        return BankName.SYNOVUS;
 
     }
 

@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.DashboardData;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
-import com.mayureshpatel.pfdataservice.service.TransactionService;
+import com.mayureshpatel.pfdataservice.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DashboardController {
 
-    private final TransactionService transactionService;
+    private final DashboardService dashboardService;
 
     @GetMapping
     public ResponseEntity<DashboardData> getDashboardData(
@@ -24,6 +24,6 @@ public class DashboardController {
             @RequestParam int year,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        return ResponseEntity.ok(this.transactionService.getDashboardData(userDetails.getId(), month, year));
+        return ResponseEntity.ok(this.dashboardService.getDashboardData(userDetails.getId(), month, year));
     }
 }

@@ -49,7 +49,7 @@ public class TransactionController {
             @RequestBody @Valid SaveTransactionRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<Transaction> transactions = request.getTransactions().stream()
+        List<Transaction> transactions = request.transactions().stream()
                 .map(this::mapToEntity)
                 .toList();
 
@@ -57,8 +57,8 @@ public class TransactionController {
                 userDetails.getId(),
                 accountId,
                 transactions,
-                request.getFileName(),
-                request.getFileHash()
+                request.fileName(),
+                request.fileHash()
         );
 
         return ResponseEntity.ok("Successfully saved " + count + " transactions.");
@@ -66,10 +66,10 @@ public class TransactionController {
 
     private Transaction mapToEntity(TransactionDto dto) {
         Transaction transaction = new Transaction();
-        transaction.setDate(dto.getDate());
-        transaction.setDescription(dto.getDescription());
-        transaction.setAmount(dto.getAmount());
-        transaction.setType(dto.getType());
+        transaction.setDate(dto.date());
+        transaction.setDescription(dto.description());
+        transaction.setAmount(dto.amount());
+        transaction.setType(dto.type());
         return transaction;
     }
 }

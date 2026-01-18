@@ -25,26 +25,6 @@ import java.util.List;
 public class TransactionService {
     private final TransactionRepository transactionRepository;
 
-    public DashboardData getDashboardData(Long userId, int month, int year) {
-        LocalDate startDate = LocalDate.of(year, month, 1);
-        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
-
-        BigDecimal income = this.transactionRepository.getSumByDateRange(userId, startDate, endDate, TransactionType.INCOME);
-        BigDecimal expense = this.transactionRepository.getSumByDateRange(userId, startDate, endDate, TransactionType.EXPENSE);
-
-        income = (income == null) ? BigDecimal.ZERO : income;
-        expense = (expense == null) ? BigDecimal.ZERO : expense;
-
-        List<CategoryTotal> breakdown = this.transactionRepository.findCategoryTotals(userId, startDate, endDate);
-
-        return DashboardData.builder()
-                .totalIncome(income)
-                .totalExpense(expense)
-                .netSavings(income.subtract(expense))
-                .categoryBreakdown(breakdown)
-                .build();
-    }
-
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
         // Note: For advanced filtering, we would use Specification or QueryDSL.
         // For MVP, we'll stick to a simple repo method (needs adding to repo) or filtering in memory if dataset small (bad practice).
@@ -67,10 +47,10 @@ public class TransactionService {
 
         validateOwnership(userId, transaction);
 
-        transaction.setAmount(dto.getAmount());
-        transaction.setDate(dto.getDate());
-        transaction.setDescription(dto.getDescription());
-        transaction.setType(dto.getType());
+        transaction.setAmount(dto.amount());
+        transaction.setDate(dto.date());
+        transaction.setDescription(dto.description());
+        transaction.setType(dto.type());
         
         // TODO: Handle category update logic here when categories are fully implemented
         

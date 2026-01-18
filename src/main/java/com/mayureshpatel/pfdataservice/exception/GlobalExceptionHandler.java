@@ -1,107 +1,76 @@
 package com.mayureshpatel.pfdataservice.exception;
 
-import com.mayureshpatel.pfdataservice.dto.ApiErrorResponse;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-import java.time.LocalDateTime;
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+    public ProblemDetail handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
         log.warn("Entity Not Found: {} at {}", ex.getMessage(), request.getRequestURI());
-        return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request);
+        return createProblemDetail(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+    public ProblemDetail handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
         log.warn("Illegal Argument: {} at {}", ex.getMessage(), request.getRequestURI());
-        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
+        return createProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(CsvParsingException.class)
-    public ResponseEntity<ApiErrorResponse> handleCsvParsingException(CsvParsingException ex, HttpServletRequest request) {
+    public ProblemDetail handleCsvParsingException(CsvParsingException ex, HttpServletRequest request) {
         log.warn("CSV Parsing Error: {} at {}", ex.getMessage(), request.getRequestURI());
-        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
+        return createProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(DuplicateImportException.class)
-    public ResponseEntity<ApiErrorResponse> handleDuplicateImportException(DuplicateImportException ex, HttpServletRequest request) {
+    public ProblemDetail handleDuplicateImportException(DuplicateImportException ex, HttpServletRequest request) {
         log.warn("Duplicate Import: {} at {}", ex.getMessage(), request.getRequestURI());
-        return buildErrorResponse(ex, HttpStatus.CONFLICT, request);
+        return createProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
+    public ProblemDetail handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
         log.warn("Validation Failed at {}: {}", request.getRequestURI(), ex.getBindingResult());
 
-        List<ApiErrorResponse.ValidationError> validationErrors = ex.getBindingResult().getFieldErrors()
+        List<Map<String, String>> validationErrors = ex.getBindingResult().getFieldErrors()
                 .stream()
-                .map(error -> ApiErrorResponse.ValidationError.builder()
-                        .field(error.getField())
-                        .message(error.getDefaultMessage())
-                        .build())
+                .map(error -> Map.of("field", error.getField(), "message", error.getDefaultMessage()))
                 .toList();
 
-        ApiErrorResponse response = ApiErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation failed for one or more fields")
-                .path(request.getRequestURI())
-                .validationErrors(validationErrors)
-                .build();
-
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        ProblemDetail problemDetail = createProblemDetail(HttpStatus.BAD_REQUEST, "Validation failed for one or more fields", request);
+        problemDetail.setProperty("validationErrors", validationErrors);
+        return problemDetail;
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ApiErrorResponse> handleMaxSizeException(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+    public ProblemDetail handleMaxSizeException(MaxUploadSizeExceededException ex, HttpServletRequest request) {
         log.warn("Upload Size Exceeded at {}", request.getRequestURI());
-
-        String message = "File too large. Please upload a file smaller than the configured limit.";
-        ApiErrorResponse response = ApiErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.PAYLOAD_TOO_LARGE.value())
-                .error(HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase())
-                .message(message)
-                .path(request.getRequestURI())
-                .build();
-
-        return new ResponseEntity<>(response, HttpStatus.PAYLOAD_TOO_LARGE);
+        return createProblemDetail(HttpStatus.PAYLOAD_TOO_LARGE, "File too large. Please upload a file smaller than the configured limit.", request);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleRuntimeException(Exception ex, HttpServletRequest request) {
+    public ProblemDetail handleRuntimeException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);
-
-        return buildErrorResponse(
-                new RuntimeException("An unexpected internal error occurred. Please contact support."),
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                request
-        );
+        return createProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected internal error occurred. Please contact support.", request);
     }
 
-    private ResponseEntity<ApiErrorResponse> buildErrorResponse(Exception ex, HttpStatus status, HttpServletRequest request) {
-        ApiErrorResponse response = ApiErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(status.value())
-                .error(status.getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
-
-        return new ResponseEntity<>(response, status);
+    private ProblemDetail createProblemDetail(HttpStatus status, String detail, HttpServletRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, detail);
+        problemDetail.setInstance(URI.create(request.getRequestURI()));
+        return problemDetail;
     }
 }

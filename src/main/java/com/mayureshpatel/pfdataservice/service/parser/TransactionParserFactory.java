@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
+import com.mayureshpatel.pfdataservice.model.BankName;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.stream.Collectors;
 
 @Component
 public class TransactionParserFactory {
-    private final Map<String, TransactionParser> transactionParsers;
+    private final Map<BankName, TransactionParser> transactionParsers;
 
     public TransactionParserFactory(List<TransactionParser> parsers) {
         this.transactionParsers = parsers.stream()
@@ -17,7 +18,8 @@ public class TransactionParserFactory {
     }
 
     public TransactionParser getTransactionParser(String bankName) {
-        TransactionParser transactionParser = transactionParsers.get(bankName.toUpperCase());
+        BankName bank = BankName.fromString(bankName);
+        TransactionParser transactionParser = transactionParsers.get(bank);
 
         if (transactionParser == null) {
             throw new IllegalArgumentException("No parser found for bank: " + bankName);

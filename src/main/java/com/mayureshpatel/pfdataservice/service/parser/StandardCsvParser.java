@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
+import com.mayureshpatel.pfdataservice.model.BankName;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import org.apache.commons.csv.CSVFormat;
@@ -19,8 +20,8 @@ import java.util.List;
 @Component
 public class StandardCsvParser implements TransactionParser {
     @Override
-    public String getBankName() {
-        return "STANDARD";
+    public BankName getBankName() {
+        return BankName.STANDARD;
     }
 
     @Override
