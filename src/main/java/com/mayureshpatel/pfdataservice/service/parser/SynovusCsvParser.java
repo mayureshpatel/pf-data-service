@@ -39,7 +39,7 @@ public class SynovusCsvParser implements TransactionParser {
             .setIgnoreHeaderCase(true)
             .setTrim(true)
             .setIgnoreSurroundingSpaces(true)
-            .build();
+            .get();
 
     @Override
     public String getBankName() {
@@ -52,7 +52,7 @@ public class SynovusCsvParser implements TransactionParser {
         List<Transaction> transactions = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-             CSVParser csvParser = new CSVParser(reader, CSV_FORMAT)) {
+             CSVParser csvParser = CSV_FORMAT.parse(reader)) {
 
             for (CSVRecord csvRecord : csvParser) {
                 if (isValidRecord(csvRecord)) {

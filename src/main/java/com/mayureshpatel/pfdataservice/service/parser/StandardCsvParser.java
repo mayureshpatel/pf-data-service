@@ -28,7 +28,7 @@ public class StandardCsvParser implements TransactionParser {
         List<Transaction> transactions = new ArrayList<>();
 
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-             CSVParser csvParser = new CSVParser(bufferedReader, CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).build())) {
+             CSVParser csvParser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get().parse(bufferedReader)) {
 
             for (CSVRecord csvRecord : csvParser) {
                 Transaction t = new Transaction();
