@@ -37,8 +37,6 @@ This roadmap outlines the steps to address the findings from the Code Review. We
     - [x] Add unit tests for the fixed `StandardCsvParser`.
     - [x] Add integration tests for edge cases (malformed CSVs, empty files) in `TransactionControllerTest` or `TransactionImportServiceTest`.
 
----
-
 ## Phase 5: Architecture & Data Safety (Round 2 Findings)
 *Goal: Decouple API from DB and fix Hibernate/Lombok pitfalls.*
 
@@ -66,4 +64,16 @@ This roadmap outlines the steps to address the findings from the Code Review. We
     - [x] Update Tests to use `@WithCustomMockUser`.
 
 ---
-**Status:** All critical refactoring, architectural improvements, and security implementation tasks are complete.
+
+## Phase 7: Final Polish & Performance (Round 3 Findings)
+*Goal: Fix remaining security gaps, improve performance, and enable frontend integration.*
+
+- [ ] **11. Fix Dashboard Security**
+    - [ ] Refactor `DashboardController` to remove `userId` param and use `@AuthenticationPrincipal`.
+- [ ] **12. Database Performance**
+    - [ ] Create Flyway V7 migration to add indices on `transactions(account_id, date)` and `categories(user_id)`.
+- [ ] **13. Developer Experience**
+    - [ ] Add `springdoc-openapi-starter-webmvc-ui` dependency for Swagger.
+    - [ ] Add `spring-boot-starter-actuator` for health checks.
+- [ ] **14. Dashboard Testing**
+    - [ ] Add unit tests for `TransactionService.getDashboardData` to ensure aggregation logic is correct.
