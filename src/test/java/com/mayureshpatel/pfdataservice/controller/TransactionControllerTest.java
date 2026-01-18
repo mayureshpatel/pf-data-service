@@ -65,6 +65,21 @@ class TransactionControllerTest {
     }
 
     @Test
+    void uploadTransactions_ShouldReturnBadRequest_WhenFileIsEmpty() throws Exception {
+        Long accountId = 1L;
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.csv", MediaType.TEXT_PLAIN_VALUE, new byte[0]
+        );
+
+        mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", accountId)
+                        .file(file)
+                        .param("bankName", "BANK"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("File must not be empty"));
+    }
+
+    @Test
     void saveTransactions_ShouldReturnSuccessMessage() throws Exception {
         Long accountId = 1L;
         Transaction t = new Transaction();

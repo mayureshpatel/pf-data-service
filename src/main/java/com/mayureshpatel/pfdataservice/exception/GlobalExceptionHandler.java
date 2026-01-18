@@ -30,6 +30,18 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
     }
 
+    @ExceptionHandler(CsvParsingException.class)
+    public ResponseEntity<ApiErrorResponse> handleCsvParsingException(CsvParsingException ex, HttpServletRequest request) {
+        log.warn("CSV Parsing Error: {} at {}", ex.getMessage(), request.getRequestURI());
+        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler(DuplicateImportException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateImportException(DuplicateImportException ex, HttpServletRequest request) {
+        log.warn("Duplicate Import: {} at {}", ex.getMessage(), request.getRequestURI());
+        return buildErrorResponse(ex, HttpStatus.CONFLICT, request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
         log.warn("Validation Failed at {}: {}", request.getRequestURI(), ex.getBindingResult());

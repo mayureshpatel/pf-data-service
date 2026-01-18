@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.model.TransactionType;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+@Component
 public class StandardCsvParser implements TransactionParser {
     @Override
     public String getBankName() {
@@ -31,10 +33,16 @@ public class StandardCsvParser implements TransactionParser {
             for (CSVRecord csvRecord : csvParser) {
                 Transaction t = new Transaction();
 
-                t.setDescription(csvRecord.get("description"));
-                t.setAmount(new BigDecimal(csvRecord.get("amount")));
+                String description = csvRecord.get("description");
+                String amountStr = csvRecord.get("amount").replace("$", "").replace(",", "");
+                BigDecimal amount = new BigDecimal(amountStr);
+
+                TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
+
+                t.setDescription(description);
+                t.setAmount(amount.abs());
                 t.setDate(LocalDate.parse(csvRecord.get("date")));
-                t.setType(TransactionType.EXPENSE);
+                t.setType(type);
 
                 transactions.add(t);
             }

@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
+import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
+import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.model.Account;
 import com.mayureshpatel.pfdataservice.model.FileImportHistory;
 import com.mayureshpatel.pfdataservice.model.Transaction;
@@ -53,7 +55,7 @@ public class TransactionImportService {
         String fileHash = calculateFileHash(fileContent);
         if (fileImportHistoryRepository.existsByAccountIdAndFileHash(accountId, fileHash)) {
             log.warn("Duplicate file upload attempt detected. Account ID: {}, Hash: {}", accountId, fileHash);
-            throw new IllegalArgumentException("This file has already been imported for this account.");
+            throw new DuplicateImportException("This file has already been imported for this account.");
         }
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
@@ -76,7 +78,7 @@ public class TransactionImportService {
             return previews;
         } catch (Exception e) {
             log.error("Failed to process transaction preview for Account ID: {}", accountId, e);
-            throw new RuntimeException("Error processing transaction file", e);
+            throw new CsvParsingException("Error processing transaction file", e);
         }
     }
 
@@ -92,7 +94,7 @@ public class TransactionImportService {
 
         if (fileHash != null && fileImportHistoryRepository.existsByAccountIdAndFileHash(accountId, fileHash)) {
             log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);
-            throw new IllegalArgumentException("This file has already been imported.");
+            throw new DuplicateImportException("This file has already been imported.");
         }
 
         List<Transaction> uniqueTransactions = new ArrayList<>();

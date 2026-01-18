@@ -1,13 +1,45 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
+import com.mayureshpatel.pfdataservice.model.CategoryRule;
 import com.mayureshpatel.pfdataservice.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.CategoryRuleRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class TransactionCategorizerTest {
 
-    private final TransactionCategorizer categorizer = new TransactionCategorizer();
+    @Mock
+    private CategoryRuleRepository categoryRuleRepository;
+
+    private TransactionCategorizer categorizer;
+
+    @BeforeEach
+    void setUp() {
+        categorizer = new TransactionCategorizer(categoryRuleRepository);
+
+        // Mock rules - Order matters (simulating Priority DESC, Length DESC)
+        List<CategoryRule> rules = List.of(
+                new CategoryRule(4L, "UBER EATS", "Dining Out", 5), // High priority
+                new CategoryRule(1L, "PUBLIX", "Groceries", 1),
+                new CategoryRule(2L, "KROGER", "Groceries", 1),
+                new CategoryRule(3L, "MCDONALD", "Dining Out", 1),
+                new CategoryRule(5L, "UBER", "Transportation", 1), // Lower priority than Uber Eats
+                new CategoryRule(6L, "SHELL", "Gas", 1),
+                new CategoryRule(7L, "NETFLIX", "Entertainment", 1)
+        );
+
+        when(categoryRuleRepository.findAllOrdered()).thenReturn(rules);
+        categorizer.refreshRules();
+    }
 
     @Test
     void shouldCategorizeKnownMerchants() {

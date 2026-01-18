@@ -1,59 +1,41 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
+import com.mayureshpatel.pfdataservice.model.CategoryRule;
 import com.mayureshpatel.pfdataservice.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.CategoryRuleRepository;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public class TransactionCategorizer {
-    private static final Map<String, String> KEYWORD_RULES = new HashMap<>();
 
-    static {
-        // Groceries
-        KEYWORD_RULES.put("PUBLIX", "Groceries");
-        KEYWORD_RULES.put("KROGER", "Groceries");
-        KEYWORD_RULES.put("WHOLE FOODS", "Groceries");
-        KEYWORD_RULES.put("TRADER JOE", "Groceries");
-        KEYWORD_RULES.put("WALMART", "Groceries");
-        KEYWORD_RULES.put("WEGMANS", "Groceries");
+    private final CategoryRuleRepository categoryRuleRepository;
+    private List<CategoryRule> cachedRules = Collections.emptyList();
 
-        // Dining
-        KEYWORD_RULES.put("MCDONALD", "Dining Out");
-        KEYWORD_RULES.put("STARBUCKS", "Dining Out");
-        KEYWORD_RULES.put("DUNKIN", "Dining Out");
-        KEYWORD_RULES.put("TACO BELL", "Dining Out");
-        KEYWORD_RULES.put("CHIPOTLE", "Dining Out");
-        KEYWORD_RULES.put("UBER EATS", "Dining Out");
-        KEYWORD_RULES.put("DOMINO", "Dining Out");
+    @PostConstruct
+    public void init() {
+        refreshRules();
+    }
 
-        // Utilities/Services
-        KEYWORD_RULES.put("AT&T", "Utilities");
-        KEYWORD_RULES.put("VERIZON", "Utilities");
-        KEYWORD_RULES.put("XFINITY", "Utilities");
-        KEYWORD_RULES.put("POWER", "Utilities");
-        KEYWORD_RULES.put("WATER", "Utilities");
-
-        // Entertainment
-        KEYWORD_RULES.put("NETFLIX", "Entertainment");
-        KEYWORD_RULES.put("SPOTIFY", "Entertainment");
-        KEYWORD_RULES.put("STEAM", "Entertainment");
-        KEYWORD_RULES.put("NINTENDO", "Entertainment");
-
-        // Transport
-        KEYWORD_RULES.put("UBER", "Transportation"); // Note: Order matters if checking contains vs exact
-        KEYWORD_RULES.put("LYFT", "Transportation");
-        KEYWORD_RULES.put("SHELL", "Gas");
-        KEYWORD_RULES.put("CHEVRON", "Gas");
-        KEYWORD_RULES.put("EXXON", "Gas");
+    public void refreshRules() {
+        try {
+            this.cachedRules = categoryRuleRepository.findAllOrdered();
+            log.info("Loaded {} categorization rules from database.", cachedRules.size());
+        } catch (Exception e) {
+            log.error("Failed to load categorization rules", e);
+        }
     }
 
     /**
      * Analyzes the transaction description and returns a best-guess category name.
-     * Logic: Returns the category associated with the LONGEST matching keyword.
+     * Logic: Returns the category associated with the highest priority (then longest) matching keyword.
      */
     public String guessCategory(Transaction transaction) {
         if (transaction.getDescription() == null) {
@@ -62,10 +44,13 @@ public class TransactionCategorizer {
 
         String descUpper = transaction.getDescription().toUpperCase();
 
-        Optional<Map.Entry<String, String>> bestMatch = KEYWORD_RULES.entrySet().stream()
-                .filter(entry -> descUpper.contains(entry.getKey()))
-                .max(Comparator.comparingInt(entry -> entry.getKey().length()));
+        // Rules are ordered by Priority DESC, then Length DESC in the query
+        for (CategoryRule rule : cachedRules) {
+            if (descUpper.contains(rule.getKeyword().toUpperCase())) {
+                return rule.getCategoryName();
+            }
+        }
 
-        return bestMatch.map(Map.Entry::getValue).orElse("Uncategorized");
+        return "Uncategorized";
     }
 }

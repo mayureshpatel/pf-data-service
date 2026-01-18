@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
+import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
+import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.model.Account;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
@@ -59,8 +61,22 @@ class TransactionImportServiceTest {
         when(fileImportHistoryRepository.existsByAccountIdAndFileHash(1L, hash)).thenReturn(true);
 
         assertThatThrownBy(() -> importService.previewTransactions(1L, "BANK", content, "test.csv"))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(DuplicateImportException.class)
                 .hasMessageContaining("already been imported");
+    }
+
+    @Test
+    void previewTransactions_ShouldThrowCsvParsingException_WhenParserFails() {
+        byte[] content = "bad data".getBytes();
+        String hash = importService.calculateFileHash(content);
+
+        when(fileImportHistoryRepository.existsByAccountIdAndFileHash(1L, hash)).thenReturn(false);
+        when(parserFactory.getTransactionParser("BANK")).thenReturn(parser);
+        when(parser.parse(eq(1L), any(InputStream.class))).thenThrow(new RuntimeException("Parse error"));
+
+        assertThatThrownBy(() -> importService.previewTransactions(1L, "BANK", content, "test.csv"))
+                .isInstanceOf(CsvParsingException.class)
+                .hasMessageContaining("Error processing transaction file");
     }
 
     @Test
