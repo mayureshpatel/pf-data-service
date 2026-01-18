@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
@@ -18,9 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Component
 public class CapitalOneCsvParser implements TransactionParser {
@@ -49,23 +47,28 @@ public class CapitalOneCsvParser implements TransactionParser {
     }
 
     @Override
-    public List<Transaction> parse(Long accountId, InputStream inputStream) {
-        List<Transaction> transactions = new ArrayList<>();
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-             CSVParser csvParser = CSV_FORMAT.parse(reader)) {
-
-            for (CSVRecord csvRecord : csvParser) {
-                if (isValidRecord(csvRecord)) {
-                    parseTransaction(csvRecord).ifPresent(transactions::add);
-                }
-            }
-
-        } catch (IOException e) {
+    public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+        try {
+            CSVParser csvParser = CSV_FORMAT.parse(reader);
+            return csvParser.stream()
+                    .filter(this::isValidRecord)
+                    .map(this::parseTransaction)
+                    .flatMap(Optional::stream)
+                    .onClose(() -> {
+                        try {
+                            csvParser.close();
+                            reader.close();
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to close CSV parser resources", e);
+                        }
+                    });
+        } catch (Exception e) {
+            try {
+                reader.close();
+            } catch (Exception ignored) {}
             throw new RuntimeException("Failed to parse Capital One CSV", e);
         }
-
-        return transactions;
     }
 
     private boolean isValidRecord(CSVRecord csvRecord) {
@@ -77,12 +80,9 @@ public class CapitalOneCsvParser implements TransactionParser {
             Transaction transaction = new Transaction();
             transaction.setDate(parseDate(csvRecord.get(HEADER_DATE)));
             transaction.setDescription(buildDescription(csvRecord));
-
             BigDecimal netAmount = calculateNetAmount(csvRecord);
             configureTransactionTypeAndAmount(transaction, netAmount);
-
             transaction.setCategory(null);
-
             return Optional.of(transaction);
         } catch (Exception e) {
             return Optional.empty();
@@ -96,7 +96,6 @@ public class CapitalOneCsvParser implements TransactionParser {
     private String buildDescription(CSVRecord csvRecord) {
         String description = csvRecord.get(HEADER_DESCRIPTION);
         String bankCategory = csvRecord.isMapped(HEADER_CATEGORY) ? csvRecord.get(HEADER_CATEGORY) : null;
-
         if (StringUtils.hasText(bankCategory)) {
             return description + " (" + bankCategory + ")";
         }
@@ -106,13 +105,6 @@ public class CapitalOneCsvParser implements TransactionParser {
     private BigDecimal calculateNetAmount(CSVRecord csvRecord) {
         BigDecimal credit = parseAmount(csvRecord, HEADER_CREDIT);
         BigDecimal debit = parseAmount(csvRecord, HEADER_DEBIT);
-
-        // Capital One Logic:
-        // Debit column contains Positive numbers for expenses (e.g. 7.53)
-        // Credit column contains Positive numbers for payments (e.g. 100.00)
-        // Net = Credit - Debit
-        // Example Expense: 0 - 7.53 = -7.53
-        // Example Income: 100 - 0 = 100
         return credit.subtract(debit);
     }
 
@@ -130,13 +122,11 @@ public class CapitalOneCsvParser implements TransactionParser {
         if (!csvRecord.isMapped(header)) {
             return BigDecimal.ZERO;
         }
-
         String stringVal = csvRecord.get(header);
         if (!StringUtils.hasText(stringVal)) {
             return BigDecimal.ZERO;
         }
-
-        String amount = stringVal.replaceAll("[^\\d.-]", "");
+        String amount = stringVal.replaceAll("[^0-9.-]", "");
         try {
             return new BigDecimal(amount);
         } catch (NumberFormatException e) {

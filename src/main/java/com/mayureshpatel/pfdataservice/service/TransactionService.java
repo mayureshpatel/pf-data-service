@@ -45,8 +45,6 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
 
-        validateOwnership(userId, transaction);
-
         transaction.setAmount(dto.amount());
         transaction.setDate(dto.date());
         transaction.setDescription(dto.description());
@@ -62,8 +60,6 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
 
-        validateOwnership(userId, transaction);
-        
         // Update account balance before deleting?
         // Ideally yes, but for this MVP import-heavy logic, balance is calculated on import.
         // Let's reverse the transaction effect on balance.
@@ -76,12 +72,6 @@ public class TransactionService {
         }
         
         transactionRepository.delete(transaction);
-    }
-
-    private void validateOwnership(Long userId, Transaction transaction) {
-        if (!transaction.getAccount().getUser().getId().equals(userId)) {
-            throw new AccessDeniedException("Access denied");
-        }
     }
 
     private TransactionDto mapToDto(Transaction t) {

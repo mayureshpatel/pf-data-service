@@ -14,8 +14,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.stream.Stream;
 
 @Component
 public class StandardCsvParser implements TransactionParser {
@@ -25,32 +24,36 @@ public class StandardCsvParser implements TransactionParser {
     }
 
     @Override
-    public List<Transaction> parse(Long accountId, InputStream inputStream) {
-        List<Transaction> transactions = new ArrayList<>();
-
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-             CSVParser csvParser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get().parse(bufferedReader)) {
-
-            for (CSVRecord csvRecord : csvParser) {
-                Transaction t = new Transaction();
-
-                String description = csvRecord.get("description");
-                String amountStr = csvRecord.get("amount").replace("$", "").replace(",", "");
-                BigDecimal amount = new BigDecimal(amountStr);
-
-                TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
-
-                t.setDescription(description);
-                t.setAmount(amount.abs());
-                t.setDate(LocalDate.parse(csvRecord.get("date")));
-                t.setType(type);
-
-                transactions.add(t);
-            }
-        } catch(Exception e) {
+    public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+        try {
+            CSVParser csvParser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get().parse(reader);
+            return csvParser.stream()
+                    .map(csvRecord -> {
+                        Transaction t = new Transaction();
+                        String description = csvRecord.get("description");
+                        String amountStr = csvRecord.get("amount").replace("$", "").replace(",", "");
+                        BigDecimal amount = new BigDecimal(amountStr);
+                        TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
+                        t.setDescription(description);
+                        t.setAmount(amount.abs());
+                        t.setDate(LocalDate.parse(csvRecord.get("date")));
+                        t.setType(type);
+                        return t;
+                    })
+                    .onClose(() -> {
+                        try {
+                            csvParser.close();
+                            reader.close();
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to close CSV parser resources", e);
+                        }
+                    });
+        } catch (Exception e) {
+            try {
+                reader.close();
+            } catch (Exception ignored) {}
             throw new RuntimeException("Failed to parse Standard CSV", e);
         }
-
-        return transactions;
     }
 }

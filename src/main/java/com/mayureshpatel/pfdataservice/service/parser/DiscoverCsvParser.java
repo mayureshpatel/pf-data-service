@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
@@ -18,20 +17,17 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Component
 public class DiscoverCsvParser implements TransactionParser {
-
     private static final String HEADER_DATE = "Trans. Date";
     private static final String HEADER_DESC = "Description";
     private static final String HEADER_AMOUNT = "Amount";
     private static final String HEADER_CATEGORY = "Category";
     private static final BankName BANK_NAME = BankName.DISCOVER;
 
-    // Flexible formatter for M/d/yyyy
     private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendPattern("[M/d/yyyy][MM/dd/yyyy][yyyy-MM-dd]")
             .toFormatter();
@@ -50,23 +46,28 @@ public class DiscoverCsvParser implements TransactionParser {
     }
 
     @Override
-    public List<Transaction> parse(Long accountId, InputStream inputStream) {
-        List<Transaction> transactions = new ArrayList<>();
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-             CSVParser csvParser = CSV_FORMAT.parse(reader)) {
-
-            for (CSVRecord csvRecord : csvParser) {
-                if (isValidRecord(csvRecord)) {
-                    parseTransaction(csvRecord).ifPresent(transactions::add);
-                }
-            }
-
-        } catch (IOException e) {
+    public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+        try {
+            CSVParser csvParser = CSV_FORMAT.parse(reader);
+            return csvParser.stream()
+                    .filter(this::isValidRecord)
+                    .map(this::parseTransaction)
+                    .flatMap(Optional::stream)
+                    .onClose(() -> {
+                        try {
+                            csvParser.close();
+                            reader.close();
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to close CSV parser resources", e);
+                        }
+                    });
+        } catch (Exception e) {
+            try {
+                reader.close();
+            } catch (Exception ignored) {}
             throw new RuntimeException("Failed to parse Discover CSV", e);
         }
-
-        return transactions;
     }
 
     private boolean isValidRecord(CSVRecord csvRecord) {
@@ -78,13 +79,10 @@ public class DiscoverCsvParser implements TransactionParser {
             Transaction transaction = new Transaction();
             transaction.setDate(parseDate(csvRecord.get(HEADER_DATE)));
             transaction.setDescription(buildDescription(csvRecord));
-
             BigDecimal rawAmount = parseAmount(csvRecord);
             configureTransactionTypeAndAmount(transaction, rawAmount);
-
             transaction.setCategory(null);
             return Optional.of(transaction);
-
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -97,7 +95,6 @@ public class DiscoverCsvParser implements TransactionParser {
     private String buildDescription(CSVRecord csvRecord) {
         String description = csvRecord.get(HEADER_DESC);
         String bankCategory = csvRecord.isMapped(HEADER_CATEGORY) ? csvRecord.get(HEADER_CATEGORY) : null;
-
         if (StringUtils.hasText(bankCategory)) {
             return description + " (" + bankCategory + ")";
         }
@@ -112,8 +109,7 @@ public class DiscoverCsvParser implements TransactionParser {
         if (!StringUtils.hasText(val)) {
             return BigDecimal.ZERO;
         }
-        // Remove currency symbols, preserve negative sign
-        String cleanVal = val.replaceAll("[^\\d.-]", "");
+        String cleanVal = val.replaceAll("[^0-9.-]", "");
         try {
             return new BigDecimal(cleanVal);
         } catch (NumberFormatException e) {
@@ -122,16 +118,10 @@ public class DiscoverCsvParser implements TransactionParser {
     }
 
     private void configureTransactionTypeAndAmount(Transaction transaction, BigDecimal rawAmount) {
-        // Discover Logic:
-        // Positive Amount = Expense (Increase in debt)
-        // Negative Amount = Payment/Credit (Decrease in debt)
-
         if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
-            // Negative (-843) -> Income/Payment of 843
             transaction.setType(TransactionType.INCOME);
             transaction.setAmount(rawAmount.abs());
         } else {
-            // Positive (6.44) -> Expense of 6.44
             transaction.setType(TransactionType.EXPENSE);
             transaction.setAmount(rawAmount);
         }

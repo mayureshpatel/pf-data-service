@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -32,6 +33,7 @@ public class TransactionCrudController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
     public ResponseEntity<TransactionDto> updateTransaction(
             @PathVariable Long id,
             @RequestBody @Valid TransactionDto dto,
@@ -41,6 +43,7 @@ public class TransactionCrudController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
     public ResponseEntity<Void> deleteTransaction(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

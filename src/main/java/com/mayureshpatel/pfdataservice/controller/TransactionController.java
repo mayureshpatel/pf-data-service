@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,6 +26,7 @@ public class TransactionController {
     private final TransactionImportService transactionImportService;
 
     @PostMapping("/upload")
+    @PreAuthorize("@ss.isAccountOwner(#accountId, principal)")
     public ResponseEntity<List<TransactionPreview>> uploadTransactions(
             @PathVariable Long accountId,
             @RequestParam("file") MultipartFile file,
@@ -44,6 +46,7 @@ public class TransactionController {
     }
 
     @PostMapping("/transactions")
+    @PreAuthorize("@ss.isAccountOwner(#accountId, principal)")
     public ResponseEntity<String> saveTransactions(
             @PathVariable Long accountId,
             @RequestBody @Valid SaveTransactionRequest request,

@@ -4,10 +4,10 @@ import com.mayureshpatel.pfdataservice.model.BankName;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 
 import java.io.InputStream;
-import java.util.List;
+import java.util.stream.Stream;
 
 public interface TransactionParser {
-    List<Transaction> parse(Long accountId, InputStream inputStream);
+    Stream<Transaction> parse(Long accountId, InputStream inputStream);
 
     BankName getBankName();
 }
