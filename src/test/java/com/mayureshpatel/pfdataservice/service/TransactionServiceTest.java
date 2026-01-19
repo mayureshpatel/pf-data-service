@@ -6,6 +6,8 @@ import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,15 +17,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -34,49 +39,118 @@ class TransactionServiceTest {
     @InjectMocks
     private TransactionService transactionService;
 
-    @Test
-    void deleteTransaction_ShouldRevertBalance() {
-        Long userId = 1L;
-        Long transactionId = 100L;
+    private User user;
+    private Account account;
+    private Transaction transaction;
 
-        User owner = new User();
-        owner.setId(userId);
-        Account account = new Account();
-        account.setUser(owner);
-        account.setCurrentBalance(new BigDecimal("1000"));
+    @BeforeEach
+    void setUp() {
+        user = new User();
+        user.setId(1L);
 
-        Transaction t = new Transaction();
-        t.setAccount(account);
-        t.setAmount(new BigDecimal("50"));
-        t.setType(TransactionType.EXPENSE);
+        account = new Account();
+        account.setId(1L);
+        account.setUser(user);
+        account.setCurrentBalance(BigDecimal.valueOf(100));
 
-        when(transactionRepository.findById(transactionId)).thenReturn(Optional.of(t));
-
-        transactionService.deleteTransaction(userId, transactionId);
-
-        // Balance should be 1000 + 50 = 1050 (reverting expense)
-        assertThat(account.getCurrentBalance()).isEqualByComparingTo("1050");
-        verify(transactionRepository).delete(t);
+        transaction = new Transaction();
+        transaction.setId(1L);
+        transaction.setAccount(account);
+        transaction.setAmount(BigDecimal.valueOf(50));
+        transaction.setType(TransactionType.EXPENSE);
+        transaction.setDate(LocalDate.now());
+        transaction.setDescription("Test Transaction");
     }
-    
+
     @Test
-    void getTransactions_ShouldFilterByType() {
-        Long userId = 1L;
+    void getTransactions_ShouldReturnPage() {
         Pageable pageable = PageRequest.of(0, 10);
-        
-        Transaction t = new Transaction();
-        t.setAmount(BigDecimal.TEN);
-        t.setDate(LocalDate.now());
-        t.setType(TransactionType.INCOME);
-        
-        Page<Transaction> page = new PageImpl<>(List.of(t));
-        
-        when(transactionRepository.findByAccount_User_IdAndType(userId, TransactionType.INCOME, pageable))
-                .thenReturn(page);
-        
-        Page<TransactionDto> result = transactionService.getTransactions(userId, TransactionType.INCOME, pageable);
-        
+        Page<Transaction> page = new PageImpl<>(Collections.singletonList(transaction));
+
+        when(transactionRepository.findByAccount_User_IdOrderByDateDesc(1L, pageable)).thenReturn(page);
+
+        Page<TransactionDto> result = transactionService.getTransactions(1L, null, pageable);
+
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).type()).isEqualTo(TransactionType.INCOME);
+        verify(transactionRepository).findByAccount_User_IdOrderByDateDesc(1L, pageable);
+    }
+
+    @Test
+    void getTransactions_WithType_ShouldFilter() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Transaction> page = new PageImpl<>(Collections.singletonList(transaction));
+
+        when(transactionRepository.findByAccount_User_IdAndType(1L, TransactionType.EXPENSE, pageable)).thenReturn(page);
+
+        Page<TransactionDto> result = transactionService.getTransactions(1L, TransactionType.EXPENSE, pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        verify(transactionRepository).findByAccount_User_IdAndType(1L, TransactionType.EXPENSE, pageable);
+    }
+
+    @Test
+    void updateTransaction_Success() {
+        TransactionDto dto = TransactionDto.builder()
+                .amount(BigDecimal.valueOf(75))
+                .date(LocalDate.now().plusDays(1))
+                .description("Updated")
+                .type(TransactionType.INCOME)
+                .build();
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(transaction));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransactionDto result = transactionService.updateTransaction(1L, 1L, dto);
+
+        assertThat(result.amount()).isEqualTo(BigDecimal.valueOf(75));
+        assertThat(result.description()).isEqualTo("Updated");
+        assertThat(result.type()).isEqualTo(TransactionType.INCOME);
+        verify(transactionRepository).save(transaction);
+    }
+
+    @Test
+    void updateTransaction_NotFound_ShouldThrow() {
+        when(transactionRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> transactionService.updateTransaction(1L, 1L, mock(TransactionDto.class)))
+                .isInstanceOf(EntityNotFoundException.class);
+    }
+
+    @Test
+    void updateTransaction_WrongUser_ShouldThrow() {
+        User otherUser = new User();
+        otherUser.setId(2L);
+        account.setUser(otherUser); // Transaction now belongs to user 2
+
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(transaction));
+
+        assertThatThrownBy(() -> transactionService.updateTransaction(1L, 1L, mock(TransactionDto.class)))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void deleteTransaction_Success_ShouldUpdateBalance() {
+        // Setup: Expense of 50. Balance is 100.
+        // If deleted, balance should become 100 + 50 = 150.
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(transaction));
+
+        transactionService.deleteTransaction(1L, 1L);
+
+        assertThat(account.getCurrentBalance()).isEqualByComparingTo("150");
+        verify(transactionRepository).delete(transaction);
+    }
+
+    @Test
+    void deleteTransaction_Income_ShouldReduceBalance() {
+        transaction.setType(TransactionType.INCOME);
+        // Setup: Income of 50. Balance is 100.
+        // If deleted, balance should become 100 - 50 = 50.
+        
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(transaction));
+
+        transactionService.deleteTransaction(1L, 1L);
+
+        assertThat(account.getCurrentBalance()).isEqualByComparingTo("50");
+        verify(transactionRepository).delete(transaction);
     }
 }

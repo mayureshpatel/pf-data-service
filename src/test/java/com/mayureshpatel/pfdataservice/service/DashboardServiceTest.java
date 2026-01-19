@@ -12,11 +12,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,53 +30,49 @@ class DashboardServiceTest {
     private DashboardService dashboardService;
 
     @Test
-    void getDashboardData_ShouldCalculateNetSavingsCorrectly() {
-        // Arrange
+    void getDashboardData_ShouldCalculateTotals() {
         Long userId = 1L;
-        int month = 10;
-        int year = 2023;
-        LocalDate startDate = LocalDate.of(2023, 10, 1);
-        LocalDate endDate = LocalDate.of(2023, 10, 31);
+        int month = 1;
+        int year = 2026;
+        LocalDate start = LocalDate.of(2026, 1, 1);
+        LocalDate end = LocalDate.of(2026, 1, 31);
 
-        when(transactionRepository.getSumByDateRange(eq(userId), eq(startDate), eq(endDate), eq(TransactionType.INCOME)))
-                .thenReturn(new BigDecimal("5000.00"));
+        when(transactionRepository.getSumByDateRange(userId, start, end, TransactionType.INCOME))
+                .thenReturn(BigDecimal.valueOf(1000));
+        when(transactionRepository.getSumByDateRange(userId, start, end, TransactionType.EXPENSE))
+                .thenReturn(BigDecimal.valueOf(500));
+        
+        List<CategoryTotal> breakdown = List.of(new CategoryTotal("Food", BigDecimal.valueOf(200)));
+        when(transactionRepository.findCategoryTotals(userId, start, end)).thenReturn(breakdown);
 
-        when(transactionRepository.getSumByDateRange(eq(userId), eq(startDate), eq(endDate), eq(TransactionType.EXPENSE)))
-                .thenReturn(new BigDecimal("3000.50"));
-
-        List<CategoryTotal> breakdown = List.of(new CategoryTotal("Groceries", new BigDecimal("500")));
-        when(transactionRepository.findCategoryTotals(eq(userId), eq(startDate), eq(endDate)))
-                .thenReturn(breakdown);
-
-        // Act
         DashboardData result = dashboardService.getDashboardData(userId, month, year);
 
-        // Assert
-        assertThat(result.totalIncome()).isEqualByComparingTo("5000.00");
-        assertThat(result.totalExpense()).isEqualByComparingTo("3000.50");
-        assertThat(result.netSavings()).isEqualByComparingTo("1999.50");
+        assertThat(result.totalIncome()).isEqualTo(BigDecimal.valueOf(1000));
+        assertThat(result.totalExpense()).isEqualTo(BigDecimal.valueOf(500));
+        assertThat(result.netSavings()).isEqualTo(BigDecimal.valueOf(500));
         assertThat(result.categoryBreakdown()).hasSize(1);
+
+        verify(transactionRepository).getSumByDateRange(userId, start, end, TransactionType.INCOME);
+        verify(transactionRepository).getSumByDateRange(userId, start, end, TransactionType.EXPENSE);
+        verify(transactionRepository).findCategoryTotals(userId, start, end);
     }
 
     @Test
-    void getDashboardData_ShouldHandleNullSumsAsZero() {
-        // Arrange
+    void getDashboardData_ShouldHandleNullSums() {
         Long userId = 1L;
-        LocalDate startDate = LocalDate.of(2023, 10, 1);
-        LocalDate endDate = LocalDate.of(2023, 10, 31);
+        int month = 1;
+        int year = 2026;
+        LocalDate start = LocalDate.of(2026, 1, 1);
+        LocalDate end = LocalDate.of(2026, 1, 31);
 
-        when(transactionRepository.getSumByDateRange(eq(userId), eq(startDate), eq(endDate), any()))
-                .thenReturn(null);
+        when(transactionRepository.getSumByDateRange(userId, start, end, TransactionType.INCOME)).thenReturn(null);
+        when(transactionRepository.getSumByDateRange(userId, start, end, TransactionType.EXPENSE)).thenReturn(null);
+        when(transactionRepository.findCategoryTotals(userId, start, end)).thenReturn(Collections.emptyList());
 
-        when(transactionRepository.findCategoryTotals(any(), any(), any()))
-                .thenReturn(List.of());
+        DashboardData result = dashboardService.getDashboardData(userId, month, year);
 
-        // Act
-        DashboardData result = dashboardService.getDashboardData(userId, 10, 2023);
-
-        // Assert
-        assertThat(result.totalIncome()).isEqualByComparingTo("0");
-        assertThat(result.totalExpense()).isEqualByComparingTo("0");
-        assertThat(result.netSavings()).isEqualByComparingTo("0");
+        assertThat(result.totalIncome()).isEqualTo(BigDecimal.ZERO);
+        assertThat(result.totalExpense()).isEqualTo(BigDecimal.ZERO);
+        assertThat(result.netSavings()).isEqualTo(BigDecimal.ZERO);
     }
 }

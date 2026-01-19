@@ -45,6 +45,10 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
 
+        if (!transaction.getAccount().getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You do not own this transaction");
+        }
+
         transaction.setAmount(dto.amount());
         transaction.setDate(dto.date());
         transaction.setDescription(dto.description());
@@ -59,6 +63,10 @@ public class TransactionService {
     public void deleteTransaction(Long userId, Long transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+
+        if (!transaction.getAccount().getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You do not own this transaction");
+        }
 
         // Update account balance before deleting?
         // Ideally yes, but for this MVP import-heavy logic, balance is calculated on import.

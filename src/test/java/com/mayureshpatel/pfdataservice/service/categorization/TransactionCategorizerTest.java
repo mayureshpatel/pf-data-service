@@ -28,14 +28,15 @@ class TransactionCategorizerTest {
         categorizer = new TransactionCategorizer(categoryRuleRepository);
 
         // Mock rules - Order matters (simulating Priority DESC, Length DESC)
+        // Constructor: id, keyword, categoryName, priority, user, createdAt, updatedAt
         rules = List.of(
-                new CategoryRule(4L, "UBER EATS", "Dining Out", 5, null), // High priority
-                new CategoryRule(1L, "PUBLIX", "Groceries", 1, null),
-                new CategoryRule(2L, "KROGER", "Groceries", 1, null),
-                new CategoryRule(3L, "MCDONALD", "Dining Out", 1, null),
-                new CategoryRule(5L, "UBER", "Transportation", 1, null), // Lower priority than Uber Eats
-                new CategoryRule(6L, "SHELL", "Gas", 1, null),
-                new CategoryRule(7L, "NETFLIX", "Entertainment", 1, null)
+                new CategoryRule(4L, "UBER EATS", "Dining Out", 5, null, null, null), 
+                new CategoryRule(1L, "PUBLIX", "Groceries", 1, null, null, null),
+                new CategoryRule(2L, "KROGER", "Groceries", 1, null, null, null),
+                new CategoryRule(3L, "MCDONALD", "Dining Out", 1, null, null, null),
+                new CategoryRule(5L, "UBER", "Transportation", 1, null, null, null), 
+                new CategoryRule(6L, "SHELL", "Gas", 1, null, null, null),
+                new CategoryRule(7L, "NETFLIX", "Entertainment", 1, null, null, null)
         );
     }
 
