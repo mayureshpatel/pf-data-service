@@ -19,12 +19,12 @@ This roadmap outlines the evolution of the `pf-data-service` data layer, priorit
     - [x] Update Java entities with `@CreationTimestamp` / `@UpdateTimestamp`.
 
 ## Phase 3: Performance & Scalability
-- [ ] **5. Reporting Indices**
-    - [ ] Create index on `transactions(category_id)`.
-    - [ ] Enable `pg_trgm` extension and add GIN index to `transactions(description)`.
-- [ ] **6. Balance Snapshots**
-    - [ ] Design `monthly_account_snapshots` table.
-    - [ ] Implement end-of-month balance calculation job.
+- [x] **5. Reporting Indices**
+    - [x] Create index on `transactions(category_id)`.
+    - [x] Enable `pg_trgm` extension and add GIN index to `transactions(description)`.
+- [x] **6. Balance Snapshots**
+    - [x] Design `monthly_account_snapshots` table.
+    - [x] Implement end-of-month balance calculation job (Service implemented).
 
 ## Phase 4: Advanced Features
 - [ ] **7. Soft Deletes**

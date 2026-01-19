@@ -97,4 +97,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("tagNames") List<String> tagNames,
             @Param("tagCount") Long tagCount
     );
+
+    @Query("SELECT SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END) FROM Transaction t WHERE t.account.id = :accountId AND t.date > :date")
+    BigDecimal getNetFlowAfterDate(@Param("accountId") Long accountId, @Param("date") LocalDate date);
 }
