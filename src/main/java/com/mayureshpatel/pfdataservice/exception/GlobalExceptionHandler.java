@@ -62,6 +62,12 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.PAYLOAD_TOO_LARGE, "File too large. Please upload a file smaller than the configured limit.", request);
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ProblemDetail handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException ex, HttpServletRequest request) {
+        log.warn("No Resource Found: {} at {}", ex.getMessage(), request.getRequestURI());
+        return createProblemDetail(HttpStatus.NOT_FOUND, "The requested resource was not found.", request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleRuntimeException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);
