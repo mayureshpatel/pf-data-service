@@ -1,47 +1,51 @@
-# Senior Software Engineer Code Review (Final Architecture Review)
-**Date:** January 18, 2026
+# Senior Software Engineer Code Review
+
+**Date:** January 19, 2026
 **Project:** Personal Finance Data Service (Backend MVP)
 **Version:** Spring Boot 3.5.3 | Java 21
 
 ## Executive Summary
-The `pf-data-service` has transitioned from a standard MVP into a high-quality, modern Spring Boot application. The implementation of stateless security, Java 21 features (Records, Streams), and standardized error handling (RFC 7807) puts it well ahead of typical MVP versions.
+The codebase is in excellent shape for a "Hardening" phase. The recent addition of **Unit Tests** achieving >90% coverage on core logic is a major win. The application correctly implements a layered architecture (Controller -> Service -> Repository) and adheres to modern Spring Boot practices.
+
+However, the removal of Integration Tests (Testcontainers) leaves a gap in verifying end-to-end flows (specifically DB interactions). Additionally, the **Scheduler** for snapshots is implemented but not enabled, rendering the feature dormant.
 
 ## 1. Architectural Integrity
 
 ### Strengths
-*   **Separation of Concerns:** High. The extraction of analytical logic into `DashboardService` and security logic into `SecurityService` has kept the domain services focused and clean.
-*   **Strategy Pattern:** The CSV parsing infrastructure is robust. Adding a new bank format now only requires implementing one interface, with zero changes to the orchestration layer.
-*   **Modern Data Carriers:** Full adoption of **Java Records** for DTOs ensures immutability and reduces memory overhead.
+*   **Immutability:** Extensive use of Java `records` for DTOs (`TransactionDto`, `DashboardData`).
+*   **Stateless Design:** Services are stateless singleton beans, relying on the DB for state, which is correct.
+*   **Separation of Concerns:** `TransactionImportService` separates heavy parsing logic from CRUD logic in `TransactionService`.
 
 ### Areas for Improvement
-*   **Component Mapping:** Mapping logic is currently manual (e.g., `mapToDto` in `TransactionService`).
-    *   *Recommendation:* Adopt **MapStruct**. It generates high-performance mapping code at compile-time and keeps mapping configurations separate from business logic.
-*   **Domain Validation:** While DTOs have JSR-303 annotations, the domain entities themselves could benefit from more robust defensive programming or self-validation to ensure data integrity at the persistence level.
+*   **Manual Mapping:** `TransactionService.mapToDto` is boilerplat-y. As the domain grows, this will become a maintenance burden.
+    *   *Recommendation:* Adopt **MapStruct** for type-safe, compile-time mapping.
+*   **Dormant Features:** `SnapshotService` contains valuable business logic but is never invoked. The `PfDataServiceApplication` is missing `@EnableScheduling`.
 
-## 2. Security & Observability
+## 2. Code Quality & Security
 
 ### Strengths
-*   **Declarative Security:** Excellent use of `@PreAuthorize` with custom bean expressions (`@ss.isAccountOwner`). This keeps controllers concise and security logic centralized.
-*   **Stateless JWT:** Correctly implemented. The use of `MDC` for correlation IDs in `RequestLoggingFilter` is a senior-level detail that drastically improves production troubleshooting.
+*   **Security Fixes:** Recent changes to `TransactionService` added explicit ownership checks (`!transaction.getAccount().getUser().getId().equals(userId)`), fixing a critical IDOR vulnerability.
+*   **Validation:** DTOs are properly annotated with `jakarta.validation` annotations (`@NotNull`).
+*   **Soft Deletes:** `User`, `Account`, and `Transaction` use Hibernate's `@SQLDelete` and `@SQLRestriction` for robust soft deletion.
 
 ### Areas for Improvement
-*   **Auth Controller Complexity:** The `AuthenticationController` handles login directly. 
-    *   *Recommendation:* Consider extracting a `UserRegistrationService` if the project expands to support self-service signups, keeping the `AuthenticationService` focused on token lifecycle.
+*   **Entity Validation:** While DTOs are validated, Entities like `User` rely solely on Database constraints (`nullable=false`). Adding JSR-303 annotations to Entities is a good defensive practice.
+*   **Magic Strings:** Security expressions like `@PreAuthorize("@ss.isAccountOwner...")` rely on the bean name `ss`. Refactoring this to a constant or stricter naming convention would prevent regression if the bean is renamed.
 
-## 3. Testing Quality
-
-### Strengths
-*   **Slice Isolation:** Tests are properly categorized (`@WebMvcTest`, `@DataJpaTest`), which speeds up the local feedback loop.
-*   **Test Syntax:** Tests have been modernized to match the Record-based DTOs and Stream-based parsers.
-
-### Critical Issues
-*   **Environmental Dependency:** The project still lacks a way to run unit tests without a Docker engine (due to `Testcontainers`). This is the primary blocker for a robust CI/CD pipeline in restricted environments.
-
-## 4. Performance & Scalability
+## 3. Testing
 
 ### Strengths
-*   **Streaming CSV Parsing:** A major improvement. Returning `Stream<Transaction>` ensures that even multi-megabyte CSV files will not crash the service with `OutOfMemoryError`.
-*   **Hibernate Batching:** Correctly configured in `application.yml`, allowing the service to handle large imports with minimal database round-trips.
+*   **Unit Coverage:** High coverage for Services and Controllers using `Mockito` and `@WebMvcTest`.
+*   **Mocking:** Proper isolation of dependencies (Security, Repositories).
+
+### Risks
+*   **Integration Gap:** Testcontainers was removed to resolve local environment issues. This means strictly relying on Unit Tests. We have no verification that the custom JPQL queries in `TransactionRepository` (e.g., `getNetFlowAfterDate`) actually execute correctly against a real Postgres instance.
+
+## 4. Maintainability
+
+### Strengths
+*   **Java 21 Features:** Good use of `var` and Streams.
+*   **Project Structure:** Clear package organization by feature/layer.
 
 ---
-**Verdict:** This backend is ready for production deployment once the operational stability tasks (Maven profiles and secrets externalization) are completed. It is an idiomatic example of a modern Spring Boot 3 service.
+**Verdict:** The code is **Clean and Testable**. The immediate priority is enabling the Scheduler to activate the Snapshot feature and then setting up MapStruct to reduce boilerplate.
