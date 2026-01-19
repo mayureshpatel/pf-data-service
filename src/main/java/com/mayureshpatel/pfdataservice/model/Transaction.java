@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLDelete;
@@ -31,15 +32,18 @@ public class Transaction {
     private Long id;
 
     @Column(nullable = false, precision = 19, scale = 2)
+    @NotNull
     private BigDecimal amount;
 
     @Column(nullable = false)
+    @NotNull
     private LocalDate date;
 
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @NotNull
     private TransactionType type;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -75,6 +75,21 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.BAD_REQUEST, detail, request);
     }
 
+    @ExceptionHandler({
+            org.springframework.security.access.AccessDeniedException.class,
+            org.springframework.security.authorization.AuthorizationDeniedException.class
+    })
+    public ProblemDetail handleAccessDenied(Exception ex, HttpServletRequest request) {
+        log.warn("Access Denied: {} at {}", ex.getMessage(), request.getRequestURI());
+        return createProblemDetail(HttpStatus.FORBIDDEN, "You do not have permission to access this resource.", request);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Data Integrity Violation: {} at {}", ex.getMessage(), request.getRequestURI());
+        return createProblemDetail(HttpStatus.BAD_REQUEST, "Database constraint violation. Please check your input data.", request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleRuntimeException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);

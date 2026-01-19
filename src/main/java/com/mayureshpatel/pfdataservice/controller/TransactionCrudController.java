@@ -40,7 +40,7 @@ public class TransactionCrudController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@securityService.isTransactionOwner(#id, principal)")
+    @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
     public ResponseEntity<TransactionDto> updateTransaction(
             @PathVariable Long id,
             @RequestBody @Valid TransactionDto dto,
@@ -50,7 +50,7 @@ public class TransactionCrudController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@securityService.isTransactionOwner(#id, principal)")
+    @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
     public ResponseEntity<Void> deleteTransaction(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
