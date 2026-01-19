@@ -3,6 +3,8 @@ package com.mayureshpatel.pfdataservice.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.proxy.HibernateProxy;
 
@@ -11,6 +13,8 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "users")
+@SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @ToString
@@ -41,6 +45,9 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdTimestamp;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Override
     public final boolean equals(Object o) {

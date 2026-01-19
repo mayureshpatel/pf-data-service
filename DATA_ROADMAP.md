@@ -27,11 +27,11 @@ This roadmap outlines the evolution of the `pf-data-service` data layer, priorit
     - [x] Implement end-of-month balance calculation job (Service implemented).
 
 ## Phase 4: Advanced Features
-- [ ] **7. Soft Deletes**
-    - [ ] Add `deleted_at` column to critical tables.
-    - [ ] Implement Hibernate `@Where(clause = "deleted_at IS NULL")` or similar pattern.
+- [x] **7. Soft Deletes**
+    - [x] Add `deleted_at` column to critical tables.
+    - [x] Implement Hibernate `@SQLRestriction("deleted_at IS NULL")` pattern.
 - [ ] **8. Data Archival**
-    - [ ] Implement table partitioning for `transactions` (by Year).
+    - [ ] Implement table partitioning for `transactions` (Deferred: Requires PK refactoring, overkill for MVP).
 
 ---
-**Status:** Updated Jan 19, 2026 following comprehensive code & schema review.
+**Status:** Updated Jan 19, 2026. Phases 1-3 Complete. Phase 4 (Soft Deletes) Complete. Partitioning deferred.
