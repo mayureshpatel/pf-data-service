@@ -17,35 +17,24 @@ import java.util.List;
 public class TransactionCategorizer {
 
     private final CategoryRuleRepository categoryRuleRepository;
-    private volatile List<CategoryRule> cachedRules = Collections.emptyList();
 
-    @PostConstruct
-    public void init() {
-        refreshRules();
-    }
-
-    public void refreshRules() {
-        try {
-            this.cachedRules = categoryRuleRepository.findAllOrdered();
-            log.info("Loaded {} categorization rules from database.", cachedRules.size());
-        } catch (Exception e) {
-            log.error("Failed to load categorization rules", e);
-        }
+    public List<CategoryRule> loadRulesForUser(Long userId) {
+        return categoryRuleRepository.findByUserOrGlobal(userId);
     }
 
     /**
      * Analyzes the transaction description and returns a best-guess category name.
      * Logic: Returns the category associated with the highest priority (then longest) matching keyword.
      */
-    public String guessCategory(Transaction transaction) {
+    public String guessCategory(Transaction transaction, List<CategoryRule> rules) {
         if (transaction.getDescription() == null) {
             return "Uncategorized";
         }
 
         String descUpper = transaction.getDescription().toUpperCase();
 
-        // Rules are ordered by Priority DESC, then Length DESC in the query
-        for (CategoryRule rule : cachedRules) {
+        // Rules are expected to be ordered by Priority DESC, then Length DESC
+        for (CategoryRule rule : rules) {
             if (descUpper.contains(rule.getKeyword().toUpperCase())) {
                 return rule.getCategoryName();
             }

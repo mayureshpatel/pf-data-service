@@ -21,24 +21,22 @@ class TransactionCategorizerTest {
     private CategoryRuleRepository categoryRuleRepository;
 
     private TransactionCategorizer categorizer;
+    private List<CategoryRule> rules;
 
     @BeforeEach
     void setUp() {
         categorizer = new TransactionCategorizer(categoryRuleRepository);
 
         // Mock rules - Order matters (simulating Priority DESC, Length DESC)
-        List<CategoryRule> rules = List.of(
-                new CategoryRule(4L, "UBER EATS", "Dining Out", 5), // High priority
-                new CategoryRule(1L, "PUBLIX", "Groceries", 1),
-                new CategoryRule(2L, "KROGER", "Groceries", 1),
-                new CategoryRule(3L, "MCDONALD", "Dining Out", 1),
-                new CategoryRule(5L, "UBER", "Transportation", 1), // Lower priority than Uber Eats
-                new CategoryRule(6L, "SHELL", "Gas", 1),
-                new CategoryRule(7L, "NETFLIX", "Entertainment", 1)
+        rules = List.of(
+                new CategoryRule(4L, "UBER EATS", "Dining Out", 5, null), // High priority
+                new CategoryRule(1L, "PUBLIX", "Groceries", 1, null),
+                new CategoryRule(2L, "KROGER", "Groceries", 1, null),
+                new CategoryRule(3L, "MCDONALD", "Dining Out", 1, null),
+                new CategoryRule(5L, "UBER", "Transportation", 1, null), // Lower priority than Uber Eats
+                new CategoryRule(6L, "SHELL", "Gas", 1, null),
+                new CategoryRule(7L, "NETFLIX", "Entertainment", 1, null)
         );
-
-        when(categoryRuleRepository.findAllOrdered()).thenReturn(rules);
-        categorizer.refreshRules();
     }
 
     @Test
@@ -62,12 +60,12 @@ class TransactionCategorizerTest {
     void shouldHandleNullDescription() {
         Transaction t = new Transaction();
         t.setDescription(null);
-        assertThat(categorizer.guessCategory(t)).isEqualTo("Uncategorized");
+        assertThat(categorizer.guessCategory(t, rules)).isEqualTo("Uncategorized");
     }
 
     private void assertCategory(String desc, String expectedCategory) {
         Transaction t = new Transaction();
         t.setDescription(desc);
-        assertThat(categorizer.guessCategory(t)).isEqualTo(expectedCategory);
+        assertThat(categorizer.guessCategory(t, rules)).isEqualTo(expectedCategory);
     }
 }

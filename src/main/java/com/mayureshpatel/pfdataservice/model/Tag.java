@@ -29,6 +29,14 @@ public class Tag {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @org.hibernate.annotations.UpdateTimestamp
+    @Column(name = "updated_at")
+    private java.time.LocalDateTime updatedAt;
+
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;

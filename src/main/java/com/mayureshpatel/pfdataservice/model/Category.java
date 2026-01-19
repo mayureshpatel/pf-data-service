@@ -10,7 +10,7 @@ import java.util.Objects;
 @Table(name = "categories")
 @Getter
 @Setter
-@ToString(exclude = {"user"})
+@ToString(exclude = {"user", "parent", "subCategories"})
 @NoArgsConstructor
 @AllArgsConstructor
 public class Category {
@@ -28,6 +28,21 @@ public class Category {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Category parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.Set<Category> subCategories = new java.util.HashSet<>();
+
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @org.hibernate.annotations.UpdateTimestamp
+    @Column(name = "updated_at")
+    private java.time.LocalDateTime updatedAt;
 
     @Override
     public final boolean equals(Object o) {

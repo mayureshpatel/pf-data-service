@@ -3,20 +3,20 @@
 This roadmap outlines the evolution of the `pf-data-service` data layer, prioritizing critical fixes and scalability.
 
 ## Phase 1: Critical Fixes (Immediate)
-- [ ] **1. Fix Code-Schema Discrepancy**
-    - [ ] Update `Category.java` to map the `parent_id` column (Self-referencing `@ManyToOne`).
-    - [ ] Update `CategoryDto` (if exists) or API models to expose hierarchy.
-- [ ] **2. Fix Association Mapping**
-    - [ ] Refactor `FileImportHistory` to use `@ManyToOne` for `Account` instead of raw ID.
+- [x] **1. Fix Code-Schema Discrepancy**
+    - [x] Update `Category.java` to map the `parent_id` column (Self-referencing `@ManyToOne`).
+    - [x] Update `CategoryDto` (if exists) or API models to expose hierarchy.
+- [x] **2. Fix Association Mapping**
+    - [x] Refactor `FileImportHistory` to use `@ManyToOne` for `Account` instead of raw ID.
 
 ## Phase 2: Data Integrity & Multi-Tenancy
-- [ ] **3. Personalize Categorization**
-    - [ ] Add `user_id` column to `category_rules`.
-    - [ ] Migrate existing rules to system defaults or specific users.
-    - [ ] Update `TransactionCategorizer` logic to respect user scopes.
-- [ ] **4. Standardize Auditing**
-    - [ ] Add `created_at` and `updated_at` to `categories`, `tags`, and `category_rules` (DB migration).
-    - [ ] Update Java entities with `@CreationTimestamp` / `@UpdateTimestamp`.
+- [x] **3. Personalize Categorization**
+    - [x] Add `user_id` column to `category_rules`.
+    - [x] Migrate existing rules to system defaults or specific users.
+    - [x] Update `TransactionCategorizer` logic to respect user scopes.
+- [x] **4. Standardize Auditing**
+    - [x] Add `created_at` and `updated_at` to `categories`, `tags`, and `category_rules` (DB migration).
+    - [x] Update Java entities with `@CreationTimestamp` / `@UpdateTimestamp`.
 
 ## Phase 3: Performance & Scalability
 - [ ] **5. Reporting Indices**

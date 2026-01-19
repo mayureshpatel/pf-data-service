@@ -76,7 +76,8 @@ class TransactionImportServiceTest {
         t1.setType(TransactionType.EXPENSE);
 
         when(parser.parse(eq(1L), any(InputStream.class))).thenReturn(Stream.of(t1));
-        when(categorizer.guessCategory(t1)).thenReturn("Groceries");
+        when(categorizer.loadRulesForUser(10L)).thenReturn(List.of());
+        when(categorizer.guessCategory(eq(t1), anyList())).thenReturn("Groceries");
 
         List<TransactionPreview> result = importService.previewTransactions(10L, 1L, "BANK", is, "test.csv");
 

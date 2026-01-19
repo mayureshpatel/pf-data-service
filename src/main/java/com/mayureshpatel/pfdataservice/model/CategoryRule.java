@@ -10,7 +10,7 @@ import java.util.Objects;
 @Table(name = "category_rules")
 @Getter
 @Setter
-@ToString
+@ToString(exclude = {"user"})
 @NoArgsConstructor
 @AllArgsConstructor
 public class CategoryRule {
@@ -27,6 +27,18 @@ public class CategoryRule {
 
     @Column(nullable = false)
     private Integer priority;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @org.hibernate.annotations.UpdateTimestamp
+    @Column(name = "updated_at")
+    private java.time.LocalDateTime updatedAt;
 
     @Override
     public final boolean equals(Object o) {

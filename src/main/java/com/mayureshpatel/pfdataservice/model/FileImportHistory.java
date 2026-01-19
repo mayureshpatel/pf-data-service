@@ -12,7 +12,7 @@ import java.util.Objects;
 @Table(name = "file_import_history")
 @Getter
 @Setter
-@ToString
+@ToString(exclude = {"account"})
 @NoArgsConstructor
 @AllArgsConstructor
 public class FileImportHistory {
@@ -21,8 +21,9 @@ public class FileImportHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long accountId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", nullable = false)
+    private Account account;
 
     @Column(nullable = false)
     private String fileName;

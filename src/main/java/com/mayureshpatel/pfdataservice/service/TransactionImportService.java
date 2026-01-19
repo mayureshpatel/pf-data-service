@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.model.Account;
+import com.mayureshpatel.pfdataservice.model.CategoryRule;
 import com.mayureshpatel.pfdataservice.model.FileImportHistory;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
@@ -56,6 +57,7 @@ public class TransactionImportService {
         log.info("Starting transaction preview for User: {}, Account ID: {}, Bank: {}, File: {}", userId, accountId, bankName, fileName);
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
+        List<CategoryRule> userRules = categorizer.loadRulesForUser(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
             List<TransactionPreview> previews = rawTransactionStream
@@ -64,7 +66,7 @@ public class TransactionImportService {
                             .description(t.getDescription())
                             .amount(t.getAmount())
                             .type(t.getType())
-                            .suggestedCategory(categorizer.guessCategory(t))
+                            .suggestedCategory(categorizer.guessCategory(t, userRules))
                             .build())
                     .toList();
 
@@ -114,7 +116,7 @@ public class TransactionImportService {
 
             if (fileName != null && fileHash != null) {
                 FileImportHistory history = new FileImportHistory();
-                history.setAccountId(accountId);
+                history.setAccount(account);
                 history.setFileName(fileName);
                 history.setFileHash(fileHash);
                 history.setTransactionCount(uniqueTransactions.size());
