@@ -5,7 +5,7 @@ import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-@Service("ss")
+@Service("securityService")
 @RequiredArgsConstructor
 public class SecurityService {
 

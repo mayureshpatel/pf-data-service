@@ -9,6 +9,8 @@ import java.time.LocalDate;
 
 @Builder
 public record TransactionDto(
+        Long id,
+
         @NotNull(message = "Date is required")
         LocalDate date,
 
@@ -20,6 +22,8 @@ public record TransactionDto(
         @NotNull(message = "Transaction type is required")
         TransactionType type,
 
-        String categoryName
+        String categoryName,
+
+        Long accountId
 ) {
 }

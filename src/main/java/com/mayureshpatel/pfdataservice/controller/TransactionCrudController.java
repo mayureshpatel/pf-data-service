@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
-import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionService;
@@ -12,8 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -32,8 +31,16 @@ public class TransactionCrudController {
         return ResponseEntity.ok(transactionService.getTransactions(userDetails.getId(), type, pageable));
     }
 
+    @PostMapping
+    public ResponseEntity<TransactionDto> createTransaction(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid TransactionDto dto) {
+
+        return ResponseEntity.ok(transactionService.createTransaction(userDetails.getId(), dto));
+    }
+
     @PutMapping("/{id}")
-    @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
+    @PreAuthorize("@securityService.isTransactionOwner(#id, principal)")
     public ResponseEntity<TransactionDto> updateTransaction(
             @PathVariable Long id,
             @RequestBody @Valid TransactionDto dto,
@@ -43,7 +50,7 @@ public class TransactionCrudController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
+    @PreAuthorize("@securityService.isTransactionOwner(#id, principal)")
     public ResponseEntity<Void> deleteTransaction(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
