@@ -68,6 +68,13 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.NOT_FOUND, "The requested resource was not found.", request);
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        log.warn("Type Mismatch: {} at {}", ex.getMessage(), request.getRequestURI());
+        String detail = String.format("Parameter '%s' should be of type '%s'", ex.getName(), ex.getRequiredType().getSimpleName());
+        return createProblemDetail(HttpStatus.BAD_REQUEST, detail, request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleRuntimeException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);
