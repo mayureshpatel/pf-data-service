@@ -29,4 +29,12 @@ public class CategoryController {
             @RequestBody @Valid CategoryDto categoryDto) {
         return ResponseEntity.ok(categoryService.createCategory(userDetails.getId(), categoryDto));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CategoryDto> updateCategory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody @Valid CategoryDto categoryDto) {
+        return ResponseEntity.ok(categoryService.updateCategory(userDetails.getId(), id, categoryDto));
+    }
 }

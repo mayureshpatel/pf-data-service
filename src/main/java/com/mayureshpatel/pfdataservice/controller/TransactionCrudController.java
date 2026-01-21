@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionService;
 import jakarta.validation.Valid;
@@ -15,6 +16,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
@@ -26,9 +31,21 @@ public class TransactionCrudController {
     public ResponseEntity<Page<TransactionDto>> getTransactions(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(sort = "date", direction = Sort.Direction.DESC) Pageable pageable,
-            @RequestParam(required = false) TransactionType type) {
+            @RequestParam(required = false) Long accountId,
+            @RequestParam(required = false) TransactionType type,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String categoryName,
+            @RequestParam(required = false) BigDecimal minAmount,
+            @RequestParam(required = false) BigDecimal maxAmount,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
+            ) {
 
-        return ResponseEntity.ok(transactionService.getTransactions(userDetails.getId(), type, pageable));
+        TransactionFilter filter = new TransactionFilter(
+                accountId, type, description, categoryName, minAmount, maxAmount, startDate, endDate
+        );
+
+        return ResponseEntity.ok(transactionService.getTransactions(userDetails.getId(), filter, pageable));
     }
 
     @PostMapping
@@ -37,6 +54,21 @@ public class TransactionCrudController {
             @RequestBody @Valid TransactionDto dto) {
 
         return ResponseEntity.ok(transactionService.createTransaction(userDetails.getId(), dto));
+    }
+
+    @PatchMapping("/bulk")
+    public ResponseEntity<List<TransactionDto>> updateTransactionsBulk(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid List<TransactionDto> dtos) {
+        return ResponseEntity.ok(transactionService.updateTransactions(userDetails.getId(), dtos));
+    }
+
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Void> deleteTransactionsBulk(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody List<Long> ids) {
+        transactionService.deleteTransactions(userDetails.getId(), ids);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}")

@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
+import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification;
+import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.model.Account;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,14 +29,43 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
-        Page<Transaction> page;
-        if (type != null) {
-            page = transactionRepository.findByAccount_User_IdAndType(userId, type, pageable);
-        } else {
-            page = transactionRepository.findByAccount_User_IdOrderByDateDesc(userId, pageable);
+        // Legacy support or simple filter
+        TransactionFilter filter = new TransactionFilter(null, type, null, null, null, null, null, null);
+        return getTransactions(userId, filter, pageable);
+    }
+
+    public Page<TransactionDto> getTransactions(Long userId, TransactionFilter filter, Pageable pageable) {
+        return transactionRepository.findAll(TransactionSpecification.withFilter(userId, filter), pageable)
+                .map(this::mapToDto);
+    }
+
+    @Transactional
+    public void deleteTransactions(Long userId, List<Long> transactionIds) {
+        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
+        
+        // Validate ownership
+        if (transactions.stream().anyMatch(t -> !t.getAccount().getUser().getId().equals(userId))) {
+             throw new AccessDeniedException("You do not own one or more of these transactions");
         }
 
-        return page.map(this::mapToDto);
+        for (Transaction t : transactions) {
+            Account account = t.getAccount();
+            BigDecimal amount = t.getAmount();
+            if (t.getType() == TransactionType.EXPENSE) {
+                account.setCurrentBalance(account.getCurrentBalance().add(amount));
+            } else {
+                account.setCurrentBalance(account.getCurrentBalance().subtract(amount));
+            }
+        }
+        
+        transactionRepository.deleteAll(transactions);
+    }
+
+    @Transactional
+    public List<TransactionDto> updateTransactions(Long userId, List<TransactionDto> dtos) {
+        return dtos.stream()
+                .map(dto -> updateTransaction(userId, dto.id(), dto))
+                .toList();
     }
 
     @Transactional

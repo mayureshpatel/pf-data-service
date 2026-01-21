@@ -39,6 +39,21 @@ public class CategoryService {
         return mapToDto(categoryRepository.save(category));
     }
 
+    @Transactional
+    public CategoryDto updateCategory(Long userId, Long categoryId, CategoryDto dto) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+
+        if (!category.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        category.setName(dto.name());
+        // Color is not in DTO but is in Entity, if we add it to DTO later we can update it here.
+        
+        return mapToDto(categoryRepository.save(category));
+    }
+
     private CategoryDto mapToDto(Category category) {
         return new CategoryDto(
                 category.getId(),

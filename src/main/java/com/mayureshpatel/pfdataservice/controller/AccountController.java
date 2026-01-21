@@ -29,4 +29,20 @@ public class AccountController {
             @RequestBody @Valid AccountDto accountDto) {
         return ResponseEntity.ok(accountService.createAccount(userDetails.getId(), accountDto));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<AccountDto> updateAccount(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody @Valid AccountDto accountDto) {
+        return ResponseEntity.ok(accountService.updateAccount(userDetails.getId(), id, accountDto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAccount(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id) {
+        accountService.deleteAccount(userDetails.getId(), id);
+        return ResponseEntity.noContent().build();
+    }
 }

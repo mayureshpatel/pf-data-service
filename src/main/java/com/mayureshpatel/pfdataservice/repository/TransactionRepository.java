@@ -1,12 +1,14 @@
 package com.mayureshpatel.pfdataservice.repository;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.DailyBalance;
 import com.mayureshpatel.pfdataservice.dto.MonthlySpending;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,7 +18,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
 
     Page<Transaction> findByAccount_User_IdOrderByDateDesc(Long userId, Pageable pageable);
     
@@ -100,4 +102,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("SELECT SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END) FROM Transaction t WHERE t.account.id = :accountId AND t.date > :date")
     BigDecimal getNetFlowAfterDate(@Param("accountId") Long accountId, @Param("date") LocalDate date);
+
+    @Query("""
+            SELECT new com.mayureshpatel.pfdataservice.dto.DailyBalance(
+                t.date,
+                SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END)
+            )
+            FROM Transaction t
+            WHERE t.account.user.id = :userId
+              AND t.date >= :startDate
+            GROUP BY t.date
+            ORDER BY t.date DESC
+            """)
+    List<DailyBalance> getDailyNetFlows(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate
+    );
 }
