@@ -1,51 +1,68 @@
-# Senior Software Engineer Code Review
+# Codebase Review & Quality Assessment
 
-**Date:** January 19, 2026
-**Project:** Personal Finance Data Service (Backend MVP)
-**Version:** Spring Boot 3.5.3 | Java 21
+**Date:** January 21, 2026
+**Reviewer:** Senior Software Engineer
+**Scope:** Full Codebase Audit
 
-## Executive Summary
-The codebase is in excellent shape for a "Hardening" phase. The recent addition of **Unit Tests** achieving >90% coverage on core logic is a major win. The application correctly implements a layered architecture (Controller -> Service -> Repository) and adheres to modern Spring Boot practices.
+## 1. Executive Summary
+The application follows a clean Spring Boot layered architecture. However, there are **critical functional defects** related to how `TransactionType.TRANSFER` is handled, leading to data corruption (incorrect balances) and incorrect reporting (Net Worth).
 
-However, the removal of Integration Tests (Testcontainers) leaves a gap in verifying end-to-end flows (specifically DB interactions). Additionally, the **Scheduler** for snapshots is implemented but not enabled, rendering the feature dormant.
+Performance is generally acceptable for small datasets, but specific areas (Bulk Delete) exhibit **N+1 query patterns**. Testing coverage is low for complex logic (Reporting, Specifications).
 
-## 1. Architectural Integrity
+## 2. Critical Findings (Bugs & Risks)
 
-### Strengths
-*   **Immutability:** Extensive use of Java `records` for DTOs (`TransactionDto`, `DashboardData`).
-*   **Stateless Design:** Services are stateless singleton beans, relying on the DB for state, which is correct.
-*   **Separation of Concerns:** `TransactionImportService` separates heavy parsing logic from CRUD logic in `TransactionService`.
+### A. The "Transfer" Logic Contradiction (High Severity)
+The application handles `TransactionType.TRANSFER` inconsistently, leading to mathematical errors.
+1.  **Service Layer (`TransactionService`):**
+    *   **Logic:** `if (type == EXPENSE) subtract else add`.
+    *   **Result:** `TRANSFER` is treated as **INCOME**.
+    *   **Scenario:** A user records a transfer *out* of an account (e.g., to Savings). They select `TRANSFER`. The system **adds** the amount to the account balance instead of subtracting it.
+2.  **Repository/Reporting Layer (`TransactionRepository`):**
+    *   **Logic:** `CASE WHEN type = 'INCOME' THEN amount ELSE -amount END`.
+    *   **Result:** `TRANSFER` is treated as **EXPENSE** (negative flow).
+    *   **Scenario:** A user records a transfer *in* (e.g., from Savings). Reporting subtracts it from Net Worth.
 
-### Areas for Improvement
-*   **Manual Mapping:** `TransactionService.mapToDto` is boilerplat-y. As the domain grows, this will become a maintenance burden.
-    *   *Recommendation:* Adopt **MapStruct** for type-safe, compile-time mapping.
-*   **Dormant Features:** `SnapshotService` contains valuable business logic but is never invoked. The `PfDataServiceApplication` is missing `@EnableScheduling`.
+**Root Cause:** `TransactionType` mixes *intent* (Transfer vs Expense) with *direction* (Credit vs Debit).
+**Recommendation:** Add a `TransactionDirection` (INFLOW, OUTFLOW) or strictly map `TRANSFER` to specific directions.
 
-## 2. Code Quality & Security
+### B. Security Vulnerabilities
+*   **Hardcoded Secret:** The JWT secret key is hardcoded in `application.yml`.
+    *   *Risk:* If the code is public, anyone can forge tokens.
+    *   *Fix:* Move to environment variables (`${JWT_SECRET}`).
 
-### Strengths
-*   **Security Fixes:** Recent changes to `TransactionService` added explicit ownership checks (`!transaction.getAccount().getUser().getId().equals(userId)`), fixing a critical IDOR vulnerability.
-*   **Validation:** DTOs are properly annotated with `jakarta.validation` annotations (`@NotNull`).
-*   **Soft Deletes:** `User`, `Account`, and `Transaction` use Hibernate's `@SQLDelete` and `@SQLRestriction` for robust soft deletion.
+### C. Performance Issues
+*   **N+1 in Bulk Delete:** `TransactionService.deleteTransactions` iterates through IDs and calls `t.getAccount().getUser()` for ownership checks. This triggers individual queries if not eagerly fetched.
+*   **Bulk Update Inefficiency:** `updateTransactions` iterates and calls `updateTransaction` (singular), which re-fetches the entity (`findById`) for every single item.
 
-### Areas for Improvement
-*   **Entity Validation:** While DTOs are validated, Entities like `User` rely solely on Database constraints (`nullable=false`). Adding JSR-303 annotations to Entities is a good defensive practice.
-*   **Magic Strings:** Security expressions like `@PreAuthorize("@ss.isAccountOwner...")` rely on the bean name `ss`. Refactoring this to a constant or stricter naming convention would prevent regression if the bean is renamed.
-
-## 3. Testing
-
-### Strengths
-*   **Unit Coverage:** High coverage for Services and Controllers using `Mockito` and `@WebMvcTest`.
-*   **Mocking:** Proper isolation of dependencies (Security, Repositories).
-
-### Risks
-*   **Integration Gap:** Testcontainers was removed to resolve local environment issues. This means strictly relying on Unit Tests. We have no verification that the custom JPQL queries in `TransactionRepository` (e.g., `getNetFlowAfterDate`) actually execute correctly against a real Postgres instance.
-
-## 4. Maintainability
+## 3. Code Quality & Maintainability
 
 ### Strengths
-*   **Java 21 Features:** Good use of `var` and Streams.
-*   **Project Structure:** Clear package organization by feature/layer.
+*   **Architecture:** Clear separation of concerns.
+*   **Dynamic Filtering:** `TransactionSpecification` is a robust solution for complex search criteria.
+*   **Security:** Ownership checks are enforced on data access (good usage of `@PreAuthorize` and manual checks).
+*   **Database:** Use of Flyway for migrations is excellent.
+
+### Weaknesses (Technical Debt)
+*   **Logic Duplication:** The logic to update account balances (add/subtract based on type) is repeated 3 times in `TransactionService` (Create, Update, Delete). It should be encapsulated.
+*   **Missing Tests:**
+    *   `DashboardService.getNetWorthHistory` is completely untested.
+    *   `TransactionSpecification` is untested.
+    *   No integration tests to verify SQL queries.
+
+## 4. Detailed Recommendations
+
+### Immediate Actions
+1.  **Refactor Transaction Model:**
+    *   Option A: Remove `TRANSFER` from `TransactionType` and use `INCOME`/`EXPENSE` only. Use Categories to denote "Transfers".
+    *   Option B (Preferred): Add a `direction` field or split `TRANSFER` into `TRANSFER_IN` and `TRANSFER_OUT`.
+2.  **Fix Balance Logic:** Centralize the "apply transaction to balance" logic in a single method that handles the direction correctly.
+3.  **Externalize Secrets:** Remove the JWT key from `application.yml`.
+
+### Secondary Actions
+4.  **Optimize Bulk Ops:** Use a single JPQL query to check ownership for a list of IDs: `boolean allOwned = repository.countOwnedByUser(ids, userId) == ids.size()`.
+5.  **Add Test Coverage:**
+    *   Unit test for `DashboardService` math.
+    *   Integration test for `TransactionRepository` custom queries.
 
 ---
-**Verdict:** The code is **Clean and Testable**. The immediate priority is enabling the Scheduler to activate the Snapshot feature and then setting up MapStruct to reduce boilerplate.
+**Verdict:** **DO NOT RELEASE** until the Transfer logic is fixed. The current state corrupts user balance data.
