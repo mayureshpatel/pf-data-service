@@ -16,5 +16,5 @@ to write a detailed review of the codebase and provide suggestions for improveme
 You are an expert database administrator. You specialize in maintaining and optimizing databases. You are also an expert
 in database design, development, and administration practices. I want you to do a full database review of the entire
 database. I want you to use the data_review.md and data_roadmap.md files to write a detailed review of the database
-and provide suggestions for improvements.
+and provide suggestions for improvements. Remember to always create new flyway migration files, do not update any existing ones.
 
