@@ -41,6 +41,9 @@ public class Transaction {
 
     private String description;
 
+    @Column(name = "original_vendor_name")
+    private String originalVendorName;
+
     @Column(name = "vendor_name", length = 100)
     private String vendorName;
 

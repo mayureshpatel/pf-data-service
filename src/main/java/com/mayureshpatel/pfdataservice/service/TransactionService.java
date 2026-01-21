@@ -87,11 +87,17 @@ public class TransactionService {
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
 
+        // Set original vendor name, default to description if not provided
+        String originalVendor = (dto.originalVendorName() != null && !dto.originalVendorName().isBlank())
+                ? dto.originalVendorName() : dto.description();
+        transaction.setOriginalVendorName(originalVendor);
+
         if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
             transaction.setVendorName(dto.vendorName());
         } else {
             List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
-            transaction.setVendorName(vendorCleaner.cleanVendorName(dto.description(), rules));
+            // Clean based on original vendor name if possible, else description
+            transaction.setVendorName(vendorCleaner.cleanVendorName(originalVendor, rules));
         }
 
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
@@ -133,11 +139,17 @@ public class TransactionService {
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
 
+        // Update original vendor name if provided
+        if (dto.originalVendorName() != null && !dto.originalVendorName().isBlank()) {
+            transaction.setOriginalVendorName(dto.originalVendorName());
+        }
+
         if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
             transaction.setVendorName(dto.vendorName());
         } else {
             List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
-            transaction.setVendorName(vendorCleaner.cleanVendorName(dto.description(), rules));
+            // Clean based on original vendor name
+            transaction.setVendorName(vendorCleaner.cleanVendorName(transaction.getOriginalVendorName(), rules));
         }
 
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
@@ -185,6 +197,7 @@ public class TransactionService {
                 .date(t.getDate())
                 .amount(t.getAmount())
                 .description(t.getDescription())
+                .originalVendorName(t.getOriginalVendorName())
                 .type(t.getType())
                 .vendorName(t.getVendorName())
                 .categoryName(t.getCategory() != null ? t.getCategory().getName() : null)

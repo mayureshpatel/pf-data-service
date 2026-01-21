@@ -16,6 +16,8 @@ public record TransactionDto(
 
         String description,
         
+        String originalVendorName,
+        
         String vendorName,
 
         @NotNull(message = "Amount is required")

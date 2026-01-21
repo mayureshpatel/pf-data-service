@@ -141,6 +141,8 @@ public class TransactionImportService {
         Transaction transaction = new Transaction();
         transaction.setDate(dto.date());
         transaction.setDescription(dto.description());
+        // For imports, original vendor name is the description
+        transaction.setOriginalVendorName(dto.description());
         transaction.setAmount(dto.amount());
         transaction.setType(dto.type());
         transaction.setVendorName(dto.vendorName());
