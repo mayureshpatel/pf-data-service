@@ -48,6 +48,16 @@ public class Account {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    public void applyTransaction(Transaction transaction) {
+        if (this.currentBalance == null) this.currentBalance = BigDecimal.ZERO;
+        this.currentBalance = this.currentBalance.add(transaction.getNetChange());
+    }
+
+    public void undoTransaction(Transaction transaction) {
+        if (this.currentBalance == null) this.currentBalance = BigDecimal.ZERO;
+        this.currentBalance = this.currentBalance.subtract(transaction.getNetChange());
+    }
+
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;

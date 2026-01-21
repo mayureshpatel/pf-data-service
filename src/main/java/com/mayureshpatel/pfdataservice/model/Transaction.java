@@ -77,6 +77,15 @@ public class Transaction {
     )
     private Set<Tag> tags = new HashSet<>();
 
+    /**
+     * Calculates the net change this transaction applies to an account balance.
+     * INCOME is positive, EXPENSE and TRANSFER are negative.
+     */
+    public BigDecimal getNetChange() {
+        if (amount == null) return BigDecimal.ZERO;
+        return (type == TransactionType.INCOME) ? amount : amount.negate();
+    }
+
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;

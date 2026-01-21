@@ -150,17 +150,15 @@ public class TransactionImportService {
     }
 
     private void updateAccountBalance(Account account, List<Transaction> newTransactions) {
-        BigDecimal netChange = newTransactions.stream()
-                .map(t -> t.getType() == TransactionType.INCOME ? t.getAmount() : t.getAmount().negate())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         BigDecimal oldBalance = account.getCurrentBalance();
-        BigDecimal newBalance = oldBalance.add(netChange);
+        
+        for (Transaction t : newTransactions) {
+            account.applyTransaction(t);
+        }
 
-        account.setCurrentBalance(newBalance);
         accountRepository.save(account);
 
-        log.info("Updated Account ID: {} balance. Old: {}, Net Change: {}, New: {}", account.getId(), oldBalance, netChange, newBalance);
+        log.info("Updated Account ID: {} balance. Old: {}, New: {}", account.getId(), oldBalance, account.getCurrentBalance());
     }
 
     public String calculateFileHash(InputStream inputStream) throws IOException {

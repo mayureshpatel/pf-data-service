@@ -81,7 +81,8 @@ public class GlobalExceptionHandler {
     })
     public ProblemDetail handleAccessDenied(Exception ex, HttpServletRequest request) {
         log.warn("Access Denied: {} at {}", ex.getMessage(), request.getRequestURI());
-        return createProblemDetail(HttpStatus.FORBIDDEN, "You do not have permission to access this resource.", request);
+        String message = ex.getMessage() != null ? ex.getMessage() : "You do not have permission to access this resource.";
+        return createProblemDetail(HttpStatus.FORBIDDEN, message, request);
     }
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)

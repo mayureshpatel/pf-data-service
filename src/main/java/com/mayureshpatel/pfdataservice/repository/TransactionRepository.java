@@ -118,4 +118,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate
     );
+
+    long countByIdInAndAccount_User_Id(List<Long> ids, Long userId);
+
+    @Query("SELECT t FROM Transaction t JOIN FETCH t.account a JOIN FETCH a.user u WHERE t.id IN :ids")
+    List<Transaction> findAllByIdWithAccountAndUser(@Param("ids") List<Long> ids);
 }

@@ -44,31 +44,20 @@ public class TransactionService {
 
     @Transactional
     public void deleteTransactions(Long userId, List<Long> transactionIds) {
-        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
-        
-        // Validate ownership
-        if (transactions.stream().anyMatch(t -> !t.getAccount().getUser().getId().equals(userId))) {
+        if (transactionIds == null || transactionIds.isEmpty()) return;
+
+        // Validate ownership in one query
+        long ownedCount = transactionRepository.countByIdInAndAccount_User_Id(transactionIds, userId);
+        if (ownedCount != transactionIds.size()) {
              throw new AccessDeniedException("You do not own one or more of these transactions");
         }
 
+        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
         for (Transaction t : transactions) {
-            Account account = t.getAccount();
-            BigDecimal amount = t.getAmount();
-            if (t.getType() == TransactionType.EXPENSE) {
-                account.setCurrentBalance(account.getCurrentBalance().add(amount));
-            } else {
-                account.setCurrentBalance(account.getCurrentBalance().subtract(amount));
-            }
+            t.getAccount().undoTransaction(t);
         }
         
         transactionRepository.deleteAll(transactions);
-    }
-
-    @Transactional
-    public List<TransactionDto> updateTransactions(Long userId, List<TransactionDto> dtos) {
-        return dtos.stream()
-                .map(dto -> updateTransaction(userId, dto.id(), dto))
-                .toList();
     }
 
     @Transactional
@@ -108,31 +97,41 @@ public class TransactionService {
         }
 
         // update account balance
-        if (transaction.getType() == TransactionType.EXPENSE) {
-            account.setCurrentBalance(account.getCurrentBalance().subtract(transaction.getAmount()));
-        } else {
-            account.setCurrentBalance(account.getCurrentBalance().add(transaction.getAmount()));
-        }
+        account.applyTransaction(transaction);
 
         return mapToDto(transactionRepository.save(transaction));
     }
 
     @Transactional
-    public TransactionDto updateTransaction(Long userId, Long transactionId, TransactionDto dto) {
-        Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+    public List<TransactionDto> updateTransactions(Long userId, List<TransactionDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) return List.of();
 
-        if (!transaction.getAccount().getUser().getId().equals(userId)) {
-            throw new AccessDeniedException("You do not own this transaction");
+        List<Long> ids = dtos.stream().map(TransactionDto::id).toList();
+        List<Transaction> transactions = transactionRepository.findAllByIdWithAccountAndUser(ids);
+
+        // Validate ownership and existence
+        if (transactions.size() != dtos.size()) {
+            throw new EntityNotFoundException("One or more transactions not found");
         }
 
+        return dtos.stream().map(dto -> {
+            Transaction transaction = transactions.stream()
+                    .filter(t -> t.getId().equals(dto.id()))
+                    .findFirst()
+                    .orElseThrow();
+
+            if (!transaction.getAccount().getUser().getId().equals(userId)) {
+                throw new AccessDeniedException("You do not own transaction ID: " + transaction.getId());
+            }
+
+            return updateTransactionFromDto(userId, transaction, dto);
+        }).toList();
+    }
+
+    private TransactionDto updateTransactionFromDto(Long userId, Transaction transaction, TransactionDto dto) {
         // Reverse old amount effect
         Account account = transaction.getAccount();
-        if (transaction.getType() == TransactionType.EXPENSE) {
-            account.setCurrentBalance(account.getCurrentBalance().add(transaction.getAmount()));
-        } else {
-            account.setCurrentBalance(account.getCurrentBalance().subtract(transaction.getAmount()));
-        }
+        account.undoTransaction(transaction);
 
         transaction.setAmount(dto.amount());
         transaction.setDate(dto.date());
@@ -162,13 +161,21 @@ public class TransactionService {
         }
 
         // Apply new amount effect
-        if (transaction.getType() == TransactionType.EXPENSE) {
-            account.setCurrentBalance(account.getCurrentBalance().subtract(transaction.getAmount()));
-        } else {
-            account.setCurrentBalance(account.getCurrentBalance().add(transaction.getAmount()));
-        }
+        account.applyTransaction(transaction);
 
         return mapToDto(transactionRepository.save(transaction));
+    }
+
+    @Transactional
+    public TransactionDto updateTransaction(Long userId, Long transactionId, TransactionDto dto) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+
+        if (!transaction.getAccount().getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You do not own this transaction");
+        }
+
+        return updateTransactionFromDto(userId, transaction, dto);
     }
 
     @Transactional
@@ -180,13 +187,7 @@ public class TransactionService {
             throw new AccessDeniedException("You do not own this transaction");
         }
 
-        Account account = transaction.getAccount();
-        BigDecimal amount = transaction.getAmount();
-        if (transaction.getType() == TransactionType.EXPENSE) {
-            account.setCurrentBalance(account.getCurrentBalance().add(amount)); // Add back expense
-        } else {
-            account.setCurrentBalance(account.getCurrentBalance().subtract(amount)); // Remove income
-        }
+        transaction.getAccount().undoTransaction(transaction);
 
         transactionRepository.delete(transaction);
     }
