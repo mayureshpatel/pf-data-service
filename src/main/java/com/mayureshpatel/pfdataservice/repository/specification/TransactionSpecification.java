@@ -39,6 +39,10 @@ public class TransactionSpecification {
                 predicates.add(cb.like(cb.lower(root.get("category").get("name")), "%" + filter.categoryName().toLowerCase() + "%"));
             }
 
+            if (filter.vendorName() != null && !filter.vendorName().isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("vendorName")), "%" + filter.vendorName().toLowerCase() + "%"));
+            }
+
             if (filter.minAmount() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("amount"), filter.minAmount()));
             }
@@ -64,6 +68,7 @@ public class TransactionSpecification {
             TransactionType type,
             String description,
             String categoryName,
+            String vendorName,
             BigDecimal minAmount,
             BigDecimal maxAmount,
             LocalDate startDate,

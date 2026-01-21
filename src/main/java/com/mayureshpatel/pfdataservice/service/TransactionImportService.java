@@ -12,7 +12,9 @@ import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.model.VendorRule;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
+import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import jakarta.persistence.EntityNotFoundException;
@@ -38,18 +40,21 @@ public class TransactionImportService {
     private final FileImportHistoryRepository fileImportHistoryRepository;
     private final TransactionParserFactory parserFactory;
     private final TransactionCategorizer categorizer;
+    private final VendorCleaner vendorCleaner;
 
     @Autowired
     public TransactionImportService(TransactionRepository transactionRepository,
                                     AccountRepository accountRepository,
                                     FileImportHistoryRepository fileImportHistoryRepository,
                                     TransactionParserFactory parserFactory,
-                                    TransactionCategorizer categorizer) {
+                                    TransactionCategorizer categorizer,
+                                    VendorCleaner vendorCleaner) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.fileImportHistoryRepository = fileImportHistoryRepository;
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
+        this.vendorCleaner = vendorCleaner;
     }
 
     @Transactional(readOnly = true)
@@ -58,6 +63,7 @@ public class TransactionImportService {
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
         List<CategoryRule> userRules = categorizer.loadRulesForUser(userId);
+        List<VendorRule> vendorRules = vendorCleaner.loadRulesForUser(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
             List<TransactionPreview> previews = rawTransactionStream
@@ -67,6 +73,7 @@ public class TransactionImportService {
                             .amount(t.getAmount())
                             .type(t.getType())
                             .suggestedCategory(categorizer.guessCategory(t, userRules))
+                            .vendorName(vendorCleaner.cleanVendorName(t.getDescription(), vendorRules))
                             .build())
                     .toList();
 
@@ -136,6 +143,7 @@ public class TransactionImportService {
         transaction.setDescription(dto.description());
         transaction.setAmount(dto.amount());
         transaction.setType(dto.type());
+        transaction.setVendorName(dto.vendorName());
         return transaction;
     }
 

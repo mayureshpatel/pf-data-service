@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class TransactionServiceTest {
 
     @Mock
     private TransactionRepository transactionRepository;
+    
+    @Mock
+    private VendorCleaner vendorCleaner;
 
     @InjectMocks
     private TransactionService transactionService;
@@ -67,12 +71,12 @@ class TransactionServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Transaction> page = new PageImpl<>(Collections.singletonList(transaction));
 
-        when(transactionRepository.findByAccount_User_IdOrderByDateDesc(1L, pageable)).thenReturn(page);
+        when(transactionRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable))).thenReturn(page);
 
-        Page<TransactionDto> result = transactionService.getTransactions(1L, null, pageable);
+        Page<TransactionDto> result = transactionService.getTransactions(1L, (TransactionType) null, pageable);
 
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionRepository).findByAccount_User_IdOrderByDateDesc(1L, pageable);
+        verify(transactionRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable));
     }
 
     @Test
@@ -80,12 +84,12 @@ class TransactionServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Transaction> page = new PageImpl<>(Collections.singletonList(transaction));
 
-        when(transactionRepository.findByAccount_User_IdAndType(1L, TransactionType.EXPENSE, pageable)).thenReturn(page);
+        when(transactionRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable))).thenReturn(page);
 
         Page<TransactionDto> result = transactionService.getTransactions(1L, TransactionType.EXPENSE, pageable);
 
         assertThat(result.getContent()).hasSize(1);
-        verify(transactionRepository).findByAccount_User_IdAndType(1L, TransactionType.EXPENSE, pageable);
+        verify(transactionRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable));
     }
 
     @Test

@@ -35,6 +35,7 @@ public class TransactionCrudController {
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) String description,
             @RequestParam(required = false) String categoryName,
+            @RequestParam(required = false) String vendorName,
             @RequestParam(required = false) BigDecimal minAmount,
             @RequestParam(required = false) BigDecimal maxAmount,
             @RequestParam(required = false) LocalDate startDate,
@@ -42,7 +43,7 @@ public class TransactionCrudController {
             ) {
 
         TransactionFilter filter = new TransactionFilter(
-                accountId, type, description, categoryName, minAmount, maxAmount, startDate, endDate
+                accountId, type, description, categoryName, vendorName, minAmount, maxAmount, startDate, endDate
         );
 
         return ResponseEntity.ok(transactionService.getTransactions(userDetails.getId(), filter, pageable));

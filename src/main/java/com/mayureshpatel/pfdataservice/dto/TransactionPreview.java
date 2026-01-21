@@ -12,6 +12,7 @@ public record TransactionPreview(
         String description,
         BigDecimal amount,
         TransactionType type,
-        String suggestedCategory
+        String suggestedCategory,
+        String vendorName
 ) {
 }

@@ -15,6 +15,8 @@ public record TransactionDto(
         LocalDate date,
 
         String description,
+        
+        String vendorName,
 
         @NotNull(message = "Amount is required")
         BigDecimal amount,

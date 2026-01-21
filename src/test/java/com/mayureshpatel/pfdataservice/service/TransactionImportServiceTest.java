@@ -10,6 +10,7 @@ import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
+import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,7 @@ class TransactionImportServiceTest {
     @Mock private FileImportHistoryRepository fileImportHistoryRepository;
     @Mock private TransactionParserFactory parserFactory;
     @Mock private TransactionCategorizer categorizer;
+    @Mock private VendorCleaner vendorCleaner;
     @Mock private TransactionParser parser;
 
     private TransactionImportService importService;
@@ -51,7 +53,8 @@ class TransactionImportServiceTest {
                 accountRepository,
                 fileImportHistoryRepository,
                 parserFactory,
-                categorizer
+                categorizer,
+                vendorCleaner
         );
         
         user = new User();
@@ -78,12 +81,15 @@ class TransactionImportServiceTest {
         when(parser.parse(eq(1L), any(InputStream.class))).thenReturn(Stream.of(t1));
         when(categorizer.loadRulesForUser(10L)).thenReturn(List.of());
         when(categorizer.guessCategory(eq(t1), anyList())).thenReturn("Groceries");
+        when(vendorCleaner.loadRulesForUser(10L)).thenReturn(List.of());
+        when(vendorCleaner.cleanVendorName(any(), anyList())).thenReturn("Vendor");
 
         List<TransactionPreview> result = importService.previewTransactions(10L, 1L, "BANK", is, "test.csv");
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().description()).isEqualTo("Grocery Store");
         assertThat(result.getFirst().suggestedCategory()).isEqualTo("Groceries");
+        assertThat(result.getFirst().vendorName()).isEqualTo("Vendor");
     }
 
     @Test

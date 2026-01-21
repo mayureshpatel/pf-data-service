@@ -9,6 +9,8 @@ import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.model.VendorRule;
+import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,10 +29,11 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
+    private final VendorCleaner vendorCleaner;
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
         // Legacy support or simple filter
-        TransactionFilter filter = new TransactionFilter(null, type, null, null, null, null, null, null);
+        TransactionFilter filter = new TransactionFilter(null, type, null, null, null, null, null, null, null);
         return getTransactions(userId, filter, pageable);
     }
 
@@ -84,6 +87,13 @@ public class TransactionService {
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
 
+        if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
+            transaction.setVendorName(dto.vendorName());
+        } else {
+            List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
+            transaction.setVendorName(vendorCleaner.cleanVendorName(dto.description(), rules));
+        }
+
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
             categoryRepository.findByUserId(userId).stream()
                     .filter(c -> c.getName().equalsIgnoreCase(dto.categoryName()))
@@ -122,6 +132,13 @@ public class TransactionService {
         transaction.setDate(dto.date());
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
+
+        if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
+            transaction.setVendorName(dto.vendorName());
+        } else {
+            List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
+            transaction.setVendorName(vendorCleaner.cleanVendorName(dto.description(), rules));
+        }
 
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
             categoryRepository.findByUserId(userId).stream()
@@ -169,6 +186,7 @@ public class TransactionService {
                 .amount(t.getAmount())
                 .description(t.getDescription())
                 .type(t.getType())
+                .vendorName(t.getVendorName())
                 .categoryName(t.getCategory() != null ? t.getCategory().getName() : null)
                 .accountId(t.getAccount() != null ? t.getAccount().getId() : null)
                 .build();

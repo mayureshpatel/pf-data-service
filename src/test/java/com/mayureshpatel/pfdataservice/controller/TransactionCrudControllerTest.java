@@ -3,6 +3,8 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.UserRepository;
+import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetailsService;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
@@ -49,6 +51,9 @@ class TransactionCrudControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
+    
+    @MockitoBean
+    private UserRepository userRepository;
 
     // We use @Autowired because we defined it in TestConfig
     @Autowired
@@ -74,7 +79,7 @@ class TransactionCrudControllerTest {
                 .build();
         Page<TransactionDto> page = new PageImpl<>(Collections.singletonList(dto));
 
-        when(transactionService.getTransactions(any(), any(), any())).thenReturn(page);
+        when(transactionService.getTransactions(any(), any(TransactionFilter.class), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/transactions")
                         .contentType(MediaType.APPLICATION_JSON))

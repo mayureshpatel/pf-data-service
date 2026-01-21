@@ -41,6 +41,9 @@ public class Transaction {
 
     private String description;
 
+    @Column(name = "vendor_name", length = 100)
+    private String vendorName;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @NotNull
