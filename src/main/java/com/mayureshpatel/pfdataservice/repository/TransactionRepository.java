@@ -27,7 +27,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     @Query("""
             SELECT SUM(t.amount)
             FROM Transaction t
-            WHERE t.account.user.id = :userId
+            JOIN t.account a
+            JOIN a.user u
+            WHERE u.id = :userId
                 AND t.date BETWEEN :startDate AND :endDate
                 AND t.type = :type
             """)
@@ -138,6 +140,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             ORDER BY t.date DESC
             """)
     List<Transaction> findRecentNonTransferTransactions(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate
+    );
+
+    @Query("""
+            SELECT YEAR(t.date) as year, MONTH(t.date) as month, t.type as type, SUM(t.amount) as total
+            FROM Transaction t
+            JOIN t.account a
+            JOIN a.user u
+            WHERE u.id = :userId
+              AND t.type != 'TRANSFER'
+              AND t.date >= :startDate
+            GROUP BY YEAR(t.date), MONTH(t.date), t.type
+            ORDER BY YEAR(t.date), MONTH(t.date)
+            """)
+    List<Object[]> findMonthlySums(
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate
     );
