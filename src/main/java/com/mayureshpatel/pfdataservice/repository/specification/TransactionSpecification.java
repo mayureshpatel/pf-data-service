@@ -36,7 +36,11 @@ public class TransactionSpecification {
             }
 
             if (filter.categoryName() != null && !filter.categoryName().isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("category").get("name")), "%" + filter.categoryName().toLowerCase() + "%"));
+                if ("null".equalsIgnoreCase(filter.categoryName())) {
+                    predicates.add(cb.isNull(root.get("category")));
+                } else {
+                    predicates.add(cb.like(cb.lower(root.get("category").get("name")), "%" + filter.categoryName().toLowerCase() + "%"));
+                }
             }
 
             if (filter.vendorName() != null && !filter.vendorName().isBlank()) {
