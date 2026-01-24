@@ -41,6 +41,9 @@ class AuthenticationControllerTest {
     @MockitoBean
     private JwtService jwtService;
 
+    @MockitoBean
+    private com.mayureshpatel.pfdataservice.repository.UserRepository userRepository;
+
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
