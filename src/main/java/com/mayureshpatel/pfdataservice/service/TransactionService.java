@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
+import com.mayureshpatel.pfdataservice.dto.TransferSuggestionDto;
 import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification;
 import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.model.Account;
@@ -20,7 +21,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +36,73 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
     private final VendorCleaner vendorCleaner;
+
+    public List<TransferSuggestionDto> findPotentialTransfers(Long userId) {
+        // Look back 5 years to cover historical data
+        LocalDate startDate = LocalDate.now().minusYears(5);
+        List<Transaction> transactions = transactionRepository.findRecentNonTransferTransactions(userId, startDate);
+
+        List<TransferSuggestionDto> suggestions = new ArrayList<>();
+        Set<Long> matchedIds = new HashSet<>();
+
+        for (int i = 0; i < transactions.size(); i++) {
+            Transaction t1 = transactions.get(i);
+            if (matchedIds.contains(t1.getId())) continue;
+
+            for (int j = i + 1; j < transactions.size(); j++) {
+                Transaction t2 = transactions.get(j);
+                if (matchedIds.contains(t2.getId())) continue;
+
+                long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getDate(), t2.getDate()));
+                
+                // Since list is sorted by date DESC, if diff > 3, subsequent items will also be > 3
+                if (daysDiff > 3) {
+                    break; 
+                }
+
+                // Check 1: Amounts are equal (both positive in DB)
+                if (t1.getAmount().compareTo(t2.getAmount()) == 0) {
+                    
+                    // Check 2: Types are different (One Income, One Expense)
+                    // This implies money moving OUT of one and INTO another
+                    if (t1.getType() != t2.getType()) {
+
+                        // Check 3: Different accounts
+                        if (!t1.getAccount().getId().equals(t2.getAccount().getId())) {
+                            
+                            // High confidence match
+                            suggestions.add(new TransferSuggestionDto(
+                                    mapToDto(t1),
+                                    mapToDto(t2),
+                                    0.9 - (daysDiff * 0.1) // 0.9 for same day, 0.8 for 1 day diff, etc.
+                            ));
+                            
+                            matchedIds.add(t1.getId());
+                            matchedIds.add(t2.getId());
+                            break; // Stop looking for match for t1
+                        }
+                    }
+                }
+            }
+        }
+        return suggestions;
+    }
+
+    @Transactional
+    public void markAsTransfer(Long userId, List<Long> transactionIds) {
+        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
+        
+        for (Transaction t : transactions) {
+            if (!t.getAccount().getUser().getId().equals(userId)) {
+                throw new AccessDeniedException("Access denied for transaction " + t.getId());
+            }
+            t.setType(TransactionType.TRANSFER);
+            // Optionally clear category if it was categorized
+            t.setCategory(null);
+        }
+        
+        transactionRepository.saveAll(transactions);
+    }
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
         // Legacy support or simple filter

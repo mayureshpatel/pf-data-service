@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
+import com.mayureshpatel.pfdataservice.dto.TransferSuggestionDto;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
@@ -26,6 +27,20 @@ import java.util.List;
 public class TransactionCrudController {
 
     private final TransactionService transactionService;
+
+    @GetMapping("/suggestions/transfers")
+    public ResponseEntity<List<TransferSuggestionDto>> getTransferSuggestions(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(transactionService.findPotentialTransfers(userDetails.getId()));
+    }
+
+    @PostMapping("/mark-as-transfer")
+    public ResponseEntity<Void> markAsTransfer(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody List<Long> transactionIds) {
+        transactionService.markAsTransfer(userDetails.getId(), transactionIds);
+        return ResponseEntity.ok().build();
+    }
 
     @GetMapping
     public ResponseEntity<Page<TransactionDto>> getTransactions(

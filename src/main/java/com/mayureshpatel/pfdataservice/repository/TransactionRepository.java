@@ -127,4 +127,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     Long countByAccountId(Long accountId);
 
     long countByCategoryId(Long categoryId);
+
+    @Query("""
+            SELECT t FROM Transaction t
+            JOIN t.account a
+            JOIN a.user u
+            WHERE u.id = :userId
+              AND t.type != 'TRANSFER'
+              AND t.date >= :startDate
+            ORDER BY t.date DESC
+            """)
+    List<Transaction> findRecentNonTransferTransactions(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate
+    );
 }
