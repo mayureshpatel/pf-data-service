@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.dto.AccountDto;
 import com.mayureshpatel.pfdataservice.model.Account;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
 
     @Transactional(readOnly = true)
     public List<AccountDto> getAccountsByUserId(Long userId) {
@@ -67,6 +69,15 @@ public class AccountService {
 
         if (!account.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied");
+        }
+
+        // Check if account has transactions
+        Long transactionCount = transactionRepository.countByAccountId(accountId);
+        if (transactionCount > 0) {
+            throw new IllegalStateException(
+                "Cannot delete account with existing transactions. " +
+                "Please delete or move the " + transactionCount + " transaction(s) first."
+            );
         }
 
         accountRepository.delete(account);

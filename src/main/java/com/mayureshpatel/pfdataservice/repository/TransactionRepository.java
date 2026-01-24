@@ -123,4 +123,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
 
     @Query("SELECT t FROM Transaction t JOIN FETCH t.account a JOIN FETCH a.user u WHERE t.id IN :ids")
     List<Transaction> findAllByIdWithAccountAndUser(@Param("ids") List<Long> ids);
+
+    Long countByAccountId(Long accountId);
 }
