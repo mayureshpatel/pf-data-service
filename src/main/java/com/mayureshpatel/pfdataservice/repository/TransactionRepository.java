@@ -41,10 +41,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     );
 
     @Query("""
-            SELECT new com.mayureshpatel.pfdataservice.dto.CategoryTotal(c.name, SUM(t.amount))
+            SELECT new com.mayureshpatel.pfdataservice.dto.CategoryTotal(COALESCE(c.name, 'Uncategorized'), SUM(t.amount))
             FROM Transaction t
-                JOIN t.category c
-            WHERE t.account.user.id = :userId
+                LEFT JOIN t.category c
+            JOIN t.account a
+            JOIN a.user u
+            WHERE u.id = :userId
                 AND t.date BETWEEN :startDate AND :endDate
                 AND t.type = 'EXPENSE'
             GROUP BY c.name
