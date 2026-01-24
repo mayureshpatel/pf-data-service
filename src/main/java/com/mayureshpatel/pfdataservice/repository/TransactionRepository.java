@@ -125,4 +125,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     List<Transaction> findAllByIdWithAccountAndUser(@Param("ids") List<Long> ids);
 
     Long countByAccountId(Long accountId);
+
+    long countByCategoryId(Long categoryId);
 }

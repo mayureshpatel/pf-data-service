@@ -6,5 +6,7 @@ public record CategoryDto(
     Long id,
 
     @NotBlank(message = "Name is required")
-    String name
+    String name,
+
+    String color
 ) {}
