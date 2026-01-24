@@ -42,6 +42,12 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ProblemDetail handleUserAlreadyExists(UserAlreadyExistsException ex, HttpServletRequest request) {
+        log.warn("User Already Exists: {} at {}", ex.getMessage(), request.getRequestURI());
+        return createProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
         log.warn("Validation Failed at {}: {}", request.getRequestURI(), ex.getBindingResult());
