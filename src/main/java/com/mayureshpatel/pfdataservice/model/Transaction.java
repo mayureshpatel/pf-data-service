@@ -52,7 +52,7 @@ public class Transaction {
     @NotNull
     private TransactionType type;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne()
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
