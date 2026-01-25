@@ -8,5 +8,8 @@ public record CategoryDto(
     @NotBlank(message = "Name is required")
     String name,
 
-    String color
+    String color,
+    
+    Long parentId,
+    String parentName
 ) {}
