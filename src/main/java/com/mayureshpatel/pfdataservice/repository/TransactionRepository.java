@@ -162,6 +162,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("startDate") LocalDate startDate
     );
 
+    List<Transaction> findByAccount_User_Id(Long userId);
+
     @Query("""
             SELECT t FROM Transaction t
             JOIN t.account a

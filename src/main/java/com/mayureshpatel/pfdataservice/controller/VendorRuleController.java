@@ -30,6 +30,12 @@ public class VendorRuleController {
         return ResponseEntity.ok(vendorRuleService.createRule(userDetails.getId(), dto));
     }
 
+    @PostMapping("/apply")
+    public ResponseEntity<Void> applyRules(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        vendorRuleService.applyRules(userDetails.getId());
+        return ResponseEntity.ok().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRule(
             @AuthenticationPrincipal CustomUserDetails userDetails,
