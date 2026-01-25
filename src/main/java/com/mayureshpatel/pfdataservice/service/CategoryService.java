@@ -38,6 +38,10 @@ public class CategoryService {
         Category category = new Category();
         category.setName(categoryDto.name());
         category.setColor(categoryDto.color());
+        category.setIcon(categoryDto.icon());
+        if (categoryDto.type() != null) {
+            category.setType(categoryDto.type());
+        }
         category.setUser(user);
 
         if (categoryDto.parentId() != null) {
@@ -63,6 +67,10 @@ public class CategoryService {
 
         category.setName(dto.name());
         category.setColor(dto.color());
+        category.setIcon(dto.icon());
+        if (dto.type() != null) {
+            category.setType(dto.type());
+        }
         
         if (dto.parentId() != null) {
             // Prevent circular dependency (simple check: parent cannot be self)
@@ -112,6 +120,8 @@ public class CategoryService {
                 category.getId(),
                 category.getName(),
                 category.getColor(),
+                category.getIcon(),
+                category.getType(),
                 category.getParent() != null ? category.getParent().getId() : null,
                 category.getParent() != null ? category.getParent().getName() : null
         );

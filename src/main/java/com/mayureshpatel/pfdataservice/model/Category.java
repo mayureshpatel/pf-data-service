@@ -13,6 +13,7 @@ import java.util.Objects;
 @ToString(exclude = {"user", "parent", "subCategories"})
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Category {
 
     @Id
@@ -24,6 +25,14 @@ public class Category {
 
     @Column(length = 20)
     private String color;
+
+    @Column(length = 50)
+    private String icon;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private CategoryType type = CategoryType.EXPENSE;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

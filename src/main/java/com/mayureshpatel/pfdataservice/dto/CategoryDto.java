@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto;
 
+import com.mayureshpatel.pfdataservice.model.CategoryType;
 import jakarta.validation.constraints.NotBlank;
 
 public record CategoryDto(
@@ -9,6 +10,8 @@ public record CategoryDto(
     String name,
 
     String color,
+    String icon,
+    CategoryType type,
     
     Long parentId,
     String parentName
