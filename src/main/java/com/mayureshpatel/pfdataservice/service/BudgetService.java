@@ -40,6 +40,13 @@ public class BudgetService {
                 .toList();
     }
 
+    public List<BudgetDto> getAllBudgets(Long userId) {
+        return budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(userId)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
     public List<BudgetStatusDto> getBudgetStatus(Long userId, Integer month, Integer year) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);

@@ -44,6 +44,12 @@ public class BudgetController {
         return ResponseEntity.ok(budgetService.getBudgetStatus(userDetails.getId(), m, y));
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<BudgetDto>> getAllBudgets(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(budgetService.getAllBudgets(userDetails.getId()));
+    }
+
     @PostMapping
     public ResponseEntity<BudgetDto> setBudget(
             @AuthenticationPrincipal CustomUserDetails userDetails,

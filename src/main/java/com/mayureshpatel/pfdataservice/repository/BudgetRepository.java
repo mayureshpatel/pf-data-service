@@ -12,5 +12,9 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
     
     List<Budget> findByUserIdAndMonthAndYearAndDeletedAtIsNull(Long userId, Integer month, Integer year);
     
+    List<Budget> findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(Long userId);
+    
+    List<Budget> findByUserIdAndCategoryId(Long userId, Long categoryId);
+    
     Optional<Budget> findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(Long userId, Long categoryId, Integer month, Integer year);
 }
