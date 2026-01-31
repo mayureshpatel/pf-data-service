@@ -38,8 +38,7 @@ spring:
       expiration: 86400000 # 1 day
 
 cors:
-  allowed-origins:
-    - localhost:4200
+  allowed-origins: http://localhost:4200
 
 logging:
   pattern:
