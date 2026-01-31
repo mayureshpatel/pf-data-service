@@ -4,15 +4,11 @@ import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
-import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.CategoryRule;
-import com.mayureshpatel.pfdataservice.model.FileImportHistory;
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
+import com.mayureshpatel.pfdataservice.model.*;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
-import com.mayureshpatel.pfdataservice.model.VendorRule;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
@@ -20,7 +16,6 @@ import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
@@ -37,6 +32,7 @@ import java.util.stream.Stream;
 public class TransactionImportService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
+    private final CategoryRepository categoryRepository;
     private final FileImportHistoryRepository fileImportHistoryRepository;
     private final TransactionParserFactory parserFactory;
     private final TransactionCategorizer categorizer;
@@ -45,12 +41,14 @@ public class TransactionImportService {
     @Autowired
     public TransactionImportService(TransactionRepository transactionRepository,
                                     AccountRepository accountRepository,
+                                    CategoryRepository categoryRepository,
                                     FileImportHistoryRepository fileImportHistoryRepository,
                                     TransactionParserFactory parserFactory,
                                     TransactionCategorizer categorizer,
                                     VendorCleaner vendorCleaner) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
+        this.categoryRepository = categoryRepository;
         this.fileImportHistoryRepository = fileImportHistoryRepository;
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
@@ -64,6 +62,7 @@ public class TransactionImportService {
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
         List<CategoryRule> userRules = categorizer.loadRulesForUser(userId);
         List<VendorRule> vendorRules = vendorCleaner.loadRulesForUser(userId);
+        List<Category> userCategories = categoryRepository.findByUserId(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
             List<TransactionPreview> previews = rawTransactionStream
@@ -72,7 +71,7 @@ public class TransactionImportService {
                             .description(t.getDescription())
                             .amount(t.getAmount())
                             .type(t.getType())
-                            .suggestedCategory(categorizer.guessCategory(t, userRules))
+                            .suggestedCategory(categorizer.guessCategory(t, userRules, userCategories))
                             .vendorName(vendorCleaner.cleanVendorName(t.getDescription(), vendorRules))
                             .build())
                     .toList();
@@ -151,7 +150,7 @@ public class TransactionImportService {
 
     private void updateAccountBalance(Account account, List<Transaction> newTransactions) {
         BigDecimal oldBalance = account.getCurrentBalance();
-        
+
         for (Transaction t : newTransactions) {
             account.applyTransaction(t);
         }
@@ -164,7 +163,7 @@ public class TransactionImportService {
     public String calculateFileHash(InputStream inputStream) throws IOException {
         return DigestUtils.md5DigestAsHex(inputStream);
     }
-    
+
     // Kept for backward compatibility if needed, but intended to be removed or unused for streaming
     public String calculateFileHash(byte[] content) {
         return DigestUtils.md5DigestAsHex(content);
