@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.model.Category;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
@@ -12,7 +13,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -113,6 +116,43 @@ public class CategoryService {
         }
 
         categoryRepository.delete(category);
+    }
+
+    /**
+     * Get categories grouped by parent for dropdown display
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryGroupDto> getCategoriesGrouped(Long userId) {
+        List<Category> allCategories = categoryRepository.findByUserId(userId);
+
+        // Group children by parent
+        Map<Category, List<Category>> grouped = allCategories.stream()
+                .filter(c -> c.getParent() != null)  // Only child categories
+                .collect(Collectors.groupingBy(Category::getParent));
+
+        return grouped.entrySet().stream()
+                .map(entry -> new CategoryGroupDto(
+                        entry.getKey().getName(),
+                        entry.getKey().getId(),
+                        entry.getValue().stream()
+                                .map(this::mapToDto)
+                                .sorted(Comparator.comparing(CategoryDto::name))
+                                .toList()
+                ))
+                .sorted(Comparator.comparing(CategoryGroupDto::groupLabel))
+                .toList();
+    }
+
+    /**
+     * Get only child categories (for filtering/autocomplete)
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getChildCategories(Long userId) {
+        return categoryRepository.findByUserId(userId).stream()
+                .filter(c -> c.getParent() != null)  // Only child categories
+                .map(this::mapToDto)
+                .sorted(Comparator.comparing(CategoryDto::name))
+                .toList();
     }
 
     private CategoryDto mapToDto(Category category) {

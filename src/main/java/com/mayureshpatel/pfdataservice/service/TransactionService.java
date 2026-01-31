@@ -2,15 +2,12 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransferSuggestionDto;
+import com.mayureshpatel.pfdataservice.model.*;
 import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification;
 import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
-import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
-import com.mayureshpatel.pfdataservice.model.VendorRule;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -163,10 +160,21 @@ public class TransactionService {
         }
 
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
-            categoryRepository.findByUserId(userId).stream()
+            Category category = categoryRepository.findByUserId(userId).stream()
                     .filter(c -> c.getName().equalsIgnoreCase(dto.categoryName()))
                     .findFirst()
-                    .ifPresent(transaction::setCategory);
+                    .orElse(null);
+
+            if (category != null) {
+                // VALIDATION: Only allow child categories on transactions
+                if (category.getParent() == null) {
+                    throw new IllegalArgumentException(
+                            "Only subcategories can be assigned to transactions. " +
+                            "Please select a specific subcategory under '" + category.getName() + "'."
+                    );
+                }
+                transaction.setCategory(category);
+            }
         }
 
         // update account balance
@@ -225,10 +233,21 @@ public class TransactionService {
         }
 
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
-            categoryRepository.findByUserId(userId).stream()
+            Category category = categoryRepository.findByUserId(userId).stream()
                     .filter(c -> c.getName().equalsIgnoreCase(dto.categoryName()))
                     .findFirst()
-                    .ifPresent(transaction::setCategory);
+                    .orElse(null);
+
+            if (category != null) {
+                // VALIDATION: Only allow child categories on transactions
+                if (category.getParent() == null) {
+                    throw new IllegalArgumentException(
+                            "Only subcategories can be assigned to transactions. " +
+                            "Please select a specific subcategory under '" + category.getName() + "'."
+                    );
+                }
+                transaction.setCategory(category);
+            }
         } else {
             transaction.setCategory(null);
         }

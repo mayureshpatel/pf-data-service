@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.CategoryService;
 import jakarta.validation.Valid;
@@ -21,6 +22,18 @@ public class CategoryController {
     @GetMapping
     public ResponseEntity<List<CategoryDto>> getCategories(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(categoryService.getCategoriesByUserId(userDetails.getId()));
+    }
+
+    @GetMapping("/grouped")
+    public ResponseEntity<List<CategoryGroupDto>> getCategoriesGrouped(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(categoryService.getCategoriesGrouped(userDetails.getId()));
+    }
+
+    @GetMapping("/children")
+    public ResponseEntity<List<CategoryDto>> getChildCategories(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(categoryService.getChildCategories(userDetails.getId()));
     }
 
     @PostMapping
