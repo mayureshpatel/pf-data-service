@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.UnmatchedVendorDto;
 import com.mayureshpatel.pfdataservice.dto.VendorRuleDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.VendorRuleService;
@@ -34,6 +36,16 @@ public class VendorRuleController {
     public ResponseEntity<Void> applyRules(@AuthenticationPrincipal CustomUserDetails userDetails) {
         vendorRuleService.applyRules(userDetails.getId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/preview")
+    public ResponseEntity<List<RuleChangePreviewDto>> previewApply(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(vendorRuleService.previewApply(userDetails.getId()));
+    }
+
+    @GetMapping("/unmatched")
+    public ResponseEntity<List<UnmatchedVendorDto>> getUnmatchedVendors(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(vendorRuleService.getUnmatchedVendors(userDetails.getId()));
     }
 
     @DeleteMapping("/{id}")

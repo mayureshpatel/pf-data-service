@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.UnmatchedVendorDto;
 import com.mayureshpatel.pfdataservice.dto.VendorRuleDto;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.User;
@@ -14,7 +16,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -99,6 +104,54 @@ public class VendorRuleService {
         }
 
         vendorRuleRepository.delete(rule);
+    }
+
+    public List<RuleChangePreviewDto> previewApply(Long userId) {
+        List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
+        List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
+
+        List<RuleChangePreviewDto> previews = new ArrayList<>();
+
+        for (Transaction t : transactions) {
+            String original = t.getOriginalVendorName();
+            if (original == null) original = t.getDescription();
+
+            String newVendor = vendorCleaner.cleanVendorName(original, rules);
+
+            if (newVendor != null && !newVendor.equals(t.getVendorName())) {
+                previews.add(new RuleChangePreviewDto(
+                        t.getDescription(),
+                        t.getVendorName(),
+                        newVendor
+                ));
+            }
+        }
+
+        return previews;
+    }
+
+    public List<UnmatchedVendorDto> getUnmatchedVendors(Long userId) {
+        List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
+        List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
+
+        Map<String, Long> grouped = transactions.stream()
+                .collect(Collectors.groupingBy(
+                        t -> t.getOriginalVendorName() != null ? t.getOriginalVendorName() : t.getDescription(),
+                        Collectors.counting()
+                ));
+
+        List<UnmatchedVendorDto> unmatched = new ArrayList<>();
+
+        for (Map.Entry<String, Long> entry : grouped.entrySet()) {
+            String name = entry.getKey();
+            if (vendorCleaner.cleanVendorName(name, rules) == null) {
+                unmatched.add(new UnmatchedVendorDto(name, entry.getValue().intValue()));
+            }
+        }
+
+        unmatched.sort((a, b) -> Integer.compare(b.count(), a.count()));
+
+        return unmatched;
     }
 
     private VendorRuleDto mapToDto(VendorRule rule) {
