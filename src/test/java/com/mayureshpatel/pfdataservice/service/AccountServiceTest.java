@@ -61,7 +61,8 @@ class AccountServiceTest {
             null,
             "New Account",
             AccountType.SAVINGS,
-            BigDecimal.valueOf(500.00)
+            BigDecimal.valueOf(500.00),
+            null
         );
     }
 
@@ -120,7 +121,8 @@ class AccountServiceTest {
             100L,
             "Updated Checking",
             AccountType.CHECKING,
-            BigDecimal.valueOf(1500.00)
+            BigDecimal.valueOf(1500.00),
+            null
         );
         when(accountRepository.findById(100L)).thenReturn(Optional.of(account));
         when(accountRepository.save(any(Account.class))).thenReturn(account);

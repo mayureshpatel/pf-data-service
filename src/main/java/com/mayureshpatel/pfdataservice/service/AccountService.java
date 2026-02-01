@@ -37,6 +37,7 @@ public class AccountService {
         account.setName(accountDto.name());
         account.setType(accountDto.type());
         account.setCurrentBalance(accountDto.currentBalance());
+        account.setBankName(accountDto.bankName());
         account.setUser(user);
 
         return mapToDto(accountRepository.save(account));
@@ -53,6 +54,7 @@ public class AccountService {
 
         account.setName(dto.name());
         account.setType(dto.type());
+        account.setBankName(dto.bankName());
         // We generally do NOT update balance directly here as it invalidates transaction history, 
         // but for a simple CRUD it might be allowed if the user wants to correct the starting balance.
         // Ideally, balance is derived or only initial balance is editable.
@@ -88,7 +90,8 @@ public class AccountService {
                 account.getId(),
                 account.getName(),
                 account.getType(),
-                account.getCurrentBalance()
+                account.getCurrentBalance(),
+                account.getBankName()
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto;
 
 import com.mayureshpatel.pfdataservice.model.AccountType;
+import com.mayureshpatel.pfdataservice.model.BankName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -15,5 +16,7 @@ public record AccountDto(
     AccountType type,
 
     @NotNull(message = "Current balance is required")
-    BigDecimal currentBalance
+    BigDecimal currentBalance,
+
+    BankName bankName
 ) {}
