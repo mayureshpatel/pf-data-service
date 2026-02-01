@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.VendorTotal;
 import com.mayureshpatel.pfdataservice.dto.DashboardData;
 import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
@@ -51,15 +52,45 @@ public class DashboardService {
     public List<CategoryTotal> getCategoryBreakdown(Long userId, int month, int year) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+        return getCategoryBreakdown(userId, startDate, endDate);
+    }
+
+    public List<CategoryTotal> getCategoryBreakdown(Long userId, LocalDate startDate, LocalDate endDate) {
         return transactionRepository.findCategoryTotals(userId, startDate, endDate);
+    }
+
+    public List<VendorTotal> getVendorBreakdown(Long userId, int month, int year) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+        return getVendorBreakdown(userId, startDate, endDate);
+    }
+
+    public List<VendorTotal> getVendorBreakdown(Long userId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.findVendorTotals(userId, startDate, endDate);
     }
 
     public DashboardPulseDto getPulse(Long userId, int month, int year) {
         LocalDate startCurrent = LocalDate.of(year, month, 1);
         LocalDate endCurrent = startCurrent.plusMonths(1).minusDays(1);
+        
+        // For monthly pulse, previous is exactly one month back
         LocalDate startPrevious = startCurrent.minusMonths(1);
         LocalDate endPrevious = startCurrent.minusDays(1);
 
+        return calculatePulse(userId, startCurrent, endCurrent, startPrevious, endPrevious);
+    }
+
+    public DashboardPulseDto getPulse(Long userId, LocalDate start, LocalDate end) {
+        // Calculate duration to find equivalent previous period
+        long days = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
+        LocalDate startPrevious = start.minusDays(days);
+        LocalDate endPrevious = start.minusDays(1);
+
+        return calculatePulse(userId, start, end, startPrevious, endPrevious);
+    }
+
+    private DashboardPulseDto calculatePulse(Long userId, LocalDate startCurrent, LocalDate endCurrent, 
+                                           LocalDate startPrevious, LocalDate endPrevious) {
         BigDecimal currentIncome = getSum(userId, startCurrent, endCurrent, TransactionType.INCOME);
         BigDecimal currentExpense = getSum(userId, startCurrent, endCurrent, TransactionType.EXPENSE);
         BigDecimal previousIncome = getSum(userId, startPrevious, endPrevious, TransactionType.INCOME);

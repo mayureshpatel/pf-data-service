@@ -59,6 +59,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     );
 
     @Query("""
+            SELECT new com.mayureshpatel.pfdataservice.dto.VendorTotal(COALESCE(t.vendorName, t.description), SUM(t.amount))
+            FROM Transaction t
+            JOIN t.account a
+            JOIN a.user u
+            WHERE u.id = :userId
+                AND t.date BETWEEN :startDate AND :endDate
+                AND t.type = 'EXPENSE'
+            GROUP BY COALESCE(t.vendorName, t.description)
+            ORDER BY SUM(t.amount) DESC
+            """)
+    List<com.mayureshpatel.pfdataservice.dto.VendorTotal> findVendorTotals(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
             select sum(t.amount)
             from Transaction t
             where t.account.user.id = :userId

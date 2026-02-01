@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.VendorTotal;
 import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardPulseDto;
@@ -26,8 +27,14 @@ public class DashboardController {
     public ResponseEntity<List<CategoryTotal>> getCategoryBreakdown(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year) {
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
         
+        if (startDate != null && endDate != null) {
+            return ResponseEntity.ok(dashboardService.getCategoryBreakdown(userDetails.getId(), startDate, endDate));
+        }
+
         LocalDate now = LocalDate.now();
         int m = month != null ? month : now.getMonthValue();
         int y = year != null ? year : now.getYear();
@@ -35,11 +42,36 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getCategoryBreakdown(userDetails.getId(), m, y));
     }
 
+    @GetMapping("/vendors")
+    public ResponseEntity<List<VendorTotal>> getVendorBreakdown(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
+
+        if (startDate != null && endDate != null) {
+            return ResponseEntity.ok(dashboardService.getVendorBreakdown(userDetails.getId(), startDate, endDate));
+        }
+
+        LocalDate now = LocalDate.now();
+        int m = month != null ? month : now.getMonthValue();
+        int y = year != null ? year : now.getYear();
+
+        return ResponseEntity.ok(dashboardService.getVendorBreakdown(userDetails.getId(), m, y));
+    }
+
     @GetMapping("/pulse")
     public ResponseEntity<DashboardPulseDto> getPulse(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year) {
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
+
+        if (startDate != null && endDate != null) {
+            return ResponseEntity.ok(dashboardService.getPulse(userDetails.getId(), startDate, endDate));
+        }
 
         LocalDate now = LocalDate.now();
         int m = month != null ? month : now.getMonthValue();
