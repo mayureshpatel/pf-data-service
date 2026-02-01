@@ -68,6 +68,7 @@ public class TransactionImportService {
             List<TransactionPreview> previews = rawTransactionStream
                     .map(t -> TransactionPreview.builder()
                             .date(t.getDate())
+                            .postDate(t.getPostDate())
                             .description(t.getDescription())
                             .amount(t.getAmount())
                             .type(t.getType())
@@ -139,6 +140,7 @@ public class TransactionImportService {
     private Transaction mapToEntity(TransactionDto dto) {
         Transaction transaction = new Transaction();
         transaction.setDate(dto.date());
+        transaction.setPostDate(dto.postDate());
         transaction.setDescription(dto.description());
         // For imports, original vendor name is the description
         transaction.setOriginalVendorName(dto.description());

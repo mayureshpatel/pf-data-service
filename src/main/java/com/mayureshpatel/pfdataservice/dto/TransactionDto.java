@@ -14,6 +14,8 @@ public record TransactionDto(
         @NotNull(message = "Date is required")
         LocalDate date,
 
+        LocalDate postDate,
+
         String description,
         
         String originalVendorName,

@@ -9,6 +9,7 @@ import java.time.LocalDate;
 @Builder
 public record TransactionPreview(
         LocalDate date,
+        LocalDate postDate,
         String description,
         BigDecimal amount,
         TransactionType type,

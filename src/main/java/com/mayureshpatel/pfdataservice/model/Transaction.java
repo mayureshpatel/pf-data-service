@@ -39,6 +39,9 @@ public class Transaction {
     @NotNull
     private LocalDate date;
 
+    @Column(name = "post_date")
+    private LocalDate postDate;
+
     private String description;
 
     @Column(name = "original_vendor_name")
