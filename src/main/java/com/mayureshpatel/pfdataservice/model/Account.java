@@ -39,6 +39,10 @@ public class Account {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
