@@ -79,11 +79,14 @@ public class Transaction {
 
     /**
      * Calculates the net change this transaction applies to an account balance.
-     * INCOME is positive, EXPENSE and TRANSFER are negative.
+     * INCOME/TRANSFER_IN is positive, EXPENSE/TRANSFER_OUT is negative.
      */
     public BigDecimal getNetChange() {
         if (amount == null) return BigDecimal.ZERO;
-        return (type == TransactionType.INCOME) ? amount : amount.negate();
+        if (type == TransactionType.INCOME || type == TransactionType.TRANSFER_IN) {
+            return amount;
+        }
+        return amount.negate();
     }
 
     @Override

@@ -93,9 +93,24 @@ public class TransactionService {
             if (!t.getAccount().getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
             }
-            t.setType(TransactionType.TRANSFER);
+
+            // Invalidate old balance effect
+            t.getAccount().undoTransaction(t);
+
+            if (t.getType() == TransactionType.INCOME) {
+                t.setType(TransactionType.TRANSFER_IN);
+            } else if (t.getType() == TransactionType.EXPENSE) {
+                t.setType(TransactionType.TRANSFER_OUT);
+            } else {
+                // Fallback for existing TRANSFER or other types
+                t.setType(TransactionType.TRANSFER_OUT); 
+            }
+            
             // Optionally clear category if it was categorized
             t.setCategory(null);
+
+            // Re-apply new balance effect (TRANSFER_IN is positive, TRANSFER_OUT is negative)
+            t.getAccount().applyTransaction(t);
         }
         
         transactionRepository.saveAll(transactions);

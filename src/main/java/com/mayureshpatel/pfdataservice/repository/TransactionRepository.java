@@ -104,13 +104,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("tagCount") Long tagCount
     );
 
-    @Query("SELECT SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END) FROM Transaction t WHERE t.account.id = :accountId AND t.date > :date")
+    @Query("SELECT SUM(CASE WHEN t.type IN ('INCOME', 'TRANSFER_IN') THEN t.amount ELSE -t.amount END) FROM Transaction t WHERE t.account.id = :accountId AND t.date > :date")
     BigDecimal getNetFlowAfterDate(@Param("accountId") Long accountId, @Param("date") LocalDate date);
 
     @Query("""
             SELECT new com.mayureshpatel.pfdataservice.dto.DailyBalance(
                 t.date,
-                SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END)
+                SUM(CASE WHEN t.type IN ('INCOME', 'TRANSFER_IN') THEN t.amount ELSE -t.amount END)
             )
             FROM Transaction t
             WHERE t.account.user.id = :userId
@@ -137,7 +137,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             JOIN t.account a
             JOIN a.user u
             WHERE u.id = :userId
-              AND t.type != 'TRANSFER'
+              AND t.type NOT IN ('TRANSFER', 'TRANSFER_IN', 'TRANSFER_OUT')
               AND t.date >= :startDate
             ORDER BY t.date DESC
             """)
@@ -152,7 +152,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             JOIN t.account a
             JOIN a.user u
             WHERE u.id = :userId
-              AND t.type != 'TRANSFER'
+              AND t.type NOT IN ('TRANSFER', 'TRANSFER_IN', 'TRANSFER_OUT')
               AND t.date >= :startDate
             GROUP BY YEAR(t.date), MONTH(t.date), t.type
             ORDER BY YEAR(t.date), MONTH(t.date)
