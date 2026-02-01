@@ -45,4 +45,14 @@ public class AccountController {
         accountService.deleteAccount(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/reconcile")
+    public ResponseEntity<AccountDto> reconcileAccount(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody ReconcileRequest request) {
+        return ResponseEntity.ok(accountService.reconcileAccount(userDetails.getId(), id, request.targetBalance()));
+    }
+
+    public record ReconcileRequest(java.math.BigDecimal targetBalance) {}
 }

@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.AccountDto;
 import com.mayureshpatel.pfdataservice.model.Account;
+import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -55,12 +57,44 @@ public class AccountService {
         account.setName(dto.name());
         account.setType(dto.type());
         account.setBankName(dto.bankName());
-        // We generally do NOT update balance directly here as it invalidates transaction history, 
-        // but for a simple CRUD it might be allowed if the user wants to correct the starting balance.
-        // Ideally, balance is derived or only initial balance is editable.
-        // Assuming user knows what they are doing for now or this updates the "current" balance.
-        account.setCurrentBalance(dto.currentBalance());
+        // currentBalance is NOT updated here to ensure data integrity.
+        // Use reconcileAccount for balance adjustments.
 
+        return mapToDto(accountRepository.save(account));
+    }
+
+    @Transactional
+    public AccountDto reconcileAccount(Long userId, Long accountId, BigDecimal targetBalance) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+
+        if (!account.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Access denied");
+        }
+
+        BigDecimal currentBalance = account.getCurrentBalance();
+        BigDecimal diff = targetBalance.subtract(currentBalance);
+
+        if (diff.compareTo(BigDecimal.ZERO) == 0) {
+            return mapToDto(account);
+        }
+
+        // Create adjustment transaction
+        // If diff is positive (Target > Current), we need to ADD money.
+        // If diff is negative (Target < Current), we need to SUBTRACT money.
+        // Transaction.getNetChange() for ADJUSTMENT returns the raw signed amount.
+        Transaction adjustment = new Transaction();
+        adjustment.setAccount(account);
+        adjustment.setAmount(diff);
+        adjustment.setDate(java.time.LocalDate.now());
+        adjustment.setType(com.mayureshpatel.pfdataservice.model.TransactionType.ADJUSTMENT);
+        adjustment.setDescription("Balance Reconciliation (Manual Adjustment)");
+        adjustment.setOriginalVendorName("System");
+        
+        transactionRepository.save(adjustment);
+        
+        // Update account balance
+        account.applyTransaction(adjustment);
         return mapToDto(accountRepository.save(account));
     }
 

@@ -83,13 +83,17 @@ public class Transaction {
     /**
      * Calculates the net change this transaction applies to an account balance.
      * INCOME/TRANSFER_IN is positive, EXPENSE/TRANSFER_OUT is negative.
+     * ADJUSTMENT uses the raw signed amount.
      */
     public BigDecimal getNetChange() {
         if (amount == null) return BigDecimal.ZERO;
-        if (type == TransactionType.INCOME || type == TransactionType.TRANSFER_IN) {
+        if (type == TransactionType.ADJUSTMENT) {
             return amount;
         }
-        return amount.negate();
+        if (type == TransactionType.INCOME || type == TransactionType.TRANSFER_IN) {
+            return amount.abs();
+        }
+        return amount.abs().negate();
     }
 
     @Override

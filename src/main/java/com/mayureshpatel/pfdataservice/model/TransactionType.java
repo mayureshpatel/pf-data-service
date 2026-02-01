@@ -3,7 +3,8 @@ package com.mayureshpatel.pfdataservice.model;
 public enum TransactionType {
     INCOME,
     EXPENSE,
-    TRANSFER,
+    TRANSFER, // Legacy/Generic Transfer
     TRANSFER_IN,
-    TRANSFER_OUT
+    TRANSFER_OUT,
+    ADJUSTMENT
 }
