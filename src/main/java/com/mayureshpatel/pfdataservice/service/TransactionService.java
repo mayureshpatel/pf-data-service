@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpeci
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
     private final VendorCleaner vendorCleaner;
+    private final TransactionCategorizer categorizer;
 
     public List<TransferSuggestionDto> findPotentialTransfers(Long userId) {
         // Look back 5 years to cover historical data
@@ -190,6 +192,18 @@ public class TransactionService {
                 }
                 transaction.setCategory(category);
             }
+        } else {
+            // Smart Categorization
+            List<CategoryRule> rules = categorizer.loadRulesForUser(userId);
+            List<Category> userCategories = categoryRepository.findByUserId(userId);
+            String suggestedCategory = categorizer.guessCategory(transaction, rules, userCategories);
+
+            if (!"Uncategorized".equals(suggestedCategory)) {
+                userCategories.stream()
+                        .filter(c -> c.getName().equalsIgnoreCase(suggestedCategory))
+                        .findFirst()
+                        .ifPresent(transaction::setCategory);
+            }
         }
 
         // update account balance
@@ -264,7 +278,19 @@ public class TransactionService {
                 transaction.setCategory(category);
             }
         } else {
-            transaction.setCategory(null);
+            // Smart Categorization
+            List<CategoryRule> rules = categorizer.loadRulesForUser(userId);
+            List<Category> userCategories = categoryRepository.findByUserId(userId);
+            String suggestedCategory = categorizer.guessCategory(transaction, rules, userCategories);
+
+            if (!"Uncategorized".equals(suggestedCategory)) {
+                userCategories.stream()
+                        .filter(c -> c.getName().equalsIgnoreCase(suggestedCategory))
+                        .findFirst()
+                        .ifPresent(transaction::setCategory);
+            } else {
+                transaction.setCategory(null);
+            }
         }
 
         // Apply new amount effect

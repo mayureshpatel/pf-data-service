@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
@@ -36,6 +37,7 @@ class TransactionImportServiceTest {
 
     @Mock private TransactionRepository transactionRepository;
     @Mock private AccountRepository accountRepository;
+    @Mock private CategoryRepository categoryRepository;
     @Mock private FileImportHistoryRepository fileImportHistoryRepository;
     @Mock private TransactionParserFactory parserFactory;
     @Mock private TransactionCategorizer categorizer;
@@ -51,6 +53,7 @@ class TransactionImportServiceTest {
         importService = new TransactionImportService(
                 transactionRepository,
                 accountRepository,
+                categoryRepository,
                 fileImportHistoryRepository,
                 parserFactory,
                 categorizer,
@@ -80,7 +83,8 @@ class TransactionImportServiceTest {
 
         when(parser.parse(eq(1L), any(InputStream.class))).thenReturn(Stream.of(t1));
         when(categorizer.loadRulesForUser(10L)).thenReturn(List.of());
-        when(categorizer.guessCategory(eq(t1), anyList())).thenReturn("Groceries");
+        when(categoryRepository.findByUserId(10L)).thenReturn(List.of());
+        when(categorizer.guessCategory(eq(t1), anyList(), anyList())).thenReturn("Groceries");
         when(vendorCleaner.loadRulesForUser(10L)).thenReturn(List.of());
         when(vendorCleaner.cleanVendorName(any(), anyList())).thenReturn("Vendor");
 

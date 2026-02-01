@@ -25,7 +25,7 @@ class TransactionCategorizerTest {
 
     @BeforeEach
     void setUp() {
-        categorizer = new TransactionCategorizer(categoryRuleRepository);
+        categorizer = new TransactionCategorizer(categoryRuleRepository, List.of(new RuleBasedCategorizationStrategy()));
 
         // Mock rules - Order matters (simulating Priority DESC, Length DESC)
         // Constructor: id, keyword, categoryName, priority, user, createdAt, updatedAt

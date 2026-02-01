@@ -28,7 +28,15 @@ public class TransactionSpecification {
             }
 
             if (filter.type() != null) {
-                predicates.add(cb.equal(root.get("type"), filter.type()));
+                if (filter.type() == TransactionType.TRANSFER) {
+                    predicates.add(root.get("type").in(
+                            TransactionType.TRANSFER,
+                            TransactionType.TRANSFER_IN,
+                            TransactionType.TRANSFER_OUT
+                    ));
+                } else {
+                    predicates.add(cb.equal(root.get("type"), filter.type()));
+                }
             }
 
             if (filter.description() != null && !filter.description().isBlank()) {

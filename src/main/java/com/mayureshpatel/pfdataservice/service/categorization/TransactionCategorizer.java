@@ -18,6 +18,7 @@ import java.util.List;
 public class TransactionCategorizer {
 
     private final CategoryRuleRepository categoryRuleRepository;
+    private final List<CategorizationStrategy> strategies;
 
     public List<CategoryRule> loadRulesForUser(Long userId) {
         return categoryRuleRepository.findByUserOrGlobal(userId);
@@ -25,53 +26,32 @@ public class TransactionCategorizer {
 
     /**
      * Analyzes the transaction description and returns a best-guess category name.
-     * Logic: Returns the category associated with the highest priority (then longest) matching keyword.
      */
     public String guessCategory(Transaction transaction, List<CategoryRule> rules) {
         return guessCategory(transaction, rules, null);
     }
 
     /**
-     * Analyzes the transaction description and returns a best-guess category name.
-     * Logic: Returns the category associated with the highest priority (then longest) matching keyword.
-     * Skips parent categories (categories without a parent) to ensure only child categories are suggested.
+     * Analyzes the transaction description and returns a best-guess category name using multiple strategies.
      *
      * @param transaction The transaction to categorize
      * @param rules The category rules to match against
-     * @param categories Optional list of categories to validate against (filters out parent categories)
+     * @param categories Optional list of categories to validate against
      * @return The suggested category name, or "Uncategorized" if no match found
      */
     public String guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {
-        if (transaction.getDescription() == null) {
-            return "Uncategorized";
-        }
+        CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                .userId(transaction.getAccount() != null ? transaction.getAccount().getUser().getId() : null)
+                .rules(rules)
+                .categories(categories)
+                .build();
 
-        String descUpper = transaction.getDescription().toUpperCase();
-
-        // Rules are expected to be ordered by Priority DESC, then Length DESC
-        for (CategoryRule rule : rules) {
-            if (descUpper.contains(rule.getKeyword().toUpperCase())) {
-                String categoryName = rule.getCategoryName();
-
-                // If categories list provided, skip parent categories
-                if (categories != null && !categories.isEmpty()) {
-                    Category matchedCategory = categories.stream()
-                            .filter(c -> c.getName().equalsIgnoreCase(categoryName))
-                            .findFirst()
-                            .orElse(null);
-
-                    // Skip if it's a parent category (no parent itself)
-                    if (matchedCategory != null && matchedCategory.getParent() == null) {
-                        log.debug("Skipping parent category '{}' in auto-categorization for transaction: {}",
-                                categoryName, transaction.getDescription());
-                        continue;
-                    }
-                }
-
-                return categoryName;
-            }
-        }
-
-        return "Uncategorized";
+        return strategies.stream()
+                .sorted(java.util.Comparator.comparingInt(CategorizationStrategy::getOrder))
+                .map(s -> s.categorize(transaction, context))
+                .filter(java.util.Optional::isPresent)
+                .map(java.util.Optional::get)
+                .findFirst()
+                .orElse("Uncategorized");
     }
 }

@@ -5,7 +5,10 @@ import com.mayureshpatel.pfdataservice.model.Account;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.model.User;
+import com.mayureshpatel.pfdataservice.repository.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,9 +39,18 @@ class TransactionServiceTest {
 
     @Mock
     private TransactionRepository transactionRepository;
-    
+
+    @Mock
+    private AccountRepository accountRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
     @Mock
     private VendorCleaner vendorCleaner;
+
+    @Mock
+    private TransactionCategorizer categorizer;
 
     @InjectMocks
     private TransactionService transactionService;
