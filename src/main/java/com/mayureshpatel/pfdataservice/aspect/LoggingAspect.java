@@ -10,6 +10,9 @@ import org.springframework.util.StopWatch;
 
 import java.util.Arrays;
 
+/**
+ * Aspect for logging execution of service and repository Spring components.
+ */
 @Aspect
 @Component
 @Slf4j
