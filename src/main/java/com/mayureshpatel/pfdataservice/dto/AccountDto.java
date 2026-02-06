@@ -6,6 +6,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
+/**
+ * Represents an account object.
+ * @param id the account id
+ * @param name the account name
+ * @param type  the account type
+ * @param currentBalance the current balance
+ * @param bankName the bank name
+ */
 public record AccountDto(
     Long id,
 

@@ -8,6 +8,15 @@ import lombok.Builder;
 
 import java.math.BigDecimal;
 
+/**
+ * Represents a budget object.
+ * @param id the budget id
+ * @param categoryId the category id
+ * @param categoryName the category name
+ * @param amount the budget amount
+ * @param month the budget month
+ * @param year the budget year
+ */
 @Builder
 public record BudgetDto(
     Long id,
