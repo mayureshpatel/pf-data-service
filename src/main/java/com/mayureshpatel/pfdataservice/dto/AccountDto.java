@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.dto;
 
-import com.mayureshpatel.pfdataservice.model.AccountType;
 import com.mayureshpatel.pfdataservice.model.BankName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,7 +9,7 @@ import java.math.BigDecimal;
  * Represents an account object.
  * @param id the account id
  * @param name the account name
- * @param type  the account type
+ * @param type the account type code (validated against account_types lookup table)
  * @param currentBalance the current balance
  * @param bankName the bank name
  */
@@ -21,7 +20,8 @@ public record AccountDto(
     String name,
 
     @NotNull(message = "Type is required")
-    AccountType type,
+    @NotBlank(message = "Type cannot be blank")
+    String type,
 
     @NotNull(message = "Current balance is required")
     BigDecimal currentBalance,

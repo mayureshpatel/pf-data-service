@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.AccountDto;
 import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.AccountType;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
@@ -53,14 +52,14 @@ class AccountServiceTest {
         account = new Account();
         account.setId(100L);
         account.setName("Test Checking");
-        account.setType(AccountType.CHECKING);
+        account.setType("CHECKING");
         account.setCurrentBalance(BigDecimal.valueOf(1000.00));
         account.setUser(user);
 
         accountDto = new AccountDto(
             null,
             "New Account",
-            AccountType.SAVINGS,
+            "SAVINGS",
             BigDecimal.valueOf(500.00),
             null
         );
@@ -77,7 +76,7 @@ class AccountServiceTest {
         // Then
         assertThat(accounts).hasSize(1);
         assertThat(accounts.get(0).name()).isEqualTo("Test Checking");
-        assertThat(accounts.get(0).type()).isEqualTo(AccountType.CHECKING);
+        assertThat(accounts.get(0).type()).isEqualTo("CHECKING");
         verify(accountRepository).findByUserId(1L);
     }
 
@@ -97,7 +96,7 @@ class AccountServiceTest {
         // Then
         assertThat(created.id()).isEqualTo(101L);
         assertThat(created.name()).isEqualTo("New Account");
-        assertThat(created.type()).isEqualTo(AccountType.SAVINGS);
+        assertThat(created.type()).isEqualTo("SAVINGS");
         assertThat(created.currentBalance()).isEqualByComparingTo(BigDecimal.valueOf(500.00));
         verify(userRepository).findById(1L);
         verify(accountRepository).save(any(Account.class));
@@ -120,7 +119,7 @@ class AccountServiceTest {
         AccountDto updateDto = new AccountDto(
             100L,
             "Updated Checking",
-            AccountType.CHECKING,
+            "CHECKING",
             BigDecimal.valueOf(1500.00),
             null
         );

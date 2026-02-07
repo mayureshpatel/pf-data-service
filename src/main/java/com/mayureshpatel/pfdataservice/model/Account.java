@@ -7,7 +7,7 @@ import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Objects;
 
 @Entity
@@ -28,12 +28,14 @@ public class Account {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private AccountType type;
+    private String type;  // Changed: Now uses lookup table, not enum
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal currentBalance;
+
+    @Column(name = "currency_code", nullable = false, length = 3)
+    private String currencyCode = "USD";
 
     @Enumerated(EnumType.STRING)
     @Column(name = "bank_name", length = 50)
@@ -48,13 +50,25 @@ public class Account {
     private Long version;
 
     @Column(name = "created_at", insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
     @Column(name = "updated_at", insertable = false, updatable = false)
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
 
     @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
+    private OffsetDateTime deletedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deleted_by")
+    private User deletedBy;
 
     public void applyTransaction(Transaction transaction) {
         if (this.currentBalance == null) this.currentBalance = BigDecimal.ZERO;
