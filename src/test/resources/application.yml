@@ -1,6 +1,7 @@
 spring:
   application:
     name: pf-data-service-test
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${DB_URL:jdbc:postgresql://localhost:5432/personal-finance}
@@ -8,7 +9,7 @@ spring:
     password: ${DB_PASSWORD:admin}
     hikari:
       maximum-pool-size: 10
-      connection-timeout: 30000
+      minimum-idle: 5
 
   flyway:
     enabled: true
