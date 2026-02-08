@@ -17,7 +17,9 @@ public interface JdbcRepository<T, ID> {
      * @param entity The entity to save or update
      * @return The saved or updated entity
      */
-    T save(T entity);
+    default T save(T entity) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Finds an entity by its primary key.
@@ -25,21 +27,27 @@ public interface JdbcRepository<T, ID> {
      * @param id The primary key of the entity
      * @return The entity if found, otherwise Optional.empty()
      */
-    Optional<T> findById(ID id);
+    default Optional<T> findById(ID id) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Find all entities.
      *
      * @return List of all entities
      */
-    List<T> findAll();
+    default List<T> findAll() {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Delete an entity by ID
      *
      * @param id The ID of the entity to delete
      */
-    void deleteById(ID id);
+    default void deleteById(ID id) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Check if an entity exists by ID
@@ -47,12 +55,16 @@ public interface JdbcRepository<T, ID> {
      * @param id The ID of the entity to check
      * @return True if the entity exists, false otherwise
      */
-    boolean existsById(ID id);
+    default boolean existsById(ID id) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Count the number of entities
      *
      * @return The number of entities
      */
-    long count();
+    default long count() {
+        throw new UnsupportedOperationException();
+    }
 }
