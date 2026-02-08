@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -23,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Each test run gets a fresh PostgreSQL database with migrations applied.
  */
 @SpringBootTest
-@TestContainer
+@Testcontainers
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional
@@ -38,9 +37,6 @@ class JdbcCurrencyRepositoryTest {
 
     @Autowired
     private JdbcCurrencyRepository repository;
-
-    @Autowired
-    private JdbcClient jdbcClient;
 
     @Test
     void shouldSaveAndFindById() {
