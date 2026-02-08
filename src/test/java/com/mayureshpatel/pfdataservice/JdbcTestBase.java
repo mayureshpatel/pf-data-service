@@ -1,0 +1,25 @@
+package com.mayureshpatel.pfdataservice;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.ActiveProfiles;
+
+/**
+ * Base class for JDBC repository tests.
+ */
+@JdbcTest
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+public abstract class JdbcTestBase {
+
+    @Autowired
+    protected JdbcClient jdbcClient;
+
+    @BeforeEach
+    void setupBase() {
+        // common test setup
+    }
+}

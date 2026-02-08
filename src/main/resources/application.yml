@@ -14,7 +14,7 @@ spring:
     password: ${DB_PASSWORD:admin}
     hikari:
       maximum-pool-size: 10
-      connection-timeout: 30000
+      minimum-idle: 5
 
   flyway:
     enabled: true
@@ -22,15 +22,12 @@ spring:
     baseline-on-migrate: true
 
   jpa:
-    open-in-view: false
+    hibernate:
+      ddl-auto: validate
     properties:
       hibernate:
-        ddl-auto: validate
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        jdbc:
-          batch_size: 50
-        order_inserts: true
-        order_updates: true
+        show_sql: false
+        format_sql: false
 
   security:
     jwt:
