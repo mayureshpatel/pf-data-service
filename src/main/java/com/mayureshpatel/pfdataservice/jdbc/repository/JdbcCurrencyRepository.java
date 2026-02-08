@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.jdbc.repository;
 
 import com.mayureshpatel.pfdataservice.jdbc.JdbcRepository;
 import com.mayureshpatel.pfdataservice.jdbc.mapper.CurrencyRowMapper;
+import com.mayureshpatel.pfdataservice.jdbc.util.SqlLoader;
 import com.mayureshpatel.pfdataservice.model.Currency;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -16,14 +17,12 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     private final JdbcClient jdbcClient;
     private final CurrencyRowMapper rowMapper;
+    private final SqlLoader sqlLoader;
 
     @Override
     public Optional<Currency> findById(String code) {
-        return jdbcClient.sql("""
-                        SELECT code, name, symbol, is_active, created_at
-                        FROM currencies
-                        WHERE code = :code
-                        """)
+        String sql = sqlLoader.load("sql/currency/findById.sql");
+        return jdbcClient.sql(sql)
                 .param("code", code)
                 .query(rowMapper)
                 .optional();
@@ -31,22 +30,15 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public List<Currency> findAll() {
-        return jdbcClient.sql("""
-                        SELECT code, name, symbol, is_active, created_at
-                        FROM currencies
-                        ORDER BY code
-                        """)
+        String sql = sqlLoader.load("sql/currency/findAll.sql");
+        return jdbcClient.sql(sql)
                 .query(rowMapper)
                 .list();
     }
 
     public List<Currency> findByIsActive(boolean isActive) {
-        return jdbcClient.sql("""
-                        SELECT code, name, symbol, is_active, created_at
-                        FROM currencies
-                        WHERE is_active = :isActive
-                        ORDER BY code
-                        """)
+        String sql = sqlLoader.load("sql/currency/findByIsActive.sql");
+        return jdbcClient.sql(sql)
                 .param("isActive", isActive)
                 .query(rowMapper)
                 .list();
@@ -54,14 +46,8 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public Currency save(Currency currency) {
-        jdbcClient.sql("""
-                        INSERT INTO currencies (code, name, symbol, is_active)
-                        VALUES (:code, :name, :symbol, :isActive)
-                        ON CONFLICT (code) DO UPDATE SET
-                            name = EXCLUDED.name,
-                            symbol = EXCLUDED.symbol,
-                            is_active = EXCLUDED.is_active
-                        """)
+        String sql = sqlLoader.load("sql/currency/save.sql");
+        jdbcClient.sql(sql)
                 .param("code", currency.getCode())
                 .param("name", currency.getName())
                 .param("symbol", currency.getSymbol())
@@ -73,16 +59,16 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public void deleteById(String code) {
-        jdbcClient.sql("DELETE FROM currencies WHERE code = :code")
+        String sql = sqlLoader.load("sql/currency/deleteById.sql");
+        jdbcClient.sql(sql)
                 .param("code", code)
                 .update();
     }
 
     @Override
     public boolean existsById(String code) {
-        Integer count = jdbcClient.sql("""
-                        SELECT COUNT(*) FROM currencies WHERE code = :code
-                        """)
+        String sql = sqlLoader.load("sql/currency/existsById.sql");
+        Integer count = jdbcClient.sql(sql)
                 .param("code", code)
                 .query(Integer.class)
                 .single();
@@ -92,7 +78,8 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public long count() {
-        return jdbcClient.sql("SELECT COUNT(*) FROM currencies")
+        String sql = sqlLoader.load("sql/currency/count.sql");
+        return jdbcClient.sql(sql)
                 .query(Long.class)
                 .single();
     }
