@@ -47,7 +47,7 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
                         WHERE is_active = :isActive
                         ORDER BY code
                         """)
-                .param("isActive", Boolean.toString(isActive))
+                .param("isActive", isActive)
                 .query(rowMapper)
                 .list();
     }

@@ -42,65 +42,67 @@ class JdbcCurrencyRepositoryTest {
     void shouldSaveAndFindById() {
         // Given
         Currency currency = new Currency();
-        currency.setCode("USD");
-        currency.setName("US Dollar");
-        currency.setSymbol("$");
+        currency.setCode("ZZ5");
+        currency.setName("Test Dollar");
+        currency.setSymbol("@");
         currency.setIsActive(true);
 
         // When
         repository.save(currency);
-        Optional<Currency> found = repository.findById("USD");
+        Optional<Currency> found = repository.findById("ZZ5");
 
         // Then
         assertThat(found).isPresent();
-        assertThat(found.get().getName()).isEqualTo("US Dollar");
-        assertThat(found.get().getSymbol()).isEqualTo("$");
+        assertThat(found.get().getName()).isEqualTo("Test Dollar");
+        assertThat(found.get().getSymbol()).isEqualTo("@");
     }
 
     @Test
     void shouldFindAllActiveCurrencies() {
         // Given
-        Currency usd = new Currency();
-        usd.setCode("USD");
-        usd.setName("US Dollar");
-        usd.setSymbol("$");
-        usd.setIsActive(true);
-        repository.save(usd);
+        Currency active1 = new Currency();
+        active1.setCode("ZZ1");
+        active1.setName("Test Active 1");
+        active1.setSymbol("@");
+        active1.setIsActive(true);
+        repository.save(active1);
 
-        Currency eur = new Currency();
-        eur.setCode("EUR");
-        eur.setName("Euro");
-        eur.setSymbol("€");
-        eur.setIsActive(false);
-        repository.save(eur);
+        Currency inactive = new Currency();
+        inactive.setCode("ZZ2");
+        inactive.setName("Test Inactive");
+        inactive.setSymbol("#");
+        inactive.setIsActive(false);
+        repository.save(inactive);
 
         // When
-        List<Currency> active = repository.findByIsActive(true);
+        List<Currency> activeCurrencies = repository.findByIsActive(true);
 
         // Then
-        assertThat(active).hasSize(1);
-        assertThat(active.get(0).getCode()).isEqualTo("USD");
+        assertThat(activeCurrencies)
+                .isNotEmpty()
+                .anyMatch(c -> c.getCode().equals("ZZ1"))
+                .noneMatch(c -> c.getCode().equals("ZZ2"));
     }
 
     @Test
     void shouldUpdateExistingCurrency() {
         // Given
         Currency currency = new Currency();
-        currency.setCode("USD");
-        currency.setName("US Dollar");
-        currency.setSymbol("$");
+        currency.setCode("ZZ6");
+        currency.setName("Test Dollar");
+        currency.setSymbol("@");
         currency.setIsActive(true);
         repository.save(currency);
 
         // When - update the name
-        currency.setName("United States Dollar");
+        currency.setName("Updated Test Dollar");
         repository.save(currency);
 
         // Then
-        Optional<Currency> updated = repository.findById("USD");
+        Optional<Currency> updated = repository.findById("ZZ6");
         assertThat(updated).isPresent();
-        assertThat(updated.get().getName()).isEqualTo("United States Dollar");
-        assertThat(updated.get().getSymbol()).isEqualTo("$");
+        assertThat(updated.get().getName()).isEqualTo("Updated Test Dollar");
+        assertThat(updated.get().getSymbol()).isEqualTo("@");
     }
 
     @Test
@@ -115,24 +117,26 @@ class JdbcCurrencyRepositoryTest {
     @Test
     void shouldCountAllCurrencies() {
         // Given
-        Currency usd = new Currency();
-        usd.setCode("USD");
-        usd.setName("US Dollar");
-        usd.setSymbol("$");
-        usd.setIsActive(true);
-        repository.save(usd);
+        long initialCount = repository.count();
 
-        Currency eur = new Currency();
-        eur.setCode("EUR");
-        eur.setName("Euro");
-        eur.setSymbol("€");
-        eur.setIsActive(true);
-        repository.save(eur);
+        Currency c1 = new Currency();
+        c1.setCode("ZZ3");
+        c1.setName("Test Currency 1");
+        c1.setSymbol("@");
+        c1.setIsActive(true);
+        repository.save(c1);
+
+        Currency c2 = new Currency();
+        c2.setCode("ZZ4");
+        c2.setName("Test Currency 2");
+        c2.setSymbol("#");
+        c2.setIsActive(true);
+        repository.save(c2);
 
         // When
         long count = repository.count();
 
         // Then
-        assertThat(count).isEqualTo(2);
+        assertThat(count).isEqualTo(initialCount + 2);
     }
 }
