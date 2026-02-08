@@ -3,13 +3,10 @@ package com.mayureshpatel.pfdataservice.service.categorization;
 import com.mayureshpatel.pfdataservice.model.Category;
 import com.mayureshpatel.pfdataservice.model.CategoryRule;
 import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.repository.CategoryRuleRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -17,12 +14,7 @@ import java.util.List;
 @Slf4j
 public class TransactionCategorizer {
 
-    private final CategoryRuleRepository categoryRuleRepository;
     private final List<CategorizationStrategy> strategies;
-
-    public List<CategoryRule> loadRulesForUser(Long userId) {
-        return categoryRuleRepository.findByUserOrGlobal(userId);
-    }
 
     /**
      * Analyzes the transaction description and returns a best-guess category name.
@@ -35,8 +27,8 @@ public class TransactionCategorizer {
      * Analyzes the transaction description and returns a best-guess category name using multiple strategies.
      *
      * @param transaction The transaction to categorize
-     * @param rules The category rules to match against
-     * @param categories Optional list of categories to validate against
+     * @param rules       The category rules to match against
+     * @param categories  Optional list of categories to validate against
      * @return The suggested category name, or "Uncategorized" if no match found
      */
     public String guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {

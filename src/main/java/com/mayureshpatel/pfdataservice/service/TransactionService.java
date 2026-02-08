@@ -2,12 +2,13 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransferSuggestionDto;
+import com.mayureshpatel.pfdataservice.jdbc.repository.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.model.*;
-import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification;
-import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification;
+import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,7 +19,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -35,6 +35,7 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final VendorCleaner vendorCleaner;
     private final TransactionCategorizer categorizer;
+    private final CategoryRuleRepository categoryRuleRepository;
 
     public List<TransferSuggestionDto> findPotentialTransfers(Long userId) {
         // Look back 5 years to cover historical data
@@ -53,29 +54,29 @@ public class TransactionService {
                 if (matchedIds.contains(t2.getId())) continue;
 
                 long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getDate(), t2.getDate()));
-                
+
                 // Since list is sorted by date DESC, if diff > 3, subsequent items will also be > 3
                 if (daysDiff > 3) {
-                    break; 
+                    break;
                 }
 
                 // Check 1: Amounts are equal (both positive in DB)
                 if (t1.getAmount().compareTo(t2.getAmount()) == 0) {
-                    
+
                     // Check 2: Types are different (One Income, One Expense)
                     // This implies money moving OUT of one and INTO another
                     if (t1.getType() != t2.getType()) {
 
                         // Check 3: Different accounts
                         if (!t1.getAccount().getId().equals(t2.getAccount().getId())) {
-                            
+
                             // High confidence match
                             suggestions.add(new TransferSuggestionDto(
                                     mapToDto(t1),
                                     mapToDto(t2),
                                     0.9 - (daysDiff * 0.1) // 0.9 for same day, 0.8 for 1 day diff, etc.
                             ));
-                            
+
                             matchedIds.add(t1.getId());
                             matchedIds.add(t2.getId());
                             break; // Stop looking for match for t1
@@ -90,7 +91,7 @@ public class TransactionService {
     @Transactional
     public void markAsTransfer(Long userId, List<Long> transactionIds) {
         List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
-        
+
         for (Transaction t : transactions) {
             if (!t.getAccount().getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
@@ -105,16 +106,16 @@ public class TransactionService {
                 t.setType(TransactionType.TRANSFER_OUT);
             } else {
                 // Fallback for existing TRANSFER or other types
-                t.setType(TransactionType.TRANSFER_OUT); 
+                t.setType(TransactionType.TRANSFER_OUT);
             }
-            
+
             // Optionally clear category if it was categorized
             t.setCategory(null);
 
             // Re-apply new balance effect (TRANSFER_IN is positive, TRANSFER_OUT is negative)
             t.getAccount().applyTransaction(t);
         }
-        
+
         transactionRepository.saveAll(transactions);
     }
 
@@ -136,14 +137,14 @@ public class TransactionService {
         // Validate ownership in one query
         long ownedCount = transactionRepository.countByIdInAndAccount_User_Id(transactionIds, userId);
         if (ownedCount != transactionIds.size()) {
-             throw new AccessDeniedException("You do not own one or more of these transactions");
+            throw new AccessDeniedException("You do not own one or more of these transactions");
         }
 
         List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
         for (Transaction t : transactions) {
             t.getAccount().undoTransaction(t);
         }
-        
+
         transactionRepository.deleteAll(transactions);
     }
 
@@ -187,14 +188,14 @@ public class TransactionService {
                 if (category.getParent() == null) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
-                            "Please select a specific subcategory under '" + category.getName() + "'."
+                                    "Please select a specific subcategory under '" + category.getName() + "'."
                     );
                 }
                 transaction.setCategory(category);
             }
         } else {
             // Smart Categorization
-            List<CategoryRule> rules = categorizer.loadRulesForUser(userId);
+            List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
             List<Category> userCategories = categoryRepository.findByUserId(userId);
             String suggestedCategory = categorizer.guessCategory(transaction, rules, userCategories);
 
@@ -272,14 +273,14 @@ public class TransactionService {
                 if (category.getParent() == null) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
-                            "Please select a specific subcategory under '" + category.getName() + "'."
+                                    "Please select a specific subcategory under '" + category.getName() + "'."
                     );
                 }
                 transaction.setCategory(category);
             }
         } else {
             // Smart Categorization
-            List<CategoryRule> rules = categorizer.loadRulesForUser(userId);
+            List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
             List<Category> userCategories = categoryRepository.findByUserId(userId);
             String suggestedCategory = categorizer.guessCategory(transaction, rules, userCategories);
 

@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.service.categorization;
 
 import com.mayureshpatel.pfdataservice.model.CategoryRule;
 import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.repository.CategoryRuleRepository;
+import com.mayureshpatel.pfdataservice.jdbc.repository.CategoryRuleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +25,7 @@ class TransactionCategorizerTest {
 
     @BeforeEach
     void setUp() {
-        categorizer = new TransactionCategorizer(categoryRuleRepository, List.of(new RuleBasedCategorizationStrategy()));
+        categorizer = new TransactionCategorizer(List.of(new RuleBasedCategorizationStrategy()));
 
         // Mock rules - Order matters (simulating Priority DESC, Length DESC)
         // Constructor: id, keyword, categoryName, priority, user, createdAt, updatedAt

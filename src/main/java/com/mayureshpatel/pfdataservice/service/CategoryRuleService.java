@@ -2,12 +2,12 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.jdbc.repository.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.model.Category;
 import com.mayureshpatel.pfdataservice.model.CategoryRule;
 import com.mayureshpatel.pfdataservice.model.Transaction;
 import com.mayureshpatel.pfdataservice.model.User;
 import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
-import com.mayureshpatel.pfdataservice.repository.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.UserRepository;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
@@ -17,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ public class CategoryRuleService {
     private final CategoryRepository categoryRepository;
 
     public List<CategoryRuleDto> getRules(Long userId) {
-        return categorizer.loadRulesForUser(userId).stream()
+        return categoryRuleRepository.findByUserId(userId).stream()
                 .map(this::mapToDto)
                 .toList();
     }
@@ -54,23 +55,31 @@ public class CategoryRuleService {
     }
 
     @Transactional
+    public CategoryRuleDto updateRule(Long ruleId, CategoryRuleDto dto) {
+        CategoryRule rule = categoryRuleRepository.findById(ruleId)
+                .orElseThrow(() -> new EntityNotFoundException("Rule not found"));
+        rule.setKeyword(dto.keyword());
+        rule.setCategoryName(dto.categoryName());
+        rule.setPriority(dto.priority());
+        rule.setUpdatedAt(OffsetDateTime.now());
+
+        return mapToDto(categoryRuleRepository.save(rule));
+    }
+
+    @Transactional
     public void deleteRule(Long userId, Long ruleId) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new EntityNotFoundException("Rule not found"));
-
-        if (rule.getUser() == null) {
-            throw new AccessDeniedException("Cannot delete global rules");
-        }
 
         if (!rule.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this rule");
         }
 
-        categoryRuleRepository.delete(rule);
+        categoryRuleRepository.deleteById(ruleId);
     }
 
     public List<RuleChangePreviewDto> previewApply(Long userId) {
-        List<CategoryRule> rules = categorizer.loadRulesForUser(userId);
+        List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
         List<Category> categories = categoryRepository.findByUserId(userId);
         List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
 
@@ -100,7 +109,7 @@ public class CategoryRuleService {
 
     @Transactional
     public int applyRules(Long userId) {
-        List<CategoryRule> rules = categorizer.loadRulesForUser(userId);
+        List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
         List<Category> categories = categoryRepository.findByUserId(userId);
         List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
 
