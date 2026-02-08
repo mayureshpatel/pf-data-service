@@ -5,7 +5,6 @@ import com.mayureshpatel.pfdataservice.dto.AuthenticationRequest;
 import com.mayureshpatel.pfdataservice.dto.AuthenticationResponse;
 import com.mayureshpatel.pfdataservice.dto.RegistrationRequest;
 import com.mayureshpatel.pfdataservice.exception.UserAlreadyExistsException;
-import com.mayureshpatel.pfdataservice.security.CustomUserDetailsService;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.service.AuthenticationService;
 import com.mayureshpatel.pfdataservice.service.RegistrationService;

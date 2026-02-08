@@ -5,7 +5,6 @@ import com.mayureshpatel.pfdataservice.dto.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
 import com.mayureshpatel.pfdataservice.model.TransactionType;
-import com.mayureshpatel.pfdataservice.security.CustomUserDetailsService;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;

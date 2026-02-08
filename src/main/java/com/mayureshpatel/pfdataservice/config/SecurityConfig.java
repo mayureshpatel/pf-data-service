@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.config;
 
-import com.mayureshpatel.pfdataservice.security.CustomUserDetailsService;
 import com.mayureshpatel.pfdataservice.security.JwtAuthenticationFilter;
+import com.mayureshpatel.pfdataservice.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,7 +30,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final CustomUserDetailsService userDetailsService;
+    private final UserService userService;
     private final JwtAuthenticationFilter jwtAuthFilter;
 
     /**
@@ -68,7 +68,7 @@ public class SecurityConfig {
      */
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }

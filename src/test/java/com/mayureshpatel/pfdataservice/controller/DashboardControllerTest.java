@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.dto.DashboardData;
-import com.mayureshpatel.pfdataservice.security.CustomUserDetailsService;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.service.DashboardService;
