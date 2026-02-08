@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpeci
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.service.TransactionService;
+import com.mayureshpatel.pfdataservice.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -33,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TransactionCrudController.class)
-@AutoConfigureMockMvc(addFilters = false) 
+@AutoConfigureMockMvc(addFilters = false)
 class TransactionCrudControllerTest {
 
     @Autowired
@@ -50,20 +51,20 @@ class TransactionCrudControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
-    
+
     @MockitoBean
     private UserRepository userRepository;
 
     // We use @Autowired because we defined it in TestConfig
     @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private UserService userService;
 
     @TestConfiguration
     static class TestConfig {
         @Bean
         @Primary
-        public CustomUserDetailsService customUserDetailsService() {
-            return mock(CustomUserDetailsService.class);
+        public UserService userService() {
+            return mock(UserService.class);
         }
     }
 

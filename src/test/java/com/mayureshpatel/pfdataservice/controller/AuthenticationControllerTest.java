@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.exception.UserAlreadyExistsException;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.service.AuthenticationService;
 import com.mayureshpatel.pfdataservice.service.RegistrationService;
+import com.mayureshpatel.pfdataservice.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -50,14 +51,14 @@ class AuthenticationControllerTest {
     private com.mayureshpatel.pfdataservice.repository.UserRepository userRepository;
 
     @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private UserService userService;
 
     @TestConfiguration
     static class TestConfig {
         @Bean
         @Primary
-        public CustomUserDetailsService customUserDetailsService() {
-            return mock(CustomUserDetailsService.class);
+        public UserService userService() {
+            return mock(UserService.class);
         }
     }
 

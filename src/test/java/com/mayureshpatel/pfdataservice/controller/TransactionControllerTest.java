@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.model.TransactionType;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;
+import com.mayureshpatel.pfdataservice.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -25,10 +26,9 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,14 +53,14 @@ class TransactionControllerTest {
     private JwtService jwtService;
 
     @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private UserService userService;
 
     @TestConfiguration
     static class TestConfig {
         @Bean
         @Primary
-        public CustomUserDetailsService customUserDetailsService() {
-            return mock(CustomUserDetailsService.class);
+        public UserService userService() {
+            return mock(UserService.class);
         }
     }
 
@@ -92,7 +92,7 @@ class TransactionControllerTest {
                 .type(TransactionType.EXPENSE)
                 .description("Test")
                 .build();
-        
+
         SaveTransactionRequest request = new SaveTransactionRequest(
                 List.of(dto),
                 "file.csv",
@@ -106,7 +106,7 @@ class TransactionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
-        
+
         verify(transactionImportService).saveTransactions(any(), eq(accountId), any(), any(), any());
     }
 }
