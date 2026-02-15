@@ -1,8 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.VendorRule;
-import com.mayureshpatel.pfdataservice.repository.VendorRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.vendor.model.VendorRule;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

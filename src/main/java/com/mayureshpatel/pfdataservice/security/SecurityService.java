@@ -1,7 +1,5 @@
 package com.mayureshpatel.pfdataservice.security;
 
-import com.mayureshpatel.pfdataservice.repository.AccountRepository;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

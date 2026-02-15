@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.model.User;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;

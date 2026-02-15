@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.model.VendorRule;
-import com.mayureshpatel.pfdataservice.repository.VendorRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.vendor.model.VendorRule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
