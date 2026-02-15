@@ -1,0 +1,1 @@
+SELECT * FROM accounts WHERE user_id = :userId AND deleted_at IS NULL
