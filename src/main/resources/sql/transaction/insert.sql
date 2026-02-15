@@ -1,0 +1,2 @@
+INSERT INTO transactions (amount, date, post_date, description, original_vendor_name, vendor_name, type, account_id, category_id, created_at, updated_at)
+VALUES (:amount, :date, :postDate, :description, :originalVendorName, :vendorName, :type, :accountId, :categoryId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
