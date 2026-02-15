@@ -11,13 +11,24 @@ import java.util.Optional;
  * @param <ID> Primary key type
  */
 public interface JdbcRepository<T, ID> {
+
     /**
-     * Saves or updates an entity.
+     * Inserts a new entity.
      *
-     * @param entity The entity to save or update
-     * @return The saved or updated entity
+     * @param entity The entity to insert
+     * @return The inserted entity
      */
-    default T save(T entity) {
+    default T insert(T entity) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Updates an existing entity.
+     *
+     * @param entity The entity to update
+     * @return The updated entity
+     */
+    default T update(T entity) {
         throw new UnsupportedOperationException();
     }
 
@@ -41,7 +52,7 @@ public interface JdbcRepository<T, ID> {
     }
 
     /**
-     * Delete an entity by ID
+     * Delete an entity
      *
      * @param id The ID of the entity to delete
      */
@@ -50,12 +61,13 @@ public interface JdbcRepository<T, ID> {
     }
 
     /**
-     * Check if an entity exists by ID
+     * Delete an entity by ID.
+     * Used for tables that support soft-deletion.
      *
-     * @param id The ID of the entity to check
-     * @return True if the entity exists, false otherwise
+     * @param id The ID of the entity to delete
+     * @param deletedBy The ID of the user who deleted the entity
      */
-    default boolean existsById(ID id) {
+    default void deleteById(ID id, Long deletedBy) {
         throw new UnsupportedOperationException();
     }
 
