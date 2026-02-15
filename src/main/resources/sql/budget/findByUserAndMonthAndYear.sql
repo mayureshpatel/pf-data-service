@@ -1,0 +1,1 @@
+SELECT * FROM budgets WHERE user_id = :userId AND month = :month AND year = :year AND deleted_at IS NULL
