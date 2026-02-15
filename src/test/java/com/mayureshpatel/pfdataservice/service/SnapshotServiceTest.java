@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.AccountSnapshot;
-import com.mayureshpatel.pfdataservice.repository.AccountRepository;
-import com.mayureshpatel.pfdataservice.repository.AccountSnapshotRepository;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.repository.account.model.AccountSnapshot;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;

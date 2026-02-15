@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
-import com.mayureshpatel.pfdataservice.model.BankName;
+import com.mayureshpatel.pfdataservice.repository.account.model.BankName;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

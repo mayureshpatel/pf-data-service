@@ -2,8 +2,8 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransferSuggestionDto;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
-import com.mayureshpatel.pfdataservice.repository.specification.TransactionSpecification.TransactionFilter;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionService;
 import jakarta.validation.Valid;

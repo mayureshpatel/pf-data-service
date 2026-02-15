@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;

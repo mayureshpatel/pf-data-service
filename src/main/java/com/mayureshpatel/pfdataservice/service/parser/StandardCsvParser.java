@@ -1,11 +1,10 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
-import com.mayureshpatel.pfdataservice.model.BankName;
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.account.model.BankName;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;

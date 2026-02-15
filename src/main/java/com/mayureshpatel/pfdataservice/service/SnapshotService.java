@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.AccountSnapshot;
-import com.mayureshpatel.pfdataservice.repository.AccountRepository;
-import com.mayureshpatel.pfdataservice.repository.AccountSnapshotRepository;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.repository.account.model.AccountSnapshot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
