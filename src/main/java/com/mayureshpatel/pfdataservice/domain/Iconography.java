@@ -12,4 +12,9 @@ public class Iconography {
     private String icon;
     private String color;
     private String iconPath;
+
+    public Iconography(String icon, String color) {
+        this.icon = icon;
+        this.color = color;
+    }
 }

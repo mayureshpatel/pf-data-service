@@ -17,4 +17,5 @@ public class TableAudit {
     private User updatedBy;
 
     private User deletedBy;
+    private OffsetDateTime deletedAt;
 }

@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +21,7 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         account.setType(rs.getString("type"));
         account.setCurrentBalance(getBigDecimal(rs, "current_balance"));
         account.setCurrencyCode(rs.getString("currency_code"));
-        
+
         String bankName = rs.getString("bank_name");
         if (bankName != null) {
             account.setBankName(BankName.valueOf(bankName));
@@ -35,29 +35,29 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         }
 
         account.setVersion(getLongOrNull(rs, "version"));
-        account.setCreatedAt(getOffsetDateTime(rs, "created_at"));
-        account.setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
-        account.setDeletedAt(getOffsetDateTime(rs, "deleted_at"));
+        account.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
+        account.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
+        account.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));
 
         Long createdById = getLongOrNull(rs, "created_by");
         if (createdById != null) {
             User createdBy = new User();
             createdBy.setId(createdById);
-            account.setCreatedBy(createdBy);
+            account.getAudit().setCreatedBy(createdBy);
         }
 
         Long updatedById = getLongOrNull(rs, "updated_by");
         if (updatedById != null) {
             User updatedBy = new User();
             updatedBy.setId(updatedById);
-            account.setUpdatedBy(updatedBy);
+            account.getAudit().setUpdatedBy(updatedBy);
         }
 
         Long deletedById = getLongOrNull(rs, "deleted_by");
         if (deletedById != null) {
             User deletedBy = new User();
             deletedBy.setId(deletedById);
-            account.setDeletedBy(deletedBy);
+            account.getAudit().setDeletedBy(deletedBy);
         }
 
         return account;

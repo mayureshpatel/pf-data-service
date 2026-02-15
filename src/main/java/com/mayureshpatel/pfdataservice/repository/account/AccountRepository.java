@@ -3,12 +3,11 @@ package com.mayureshpatel.pfdataservice.repository.account;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
-import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
+import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
+import com.mayureshpatel.pfdataservice.repository.account.query.AccountQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -24,24 +23,21 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
 
     @Override
     public List<Account> findAll() {
-        String query = sqlLoader.load("sql/account/findAll.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(AccountQueries.FIND_ALL)
                 .query(rowMapper)
                 .list();
     }
 
     @Override
     public Optional<Account> findById(Long id) {
-        String query = sqlLoader.load("sql/account/findById.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(AccountQueries.FIND_BY_ID)
                 .param("id", id)
                 .query(rowMapper)
                 .optional();
     }
 
     public List<Account> findByUserId(Long userId) {
-        String query = sqlLoader.load("sql/account/findByUserId.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(AccountQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
@@ -49,35 +45,28 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
 
     @Override
     public Account insert(Account account) {
-        String query = sqlLoader.load("sql/account/insert.sql");
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-
-        jdbcClient.sql(query)
+        jdbcClient.sql(AccountQueries.INSERT)
                 .param("name", account.getName())
                 .param("type", account.getType())
                 .param("currentBalance", account.getCurrentBalance())
                 .param("currencyCode", account.getCurrencyCode())
                 .param("bankName", account.getBankName() != null ? account.getBankName().name() : null)
                 .param("userId", account.getUser().getId())
-                .param("createdBy", account.getCreatedBy() != null ? account.getCreatedBy().getId() : null)
-                .param("updatedBy", account.getUpdatedBy() != null ? account.getUpdatedBy().getId() : null)
-                .update(keyHolder);
+                .param("createdBy", account.getAudit().getCreatedBy() != null ? account.getAudit().getCreatedBy().getId() : null)
+                .param("updatedBy", account.getAudit().getUpdatedBy() != null ? account.getAudit().getUpdatedBy().getId() : null);
 
-        account.setId(keyHolder.getKeyAs(Long.class));
         return account;
     }
 
     @Override
     public Account update(Account account) {
-        String query = sqlLoader.load("sql/account/update.sql");
-
-        int updated = jdbcClient.sql(query)
+        int updated = jdbcClient.sql(AccountQueries.UPDATE)
                 .param("name", account.getName())
                 .param("type", account.getType())
                 .param("currentBalance", account.getCurrentBalance())
                 .param("currencyCode", account.getCurrencyCode())
                 .param("bankName", account.getBankName() != null ? account.getBankName().name() : null)
-                .param("updatedBy", account.getUpdatedBy() != null ? account.getUpdatedBy().getId() : null)
+                .param("updatedBy", account.getAudit().getUpdatedBy() != null ? account.getAudit().getUpdatedBy().getId() : null)
                 .param("id", account.getId())
                 .param("version", account.getVersion())
                 .update();
@@ -92,8 +81,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
 
     @Override
     public void deleteById(Long id, Long deletedBy) {
-        String query = sqlLoader.load("sql/account/deleteById.sql");
-        jdbcClient.sql(query)
+        jdbcClient.sql(AccountQueries.DELETE_BY_ID)
                 .param("id", id)
                 .param("deletedBy", deletedBy)
                 .update();
@@ -101,8 +89,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
 
     @Override
     public long count() {
-        String query = sqlLoader.load("sql/account/count.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(AccountQueries.COUNT_ACTIVE)
                 .query(Long.class)
                 .single();
     }

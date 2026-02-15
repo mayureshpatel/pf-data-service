@@ -1,2 +1,0 @@
-INSERT INTO accounts (name, type, current_balance, currency_code, bank_name, user_id, version, created_at, created_by, updated_at, updated_by)
-VALUES (:name, :type, :currentBalance, :currencyCode, :bankName, :userId, 1, CURRENT_TIMESTAMP, :createdBy, CURRENT_TIMESTAMP, :updatedBy)

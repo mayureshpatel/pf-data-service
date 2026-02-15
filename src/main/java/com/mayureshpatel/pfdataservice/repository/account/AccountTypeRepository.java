@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.account.AccountTypeLookup;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountTypeRowMapper;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
+import com.mayureshpatel.pfdataservice.repository.account.query.AccountTypeQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -19,8 +20,7 @@ public class AccountTypeRepository implements JdbcRepository<AccountTypeLookup, 
     private final SqlLoader sqlLoader;
 
     public List<AccountTypeLookup> findByIsActiveTrueOrderBySortOrder() {
-        String query = sqlLoader.load("sql/account-type/findBy.sql");
-        return this.jdbcClient.sql(query)
+        return this.jdbcClient.sql(AccountTypeQueries.FIND_ALL_ORDERED)
                 .query(rowMapper)
                 .list();
     }

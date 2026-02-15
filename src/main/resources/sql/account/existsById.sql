@@ -1,1 +1,0 @@
-SELECT COUNT(*) FROM accounts WHERE id = :id AND deleted_at IS NULL
