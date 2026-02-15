@@ -1,5 +1,9 @@
 package com.mayureshpatel.pfdataservice.domain.bank;
 
+import lombok.Getter;
+
+// todo: create lookup table for this
+@Getter
 public enum BankName {
     CAPITAL_ONE("Capital One"),
     DISCOVER("Discover"),
@@ -11,10 +15,6 @@ public enum BankName {
 
     BankName(String displayName) {
         this.displayName = displayName;
-    }
-
-    public String getDisplayName() {
-        return displayName;
     }
 
     public static BankName fromString(String text) {
