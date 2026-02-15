@@ -1,17 +1,15 @@
-package com.mayureshpatel.pfdataservice.jdbc.repository;
+package com.mayureshpatel.pfdataservice.repository.account.model;
 
-import com.mayureshpatel.pfdataservice.jdbc.JdbcRepository;
-import com.mayureshpatel.pfdataservice.jdbc.SoftDeleteSupport;
-import com.mayureshpatel.pfdataservice.jdbc.mapper.AccountRowMapper;
-import com.mayureshpatel.pfdataservice.jdbc.util.SqlLoader;
-import com.mayureshpatel.pfdataservice.model.Account;
+import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
+import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
+import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 

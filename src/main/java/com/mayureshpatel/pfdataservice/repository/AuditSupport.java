@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.jdbc;
+package com.mayureshpatel.pfdataservice.repository;
 
 import java.time.OffsetDateTime;
 

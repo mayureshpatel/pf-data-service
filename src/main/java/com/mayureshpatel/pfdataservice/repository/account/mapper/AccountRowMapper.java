@@ -1,8 +1,9 @@
-package com.mayureshpatel.pfdataservice.jdbc.mapper;
+package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
-import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.BankName;
-import com.mayureshpatel.pfdataservice.model.User;
+import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
+import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.repository.account.model.BankName;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
