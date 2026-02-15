@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.jdbc.repository.JdbcCurrencyRepository;
-import com.mayureshpatel.pfdataservice.model.Currency;
+import com.mayureshpatel.pfdataservice.repository.transaction.JdbcCurrencyRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Currency;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

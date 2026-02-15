@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.model.AccountTypeLookup;
-import com.mayureshpatel.pfdataservice.repository.AccountTypeLookupRepository;
+import com.mayureshpatel.pfdataservice.repository.account.model.AccountTypeLookup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

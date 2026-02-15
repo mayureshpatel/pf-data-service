@@ -2,8 +2,7 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
 import com.mayureshpatel.pfdataservice.dto.DashboardData;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

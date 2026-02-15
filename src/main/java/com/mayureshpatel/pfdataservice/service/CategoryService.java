@@ -2,11 +2,8 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.CategoryGroupDto;
-import com.mayureshpatel.pfdataservice.model.Category;
-import com.mayureshpatel.pfdataservice.model.User;
-import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
-import com.mayureshpatel.pfdataservice.repository.UserRepository;
+import com.mayureshpatel.pfdataservice.repository.category.model.Category;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;

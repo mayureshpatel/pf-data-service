@@ -2,11 +2,11 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.RecurringTransactionDto;
-import com.mayureshpatel.pfdataservice.model.*;
-import com.mayureshpatel.pfdataservice.repository.AccountRepository;
-import com.mayureshpatel.pfdataservice.repository.RecurringTransactionRepository;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
-import com.mayureshpatel.pfdataservice.repository.UserRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Frequency;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.RecurringTransaction;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
