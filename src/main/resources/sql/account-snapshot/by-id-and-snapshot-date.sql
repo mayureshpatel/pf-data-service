@@ -1,0 +1,1 @@
+select * from account_snapshot where id = :id and snapshot_date = :snapshotDate
