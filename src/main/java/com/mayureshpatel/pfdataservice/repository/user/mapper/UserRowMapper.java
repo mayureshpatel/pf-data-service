@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.user.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

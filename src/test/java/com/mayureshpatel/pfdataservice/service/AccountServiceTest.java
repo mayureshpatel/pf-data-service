@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.AccountDto;
-import com.mayureshpatel.pfdataservice.repository.account.model.Account;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

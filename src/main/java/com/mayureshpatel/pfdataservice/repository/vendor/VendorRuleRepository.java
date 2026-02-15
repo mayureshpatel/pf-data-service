@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.vendor;
 
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
-import com.mayureshpatel.pfdataservice.repository.vendor.model.VendorRule;
+import com.mayureshpatel.pfdataservice.domain.vendor.VendorRule;
 import com.mayureshpatel.pfdataservice.repository.vendor.mapper.VendorRuleRowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;

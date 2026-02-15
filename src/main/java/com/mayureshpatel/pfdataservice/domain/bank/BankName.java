@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.repository.account.model;
+package com.mayureshpatel.pfdataservice.domain.bank;
 
 public enum BankName {
     CAPITAL_ONE("Capital One"),

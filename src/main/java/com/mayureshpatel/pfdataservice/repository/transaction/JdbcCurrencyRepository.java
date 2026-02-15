@@ -3,7 +3,7 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CurrencyRowMapper;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Currency;
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;

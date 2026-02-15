@@ -1,10 +1,10 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
-import com.mayureshpatel.pfdataservice.repository.account.model.Account;
-import com.mayureshpatel.pfdataservice.repository.category.model.Category;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class TransactionRowMapper extends RowMapperFactory implements RowMapper<Transaction> {
+public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<Transaction> {
 
     @Override
     public Transaction mapRow(ResultSet rs, int rowNum) throws SQLException {

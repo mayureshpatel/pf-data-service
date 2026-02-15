@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.repository.account.model;
+package com.mayureshpatel.pfdataservice.domain.account;
 
 public enum AccountType {
     CHECKING,

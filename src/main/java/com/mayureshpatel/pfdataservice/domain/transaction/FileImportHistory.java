@@ -1,25 +1,22 @@
-package com.mayureshpatel.pfdataservice.repository.account.model;
+package com.mayureshpatel.pfdataservice.domain.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.proxy.HibernateProxy;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
-@Table(name = "account_snapshots", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"account_id", "snapshot_date"})
-})
+@Table(name = "file_import_history")
 @Getter
 @Setter
 @ToString(exclude = {"account"})
 @NoArgsConstructor
 @AllArgsConstructor
-public class AccountSnapshot {
+public class FileImportHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,15 +26,17 @@ public class AccountSnapshot {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
-    @Column(name = "snapshot_date", nullable = false)
-    private LocalDate snapshotDate;
+    @Column(nullable = false)
+    private String fileName;
 
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal balance;
+    @Column(nullable = false)
+    private String fileHash;
+
+    @Column(nullable = false)
+    private int transactionCount;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime importedAt;
 
     @Override
     public final boolean equals(Object o) {
@@ -46,7 +45,7 @@ public class AccountSnapshot {
         Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
         if (thisEffectiveClass != oEffectiveClass) return false;
-        AccountSnapshot that = (AccountSnapshot) o;
+        FileImportHistory that = (FileImportHistory) o;
         return getId() != null && Objects.equals(getId(), that.getId());
     }
 

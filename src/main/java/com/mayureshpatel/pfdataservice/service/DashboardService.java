@@ -7,7 +7,7 @@ import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardPulseDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.YtdSummaryDto;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

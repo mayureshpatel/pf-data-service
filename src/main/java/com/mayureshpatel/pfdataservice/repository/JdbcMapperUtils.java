@@ -13,7 +13,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 @Component
-public class RowMapperFactory {
+public class JdbcMapperUtils {
 
     /**
      * Safely get {@link OffsetDateTime} from {@link ResultSet}
@@ -23,7 +23,7 @@ public class RowMapperFactory {
      * @return the {@link OffsetDateTime}
      * @throws SQLException if column does not exist or cannot be converted to OffsetDateTime
      */
-    protected OffsetDateTime getOffsetDateTime(ResultSet rs, String columnName) throws SQLException {
+    public static OffsetDateTime getOffsetDateTime(ResultSet rs, String columnName) throws SQLException {
         Timestamp timestamp = rs.getTimestamp(columnName);
         return timestamp != null ? timestamp.toInstant().atOffset(ZoneOffset.UTC) : null;
     }
@@ -36,7 +36,7 @@ public class RowMapperFactory {
      * @return the {@link LocalDateTime}
      * @throws SQLException if column does not exist or cannot be converted to LocalDateTime
      */
-    protected LocalDateTime getLocalDateTime(ResultSet rs, String columnName) throws SQLException {
+    public static LocalDateTime getLocalDateTime(ResultSet rs, String columnName) throws SQLException {
         Timestamp timestamp = rs.getTimestamp(columnName);
         return timestamp != null ? timestamp.toLocalDateTime() : null;
     }
@@ -49,7 +49,7 @@ public class RowMapperFactory {
      * @return the {@link LocalDate}
      * @throws SQLException if column does not exist or cannot be converted to LocalDate
      */
-    protected LocalDate getLocalDate(ResultSet rs, String columnName) throws SQLException {
+    public static LocalDate getLocalDate(ResultSet rs, String columnName) throws SQLException {
         Date localDate = rs.getDate(columnName);
         return localDate != null ? localDate.toLocalDate() : null;
     }
@@ -62,7 +62,7 @@ public class RowMapperFactory {
      * @return the {@link BigDecimal} value
      * @throws SQLException if column does not exist or cannot be converted to BigDecimal
      */
-    protected BigDecimal getBigDecimal(ResultSet rs, String columnName) throws SQLException {
+    public static BigDecimal getBigDecimal(ResultSet rs, String columnName) throws SQLException {
         BigDecimal value = rs.getBigDecimal(columnName);
         return value != null ? value : BigDecimal.ZERO;
     }
@@ -75,7 +75,7 @@ public class RowMapperFactory {
      * @return the {@link Long} value
      * @throws SQLException if column does not exist or cannot be converted to long
      */
-    protected Long getLongOrNull(ResultSet rs, String columnName) throws SQLException {
+    public static Long getLongOrNull(ResultSet rs, String columnName) throws SQLException {
         long value = rs.getLong(columnName);
         return rs.wasNull() ? null : value;
     }
@@ -88,7 +88,7 @@ public class RowMapperFactory {
      * @return the {@link Integer} value
      * @throws SQLException if column does not exist or cannot be converted to Integer
      */
-    protected Integer getIntegerOrNull(ResultSet rs, String columnName) throws SQLException {
+    public static Integer getIntegerOrNull(ResultSet rs, String columnName) throws SQLException {
         int value = rs.getInt(columnName);
         return rs.wasNull() ? null : value;
     }

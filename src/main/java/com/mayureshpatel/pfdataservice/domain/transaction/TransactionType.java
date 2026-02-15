@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.model;
+package com.mayureshpatel.pfdataservice.domain.transaction;
 
 public enum TransactionType {
     INCOME,

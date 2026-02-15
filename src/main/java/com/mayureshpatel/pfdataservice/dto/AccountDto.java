@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto;
 
-import com.mayureshpatel.pfdataservice.repository.account.model.BankName;
+import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;

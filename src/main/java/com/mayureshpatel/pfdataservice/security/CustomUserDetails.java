@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.security;
 
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

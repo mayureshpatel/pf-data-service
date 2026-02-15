@@ -1,5 +1,6 @@
-package com.mayureshpatel.pfdataservice.repository.account.model;
+package com.mayureshpatel.pfdataservice.repository.account;
 
+import com.mayureshpatel.pfdataservice.domain.account.AccountSnapshot;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import lombok.RequiredArgsConstructor;

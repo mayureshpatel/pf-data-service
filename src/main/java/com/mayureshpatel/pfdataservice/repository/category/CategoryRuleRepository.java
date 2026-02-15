@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.category;
 
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
-import com.mayureshpatel.pfdataservice.repository.category.model.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRuleRowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;

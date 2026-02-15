@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto;
 
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Frequency;
+import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import lombok.Builder;
 
 import java.math.BigDecimal;

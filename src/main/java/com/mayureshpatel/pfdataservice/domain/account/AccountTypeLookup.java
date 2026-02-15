@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.model;
+package com.mayureshpatel.pfdataservice.domain.account;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,33 +8,45 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 
 /**
- * ISO 4217 currency codes with display metadata.
- * Validates currency_code in accounts table.
+ * Lookup table for account types with metadata (icons, colors, labels).
+ * Used by frontend for display configuration.
  */
 @Entity
-@Table(name = "currencies")
+@Table(name = "account_types")
 @Getter
 @Setter
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-public class Currency {
+public class AccountTypeLookup {
 
     @Id
-    @Column(name = "code", length = 3)
+    @Column(name = "code", length = 20)
     private String code;
 
-    @Column(name = "name", nullable = false, length = 50)
-    private String name;
+    @Column(name = "label", nullable = false, length = 50)
+    private String label;
 
-    @Column(name = "symbol", nullable = false, length = 5)
-    private String symbol;
+    @Column(name = "icon", length = 50)
+    private String icon;
+
+    @Column(name = "color", length = 20)
+    private String color;
+
+    @Column(name = "is_asset", nullable = false)
+    private Boolean isAsset;
+
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false, insertable = false)
+    private OffsetDateTime updatedAt;
 
     @Override
     public final boolean equals(Object o) {
@@ -49,8 +61,8 @@ public class Currency {
                 this.getClass();
         if (thisEffectiveClass != oEffectiveClass) return false;
 
-        Currency currency = (Currency) o;
-        return getCode() != null && Objects.equals(getCode(), currency.getCode());
+        AccountTypeLookup that = (AccountTypeLookup) o;
+        return getCode() != null && Objects.equals(getCode(), that.getCode());
     }
 
     @Override

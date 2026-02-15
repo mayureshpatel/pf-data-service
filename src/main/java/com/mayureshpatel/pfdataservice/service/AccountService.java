@@ -1,10 +1,10 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.AccountDto;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
-import com.mayureshpatel.pfdataservice.repository.account.model.Account;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -4,7 +4,7 @@ import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.user.mapper.UserRowMapper;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;

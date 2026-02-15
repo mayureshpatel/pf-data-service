@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
-import com.mayureshpatel.pfdataservice.repository.account.model.Account;
-import com.mayureshpatel.pfdataservice.repository.account.model.BankName;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.bank.BankName;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class AccountRowMapper extends RowMapperFactory implements RowMapper<Account> {
+public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Account> {
 
     @Override
     public Account mapRow(ResultSet rs, int rowNum) throws SQLException {

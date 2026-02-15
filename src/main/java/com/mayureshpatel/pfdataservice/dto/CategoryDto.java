@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto;
 
-import com.mayureshpatel.pfdataservice.repository.category.model.CategoryType;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import jakarta.validation.constraints.NotBlank;
 
 public record CategoryDto(

@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Tag;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
-import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
+import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
+import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class TagRowMapper extends RowMapperFactory implements RowMapper<Tag> {
+public class TagRowMapper extends JdbcMapperUtils implements RowMapper<Tag> {
 
     @Override
     public Tag mapRow(ResultSet rs, int rowNum) throws SQLException {

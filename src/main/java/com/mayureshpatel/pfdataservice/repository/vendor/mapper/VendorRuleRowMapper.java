@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.repository.vendor.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
-import com.mayureshpatel.pfdataservice.repository.vendor.model.VendorRule;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.domain.vendor.VendorRule;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class VendorRuleRowMapper extends RowMapperFactory implements RowMapper<VendorRule> {
+public class VendorRuleRowMapper extends JdbcMapperUtils implements RowMapper<VendorRule> {
 
     @Override
     public VendorRule mapRow(ResultSet rs, int rowNum) throws SQLException {

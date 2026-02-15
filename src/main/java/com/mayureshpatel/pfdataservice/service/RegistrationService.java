@@ -3,7 +3,7 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.dto.AuthenticationResponse;
 import com.mayureshpatel.pfdataservice.dto.RegistrationRequest;
 import com.mayureshpatel.pfdataservice.exception.UserAlreadyExistsException;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import lombok.RequiredArgsConstructor;

@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
-import com.mayureshpatel.pfdataservice.repository.category.model.Category;
-import com.mayureshpatel.pfdataservice.repository.category.model.CategoryType;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class CategoryRowMapper extends RowMapperFactory implements RowMapper<Category> {
+public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Category> {
 
     @Override
     public Category mapRow(ResultSet rs, int rowNum) throws SQLException {

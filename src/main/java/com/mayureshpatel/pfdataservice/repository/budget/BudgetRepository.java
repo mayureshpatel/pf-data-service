@@ -4,7 +4,7 @@ import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetRowMapper;
-import com.mayureshpatel.pfdataservice.repository.budget.model.Budget;
+import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;

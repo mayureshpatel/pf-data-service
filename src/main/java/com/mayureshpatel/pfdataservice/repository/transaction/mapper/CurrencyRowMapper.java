@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Currency;
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

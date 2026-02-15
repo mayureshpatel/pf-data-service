@@ -1,6 +1,6 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.model;
+package com.mayureshpatel.pfdataservice.domain.transaction;
 
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;

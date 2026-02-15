@@ -2,10 +2,10 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
-import com.mayureshpatel.pfdataservice.repository.account.model.Account;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;

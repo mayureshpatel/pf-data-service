@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.account.model.AccountTypeLookup;
+import com.mayureshpatel.pfdataservice.domain.account.AccountTypeLookup;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

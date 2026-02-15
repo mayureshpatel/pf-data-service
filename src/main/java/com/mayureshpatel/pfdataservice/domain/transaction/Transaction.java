@@ -1,7 +1,7 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.model;
+package com.mayureshpatel.pfdataservice.domain.transaction;
 
-import com.mayureshpatel.pfdataservice.repository.category.model.Category;
-import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;

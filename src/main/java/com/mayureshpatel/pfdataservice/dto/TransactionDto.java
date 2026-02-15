@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto;
 
-import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 

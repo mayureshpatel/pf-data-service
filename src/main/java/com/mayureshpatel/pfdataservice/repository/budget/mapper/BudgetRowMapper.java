@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.budget.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
-import com.mayureshpatel.pfdataservice.repository.category.model.Category;
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
-import com.mayureshpatel.pfdataservice.repository.budget.model.Budget;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class BudgetRowMapper extends RowMapperFactory implements RowMapper<Budget> {
+public class BudgetRowMapper extends JdbcMapperUtils implements RowMapper<Budget> {
 
     @Override
     public Budget mapRow(ResultSet rs, int rowNum) throws SQLException {

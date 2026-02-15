@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.repository.category.model.CategoryRule;
-import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

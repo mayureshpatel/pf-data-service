@@ -1,25 +1,26 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.model;
+package com.mayureshpatel.pfdataservice.domain.budget;
 
-import com.mayureshpatel.pfdataservice.repository.user.model.User;
-import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
-@Table(name = "recurring_transactions")
+@Table(name = "budgets", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"user_id", "category_id", "month", "year"})
+})
 @Getter
 @Setter
-@ToString(exclude = {"user", "account"})
+@ToString(exclude = {"user", "category"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RecurringTransaction {
+public class Budget {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,28 +31,17 @@ public class RecurringTransaction {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id")
-    private Account account;
-
-    @Column(name = "merchant_name", nullable = false)
-    private String merchantName;
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Frequency frequency;
-
-    @Column(name = "last_date")
-    private LocalDate lastDate;
-
-    @Column(name = "next_date", nullable = false)
-    private LocalDate nextDate;
+    private Integer month;
 
     @Column(nullable = false)
-    @Builder.Default
-    private boolean active = true;
+    private Integer year;
 
     @org.hibernate.annotations.CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -71,8 +61,8 @@ public class RecurringTransaction {
         Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
         if (thisEffectiveClass != oEffectiveClass) return false;
-        RecurringTransaction that = (RecurringTransaction) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
+        Budget budget = (Budget) o;
+        return getId() != null && Objects.equals(getId(), budget.getId());
     }
 
     @Override
