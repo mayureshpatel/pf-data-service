@@ -1,19 +1,20 @@
-package com.mayureshpatel.pfdataservice.domain.user;
+package com.mayureshpatel.pfdataservice.domain.vendor;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
+
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class User {
+@AllArgsConstructor
+public class Vendor {
 
     private Long id;
-    private String username;
-    private String passwordHash;
-    private String email;
+    private String name;
+    private Set<String> aliases;
 
     private TableAudit audit;
 }

@@ -1,86 +1,38 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.proxy.HibernateProxy;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.vendor.Vendor;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
-@Entity
-@Table(name = "transactions")
-@SQLDelete(sql = "UPDATE transactions SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@SQLRestriction("deleted_at IS NULL")
-@Getter
-@Setter
-@ToString(exclude = {"account", "category", "tags"})
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Transaction {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, precision = 19, scale = 2)
-    @NotNull
     private BigDecimal amount;
 
-    @Column(nullable = false)
-    @NotNull
-    private LocalDate date;
-
-    @Column(name = "post_date")
+    private OffsetDateTime transactionDate;
     private LocalDate postDate;
-
     private String description;
-
-    @Column(name = "original_vendor_name")
     private String originalVendorName;
-
-    @Column(name = "vendor_name", length = 100)
-    private String vendorName;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    @NotNull
+    private Vendor vendor;
     private TransactionType type;
-
-    @ManyToOne()
-    @JoinColumn(name = "account_id", nullable = false)
     private Account account;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
     private Category category;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
-    @ManyToMany
-    @JoinTable(
-            name = "transaction_tags",
-            joinColumns = @JoinColumn(name = "transaction_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
     private Set<Tag> tags = new HashSet<>();
+
+    private TableAudit audit;
 
     /**
      * Calculates the net change this transaction applies to an account balance.
@@ -96,21 +48,5 @@ public class Transaction {
             return amount.abs();
         }
         return amount.abs().negate();
-    }
-
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null) return false;
-        Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
-        Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass) return false;
-        Transaction that = (Transaction) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
-    }
-
-    @Override
-    public final int hashCode() {
-        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
     }
 }
