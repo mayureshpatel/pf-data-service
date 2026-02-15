@@ -1,7 +1,7 @@
-package com.mayureshpatel.pfdataservice.jdbc.mapper;
+package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
-import com.mayureshpatel.pfdataservice.model.CategoryRule;
-import com.mayureshpatel.pfdataservice.model.User;
+import com.mayureshpatel.pfdataservice.repository.category.model.CategoryRule;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

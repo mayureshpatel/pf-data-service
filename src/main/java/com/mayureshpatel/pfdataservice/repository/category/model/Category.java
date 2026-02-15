@@ -1,5 +1,6 @@
-package com.mayureshpatel.pfdataservice.model;
+package com.mayureshpatel.pfdataservice.repository.category.model;
 
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;

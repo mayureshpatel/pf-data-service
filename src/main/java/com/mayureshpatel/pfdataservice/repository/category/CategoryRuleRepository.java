@@ -1,9 +1,9 @@
-package com.mayureshpatel.pfdataservice.jdbc.repository;
+package com.mayureshpatel.pfdataservice.repository.category;
 
-import com.mayureshpatel.pfdataservice.jdbc.JdbcRepository;
-import com.mayureshpatel.pfdataservice.jdbc.mapper.CategoryRuleRowMapper;
-import com.mayureshpatel.pfdataservice.jdbc.util.SqlLoader;
-import com.mayureshpatel.pfdataservice.model.CategoryRule;
+import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SqlLoader;
+import com.mayureshpatel.pfdataservice.repository.category.model.CategoryRule;
+import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRuleRowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;

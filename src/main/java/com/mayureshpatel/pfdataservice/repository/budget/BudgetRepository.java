@@ -1,10 +1,10 @@
-package com.mayureshpatel.pfdataservice.jdbc.repository;
+package com.mayureshpatel.pfdataservice.repository.budget;
 
-import com.mayureshpatel.pfdataservice.jdbc.JdbcRepository;
-import com.mayureshpatel.pfdataservice.jdbc.SoftDeleteSupport;
-import com.mayureshpatel.pfdataservice.jdbc.mapper.BudgetRowMapper;
-import com.mayureshpatel.pfdataservice.jdbc.util.SqlLoader;
-import com.mayureshpatel.pfdataservice.model.Budget;
+import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
+import com.mayureshpatel.pfdataservice.repository.SqlLoader;
+import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetRowMapper;
+import com.mayureshpatel.pfdataservice.repository.budget.model.Budget;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
