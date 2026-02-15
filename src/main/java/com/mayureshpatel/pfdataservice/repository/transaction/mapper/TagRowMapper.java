@@ -1,7 +1,8 @@
-package com.mayureshpatel.pfdataservice.jdbc.mapper;
+package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.model.Tag;
-import com.mayureshpatel.pfdataservice.model.User;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Tag;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

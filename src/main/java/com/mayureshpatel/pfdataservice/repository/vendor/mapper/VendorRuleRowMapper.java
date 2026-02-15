@@ -1,7 +1,8 @@
-package com.mayureshpatel.pfdataservice.jdbc.mapper;
+package com.mayureshpatel.pfdataservice.repository.vendor.mapper;
 
-import com.mayureshpatel.pfdataservice.model.User;
-import com.mayureshpatel.pfdataservice.model.VendorRule;
+import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
+import com.mayureshpatel.pfdataservice.repository.vendor.model.VendorRule;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

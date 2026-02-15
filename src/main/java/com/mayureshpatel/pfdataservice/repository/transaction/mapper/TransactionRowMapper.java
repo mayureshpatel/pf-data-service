@@ -1,9 +1,10 @@
-package com.mayureshpatel.pfdataservice.jdbc.mapper;
+package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.Category;
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.RowMapperFactory;
+import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.repository.category.model.Category;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

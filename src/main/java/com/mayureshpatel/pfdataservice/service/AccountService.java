@@ -1,12 +1,10 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.AccountDto;
-import com.mayureshpatel.pfdataservice.model.Account;
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.User;
-import com.mayureshpatel.pfdataservice.repository.AccountRepository;
-import com.mayureshpatel.pfdataservice.repository.TransactionRepository;
-import com.mayureshpatel.pfdataservice.repository.UserRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.account.model.Account;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -87,7 +85,7 @@ public class AccountService {
         adjustment.setAccount(account);
         adjustment.setAmount(diff);
         adjustment.setDate(java.time.LocalDate.now());
-        adjustment.setType(com.mayureshpatel.pfdataservice.model.TransactionType.ADJUSTMENT);
+        adjustment.setType(TransactionType.ADJUSTMENT);
         adjustment.setDescription("Balance Reconciliation (Manual Adjustment)");
         adjustment.setOriginalVendorName("System");
         

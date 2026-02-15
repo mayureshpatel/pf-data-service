@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.model;
+package com.mayureshpatel.pfdataservice.repository.user.model;
 
 import jakarta.persistence.*;
 import lombok.*;

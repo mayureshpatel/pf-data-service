@@ -1,7 +1,7 @@
-package com.mayureshpatel.pfdataservice.repository.specification;
+package com.mayureshpatel.pfdataservice.repository.transaction.specification;
 
-import com.mayureshpatel.pfdataservice.model.Transaction;
-import com.mayureshpatel.pfdataservice.model.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.transaction.model.TransactionType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
