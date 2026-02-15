@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.jdbc.mapper;
+package com.mayureshpatel.pfdataservice.jdbc.repository;
 
 import com.mayureshpatel.pfdataservice.jdbc.JdbcRepository;
 import com.mayureshpatel.pfdataservice.jdbc.util.SqlLoader;
