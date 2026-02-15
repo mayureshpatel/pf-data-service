@@ -1,1 +1,0 @@
-SELECT * FROM budgets WHERE user_id = :userId AND category_id = :categoryId AND month = :month AND year = :year AND deleted_at IS NULL

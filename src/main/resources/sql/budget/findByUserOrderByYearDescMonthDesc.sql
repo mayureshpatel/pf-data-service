@@ -1,1 +1,0 @@
-SELECT * FROM budgets WHERE user_id = :userId AND deleted_at IS NULL ORDER BY year DESC, month DESC

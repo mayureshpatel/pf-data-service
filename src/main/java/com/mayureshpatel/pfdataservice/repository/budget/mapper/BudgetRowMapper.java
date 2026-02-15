@@ -11,33 +11,33 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class BudgetRowMapper extends JdbcMapperUtils implements RowMapper<Budget> {
+public class BudgetRowMapper implements RowMapper<Budget> {
 
     @Override
     public Budget mapRow(ResultSet rs, int rowNum) throws SQLException {
         Budget budget = new Budget();
         budget.setId(rs.getLong("id"));
-        budget.setAmount(getBigDecimal(rs, "amount"));
+        budget.setAmount(JdbcMapperUtils.getBigDecimal(rs, "amount"));
         budget.setMonth(rs.getInt("month"));
         budget.setYear(rs.getInt("year"));
 
-        Long userId = getLongOrNull(rs, "user_id");
+        Long userId = JdbcMapperUtils.getLongOrNull(rs, "user_id");
         if (userId != null) {
             User user = new User();
             user.setId(userId);
             budget.setUser(user);
         }
 
-        Long categoryId = getLongOrNull(rs, "category_id");
+        Long categoryId = JdbcMapperUtils.getLongOrNull(rs, "category_id");
         if (categoryId != null) {
             Category category = new Category();
             category.setId(categoryId);
             budget.setCategory(category);
         }
 
-        budget.setCreatedAt(getLocalDateTime(rs, "created_at"));
-        budget.setUpdatedAt(getLocalDateTime(rs, "updated_at"));
-        budget.setDeletedAt(getLocalDateTime(rs, "deleted_at"));
+        budget.getAudit().setCreatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "created_at"));
+        budget.getAudit().setUpdatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "updated_at"));
+        budget.getAudit().setDeletedAt(JdbcMapperUtils.getOffsetDateTime(rs, "deleted_at"));
 
         return budget;
     }

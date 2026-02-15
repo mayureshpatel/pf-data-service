@@ -1,14 +1,13 @@
 package com.mayureshpatel.pfdataservice.repository.budget;
 
+import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetRowMapper;
-import com.mayureshpatel.pfdataservice.domain.budget.Budget;
+import com.mayureshpatel.pfdataservice.repository.budget.query.BudgetQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -23,8 +22,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
 
     @Override
     public Optional<Budget> findById(Long id) {
-        String query = sqlLoader.load("sql/budget/findById.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(BudgetQueries.FIND_BY_ID)
                 .param("id", id)
                 .query(rowMapper)
                 .optional();
@@ -32,26 +30,19 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
 
     @Override
     public Budget insert(Budget budget) {
-        String query = sqlLoader.load("sql/budget/insert.sql");
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-
-        jdbcClient.sql(query)
+        jdbcClient.sql(BudgetQueries.INSERT)
                 .param("userId", budget.getUser().getId())
                 .param("categoryId", budget.getCategory().getId())
                 .param("amount", budget.getAmount())
                 .param("month", budget.getMonth())
-                .param("year", budget.getYear())
-                .update(keyHolder);
+                .param("year", budget.getYear());
 
-        budget.setId(keyHolder.getKeyAs(Long.class));
         return budget;
     }
 
     @Override
     public Budget update(Budget budget) {
-        String query = sqlLoader.load("sql/budget/update.sql");
-
-        jdbcClient.sql(query)
+        jdbcClient.sql(BudgetQueries.UPDATE)
                 .param("amount", budget.getAmount())
                 .param("id", budget.getId())
                 .update();
@@ -61,8 +52,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
 
     @Override
     public void deleteById(Long id) {
-        String query = sqlLoader.load("sql/budget/deleteById.sql");
-        jdbcClient.sql(query)
+        jdbcClient.sql(BudgetQueries.DELETE)
                 .param("id", id)
                 .update();
     }
