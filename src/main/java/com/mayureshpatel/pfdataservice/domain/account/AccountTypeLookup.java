@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.account;
 
+import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,8 +17,7 @@ public class AccountTypeLookup {
 
     private String code;
     private String label;
-    private String icon;
-    private String color;
+    private Iconography iconography;
     private Boolean isAsset;
     private Integer sortOrder;
     private Boolean isActive = true;

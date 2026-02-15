@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.AllArgsConstructor;
@@ -12,8 +13,8 @@ import lombok.NoArgsConstructor;
 public class Tag {
 
     private Long id;
+    private Iconography iconography;
     private String name;
-    private String color;
     private User user;
 
     private TableAudit audit;
