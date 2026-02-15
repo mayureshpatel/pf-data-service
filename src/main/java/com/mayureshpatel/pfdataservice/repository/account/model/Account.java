@@ -1,5 +1,7 @@
-package com.mayureshpatel.pfdataservice.model;
+package com.mayureshpatel.pfdataservice.repository.account.model;
 
+import com.mayureshpatel.pfdataservice.repository.transaction.model.Transaction;
+import com.mayureshpatel.pfdataservice.repository.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
