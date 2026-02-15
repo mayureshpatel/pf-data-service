@@ -1,9 +1,10 @@
 package com.mayureshpatel.pfdataservice.repository.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CurrencyRowMapper;
-import com.mayureshpatel.pfdataservice.domain.currency.Currency;
+import com.mayureshpatel.pfdataservice.repository.transaction.query.CurrencyQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -13,7 +14,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> {
+public class CurrencyRepository implements JdbcRepository<Currency, String> {
 
     private final JdbcClient jdbcClient;
     private final CurrencyRowMapper rowMapper;
@@ -21,8 +22,7 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public Optional<Currency> findById(String code) {
-        String sql = sqlLoader.load("sql/currency/findById.sql");
-        return jdbcClient.sql(sql)
+        return jdbcClient.sql(CurrencyQueries.FIND_BY_CODE)
                 .param("code", code)
                 .query(rowMapper)
                 .optional();
@@ -30,24 +30,19 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public List<Currency> findAll() {
-        String sql = sqlLoader.load("sql/currency/findAll.sql");
-        return jdbcClient.sql(sql)
+        return jdbcClient.sql(CurrencyQueries.FIND_ALL)
                 .query(rowMapper)
                 .list();
     }
 
-    public List<Currency> findByIsActive(boolean isActive) {
-        String sql = sqlLoader.load("sql/currency/findByIsActive.sql");
-        return jdbcClient.sql(sql)
-                .param("isActive", isActive)
+    public List<Currency> findByIsActive() {
+        return jdbcClient.sql(CurrencyQueries.FIND_BY_IS_ACTIVE)
                 .query(rowMapper)
                 .list();
     }
 
-    @Override
     public Currency save(Currency currency) {
-        String sql = sqlLoader.load("sql/currency/save.sql");
-        jdbcClient.sql(sql)
+        jdbcClient.sql(CurrencyQueries.SAVE)
                 .param("code", currency.getCode())
                 .param("name", currency.getName())
                 .param("symbol", currency.getSymbol())
@@ -59,16 +54,13 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public void deleteById(String code) {
-        String sql = sqlLoader.load("sql/currency/deleteById.sql");
-        jdbcClient.sql(sql)
+        jdbcClient.sql(CurrencyQueries.DELETE)
                 .param("code", code)
                 .update();
     }
 
-    @Override
     public boolean existsById(String code) {
-        String sql = sqlLoader.load("sql/currency/existsById.sql");
-        Integer count = jdbcClient.sql(sql)
+        Integer count = jdbcClient.sql(CurrencyQueries.COUNT)
                 .param("code", code)
                 .query(Integer.class)
                 .single();
@@ -78,8 +70,7 @@ public class JdbcCurrencyRepository implements JdbcRepository<Currency, String> 
 
     @Override
     public long count() {
-        String sql = sqlLoader.load("sql/currency/count.sql");
-        return jdbcClient.sql(sql)
+        return jdbcClient.sql(CurrencyQueries.COUNT)
                 .query(Long.class)
                 .single();
     }

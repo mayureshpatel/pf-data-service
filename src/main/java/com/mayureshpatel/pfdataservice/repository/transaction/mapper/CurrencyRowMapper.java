@@ -22,7 +22,7 @@ public class CurrencyRowMapper implements RowMapper<Currency> {
 
         Timestamp createdAtTimestamp = rs.getTimestamp("created_at");
         if (createdAtTimestamp != null) {
-            currency.setCreatedAt(createdAtTimestamp.toInstant()
+            currency.getAudit().setCreatedAt(createdAtTimestamp.toInstant()
                     .atOffset(ZoneOffset.UTC));
         }
 

@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.repository.transaction.JdbcCurrencyRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.CurrencyRepository;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class CurrencyService {
 
-    private final JdbcCurrencyRepository currencyRepository;
+    private final CurrencyRepository currencyRepository;
 
     public List<Currency> getAllActiveCurrencies() {
         return this.currencyRepository.findByIsActive(true);

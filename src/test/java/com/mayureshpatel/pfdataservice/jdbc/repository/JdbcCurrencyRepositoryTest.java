@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.jdbc.repository;
 
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
-import com.mayureshpatel.pfdataservice.repository.transaction.JdbcCurrencyRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.CurrencyRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -37,7 +37,7 @@ class JdbcCurrencyRepositoryTest {
             .withPassword("test");
 
     @Autowired
-    private JdbcCurrencyRepository repository;
+    private CurrencyRepository repository;
 
     @Test
     void shouldSaveAndFindById() {
