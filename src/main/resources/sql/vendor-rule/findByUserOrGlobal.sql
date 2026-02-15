@@ -1,0 +1,1 @@
+SELECT * FROM vendor_rules WHERE user_id = :userId OR user_id IS NULL ORDER BY priority DESC, LENGTH(keyword) DESC

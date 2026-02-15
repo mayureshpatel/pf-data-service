@@ -1,0 +1,1 @@
+SELECT COUNT(*) FROM vendor_rules WHERE id = :id
