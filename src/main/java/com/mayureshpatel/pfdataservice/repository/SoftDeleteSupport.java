@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.jdbc;
+package com.mayureshpatel.pfdataservice.repository;
 
 /**
  * Interface for repositories that support soft deletes.

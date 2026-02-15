@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.jdbc.mapper;
+package com.mayureshpatel.pfdataservice.repository;
 
 import org.springframework.stereotype.Component;
 

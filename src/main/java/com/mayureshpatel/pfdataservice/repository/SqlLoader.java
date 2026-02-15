@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.jdbc.util;
+package com.mayureshpatel.pfdataservice.repository;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;

@@ -1,5 +1,6 @@
-package com.mayureshpatel.pfdataservice.model;
+package com.mayureshpatel.pfdataservice.repository.transaction.model;
 
+import com.mayureshpatel.pfdataservice.repository.account.model.Account;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
