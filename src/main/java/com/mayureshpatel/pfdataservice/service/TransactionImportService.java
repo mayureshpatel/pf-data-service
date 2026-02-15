@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.dto.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
+import com.mayureshpatel.pfdataservice.jdbc.repository.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.model.*;
 import com.mayureshpatel.pfdataservice.repository.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.CategoryRepository;
@@ -36,6 +37,7 @@ public class TransactionImportService {
     private final FileImportHistoryRepository fileImportHistoryRepository;
     private final TransactionParserFactory parserFactory;
     private final TransactionCategorizer categorizer;
+    private final CategoryRuleRepository categoryRuleRepository;
     private final VendorCleaner vendorCleaner;
 
     @Autowired
@@ -45,10 +47,12 @@ public class TransactionImportService {
                                     FileImportHistoryRepository fileImportHistoryRepository,
                                     TransactionParserFactory parserFactory,
                                     TransactionCategorizer categorizer,
-                                    VendorCleaner vendorCleaner) {
+                                    VendorCleaner vendorCleaner,
+                                    CategoryRuleRepository categoryRuleRepository) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.categoryRepository = categoryRepository;
+        this.categoryRuleRepository = categoryRuleRepository;
         this.fileImportHistoryRepository = fileImportHistoryRepository;
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
@@ -60,7 +64,7 @@ public class TransactionImportService {
         log.info("Starting transaction preview for User: {}, Account ID: {}, Bank: {}, File: {}", userId, accountId, bankName, fileName);
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
-        List<CategoryRule> userRules = categorizer.loadRulesForUser(userId);
+        List<CategoryRule> userRules = this.categoryRuleRepository.findByUserId(userId);
         List<VendorRule> vendorRules = vendorCleaner.loadRulesForUser(userId);
         List<Category> userCategories = categoryRepository.findByUserId(userId);
 
