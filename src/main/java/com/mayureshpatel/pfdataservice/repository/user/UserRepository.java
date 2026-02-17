@@ -98,7 +98,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash",  user.getPasswordHash())
-                .param("lastUpdatedBy", user.getLastUpdatedBy())
+                .param("lastUpdatedBy", user.getAudit().getUpdatedBy())
                 .param("id", user.getId())
                 .update();
 
@@ -119,7 +119,6 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 .update();
     }
 
-    @Override
     public boolean existsById(Long id) {
         Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_ID)
                 .param("id", id)

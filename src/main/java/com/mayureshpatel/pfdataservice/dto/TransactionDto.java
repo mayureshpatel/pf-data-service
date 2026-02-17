@@ -5,21 +5,21 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 @Builder
 public record TransactionDto(
         Long id,
 
         @NotNull(message = "Date is required")
-        LocalDate date,
+        OffsetDateTime date,
 
-        LocalDate postDate,
+        OffsetDateTime postDate,
 
         String description,
-        
+
         String originalVendorName,
-        
+
         String vendorName,
 
         @NotNull(message = "Amount is required")

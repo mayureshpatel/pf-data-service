@@ -1,16 +1,16 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
-import com.mayureshpatel.pfdataservice.dto.UnmatchedVendorDto;
-import com.mayureshpatel.pfdataservice.dto.VendorRuleDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.vendor.VendorRule;
-import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
+import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.UnmatchedVendorDto;
+import com.mayureshpatel.pfdataservice.dto.VendorRuleDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import com.mayureshpatel.pfdataservice.repository.vendor.VendorRuleRepository;
+import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -39,37 +39,22 @@ public class VendorRuleService {
 
     @Transactional
     public void applyRules(Long userId) {
-        // Fetch all transactions for user
-        // Note: For large datasets, pagination/batching is better. For MVP (personal finance), fetching all is okay-ish.
-        // Optimization: Fetch only transactions where vendor_name is null or equals original_vendor_name?
-        // Or simply re-process everything to ensure new rules overwrite old cleanups.
-        
         List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
-        // We need a custom query or Specification to fetch all transactions for user
-        // findRecentNonTransferTransactions uses JOIN, let's use something similar or add findByUserId
-        
-        // Let's use a simple query on TransactionRepository
-        List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
-        
+        List<Transaction> transactions = transactionRepository.findByUserId(userId);
+
         int updatedCount = 0;
         for (Transaction t : transactions) {
             String original = t.getOriginalVendorName();
-            if (original == null) original = t.getDescription(); // Fallback
-            
+            if (original == null) original = t.getDescription();
+
             String newVendor = vendorCleaner.cleanVendorName(original, rules);
-            
-            // If rule found, update. If no rule found, we might want to revert to original? 
-            // Current logic: cleanVendorName returns null if no rule matches.
-            // If null, we generally keep existing or revert to original?
-            // Let's say: If rule matches, update. If no rule matches, do nothing (preserve manual edits or previous state).
-            // OR: Revert to original if no rule matches? That's risky if user manually renamed.
-            
-            if (newVendor != null && !newVendor.equals(t.getVendorName())) {
-                t.setVendorName(newVendor);
+
+            if (newVendor != null && !newVendor.equals(t.getVendor().getName())) {
+                t.getVendor().setName(newVendor);
                 updatedCount++;
             }
         }
-        
+
         if (updatedCount > 0) {
             transactionRepository.saveAll(transactions);
         }
@@ -83,7 +68,7 @@ public class VendorRuleService {
         VendorRule rule = new VendorRule();
         rule.setUser(user);
         rule.setKeyword(dto.keyword());
-        rule.setVendorName(dto.vendorName());
+        rule.getVendor().setName(dto.vendorName());
         rule.setPriority(dto.priority() != null ? dto.priority() : 0);
 
         return mapToDto(vendorRuleRepository.save(rule));
@@ -97,10 +82,10 @@ public class VendorRuleService {
         if (rule.getUser() != null && !rule.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this rule");
         }
-        
+
         // Prevent deleting global rules via this API (unless admin, but for now simple check)
         if (rule.getUser() == null) {
-             throw new AccessDeniedException("Cannot delete global rules");
+            throw new AccessDeniedException("Cannot delete global rules");
         }
 
         vendorRuleRepository.delete(rule);
@@ -108,7 +93,7 @@ public class VendorRuleService {
 
     public List<RuleChangePreviewDto> previewApply(Long userId) {
         List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
-        List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
+        List<Transaction> transactions = transactionRepository.findByUserId(userId);
 
         List<RuleChangePreviewDto> previews = new ArrayList<>();
 
@@ -118,10 +103,10 @@ public class VendorRuleService {
 
             String newVendor = vendorCleaner.cleanVendorName(original, rules);
 
-            if (newVendor != null && !newVendor.equals(t.getVendorName())) {
+            if (newVendor != null && !newVendor.equals(t.getVendor().getName())) {
                 previews.add(new RuleChangePreviewDto(
                         t.getDescription(),
-                        t.getVendorName(),
+                        t.getVendor().getName(),
                         newVendor
                 ));
             }
@@ -132,7 +117,7 @@ public class VendorRuleService {
 
     public List<UnmatchedVendorDto> getUnmatchedVendors(Long userId) {
         List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
-        List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
+        List<Transaction> transactions = transactionRepository.findByUserId(userId);
 
         Map<String, Long> grouped = transactions.stream()
                 .collect(Collectors.groupingBy(
@@ -158,7 +143,7 @@ public class VendorRuleService {
         return VendorRuleDto.builder()
                 .id(rule.getId())
                 .keyword(rule.getKeyword())
-                .vendorName(rule.getVendorName())
+                .vendorName(rule.getVendor().getName())
                 .priority(rule.getPriority())
                 .build();
     }

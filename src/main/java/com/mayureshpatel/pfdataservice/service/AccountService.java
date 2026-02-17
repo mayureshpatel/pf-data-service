@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -87,7 +88,7 @@ public class AccountService {
         Transaction adjustment = new Transaction();
         adjustment.setAccount(account);
         adjustment.setAmount(diff);
-        adjustment.setDate(java.time.LocalDate.now());
+        adjustment.setTransactionDate(OffsetDateTime.now());
         adjustment.setType(TransactionType.ADJUSTMENT);
         adjustment.setDescription("Balance Reconciliation (Manual Adjustment)");
         adjustment.setOriginalVendorName("System");
@@ -109,7 +110,7 @@ public class AccountService {
         }
 
         // Check if account has transactions
-        Long transactionCount = transactionRepository.countByAccountId(accountId);
+        long transactionCount = transactionRepository.countByUserId(userId);
         if (transactionCount > 0) {
             throw new IllegalStateException(
                 "Cannot delete account with existing transactions. " +

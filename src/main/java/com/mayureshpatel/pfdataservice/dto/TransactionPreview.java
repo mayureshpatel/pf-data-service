@@ -5,11 +5,12 @@ import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 @Builder
 public record TransactionPreview(
-        LocalDate date,
-        LocalDate postDate,
+        OffsetDateTime date,
+        OffsetDateTime postDate,
         String description,
         BigDecimal amount,
         TransactionType type,

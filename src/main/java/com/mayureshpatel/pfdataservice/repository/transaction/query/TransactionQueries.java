@@ -31,6 +31,17 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
+    public static final String FIND_BY_ACCOUNT_ID_AND_DATE_AND_AMOUNT_AND_DESCRIPTION_AND_TYPE = """
+            select *
+            from transactions
+            where account_id = :accountId
+                and date = :transactionDate
+                and amount = :amount
+                and description = :description
+                and type = :type
+            """;
+
+    // language=SQL
     public static final String INSERT = """
             insert into transactions
                 (amount, date, post_date, description, original_vendor_name, vendor_name, type, account_id, category_id, created_at, updated_at)
@@ -78,6 +89,14 @@ public final class TransactionQueries {
             select count(*)
             from transactions
             where deleted_at is null
+            """;
+
+    // language=SQL
+    public static final String COUNT_BY_ACCOUNT_ID = """
+            select count(*)
+            from transactions
+            where account_id = :accountId
+                and deleted_at is null
             """;
 
     // language=SQL

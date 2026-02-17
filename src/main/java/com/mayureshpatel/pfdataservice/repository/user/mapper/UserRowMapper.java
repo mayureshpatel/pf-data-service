@@ -22,24 +22,24 @@ public class UserRowMapper implements RowMapper<User> {
 
         Long lastUpdatedBy = rs.getLong("last_updated_by");
         if (!rs.wasNull()) {
-            user.setLastUpdatedBy(lastUpdatedBy);
+            user.getAudit().getUpdatedBy().setId(lastUpdatedBy);
         }
 
         Timestamp lastUpdatedTimestamp =  rs.getTimestamp("last_updated_timestamp");
         if (lastUpdatedTimestamp != null) {
-            user.setLastUpdatedTimestamp(lastUpdatedTimestamp.toInstant()
+            user.getAudit().setUpdatedAt(lastUpdatedTimestamp.toInstant()
                     .atOffset(ZoneOffset.UTC));
         }
 
         Timestamp createdTimestamp = rs.getTimestamp("created_at");
         if (createdTimestamp != null) {
-            user.setCreatedTimestamp(createdTimestamp.toInstant()
+            user.getAudit().setCreatedAt(createdTimestamp.toInstant()
                     .atOffset(ZoneOffset.UTC));
         }
 
         Timestamp deletedTimestamp = rs.getTimestamp("deleted_at");
         if (deletedTimestamp != null) {
-            user.setDeletedAt(deletedTimestamp.toInstant()
+            user.getAudit().setDeletedAt(deletedTimestamp.toInstant()
                     .atOffset(ZoneOffset.UTC));
         }
 

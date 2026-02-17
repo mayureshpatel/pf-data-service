@@ -23,7 +23,7 @@ public class Transaction {
     private BigDecimal amount;
 
     private OffsetDateTime transactionDate;
-    private LocalDate postDate;
+    private OffsetDateTime postDate;
     private String description;
     private String originalVendorName;
     private Vendor vendor;

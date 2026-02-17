@@ -76,7 +76,7 @@ public class TransactionImportService {
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
             List<TransactionPreview> previews = rawTransactionStream
                     .map(t -> TransactionPreview.builder()
-                            .date(t.getDate())
+                            .date(t.getTransactionDate())
                             .postDate(t.getPostDate())
                             .description(t.getDescription())
                             .amount(t.getAmount())
@@ -101,7 +101,7 @@ public class TransactionImportService {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + accountId));
 
-        if (fileHash != null && fileImportHistoryRepository.existsByAccountIdAndFileHash(accountId, fileHash)) {
+        if (fileHash != null && fileImportHistoryRepository.findByAccountIdAndFileHash(accountId, fileHash).isPresent()) {
             log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);
             throw new DuplicateImportException("This file has already been imported.");
         }
@@ -148,14 +148,13 @@ public class TransactionImportService {
 
     private Transaction mapToEntity(TransactionDto dto) {
         Transaction transaction = new Transaction();
-        transaction.setDate(dto.date());
+        transaction.setTransactionDate(dto.date());
         transaction.setPostDate(dto.postDate());
         transaction.setDescription(dto.description());
-        // For imports, original vendor name is the description
         transaction.setOriginalVendorName(dto.description());
         transaction.setAmount(dto.amount());
         transaction.setType(dto.type());
-        transaction.setVendorName(dto.vendorName());
+        transaction.getVendor().setName(dto.vendorName());
         return transaction;
     }
 

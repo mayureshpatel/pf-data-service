@@ -27,6 +27,14 @@ public final class FileImportHistoryQueries {
             """;
 
     // language=SQL
+    public static final String FIND_BY_ACCOUNT_ID_AND_FILE_HASH = """
+            select *
+            from file_import_history
+            where account_id = :accountId
+                and file_hash = :fileHash
+            """;
+
+    // language=SQL
     public static final String INSERT = """
             insert into file_import_history (id, account_id, file_hash, file_name, transaction_count, imported_at)
             values (:id, :accountId, :fileHash, :fileName, :transactionCount, current_timestamp)

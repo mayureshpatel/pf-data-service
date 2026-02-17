@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
@@ -13,9 +14,12 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository("jdbcTransactionRepository")
 @RequiredArgsConstructor
@@ -64,17 +68,34 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return transactions;
     }
 
+    public boolean existsByAccountIdAndDateAndAmountAndDescriptionAndType(
+            Long accountId,
+            OffsetDateTime transactionDate,
+            BigDecimal amount,
+            String description,
+            TransactionType type
+    ) {
+        return jdbcClient.sql(TransactionQueries.FIND_BY_ACCOUNT_ID_AND_DATE_AND_AMOUNT_AND_DESCRIPTION_AND_TYPE)
+                .param("accountId", accountId)
+                .param("transactionDate", transactionDate)
+                .param("amount", amount)
+                .param("description", description)
+                .param("type", type)
+                .query(rowMapper)
+                .optional().isPresent();
+    }
+
     @Override
     public Transaction insert(Transaction transaction) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcClient.sql(TransactionQueries.INSERT)
                 .param("amount", transaction.getAmount())
-                .param("date", transaction.getDate())
+                .param("date", transaction.getTransactionDate())
                 .param("postDate", transaction.getPostDate())
                 .param("description", transaction.getDescription())
                 .param("originalVendorName", transaction.getOriginalVendorName())
-                .param("vendorName", transaction.getVendorName())
+                .param("vendorName", transaction.getVendor().getName())
                 .param("type", transaction.getType().name())
                 .param("accountId", transaction.getAccount().getId())
                 .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
@@ -89,11 +110,11 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public Transaction update(Transaction transaction) {
         jdbcClient.sql(TransactionQueries.UPDATE)
                 .param("amount", transaction.getAmount())
-                .param("date", transaction.getDate())
+                .param("date", transaction.getTransactionDate())
                 .param("postDate", transaction.getPostDate())
                 .param("description", transaction.getDescription())
                 .param("originalVendorName", transaction.getOriginalVendorName())
-                .param("vendorName", transaction.getVendorName())
+                .param("vendorName", transaction.getVendor().getName())
                 .param("type", transaction.getType().name())
                 .param("accountId", transaction.getAccount().getId())
                 .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
@@ -110,6 +131,12 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         } else {
             return update(transaction);
         }
+    }
+
+    public List<Transaction> saveAll(List<Transaction> transactions) {
+        return transactions.stream()
+                .map(this::save)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -129,6 +156,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     @Override
     public long count() {
         return jdbcClient.sql(TransactionQueries.COUNT)
+                .query(Long.class)
+                .single();
+    }
+
+    public long countByUserId(Long accountId) {
+        return jdbcClient.sql(TransactionQueries.COUNT_BY_ACCOUNT_ID)
+                .param("accountId", accountId)
                 .query(Long.class)
                 .single();
     }
