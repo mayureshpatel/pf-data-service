@@ -17,7 +17,7 @@ public class CurrencyService {
     private final CurrencyRepository currencyRepository;
 
     public List<Currency> getAllActiveCurrencies() {
-        return this.currencyRepository.findByIsActive(true);
+        return this.currencyRepository.findByIsActive();
     }
 
     public Currency getCurrencyByCode(String code) throws ResourceNotFoundException {

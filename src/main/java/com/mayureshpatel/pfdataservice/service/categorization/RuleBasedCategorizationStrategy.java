@@ -13,7 +13,7 @@ import java.util.Optional;
 public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
 
     @Override
-    public Optional<String> categorize(Transaction transaction, CategorizationContext context) {
+    public Optional<Long> categorize(Transaction transaction, CategorizationContext context) {
         if (transaction.getDescription() == null || context.getRules() == null) {
             return Optional.empty();
         }
@@ -22,21 +22,14 @@ public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
 
         for (CategoryRule rule : context.getRules()) {
             if (descUpper.contains(rule.getKeyword().toUpperCase())) {
-                String categoryName = rule.getCategoryName();
+                Long categoryName = rule.getCategoryId();
 
                 // Validate against categories if context provides them
                 if (context.getCategories() != null && !context.getCategories().isEmpty()) {
                     Category matchedCategory = context.getCategories().stream()
-                            .filter(c -> c.getName().equalsIgnoreCase(categoryName))
+                            .filter(c -> c.getId().equals(categoryName))
                             .findFirst()
                             .orElse(null);
-
-                    // Skip if it's a parent category
-                    if (matchedCategory != null && matchedCategory.getParent() == null) {
-                        log.debug("Skipping parent category '{}' in auto-categorization for transaction: {}",
-                                categoryName, transaction.getDescription());
-                        continue;
-                    }
                 }
 
                 return Optional.of(categoryName);
@@ -48,6 +41,6 @@ public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
 
     @Override
     public int getOrder() {
-        return 100; // Primary rule-based logic
+        return 100;
     }
 }

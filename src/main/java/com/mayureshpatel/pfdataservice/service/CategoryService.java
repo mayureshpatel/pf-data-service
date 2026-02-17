@@ -40,8 +40,8 @@ public class CategoryService {
 
         Category category = new Category();
         category.setName(categoryDto.name());
-        category.setColor(categoryDto.color());
-        category.setIcon(categoryDto.icon());
+        category.getIconography().setColor(categoryDto.color());
+        category.getIconography().setIcon(categoryDto.icon());
         if (categoryDto.type() != null) {
             category.setType(categoryDto.type());
         }
@@ -53,7 +53,6 @@ public class CategoryService {
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
-            category.setParent(parent);
         }
 
         return mapToDto(categoryRepository.save(category));
@@ -69,8 +68,8 @@ public class CategoryService {
         }
 
         category.setName(dto.name());
-        category.setColor(dto.color());
-        category.setIcon(dto.icon());
+        category.getIconography().setColor(dto.color());
+        category.getIconography().setIcon(dto.icon());
         if (dto.type() != null) {
             category.setType(dto.type());
         }
@@ -86,9 +85,7 @@ public class CategoryService {
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
-            category.setParent(parent);
         } else {
-            category.setParent(null);
         }
         
         return mapToDto(categoryRepository.save(category));
@@ -125,11 +122,6 @@ public class CategoryService {
     public List<CategoryGroupDto> getCategoriesGrouped(Long userId) {
         List<Category> allCategories = categoryRepository.findByUserId(userId);
 
-        // Group children by parent
-        Map<Category, List<Category>> grouped = allCategories.stream()
-                .filter(c -> c.getParent() != null)  // Only child categories
-                .collect(Collectors.groupingBy(Category::getParent));
-
         return grouped.entrySet().stream()
                 .map(entry -> new CategoryGroupDto(
                         entry.getKey().getName(),
@@ -159,11 +151,8 @@ public class CategoryService {
         return new CategoryDto(
                 category.getId(),
                 category.getName(),
-                category.getColor(),
-                category.getIcon(),
-                category.getType(),
-                category.getParent() != null ? category.getParent().getId() : null,
-                category.getParent() != null ? category.getParent().getName() : null
+                category.getIconography(),
+                category.getType()
         );
     }
 }

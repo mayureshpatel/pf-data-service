@@ -34,7 +34,7 @@ public class VendorCleaner {
         // Rules are expected to be ordered by Priority DESC, then Length DESC
         for (VendorRule rule : rules) {
             if (descUpper.contains(rule.getKeyword().toUpperCase())) {
-                return rule.getVendorName();
+                return rule.getVendor().getName();
             }
         }
 

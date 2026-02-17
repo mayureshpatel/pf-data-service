@@ -1,22 +1,22 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.TransactionDto;
-import com.mayureshpatel.pfdataservice.dto.TransferSuggestionDto;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.vendor.VendorRule;
-import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.dto.TransactionDto;
+import com.mayureshpatel.pfdataservice.dto.TransferSuggestionDto;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
-import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -58,7 +58,7 @@ public class TransactionService {
                 Transaction t2 = transactions.get(j);
                 if (matchedIds.contains(t2.getId())) continue;
 
-                long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getDate(), t2.getDate()));
+                long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getTransactionDate(), t2.getTransactionDate()));
 
                 // Since list is sorted by date DESC, if diff > 3, subsequent items will also be > 3
                 if (daysDiff > 3) {
@@ -164,7 +164,7 @@ public class TransactionService {
 
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
-        transaction.setDate(dto.date());
+        transaction.setTransactionDate(dto.date());
         transaction.setAmount(dto.amount());
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
@@ -175,11 +175,11 @@ public class TransactionService {
         transaction.setOriginalVendorName(originalVendor);
 
         if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
-            transaction.setVendorName(dto.vendorName());
+            transaction.getVendor().setName(dto.vendorName());
         } else {
             List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
             // Clean based on original vendor name if possible, else description
-            transaction.setVendorName(vendorCleaner.cleanVendorName(originalVendor, rules));
+            transaction.getVendor().setName(vendorCleaner.cleanVendorName(originalVendor, rules));
         }
 
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
@@ -190,7 +190,7 @@ public class TransactionService {
 
             if (category != null) {
                 // VALIDATION: Only allow child categories on transactions
-                if (category.getParent() == null) {
+                if (category.isParent()) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
                                     "Please select a specific subcategory under '" + category.getName() + "'."
@@ -250,7 +250,7 @@ public class TransactionService {
         account.undoTransaction(transaction);
 
         transaction.setAmount(dto.amount());
-        transaction.setDate(dto.date());
+        transaction.setTransactionDate(dto.date());
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
 
@@ -260,11 +260,11 @@ public class TransactionService {
         }
 
         if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
-            transaction.setVendorName(dto.vendorName());
+            transaction.getVendor().setName(dto.vendorName());
         } else {
             List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
             // Clean based on original vendor name
-            transaction.setVendorName(vendorCleaner.cleanVendorName(transaction.getOriginalVendorName(), rules));
+            transaction.getVendor().setName(vendorCleaner.cleanVendorName(transaction.getOriginalVendorName(), rules));
         }
 
         if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
@@ -275,7 +275,7 @@ public class TransactionService {
 
             if (category != null) {
                 // VALIDATION: Only allow child categories on transactions
-                if (category.getParent() == null) {
+                if (category.isParent()) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
                                     "Please select a specific subcategory under '" + category.getName() + "'."
@@ -334,12 +334,12 @@ public class TransactionService {
     private TransactionDto mapToDto(Transaction t) {
         return TransactionDto.builder()
                 .id(t.getId())
-                .date(t.getDate())
+                .date(t.getTransactionDate())
                 .amount(t.getAmount())
                 .description(t.getDescription())
                 .originalVendorName(t.getOriginalVendorName())
                 .type(t.getType())
-                .vendorName(t.getVendorName())
+                .vendorName(t.getVendor().getName())
                 .categoryName(t.getCategory() != null ? t.getCategory().getName() : null)
                 .accountId(t.getAccount() != null ? t.getAccount().getId() : null)
                 .build();

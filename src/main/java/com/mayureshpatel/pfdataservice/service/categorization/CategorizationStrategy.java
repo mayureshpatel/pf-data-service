@@ -21,9 +21,9 @@ public interface CategorizationStrategy {
 
     /**
      * Attempts to categorize the transaction.
-     * @return Optional containing the category name if matched, or empty if not matched.
+     * @return Optional containing the category id if matched, or empty if not matched.
      */
-    Optional<String> categorize(Transaction transaction, CategorizationContext context);
+    Optional<Long> categorize(Transaction transaction, CategorizationContext context);
 
     /**
      * Determines the order in which strategies are applied. Lower values run first.

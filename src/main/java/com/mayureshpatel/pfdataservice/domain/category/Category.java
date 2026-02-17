@@ -22,6 +22,7 @@ public class Category {
     private Iconography iconography;
     private CategoryType type;
     private User user;
+    private boolean isParent;
     private Set<Category> subCategories = new HashSet<>();
 
     private TableAudit audit;

@@ -1,17 +1,17 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.CategoryRuleDto;
-import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
-import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
-import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
-import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
+import com.mayureshpatel.pfdataservice.dto.CategoryRuleDto;
+import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
+import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -48,7 +48,7 @@ public class CategoryRuleService {
         CategoryRule rule = new CategoryRule();
         rule.setUser(user);
         rule.setKeyword(dto.keyword());
-        rule.setCategoryName(dto.categoryName());
+        rule.setCategory(dto.category());
         rule.setPriority(dto.priority() != null ? dto.priority() : 0);
 
         return mapToDto(categoryRuleRepository.save(rule));
@@ -59,9 +59,9 @@ public class CategoryRuleService {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
         rule.setKeyword(dto.keyword());
-        rule.setCategoryName(dto.categoryName());
+        rule.setCategory(dto.category());
         rule.setPriority(dto.priority());
-        rule.setUpdatedAt(OffsetDateTime.now());
+        rule.getAudit().setUpdatedAt(OffsetDateTime.now());
 
         return mapToDto(categoryRuleRepository.save(rule));
     }
@@ -91,10 +91,10 @@ public class CategoryRuleService {
         for (Transaction t : transactions) {
             if (t.getCategory() != null) continue;
 
-            String guessed = categorizer.guessCategory(t, rules, categories);
+            Long guessed = categorizer.guessCategory(t, rules, categories);
             if ("Uncategorized".equals(guessed)) continue;
 
-            Category matchedCategory = categoryMap.get(guessed.toLowerCase());
+            Category matchedCategory = categoryMap.get(guessed);
             if (matchedCategory == null) continue;
 
             previews.add(new RuleChangePreviewDto(
@@ -121,10 +121,10 @@ public class CategoryRuleService {
         for (Transaction t : transactions) {
             if (t.getCategory() != null) continue;
 
-            String guessed = categorizer.guessCategory(t, rules, categories);
+            Long guessed = categorizer.guessCategory(t, rules, categories);
             if ("Uncategorized".equals(guessed)) continue;
 
-            Category matchedCategory = categoryMap.get(guessed.toLowerCase());
+            Category matchedCategory = categoryMap.get(guessed);
             if (matchedCategory == null) continue;
 
             t.setCategory(matchedCategory);
@@ -142,7 +142,7 @@ public class CategoryRuleService {
         return CategoryRuleDto.builder()
                 .id(rule.getId())
                 .keyword(rule.getKeyword())
-                .categoryName(rule.getCategoryName())
+                .category(rule.getCategory())
                 .priority(rule.getPriority())
                 .build();
     }

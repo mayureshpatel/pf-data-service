@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.stream.Stream;
 
 @Component
@@ -36,7 +37,7 @@ public class StandardCsvParser implements TransactionParser {
                         TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
                         t.setDescription(description);
                         t.setAmount(amount.abs());
-                        t.setDate(LocalDate.parse(csvRecord.get("date")));
+                        t.setTransactionDate(OffsetDateTime.parse(csvRecord.get("date")));
                         t.setType(type);
                         return t;
                     })

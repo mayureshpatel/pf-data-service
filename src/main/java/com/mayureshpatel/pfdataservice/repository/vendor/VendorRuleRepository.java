@@ -41,7 +41,7 @@ public class VendorRuleRepository implements JdbcRepository<VendorRule, Long> {
 
         jdbcClient.sql(VendorRuleQueries.INSERT)
                 .param("keyword", rule.getKeyword())
-                .param("vendorName", rule.getVendorName())
+                .param("vendorName", rule.getVendor().getName())
                 .param("priority", rule.getPriority())
                 .param("userId", rule.getUser() != null ? rule.getUser().getId() : null)
                 .update(keyHolder);
@@ -54,7 +54,7 @@ public class VendorRuleRepository implements JdbcRepository<VendorRule, Long> {
     public VendorRule update(VendorRule rule) {
         jdbcClient.sql(VendorRuleQueries.UPDATE)
                 .param("keyword", rule.getKeyword())
-                .param("vendorName", rule.getVendorName())
+                .param("vendorName", rule.getVendor().getName())
                 .param("priority", rule.getPriority())
                 .param("id", rule.getId())
                 .update();

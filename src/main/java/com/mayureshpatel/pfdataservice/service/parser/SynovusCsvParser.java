@@ -14,7 +14,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Optional;
@@ -65,7 +65,8 @@ public class SynovusCsvParser implements TransactionParser {
         } catch (Exception e) {
             try {
                 reader.close();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             throw new RuntimeException("Failed to parse Synovus CSV", e);
         }
     }
@@ -77,7 +78,7 @@ public class SynovusCsvParser implements TransactionParser {
     private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
         try {
             Transaction transaction = new Transaction();
-            transaction.setDate(parseDate(csvRecord.get(HEADER_DATE)));
+            transaction.setTransactionDate(parseDate(csvRecord.get(HEADER_DATE)));
             transaction.setDescription(buildDescription(csvRecord));
             BigDecimal netAmount = calculateNetAmount(csvRecord);
             configureTransactionTypeAndAmount(transaction, netAmount);
@@ -88,8 +89,8 @@ public class SynovusCsvParser implements TransactionParser {
         }
     }
 
-    private LocalDate parseDate(String dateStr) {
-        return LocalDate.parse(dateStr, DATE_TIME_FORMATTER);
+    private OffsetDateTime parseDate(String dateStr) {
+        return OffsetDateTime.parse(dateStr, DATE_TIME_FORMATTER);
     }
 
     private String buildDescription(CSVRecord csvRecord) {

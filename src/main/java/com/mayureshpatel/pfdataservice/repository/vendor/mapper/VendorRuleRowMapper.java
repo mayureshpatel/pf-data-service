@@ -17,7 +17,7 @@ public class VendorRuleRowMapper extends JdbcMapperUtils implements RowMapper<Ve
         VendorRule rule = new VendorRule();
         rule.setId(rs.getLong("id"));
         rule.setKeyword(rs.getString("keyword"));
-        rule.setVendorName(rs.getString("vendor_name"));
+        rule.getVendor().setName(rs.getString("vendor_name"));
         rule.setPriority(rs.getInt("priority"));
 
         Long userId = getLongOrNull(rs, "user_id");
@@ -27,8 +27,8 @@ public class VendorRuleRowMapper extends JdbcMapperUtils implements RowMapper<Ve
             rule.setUser(user);
         }
 
-        rule.setCreatedAt(getLocalDateTime(rs, "created_at"));
-        rule.setUpdatedAt(getLocalDateTime(rs, "updated_at"));
+        rule.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
+        rule.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
 
         return rule;
     }

@@ -15,6 +15,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -138,9 +139,9 @@ public class UniversalCsvParser implements TransactionParser {
     private Transaction parseRecord(CSVRecord record, ColumnMapping mapping) {
         try {
             // 1. Parse Date
-            LocalDate date = parseDate(record.get(mapping.dateCol));
-            LocalDate postDate = mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)
-                    ? parseDate(record.get(mapping.postDateCol))
+            OffsetDateTime date = OffsetDateTime.from(parseDate(record.get(mapping.dateCol)));
+            OffsetDateTime postDate = mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)
+                    ? OffsetDateTime.from(parseDate(record.get(mapping.postDateCol)))
                     : null;
 
             // 2. Parse Description
@@ -160,7 +161,6 @@ public class UniversalCsvParser implements TransactionParser {
 
                 if (debit.compareTo(BigDecimal.ZERO) > 0) {
                     amount = debit;
-                    type = TransactionType.EXPENSE;
                 } else if (credit.compareTo(BigDecimal.ZERO) > 0) {
                     amount = credit;
                     type = TransactionType.INCOME;
@@ -169,7 +169,6 @@ public class UniversalCsvParser implements TransactionParser {
                 // Strategy: Single Amount column
                 BigDecimal rawAmount = parseAmount(record.get(mapping.amountCol));
                 if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
-                    type = TransactionType.EXPENSE;
                     amount = rawAmount.abs();
                 } else {
                     type = TransactionType.INCOME;
@@ -178,7 +177,6 @@ public class UniversalCsvParser implements TransactionParser {
             } else if (mapping.debitCol != null) {
                 // Only Debit column found
                 amount = parseAmount(record.get(mapping.debitCol));
-                type = TransactionType.EXPENSE;
             } else if (mapping.creditCol != null) {
                  // Only Credit column found
                 amount = parseAmount(record.get(mapping.creditCol));
@@ -191,7 +189,7 @@ public class UniversalCsvParser implements TransactionParser {
             }
 
             Transaction t = new Transaction();
-            t.setDate(date);
+            t.setTransactionDate(date);
             t.setPostDate(postDate);
             t.setDescription(description);
             t.setAmount(amount);

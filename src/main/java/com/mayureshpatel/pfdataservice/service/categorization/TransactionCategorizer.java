@@ -19,7 +19,7 @@ public class TransactionCategorizer {
     /**
      * Analyzes the transaction description and returns a best-guess category name.
      */
-    public String guessCategory(Transaction transaction, List<CategoryRule> rules) {
+    public Long guessCategory(Transaction transaction, List<CategoryRule> rules) {
         return guessCategory(transaction, rules, null);
     }
 
@@ -31,7 +31,7 @@ public class TransactionCategorizer {
      * @param categories  Optional list of categories to validate against
      * @return The suggested category name, or "Uncategorized" if no match found
      */
-    public String guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {
+    public Long guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {
         CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                 .userId(transaction.getAccount() != null ? transaction.getAccount().getUser().getId() : null)
                 .rules(rules)
@@ -44,6 +44,6 @@ public class TransactionCategorizer {
                 .filter(java.util.Optional::isPresent)
                 .map(java.util.Optional::get)
                 .findFirst()
-                .orElse("Uncategorized");
+                .orElse(-1L);
     }
 }

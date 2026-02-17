@@ -15,6 +15,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Optional;
@@ -77,7 +78,7 @@ public class DiscoverCsvParser implements TransactionParser {
     private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
         try {
             Transaction transaction = new Transaction();
-            transaction.setDate(parseDate(csvRecord.get(HEADER_DATE)));
+            transaction.setTransactionDate(parseDate(csvRecord.get(HEADER_DATE)));
             transaction.setDescription(buildDescription(csvRecord));
             BigDecimal rawAmount = parseAmount(csvRecord);
             configureTransactionTypeAndAmount(transaction, rawAmount);
@@ -88,8 +89,8 @@ public class DiscoverCsvParser implements TransactionParser {
         }
     }
 
-    private LocalDate parseDate(String dateStr) {
-        return LocalDate.parse(dateStr, DATE_FORMATTER);
+    private OffsetDateTime parseDate(String dateStr) {
+        return OffsetDateTime.parse(dateStr, DATE_FORMATTER);
     }
 
     private String buildDescription(CSVRecord csvRecord) {

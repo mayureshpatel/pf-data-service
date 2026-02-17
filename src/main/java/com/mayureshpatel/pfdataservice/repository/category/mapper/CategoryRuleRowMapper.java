@@ -18,7 +18,7 @@ public class CategoryRuleRowMapper implements RowMapper<CategoryRule> {
         CategoryRule categoryRule = new CategoryRule();
         categoryRule.setId(rs.getLong("id"));
         categoryRule.setKeyword(rs.getString("keyword"));
-        categoryRule.setCategoryName(rs.getString("category_name"));
+        categoryRule.setCategoryId(rs.getLong("category_id"));
         categoryRule.setPriority(rs.getInt("priority"));
 
         // set user object
@@ -30,12 +30,12 @@ public class CategoryRuleRowMapper implements RowMapper<CategoryRule> {
         // set audit columns
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
-            categoryRule.setCreatedAt(createdAt.toInstant().atOffset(ZoneOffset.UTC));
+            categoryRule.getAudit().setCreatedAt(createdAt.toInstant().atOffset(ZoneOffset.UTC));
         }
 
         Timestamp updatedAt = rs.getTimestamp("updated_at");
         if (updatedAt != null) {
-            categoryRule.setUpdatedAt(updatedAt.toInstant().atOffset(ZoneOffset.UTC));
+            categoryRule.getAudit().setUpdatedAt(updatedAt.toInstant().atOffset(ZoneOffset.UTC));
         }
 
         return categoryRule;
