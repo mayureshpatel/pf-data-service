@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.AuthenticationResponse;
-import com.mayureshpatel.pfdataservice.dto.RegistrationRequest;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
+import com.mayureshpatel.pfdataservice.dto.user.RegistrationRequest;
 import com.mayureshpatel.pfdataservice.exception.UserAlreadyExistsException;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;

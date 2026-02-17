@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.dto.CategoryRuleDto;
-import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
+import com.mayureshpatel.pfdataservice.dto.vendor.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.service.CategoryRuleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

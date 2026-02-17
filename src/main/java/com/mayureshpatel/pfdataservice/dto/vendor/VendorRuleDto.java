@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.vendor;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;

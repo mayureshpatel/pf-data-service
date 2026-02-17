@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.dto.RecurringSuggestionDto;
-import com.mayureshpatel.pfdataservice.dto.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.service.RecurringTransactionService;
 import org.junit.jupiter.api.Test;

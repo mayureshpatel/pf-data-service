@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.dto.CategoryDto;
-import com.mayureshpatel.pfdataservice.dto.CategoryGroupDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.service.CategoryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

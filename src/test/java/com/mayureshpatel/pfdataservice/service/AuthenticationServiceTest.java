@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.AuthenticationRequest;
-import com.mayureshpatel.pfdataservice.dto.AuthenticationResponse;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationRequest;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +12,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.dto.AuthenticationRequest;
-import com.mayureshpatel.pfdataservice.dto.AuthenticationResponse;
-import com.mayureshpatel.pfdataservice.dto.RegistrationRequest;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationRequest;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
+import com.mayureshpatel.pfdataservice.dto.user.RegistrationRequest;
 import com.mayureshpatel.pfdataservice.service.AuthenticationService;
 import com.mayureshpatel.pfdataservice.service.RegistrationService;
 import jakarta.validation.Valid;

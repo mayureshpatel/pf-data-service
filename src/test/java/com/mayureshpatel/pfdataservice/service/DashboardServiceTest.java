@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
-import com.mayureshpatel.pfdataservice.dto.DashboardData;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardData;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

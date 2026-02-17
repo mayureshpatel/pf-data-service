@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.vendor;
 
 import java.math.BigDecimal;
 

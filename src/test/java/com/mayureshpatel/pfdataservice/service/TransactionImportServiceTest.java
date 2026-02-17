@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.TransactionDto;
-import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;

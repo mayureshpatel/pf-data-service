@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.category;
 
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import jakarta.validation.constraints.NotBlank;

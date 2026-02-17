@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.dto.RecurringSuggestionDto;
-import com.mayureshpatel.pfdataservice.dto.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.RecurringTransactionService;
 import jakarta.validation.Valid;

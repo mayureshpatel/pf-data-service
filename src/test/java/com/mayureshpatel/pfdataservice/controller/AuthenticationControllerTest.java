@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.dto.AuthenticationRequest;
-import com.mayureshpatel.pfdataservice.dto.AuthenticationResponse;
-import com.mayureshpatel.pfdataservice.dto.RegistrationRequest;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationRequest;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
+import com.mayureshpatel.pfdataservice.dto.user.RegistrationRequest;
 import com.mayureshpatel.pfdataservice.exception.UserAlreadyExistsException;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.service.AuthenticationService;

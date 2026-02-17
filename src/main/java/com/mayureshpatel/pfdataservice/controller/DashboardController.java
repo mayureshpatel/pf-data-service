@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
-import com.mayureshpatel.pfdataservice.dto.VendorTotal;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.vendor.VendorTotal;
 import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardPulseDto;

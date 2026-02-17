@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.auth;
 
 import lombok.Builder;
 

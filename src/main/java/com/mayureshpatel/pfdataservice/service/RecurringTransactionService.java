@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.RecurringSuggestionDto;
-import com.mayureshpatel.pfdataservice.dto.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;

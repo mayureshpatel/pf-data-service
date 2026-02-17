@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.BudgetDto;
-import com.mayureshpatel.pfdataservice.dto.BudgetStatusDto;
-import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;

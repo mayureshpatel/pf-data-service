@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.dto.CategoryDto;
-import com.mayureshpatel.pfdataservice.dto.CategoryGroupDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.CategoryService;
 import jakarta.validation.Valid;

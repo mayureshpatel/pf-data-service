@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.budget;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;

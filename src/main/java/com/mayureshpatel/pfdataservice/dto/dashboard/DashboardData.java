@@ -1,5 +1,6 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.dashboard;
 
+import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
 import lombok.Builder;
 
 import java.math.BigDecimal;

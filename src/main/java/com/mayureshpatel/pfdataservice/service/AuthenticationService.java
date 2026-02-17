@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.AuthenticationRequest;
-import com.mayureshpatel.pfdataservice.dto.AuthenticationResponse;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationRequest;
+import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import lombok.RequiredArgsConstructor;

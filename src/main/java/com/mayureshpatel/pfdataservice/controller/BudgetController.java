@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.dto.BudgetDto;
-import com.mayureshpatel.pfdataservice.dto.BudgetStatusDto;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.BudgetService;
 import jakarta.validation.Valid;

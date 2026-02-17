@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.account;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import jakarta.validation.constraints.NotBlank;

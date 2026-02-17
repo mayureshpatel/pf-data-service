@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
-import com.mayureshpatel.pfdataservice.dto.UnmatchedVendorDto;
-import com.mayureshpatel.pfdataservice.dto.VendorRuleDto;
+import com.mayureshpatel.pfdataservice.dto.vendor.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.vendor.UnmatchedVendorDto;
+import com.mayureshpatel.pfdataservice.dto.vendor.VendorRuleDto;
 import com.mayureshpatel.pfdataservice.service.VendorRuleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

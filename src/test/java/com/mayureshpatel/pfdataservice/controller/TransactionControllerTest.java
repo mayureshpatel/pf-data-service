@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.dto.SaveTransactionRequest;
-import com.mayureshpatel.pfdataservice.dto.TransactionDto;
-import com.mayureshpatel.pfdataservice.dto.TransactionPreview;
+import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;

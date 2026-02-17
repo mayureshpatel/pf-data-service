@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto;
+package com.mayureshpatel.pfdataservice.dto.transaction;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;

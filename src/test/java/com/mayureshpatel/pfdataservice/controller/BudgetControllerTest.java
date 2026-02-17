@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.dto.BudgetDto;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.service.BudgetService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
