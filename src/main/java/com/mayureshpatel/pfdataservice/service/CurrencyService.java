@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.repository.transaction.CurrencyRepository;
+import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;

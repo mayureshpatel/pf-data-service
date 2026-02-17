@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
+package com.mayureshpatel.pfdataservice.repository.currency.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import org.springframework.jdbc.core.RowMapper;

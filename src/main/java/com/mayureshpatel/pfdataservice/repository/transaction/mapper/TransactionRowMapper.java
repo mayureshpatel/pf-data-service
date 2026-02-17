@@ -1,10 +1,10 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +19,12 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
         Transaction transaction = new Transaction();
         transaction.setId(rs.getLong("id"));
         transaction.setAmount(getBigDecimal(rs, "amount"));
-        transaction.setDate(getLocalDate(rs, "date"));
+        transaction.setTransactionDate(getOffsetDateTime(rs, "date"));
         transaction.setPostDate(getLocalDate(rs, "post_date"));
         transaction.setDescription(rs.getString("description"));
         transaction.setOriginalVendorName(rs.getString("original_vendor_name"));
-        transaction.setVendorName(rs.getString("vendor_name"));
-        
+        transaction.getVendor().setName(rs.getString("vendor_name"));
+
         String type = rs.getString("type");
         if (type != null) {
             transaction.setType(TransactionType.valueOf(type));
@@ -44,9 +44,9 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
             transaction.setCategory(category);
         }
 
-        transaction.setCreatedAt(getLocalDateTime(rs, "created_at"));
-        transaction.setUpdatedAt(getLocalDateTime(rs, "updated_at"));
-        transaction.setDeletedAt(getLocalDateTime(rs, "deleted_at"));
+        transaction.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
+        transaction.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
+        transaction.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));
 
         return transaction;
     }

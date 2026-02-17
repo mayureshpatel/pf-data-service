@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
+package com.mayureshpatel.pfdataservice.repository.tag.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -17,7 +17,7 @@ public class TagRowMapper extends JdbcMapperUtils implements RowMapper<Tag> {
         Tag tag = new Tag();
         tag.setId(rs.getLong("id"));
         tag.setName(rs.getString("name"));
-        tag.setColor(rs.getString("color"));
+        tag.getIconography().setColor(rs.getString("color"));
 
         Long userId = getLongOrNull(rs, "user_id");
         if (userId != null) {
@@ -26,8 +26,8 @@ public class TagRowMapper extends JdbcMapperUtils implements RowMapper<Tag> {
             tag.setUser(user);
         }
 
-        tag.setCreatedAt(getLocalDateTime(rs, "created_at"));
-        tag.setUpdatedAt(getLocalDateTime(rs, "updated_at"));
+        tag.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
+        tag.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
 
         return tag;
     }

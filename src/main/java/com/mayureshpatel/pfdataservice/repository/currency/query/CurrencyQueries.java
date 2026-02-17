@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.repository.transaction.query;
+package com.mayureshpatel.pfdataservice.repository.currency.query;
 
 import lombok.NoArgsConstructor;
 
