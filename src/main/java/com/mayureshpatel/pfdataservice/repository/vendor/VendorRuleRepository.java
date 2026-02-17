@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.vendor;
 
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.domain.vendor.VendorRule;
 import com.mayureshpatel.pfdataservice.repository.vendor.mapper.VendorRuleRowMapper;
+import com.mayureshpatel.pfdataservice.repository.vendor.query.VendorRuleQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -19,20 +19,17 @@ public class VendorRuleRepository implements JdbcRepository<VendorRule, Long> {
 
     private final JdbcClient jdbcClient;
     private final VendorRuleRowMapper rowMapper;
-    private final SqlLoader sqlLoader;
 
     @Override
     public Optional<VendorRule> findById(Long id) {
-        String query = sqlLoader.load("sql/vendor-rule/findById.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(VendorRuleQueries.FIND_BY_ID)
                 .param("id", id)
                 .query(rowMapper)
                 .optional();
     }
 
     public List<VendorRule> findByUserOrGlobal(Long userId) {
-        String query = sqlLoader.load("sql/vendor-rule/findByUserOrGlobal.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(VendorRuleQueries.FIND_BY_USER_OR_GLOBAL)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
@@ -40,10 +37,9 @@ public class VendorRuleRepository implements JdbcRepository<VendorRule, Long> {
 
     @Override
     public VendorRule insert(VendorRule rule) {
-        String query = sqlLoader.load("sql/vendor-rule/insert.sql");
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        jdbcClient.sql(query)
+        jdbcClient.sql(VendorRuleQueries.INSERT)
                 .param("keyword", rule.getKeyword())
                 .param("vendorName", rule.getVendorName())
                 .param("priority", rule.getPriority())
@@ -56,9 +52,7 @@ public class VendorRuleRepository implements JdbcRepository<VendorRule, Long> {
 
     @Override
     public VendorRule update(VendorRule rule) {
-        String query = sqlLoader.load("sql/vendor-rule/update.sql");
-
-        jdbcClient.sql(query)
+        jdbcClient.sql(VendorRuleQueries.UPDATE)
                 .param("keyword", rule.getKeyword())
                 .param("vendorName", rule.getVendorName())
                 .param("priority", rule.getPriority())
@@ -69,17 +63,31 @@ public class VendorRuleRepository implements JdbcRepository<VendorRule, Long> {
     }
 
     @Override
+    public VendorRule save(VendorRule rule) {
+        if (rule.getId() == null) {
+            return insert(rule);
+        } else {
+            return update(rule);
+        }
+    }
+
+    @Override
+    public void delete(VendorRule rule) {
+        if (rule.getId() != null) {
+            deleteById(rule.getId());
+        }
+    }
+
+    @Override
     public void deleteById(Long id) {
-        String query = sqlLoader.load("sql/vendor-rule/deleteById.sql");
-        jdbcClient.sql(query)
+        jdbcClient.sql(VendorRuleQueries.DELETE_BY_ID)
                 .param("id", id)
                 .update();
     }
 
     @Override
     public long count() {
-        String query = sqlLoader.load("sql/vendor-rule/count.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(VendorRuleQueries.COUNT)
                 .query(Long.class)
                 .single();
     }

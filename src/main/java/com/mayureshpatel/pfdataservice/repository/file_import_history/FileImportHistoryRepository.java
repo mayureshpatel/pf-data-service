@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.repository.file_import_history;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.file_import_history.mapper.FileImportHistoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.file_import_history.query.FileImportHistoryQueries;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,6 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
 
     private final JdbcClient jdbcClient;
     private final FileImportHistoryRowMapper rowMapper;
-    private final SqlLoader sqlLoader;
 
     @Override
     public Optional<FileImportHistory> findById(Long id) {
@@ -59,5 +57,19 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
                 .update();
     }
 
+    @Override
+    public FileImportHistory save(FileImportHistory entity) {
+        if (entity.getId() == null) {
+            return insert(entity);
+        } else {
+            return update(entity);
+        }
+    }
 
+    @Override
+    public void delete(FileImportHistory entity) {
+        if (entity.getId() != null) {
+            deleteById(entity.getId());
+        }
+    }
 }

@@ -3,7 +3,7 @@ package com.mayureshpatel.pfdataservice.repository.user;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.user.mapper.UserRowMapper;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
+import com.mayureshpatel.pfdataservice.repository.user.query.UserQueries;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -20,31 +20,24 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
 
     private final JdbcClient jdbcClient;
     private final UserRowMapper rowMapper;
-    private final SqlLoader sqlLoader;
 
     @Override
     public Optional<User> findById(Long id) {
-        String query = this.sqlLoader.load("sql/user/findById.sql");
-
-        return this.jdbcClient.sql(query)
+        return this.jdbcClient.sql(UserQueries.FIND_BY_ID)
                 .param("id", id)
                 .query(rowMapper)
                 .optional();
     }
 
     public Optional<User> findByEmail(String email) {
-        String query = this.sqlLoader.load("sql/user/findByEmail.sql");
-
-        return this.jdbcClient.sql(query)
+        return this.jdbcClient.sql(UserQueries.FIND_BY_EMAIL)
                 .param("email", email)
                 .query(rowMapper)
                 .optional();
     }
 
     public Optional<User> findByUsername(String username) {
-        String query = this.sqlLoader.load("sql/user/findByUsername.sql");
-
-        return this.jdbcClient.sql(query)
+        return this.jdbcClient.sql(UserQueries.FIND_BY_USERNAME)
                 .param("username", username)
                 .query(rowMapper)
                 .optional();
@@ -52,18 +45,14 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
 
     @Override
     public List<User> findAll() {
-        String query = this.sqlLoader.load("sql/user/findAll.sql");
-
-        return this.jdbcClient.sql(query)
+        return this.jdbcClient.sql(UserQueries.FIND_ALL)
                 .query(rowMapper)
                 .list();
     }
 
 
     public boolean existsByEmail(String email) {
-        String query = this.sqlLoader.load("sql/user/existsByEmail.sql");
-
-        Integer count = this.jdbcClient.sql(query)
+        Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_EMAIL)
                 .param("email", email)
                 .query(Integer.class)
                 .single();
@@ -72,9 +61,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
     }
 
     public boolean existsByUsername(String username) {
-        String query = this.sqlLoader.load("sql/user/existsByUsername.sql");
-
-        Integer count = this.jdbcClient.sql(query)
+        Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_USERNAME)
                 .param("username", username)
                 .query(Integer.class)
                 .single();
@@ -91,11 +78,11 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
         }
     }
 
-    private User insert(User user) {
-        String query = this.sqlLoader.load("sql/user/insert.sql");
+    @Override
+    public User insert(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        this.jdbcClient.sql(query)
+        this.jdbcClient.sql(UserQueries.INSERT)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash",  user.getPasswordHash())
@@ -105,10 +92,9 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
         return user;
     }
 
-    private User update(User user) {
-        String query = this.sqlLoader.load("sql/user/update.sql");
-
-        this.jdbcClient.sql(query)
+    @Override
+    public User update(User user) {
+        this.jdbcClient.sql(UserQueries.UPDATE)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash",  user.getPasswordHash())
@@ -120,19 +106,22 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
     }
 
     @Override
-    public void deleteById(Long id) {
-        String query = this.sqlLoader.load("sql/user/deleteById.sql");
+    public void delete(User user) {
+        if (user.getId() != null) {
+            deleteById(user.getId());
+        }
+    }
 
-        this.jdbcClient.sql(query)
+    @Override
+    public void deleteById(Long id) {
+        this.jdbcClient.sql(UserQueries.DELETE_BY_ID)
                 .param("id", id)
                 .update();
     }
 
     @Override
     public boolean existsById(Long id) {
-        String query = this.sqlLoader.load("sql/user/existsById.sql");
-
-        Integer count = this.jdbcClient.sql(query)
+        Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_ID)
                 .param("id", id)
                 .query(Integer.class)
                 .single();
@@ -142,9 +131,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
 
     @Override
     public long count() {
-        String query = this.sqlLoader.load("sql/user/count.sql");
-
-        return this.jdbcClient.sql(query)
+        return this.jdbcClient.sql(UserQueries.COUNT)
                 .query(Long.class)
                 .single();
     }

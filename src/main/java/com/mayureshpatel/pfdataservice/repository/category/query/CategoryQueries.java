@@ -40,6 +40,7 @@ public final class CategoryQueries {
             values (
                     :name, :color, :icon, :type, :userId, :parentId,
                     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            returning id
             """;
 
     // language=SQL

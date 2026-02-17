@@ -3,11 +3,12 @@ package com.mayureshpatel.pfdataservice.repository.account;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
 import com.mayureshpatel.pfdataservice.repository.account.query.AccountQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -19,7 +20,6 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
 
     private final JdbcClient jdbcClient;
     private final AccountRowMapper rowMapper;
-    private final SqlLoader sqlLoader;
 
     @Override
     public List<Account> findAll() {
@@ -45,6 +45,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
 
     @Override
     public Account insert(Account account) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(AccountQueries.INSERT)
                 .param("name", account.getName())
                 .param("type", account.getType())
@@ -53,8 +54,11 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .param("bankName", account.getBankName() != null ? account.getBankName().name() : null)
                 .param("userId", account.getUser().getId())
                 .param("createdBy", account.getAudit().getCreatedBy() != null ? account.getAudit().getCreatedBy().getId() : null)
-                .param("updatedBy", account.getAudit().getUpdatedBy() != null ? account.getAudit().getUpdatedBy().getId() : null);
+                .param("updatedBy", account.getAudit().getUpdatedBy() != null ? account.getAudit().getUpdatedBy().getId() : null)
+                .update(keyHolder);
 
+        account.setId(keyHolder.getKeyAs(Long.class));
+        account.setVersion(1L);
         return account;
     }
 
@@ -77,6 +81,25 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
 
         account.setVersion(account.getVersion() + 1);
         return account;
+    }
+
+    @Override
+    public Account save(Account account) {
+        if (account.getId() == null) {
+            return insert(account);
+        } else {
+            return update(account);
+        }
+    }
+
+    @Override
+    public void delete(Account account) {
+        if (account.getId() != null) {
+            Long deletedBy = account.getAudit() != null && account.getAudit().getUpdatedBy() != null
+                    ? account.getAudit().getUpdatedBy().getId()
+                    : null;
+            deleteById(account.getId(), deletedBy);
+        }
     }
 
     @Override

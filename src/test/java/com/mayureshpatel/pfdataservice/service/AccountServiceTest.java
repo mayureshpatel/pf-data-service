@@ -3,7 +3,7 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.dto.AccountDto;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,7 +106,7 @@ class AccountServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> accountService.createAccount(1L, accountDto))
-            .isInstanceOf(EntityNotFoundException.class)
+            .isInstanceOf(ResourceNotFoundException.class)
             .hasMessage("User not found");
     }
 
@@ -140,7 +140,7 @@ class AccountServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> accountService.updateAccount(1L, 100L, accountDto))
-            .isInstanceOf(EntityNotFoundException.class)
+            .isInstanceOf(ResourceNotFoundException.class)
             .hasMessage("Account not found");
     }
 
@@ -194,7 +194,7 @@ class AccountServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> accountService.deleteAccount(1L, 100L))
-            .isInstanceOf(EntityNotFoundException.class)
+            .isInstanceOf(ResourceNotFoundException.class)
             .hasMessage("Account not found");
     }
 

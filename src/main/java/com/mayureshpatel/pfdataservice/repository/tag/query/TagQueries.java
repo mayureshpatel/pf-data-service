@@ -22,8 +22,9 @@ public final class TagQueries {
 
     // language=SQL
     public static final String INSERT = """
-            insert into tags (id, user_id, name, color, created_at, updated_at)
-            values (:id, :userId, :name, :color, current_timestamp, current_timestamp)
+            insert into tags (user_id, name, color, created_at, updated_at)
+            values (:userId, :name, :color, current_timestamp, current_timestamp)
+            returning id
             """;
 
     // language=SQL

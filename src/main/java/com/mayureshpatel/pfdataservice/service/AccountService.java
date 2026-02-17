@@ -5,7 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +31,7 @@ public class AccountService {
     @Transactional
     public AccountDto createAccount(Long userId, AccountDto accountDto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Account account = new Account();
         account.setName(accountDto.name());
@@ -46,7 +46,7 @@ public class AccountService {
     @Transactional
     public AccountDto updateAccount(Long userId, Long accountId, AccountDto dto) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
              throw new RuntimeException("Access denied"); // Better to use AccessDeniedException
@@ -64,7 +64,7 @@ public class AccountService {
     @Transactional
     public AccountDto reconcileAccount(Long userId, Long accountId, BigDecimal targetBalance) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied");
@@ -99,7 +99,7 @@ public class AccountService {
     @Transactional
     public void deleteAccount(Long userId, Long accountId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied");

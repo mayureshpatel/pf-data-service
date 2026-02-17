@@ -7,7 +7,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -126,7 +126,7 @@ class TransactionServiceTest {
         when(transactionRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> transactionService.updateTransaction(1L, 1L, mock(TransactionDto.class)))
-                .isInstanceOf(EntityNotFoundException.class);
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

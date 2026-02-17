@@ -6,7 +6,7 @@ import com.mayureshpatel.pfdataservice.dto.CategoryTotal;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,10 +99,10 @@ public class BudgetService {
     @Transactional
     public BudgetDto setBudget(Long userId, BudgetDto dto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Category category = categoryRepository.findById(dto.categoryId())
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied to category");
@@ -131,7 +131,7 @@ public class BudgetService {
     @Transactional
     public void deleteBudget(Long userId, Long id) {
         Budget budget = budgetRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Budget not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Budget not found"));
 
         if (!budget.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied");

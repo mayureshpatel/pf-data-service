@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.repository.category;
 
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRuleRowMapper;
 import com.mayureshpatel.pfdataservice.repository.category.query.CategoryRuleQueries;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,6 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
 
     private final JdbcClient jdbcClient;
     private final CategoryRuleRowMapper rowMapper;
-    private final SqlLoader sqlLoader;
 
     public List<CategoryRule> findByUserId(Long userId) {
         return this.jdbcClient.sql(CategoryRuleQueries.FIND_ALL_BY_USER_ID)

@@ -88,6 +88,7 @@ public final class AccountQueries {
                    1,
                    CURRENT_TIMESTAMP, :createdBy, CURRENT_TIMESTAMP, :updatedBy
                    )
+            returning id
             """;
 
     // language=SQL

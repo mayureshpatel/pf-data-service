@@ -33,6 +33,18 @@ public interface JdbcRepository<T, ID> {
     }
 
     /**
+     * Saves an entity (insert if new, update if existing).
+     * Default implementation throws UnsupportedOperationException.
+     * Repositories should override this method to provide custom logic.
+     *
+     * @param entity The entity to save
+     * @return The saved entity
+     */
+    default T save(T entity) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * Finds an entity by its primary key.
      *
      * @param id The primary key of the entity
@@ -48,6 +60,17 @@ public interface JdbcRepository<T, ID> {
      * @return List of all entities
      */
     default List<T> findAll() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Delete an entity.
+     * Default implementation throws UnsupportedOperationException.
+     * Repositories should override this method to provide custom logic.
+     *
+     * @param entity The entity to delete
+     */
+    default void delete(T entity) {
         throw new UnsupportedOperationException();
     }
 

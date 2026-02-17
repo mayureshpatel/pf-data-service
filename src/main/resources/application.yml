@@ -21,14 +21,6 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        show_sql: false
-        format_sql: false
-
   security:
     jwt:
       secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
@@ -44,5 +36,3 @@ logging:
     root: info
     com.mayureshpatel.pfdataservice: debug
     org.springframework.web: info
-    org.hibernate.SQL: debug
-#    org.hibernate.orm.jdbc.bind: trace

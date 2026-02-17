@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.exception;
 
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,8 +18,8 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ProblemDetail handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleEntityNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         log.warn("Entity Not Found: {} at {}", ex.getMessage(), request.getRequestURI());
         return createProblemDetail(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }

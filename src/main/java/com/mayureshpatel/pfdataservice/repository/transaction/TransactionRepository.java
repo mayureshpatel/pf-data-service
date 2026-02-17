@@ -4,7 +4,7 @@ import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionRowMapper;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
+import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +24,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     private final JdbcClient jdbcClient;
     private final TransactionRowMapper rowMapper;
     private final TagRowMapper tagRowMapper;
-    private final SqlLoader sqlLoader;
 
     @Override
     public Optional<Transaction> findById(Long id) {
-        String query = sqlLoader.load("sql/transaction/findById.sql");
-        Optional<Transaction> transaction = jdbcClient.sql(query)
+        Optional<Transaction> transaction = jdbcClient.sql(TransactionQueries.FIND_BY_ID)
                 .param("id", id)
                 .query(rowMapper)
                 .optional();
@@ -39,8 +37,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     private void loadTags(Transaction transaction) {
-        String query = sqlLoader.load("sql/transaction/findTagsByTransactionId.sql");
-        List<Tag> tags = jdbcClient.sql(query)
+        List<Tag> tags = jdbcClient.sql(TransactionQueries.FIND_TAGS_BY_TRANSACTION_ID)
                 .param("transactionId", transaction.getId())
                 .query(tagRowMapper)
                 .list();
@@ -49,8 +46,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     @Override
     public List<Transaction> findAll() {
-        String query = sqlLoader.load("sql/transaction/findAll.sql");
-        List<Transaction> transactions = jdbcClient.sql(query)
+        List<Transaction> transactions = jdbcClient.sql(TransactionQueries.FIND_ALL)
                 .query(rowMapper)
                 .list();
 
@@ -59,8 +55,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     public List<Transaction> findByUserId(Long userId) {
-        String query = sqlLoader.load("sql/transaction/findByUserId.sql");
-        List<Transaction> transactions = jdbcClient.sql(query)
+        List<Transaction> transactions = jdbcClient.sql(TransactionQueries.FIND_BY_USER_ID)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
@@ -71,10 +66,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     @Override
     public Transaction insert(Transaction transaction) {
-        String query = sqlLoader.load("sql/transaction/insert.sql");
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        jdbcClient.sql(query)
+        jdbcClient.sql(TransactionQueries.INSERT)
                 .param("amount", transaction.getAmount())
                 .param("date", transaction.getDate())
                 .param("postDate", transaction.getPostDate())
@@ -93,9 +87,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     @Override
     public Transaction update(Transaction transaction) {
-        String query = sqlLoader.load("sql/transaction/update.sql");
-
-        jdbcClient.sql(query)
+        jdbcClient.sql(TransactionQueries.UPDATE)
                 .param("amount", transaction.getAmount())
                 .param("date", transaction.getDate())
                 .param("postDate", transaction.getPostDate())
@@ -112,17 +104,31 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     @Override
+    public Transaction save(Transaction transaction) {
+        if (transaction.getId() == null) {
+            return insert(transaction);
+        } else {
+            return update(transaction);
+        }
+    }
+
+    @Override
+    public void delete(Transaction transaction) {
+        if (transaction.getId() != null) {
+            deleteById(transaction.getId());
+        }
+    }
+
+    @Override
     public void deleteById(Long id) {
-        String query = sqlLoader.load("sql/transaction/deleteById.sql");
-        jdbcClient.sql(query)
+        jdbcClient.sql(TransactionQueries.DELETE_BY_ID)
                 .param("id", id)
                 .update();
     }
 
     @Override
     public long count() {
-        String query = sqlLoader.load("sql/transaction/count.sql");
-        return jdbcClient.sql(query)
+        return jdbcClient.sql(TransactionQueries.COUNT)
                 .query(Long.class)
                 .single();
     }

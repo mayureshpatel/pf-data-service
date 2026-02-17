@@ -2,11 +2,12 @@ package com.mayureshpatel.pfdataservice.repository.category;
 
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.category.query.CategoryQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,7 +19,6 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
 
     private final JdbcClient jdbcClient;
     private final CategoryRowMapper rowMapper;
-    private final SqlLoader sqlLoader;
 
     @Override
     public Optional<Category> findById(Long id) {
@@ -44,13 +44,17 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
 
     @Override
     public Category insert(Category category) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(CategoryQueries.INSERT)
                 .param("name", category.getName())
                 .param("color", category.getIconography().getColor())
                 .param("icon", category.getIconography().getIcon())
                 .param("type", category.getType().name())
-                .param("userId", category.getUser().getId());
+                .param("userId", category.getUser().getId())
+                .param("parentId", category.getParent() != null ? category.getParent().getId() : null)
+                .update(keyHolder);
 
+        category.setId(keyHolder.getKeyAs(Long.class));
         return category;
     }
 
@@ -61,10 +65,27 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .param("color", category.getIconography().getColor())
                 .param("icon", category.getIconography().getIcon())
                 .param("type", category.getType().name())
+                .param("parentId", category.getParent() != null ? category.getParent().getId() : null)
                 .param("id", category.getId())
                 .update();
 
         return category;
+    }
+
+    @Override
+    public Category save(Category category) {
+        if (category.getId() == null) {
+            return insert(category);
+        } else {
+            return update(category);
+        }
+    }
+
+    @Override
+    public void delete(Category category) {
+        if (category.getId() != null) {
+            deleteById(category.getId());
+        }
     }
 
     @Override

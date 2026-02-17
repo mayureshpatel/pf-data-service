@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,8 +20,8 @@ public class CurrencyService {
         return this.currencyRepository.findByIsActive(true);
     }
 
-    public Currency getCurrencyByCode(String code) throws EntityNotFoundException {
+    public Currency getCurrencyByCode(String code) throws ResourceNotFoundException {
         return this.currencyRepository.findById(code)
-                .orElseThrow(() -> new EntityNotFoundException("Currency with code " + code + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Currency with code " + code + " not found"));
     }
 }

@@ -7,7 +7,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -138,12 +138,12 @@ public class RecurringTransactionService {
     @Transactional
     public RecurringTransactionDto createRecurringTransaction(Long userId, RecurringTransactionDto dto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Account account = null;
         if (dto.accountId() != null) {
             account = accountRepository.findById(dto.accountId())
-                    .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             if (!account.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to account");
             }
@@ -166,7 +166,7 @@ public class RecurringTransactionService {
     @Transactional
     public RecurringTransactionDto updateRecurringTransaction(Long userId, Long id, RecurringTransactionDto dto) {
         RecurringTransaction recurring = recurringRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Recurring transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
 
         if (!recurring.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
@@ -174,7 +174,7 @@ public class RecurringTransactionService {
 
         if (dto.accountId() != null) {
             Account account = accountRepository.findById(dto.accountId())
-                    .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             if (!account.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to account");
             }
@@ -196,7 +196,7 @@ public class RecurringTransactionService {
     @Transactional
     public void deleteRecurringTransaction(Long userId, Long id) {
         RecurringTransaction recurring = recurringRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Recurring transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
 
         if (!recurring.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("Access denied");

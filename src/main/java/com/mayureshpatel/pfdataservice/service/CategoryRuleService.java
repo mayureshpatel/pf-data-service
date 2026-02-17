@@ -8,7 +8,7 @@ import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -40,7 +40,7 @@ public class CategoryRuleService {
     @Transactional
     public CategoryRuleDto createRule(Long userId, CategoryRuleDto dto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         CategoryRule rule = new CategoryRule();
         rule.setUser(user);
@@ -54,7 +54,7 @@ public class CategoryRuleService {
     @Transactional
     public CategoryRuleDto updateRule(Long ruleId, CategoryRuleDto dto) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
-                .orElseThrow(() -> new EntityNotFoundException("Rule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
         rule.setKeyword(dto.keyword());
         rule.setCategoryName(dto.categoryName());
         rule.setPriority(dto.priority());
@@ -66,7 +66,7 @@ public class CategoryRuleService {
     @Transactional
     public void deleteRule(Long userId, Long ruleId) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
-                .orElseThrow(() -> new EntityNotFoundException("Rule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
 
         if (!rule.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this rule");

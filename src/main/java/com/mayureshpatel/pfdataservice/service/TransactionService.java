@@ -13,7 +13,7 @@ import com.mayureshpatel.pfdataservice.repository.transaction.specification.Tran
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -153,7 +153,7 @@ public class TransactionService {
     @Transactional
     public TransactionDto createTransaction(Long userId, TransactionDto dto) {
         Account account = accountRepository.findById(dto.accountId())
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this account");
@@ -224,7 +224,7 @@ public class TransactionService {
 
         // Validate ownership and existence
         if (transactions.size() != dtos.size()) {
-            throw new EntityNotFoundException("One or more transactions not found");
+            throw new ResourceNotFoundException("One or more transactions not found");
         }
 
         return dtos.stream().map(dto -> {
@@ -305,7 +305,7 @@ public class TransactionService {
     @Transactional
     public TransactionDto updateTransaction(Long userId, Long transactionId, TransactionDto dto) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
         if (!transaction.getAccount().getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this transaction");
@@ -317,7 +317,7 @@ public class TransactionService {
     @Transactional
     public void deleteTransaction(Long userId, Long transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
         if (!transaction.getAccount().getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this transaction");

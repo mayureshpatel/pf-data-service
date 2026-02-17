@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.repository.account;
 
 import com.mayureshpatel.pfdataservice.domain.account.AccountSnapshot;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.account.query.AccountSnapshotQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -16,7 +15,6 @@ import java.util.Optional;
 public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot, Long> {
 
     private final JdbcClient jdbcClient;
-    private final SqlLoader sqlLoader;
 
     /**
      * Fetches account snapshot by account ID and snapshot date
@@ -30,5 +28,21 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
                 .param("snapshotDate", snapshotDate)
                 .query(AccountSnapshot.class)
                 .optional();
+    }
+
+    @Override
+    public AccountSnapshot save(AccountSnapshot entity) {
+        if (entity.getId() == null) {
+            return insert(entity);
+        } else {
+            return update(entity);
+        }
+    }
+
+    @Override
+    public void delete(AccountSnapshot entity) {
+        if (entity.getId() != null) {
+            deleteById(entity.getId());
+        }
     }
 }

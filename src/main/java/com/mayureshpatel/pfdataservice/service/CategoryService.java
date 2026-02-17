@@ -4,7 +4,7 @@ import com.mayureshpatel.pfdataservice.dto.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -33,7 +33,7 @@ public class CategoryService {
     @Transactional
     public CategoryDto createCategory(Long userId, CategoryDto categoryDto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Category category = new Category();
         category.setName(categoryDto.name());
@@ -46,7 +46,7 @@ public class CategoryService {
 
         if (categoryDto.parentId() != null) {
             Category parent = categoryRepository.findById(categoryDto.parentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
@@ -59,7 +59,7 @@ public class CategoryService {
     @Transactional
     public CategoryDto updateCategory(Long userId, Long categoryId, CategoryDto dto) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied");
@@ -79,7 +79,7 @@ public class CategoryService {
             }
             
             Category parent = categoryRepository.findById(dto.parentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
@@ -94,7 +94,7 @@ public class CategoryService {
     @Transactional
     public void deleteCategory(Long userId, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied");

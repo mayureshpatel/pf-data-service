@@ -7,7 +7,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.vendor.VendorRule;
 import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
-import jakarta.persistence.EntityNotFoundException;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -75,7 +75,7 @@ public class VendorRuleService {
     @Transactional
     public VendorRuleDto createRule(Long userId, VendorRuleDto dto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         VendorRule rule = new VendorRule();
         rule.setUser(user);
@@ -89,7 +89,7 @@ public class VendorRuleService {
     @Transactional
     public void deleteRule(Long userId, Long ruleId) {
         VendorRule rule = vendorRuleRepository.findById(ruleId)
-                .orElseThrow(() -> new EntityNotFoundException("Rule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
 
         if (rule.getUser() != null && !rule.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this rule");

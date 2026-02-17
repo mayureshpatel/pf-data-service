@@ -6,6 +6,8 @@ import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
 import com.mayureshpatel.pfdataservice.repository.tag.query.TagQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -35,11 +37,14 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
 
     @Override
     public Tag insert(Tag tag) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(TagQueries.INSERT)
                 .param("name", tag.getName())
                 .param("color", tag.getIconography().getColor())
-                .param("userId", tag.getUser().getId());
+                .param("userId", tag.getUser().getId())
+                .update(keyHolder);
 
+        tag.setId(keyHolder.getKeyAs(Long.class));
         return tag;
     }
 
@@ -52,6 +57,22 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
                 .update();
 
         return tag;
+    }
+
+    @Override
+    public Tag save(Tag tag) {
+        if (tag.getId() == null) {
+            return insert(tag);
+        } else {
+            return update(tag);
+        }
+    }
+
+    @Override
+    public void delete(Tag tag) {
+        if (tag.getId() != null) {
+            deleteById(tag.getId());
+        }
     }
 
     @Override

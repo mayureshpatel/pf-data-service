@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.repository.currency;
 
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
-import com.mayureshpatel.pfdataservice.repository.SqlLoader;
 import com.mayureshpatel.pfdataservice.repository.currency.mapper.CurrencyRowMapper;
 import com.mayureshpatel.pfdataservice.repository.currency.query.CurrencyQueries;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,6 @@ public class CurrencyRepository implements JdbcRepository<Currency, String> {
 
     private final JdbcClient jdbcClient;
     private final CurrencyRowMapper rowMapper;
-    private final SqlLoader sqlLoader;
 
     @Override
     public Optional<Currency> findById(String code) {
