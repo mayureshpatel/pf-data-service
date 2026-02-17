@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.domain.account.AccountTypeLookup;
+import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountTypeController {
 
-    private final AccountTypeLookupRepository accountTypeLookupRepository;
+    private final AccountTypeRepository accountTypeLookupRepository;
 
     @GetMapping
     public ResponseEntity<List<AccountTypeLookup>> getAccountTypes() {
