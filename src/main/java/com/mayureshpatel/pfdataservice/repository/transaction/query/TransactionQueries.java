@@ -44,14 +44,13 @@ public final class TransactionQueries {
     // language=SQL
     public static final String INSERT = """
             insert into transactions
-                (amount, date, post_date, description, original_vendor_name, vendor_name, type, account_id, category_id, created_at, updated_at)
+                (amount, date, post_date, description, merchant_id, type, account_id, category_id, created_at, updated_at)
             values (
                     :amount,
                     :date,
                     :postDate,
                     :description,
-                    :originalVendorName,
-                    :vendorName,
+                    :merchantId,
                     :type,
                     :accountId,
                     :categoryId,
@@ -66,8 +65,7 @@ public final class TransactionQueries {
                 date = :date,
                 post_date = :postDate,
                 description = :description,
-                original_vendor_name = :originalVendorName,
-                vendor_name = :vendorName,
+                merchant_id = :merchantId,
                 type = :type,
                 account_id = :accountId,
                 category_id = :categoryId,

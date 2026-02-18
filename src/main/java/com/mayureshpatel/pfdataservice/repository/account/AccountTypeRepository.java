@@ -25,7 +25,7 @@ public class AccountTypeRepository implements JdbcRepository<AccountType, String
 
     @Override
     public AccountType save(AccountType entity) {
-        if (entity.getId() == null) {
+        if (entity.getCode() == null) {
             return insert(entity);
         } else {
             return update(entity);
@@ -34,8 +34,8 @@ public class AccountTypeRepository implements JdbcRepository<AccountType, String
 
     @Override
     public void delete(AccountType entity) {
-        if (entity.getId() != null) {
-            deleteById(entity.getId());
+        if (entity.getCode() != null) {
+            deleteById(entity.getCode());
         }
     }
 }

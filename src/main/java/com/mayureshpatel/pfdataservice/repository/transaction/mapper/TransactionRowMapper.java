@@ -20,7 +20,7 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
         transaction.setId(rs.getLong("id"));
         transaction.setAmount(getBigDecimal(rs, "amount"));
         transaction.setTransactionDate(getOffsetDateTime(rs, "date"));
-        transaction.setPostDate(getLocalDate(rs, "post_date"));
+        transaction.setPostDate(getOffsetDateTime(rs, "post_date"));
         transaction.setDescription(rs.getString("description"));
         transaction.setOriginalVendorName(rs.getString("original_vendor_name"));
         transaction.getVendor().setName(rs.getString("vendor_name"));

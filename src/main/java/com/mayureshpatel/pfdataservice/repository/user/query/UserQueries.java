@@ -39,11 +39,17 @@ public final class UserQueries {
     // language=SQL
     public static final String INSERT = """
             insert into users
-                (username, email, password_hash, created_at, last_updated_timestamp)
+                (
+                 username,
+                 email,
+                 password_hash,
+                 last_updated_by,
+                 created_at, last_updated_timestamp)
             values (
                     :username,
                     :email,
                     :passwordHash,
+                    :lastUpdatedBy,
                     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             returning id
             """;

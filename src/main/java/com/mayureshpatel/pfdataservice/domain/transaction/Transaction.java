@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.domain.transaction;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.vendor.Vendor;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,7 +30,7 @@ public class Transaction {
     private OffsetDateTime postDate;
     private String description;
     private String originalVendorName;
-    private Vendor vendor;
+    private Merchant merchant;
     private TransactionType type;
 
     private TableAudit audit;

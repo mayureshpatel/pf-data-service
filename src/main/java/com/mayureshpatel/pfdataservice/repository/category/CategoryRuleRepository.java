@@ -28,7 +28,7 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
         this.jdbcClient.sql(CategoryRuleQueries.INSERT)
                 .param("id", categoryRule.getId())
                 .param("keyword", categoryRule.getKeyword())
-                .param("categoryId", categoryRule.getCategoryId())
+                .param("categoryId", categoryRule.getCategory().getId())
                 .param("priority", categoryRule.getPriority())
                 .param("userId", categoryRule.getUser().getId())
                 .update();

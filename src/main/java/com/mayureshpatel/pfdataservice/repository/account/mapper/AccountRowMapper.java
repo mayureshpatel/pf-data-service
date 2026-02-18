@@ -18,9 +18,9 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         Account account = new Account();
         account.setId(rs.getLong("id"));
         account.setName(rs.getString("name"));
-        account.setType(rs.getString("type"));
+        account.getType().setCode(rs.getString("type"));
         account.setCurrentBalance(getBigDecimal(rs, "current_balance"));
-        account.setCurrencyCode(rs.getString("currency_code"));
+        account.getCurrency().setCode(rs.getString("currency_code"));
 
         String bankName = rs.getString("bank_name");
         if (bankName != null) {

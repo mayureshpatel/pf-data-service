@@ -18,7 +18,7 @@ public class CategoryRuleRowMapper implements RowMapper<CategoryRule> {
         CategoryRule categoryRule = new CategoryRule();
         categoryRule.setId(rs.getLong("id"));
         categoryRule.setKeyword(rs.getString("keyword"));
-        categoryRule.setCategoryId(rs.getLong("category_id"));
+        categoryRule.getCategory().setId(rs.getLong("category_id"));
         categoryRule.setPriority(rs.getInt("priority"));
 
         // set user object

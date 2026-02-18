@@ -1,13 +1,11 @@
 package com.mayureshpatel.pfdataservice.repository.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
-import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
-import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -16,7 +14,6 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,45 +24,27 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     private final JdbcClient jdbcClient;
     private final TransactionRowMapper rowMapper;
-    private final TagRowMapper tagRowMapper;
 
     @Override
     public Optional<Transaction> findById(Long id) {
-        Optional<Transaction> transaction = jdbcClient.sql(TransactionQueries.FIND_BY_ID)
+        return jdbcClient.sql(TransactionQueries.FIND_BY_ID)
                 .param("id", id)
                 .query(rowMapper)
                 .optional();
-
-        transaction.ifPresent(this::loadTags);
-        return transaction;
-    }
-
-    private void loadTags(Transaction transaction) {
-        List<Tag> tags = jdbcClient.sql(TransactionQueries.FIND_TAGS_BY_TRANSACTION_ID)
-                .param("transactionId", transaction.getId())
-                .query(tagRowMapper)
-                .list();
-        transaction.setTags(new HashSet<>(tags));
     }
 
     @Override
     public List<Transaction> findAll() {
-        List<Transaction> transactions = jdbcClient.sql(TransactionQueries.FIND_ALL)
+        return jdbcClient.sql(TransactionQueries.FIND_ALL)
                 .query(rowMapper)
                 .list();
-
-        transactions.forEach(this::loadTags);
-        return transactions;
     }
 
     public List<Transaction> findByUserId(Long userId) {
-        List<Transaction> transactions = jdbcClient.sql(TransactionQueries.FIND_BY_USER_ID)
+        return jdbcClient.sql(TransactionQueries.FIND_BY_USER_ID)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
-
-        transactions.forEach(this::loadTags);
-        return transactions;
     }
 
     public boolean existsByAccountIdAndDateAndAmountAndDescriptionAndType(
@@ -94,8 +73,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("date", transaction.getTransactionDate())
                 .param("postDate", transaction.getPostDate())
                 .param("description", transaction.getDescription())
-                .param("originalVendorName", transaction.getOriginalVendorName())
-                .param("vendorName", transaction.getVendor().getName())
+                .param("merchantId", transaction.getMerchant().getId())
                 .param("type", transaction.getType().name())
                 .param("accountId", transaction.getAccount().getId())
                 .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
@@ -113,8 +91,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("date", transaction.getTransactionDate())
                 .param("postDate", transaction.getPostDate())
                 .param("description", transaction.getDescription())
-                .param("originalVendorName", transaction.getOriginalVendorName())
-                .param("vendorName", transaction.getVendor().getName())
+                .param("merchantId", transaction.getMerchant().getId())
                 .param("type", transaction.getType().name())
                 .param("accountId", transaction.getAccount().getId())
                 .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)

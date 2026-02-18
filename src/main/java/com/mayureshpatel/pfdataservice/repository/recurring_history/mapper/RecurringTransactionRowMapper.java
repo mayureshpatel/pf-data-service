@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.recurring_history.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
+import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -19,8 +20,8 @@ public class RecurringTransactionRowMapper implements RowMapper<RecurringTransac
         recurringTransaction.getVendor().setName(rs.getString("merchant_name"));
         recurringTransaction.setAmount(rs.getBigDecimal("amount"));
         recurringTransaction.setFrequency(Frequency.valueOf(rs.getString("frequency")));
-        recurringTransaction.setLastDate(rs.getDate("last_date").toLocalDate());
-        recurringTransaction.setNextDate(rs.getDate("next_date").toLocalDate());
+        recurringTransaction.setLastDate(JdbcMapperUtils.getOffsetDateTime(rs, "last_date"));
+        recurringTransaction.setNextDate(JdbcMapperUtils.getOffsetDateTime(rs, "next_date"));
         recurringTransaction.setActive(rs.getBoolean("active"));
 
         recurringTransaction.getAudit().setCreatedAt(rs.getTimestamp("created_at").toInstant().atOffset(java.time.ZoneOffset.UTC));
