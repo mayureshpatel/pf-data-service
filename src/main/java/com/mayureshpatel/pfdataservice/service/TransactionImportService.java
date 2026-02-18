@@ -1,24 +1,23 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
-import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
-import com.mayureshpatel.pfdataservice.domain.vendor.VendorRule;
-import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.file_import_history.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
-import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,7 +41,6 @@ public class TransactionImportService {
     private final TransactionParserFactory parserFactory;
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
-    private final VendorCleaner vendorCleaner;
 
     @Autowired
     public TransactionImportService(TransactionRepository transactionRepository,
@@ -51,7 +49,6 @@ public class TransactionImportService {
                                     FileImportHistoryRepository fileImportHistoryRepository,
                                     TransactionParserFactory parserFactory,
                                     TransactionCategorizer categorizer,
-                                    VendorCleaner vendorCleaner,
                                     CategoryRuleRepository categoryRuleRepository) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
@@ -60,7 +57,6 @@ public class TransactionImportService {
         this.fileImportHistoryRepository = fileImportHistoryRepository;
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
-        this.vendorCleaner = vendorCleaner;
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +65,6 @@ public class TransactionImportService {
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
         List<CategoryRule> userRules = this.categoryRuleRepository.findByUserId(userId);
-        List<VendorRule> vendorRules = vendorCleaner.loadRulesForUser(userId);
         List<Category> userCategories = categoryRepository.findByUserId(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
@@ -81,7 +76,6 @@ public class TransactionImportService {
                             .amount(t.getAmount())
                             .type(t.getType())
                             .suggestedCategory(categorizer.guessCategory(t, userRules, userCategories))
-                            .vendorName(vendorCleaner.cleanVendorName(t.getDescription(), vendorRules))
                             .build())
                     .toList();
 
@@ -153,7 +147,7 @@ public class TransactionImportService {
         transaction.setOriginalVendorName(dto.description());
         transaction.setAmount(dto.amount());
         transaction.setType(dto.type());
-        transaction.getVendor().setName(dto.vendorName());
+        transaction.getMerchant().setName(dto.merchant().cleanName());
         return transaction;
     }
 

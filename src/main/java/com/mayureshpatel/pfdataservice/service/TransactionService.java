@@ -37,7 +37,6 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
-    private final VendorCleaner vendorCleaner;
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
 
