@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -13,7 +15,7 @@ public record TransactionPreview(
         String description,
         BigDecimal amount,
         TransactionType type,
-        String suggestedCategory,
-        String vendorName
+        Category suggestedCategory,
+        MerchantDto suggestedMerchant
 ) {
 }

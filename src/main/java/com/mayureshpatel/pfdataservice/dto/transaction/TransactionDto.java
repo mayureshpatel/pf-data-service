@@ -1,7 +1,8 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
-import jakarta.validation.constraints.NotNull;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -10,26 +11,13 @@ import java.time.OffsetDateTime;
 @Builder
 public record TransactionDto(
         Long id,
-
-        @NotNull(message = "Date is required")
         OffsetDateTime date,
-
         OffsetDateTime postDate,
-
         String description,
-
-        String originalVendorName,
-
-        String vendorName,
-
-        @NotNull(message = "Amount is required")
+        MerchantDto merchant,
         BigDecimal amount,
-
-        @NotNull(message = "Transaction type is required")
         TransactionType type,
-
-        String categoryName,
-
+        Category category,
         Long accountId
 ) {
 }

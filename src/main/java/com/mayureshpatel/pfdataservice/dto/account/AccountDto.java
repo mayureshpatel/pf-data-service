@@ -1,30 +1,30 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
+import com.mayureshpatel.pfdataservice.domain.user.User;
+
 import java.math.BigDecimal;
 
 /**
  * Represents an account object.
- * @param id the account id
- * @param name the account name
- * @param type the account type code (validated against account_types lookup table)
+ *
+ * @param id             the account id
+ * @param user           the user who owns the account
+ * @param name           the account name
+ * @param type           the account type code
  * @param currentBalance the current balance
- * @param bankName the bank name
+ * @param currency       the account currency
+ * @param bankName       the bank name
  */
 public record AccountDto(
-    Long id,
-
-    @NotBlank(message = "Name is required")
-    String name,
-
-    @NotNull(message = "Type is required")
-    @NotBlank(message = "Type cannot be blank")
-    String type,
-
-    @NotNull(message = "Current balance is required")
-    BigDecimal currentBalance,
-
-    BankName bankName
-) {}
+        Long id,
+        User user,
+        String name,
+        AccountType type,
+        BigDecimal currentBalance,
+        Currency currency,
+        BankName bankName
+) {
+}
