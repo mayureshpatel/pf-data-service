@@ -22,8 +22,7 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
         transaction.setTransactionDate(getOffsetDateTime(rs, "date"));
         transaction.setPostDate(getOffsetDateTime(rs, "post_date"));
         transaction.setDescription(rs.getString("description"));
-        transaction.setOriginalVendorName(rs.getString("original_vendor_name"));
-        transaction.getVendor().setName(rs.getString("vendor_name"));
+        transaction.getMerchant().setId(rs.getLong("merchant_id"));
 
         String type = rs.getString("type");
         if (type != null) {
