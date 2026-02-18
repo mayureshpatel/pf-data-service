@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 @Data
 @NoArgsConstructor
@@ -26,8 +27,8 @@ public class RecurringTransaction {
     private BigDecimal amount;
     private Frequency frequency;
 
-    private LocalDate lastDate;
-    private LocalDate nextDate;
+    private OffsetDateTime lastDate;
+    private OffsetDateTime nextDate;
 
     @Builder.Default
     private boolean active = true;

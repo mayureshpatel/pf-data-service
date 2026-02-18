@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.domain.vendor;
+package com.mayureshpatel.pfdataservice.domain.merchant;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -9,13 +9,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class VendorRule {
+public class Merchant {
 
     private Long id;
     private User user;
-    private String keyword;
-    private Vendor vendor;
-    private Integer priority;
+    private String originalName;
+    private String name;
 
     private TableAudit audit;
 }

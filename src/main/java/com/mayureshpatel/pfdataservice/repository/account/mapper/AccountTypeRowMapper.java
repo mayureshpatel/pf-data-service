@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.account.AccountTypeLookup;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -11,11 +11,11 @@ import java.sql.Timestamp;
 import java.time.ZoneOffset;
 
 @Component
-public class AccountTypeRowMapper implements RowMapper<AccountTypeLookup> {
+public class AccountTypeRowMapper implements RowMapper<AccountType> {
 
     @Override
-    public AccountTypeLookup mapRow(ResultSet rs, int rowNum) throws SQLException {
-        AccountTypeLookup accountType = new AccountTypeLookup();
+    public AccountType mapRow(ResultSet rs, int rowNum) throws SQLException {
+        AccountType accountType = new AccountType();
         accountType.setCode(rs.getString("code"));
         accountType.setLabel(rs.getString("label"));
         accountType.setIconography(new Iconography(rs.getString("icon"), rs.getString("color")));

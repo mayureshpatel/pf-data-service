@@ -20,6 +20,9 @@ import java.util.Set;
 public class Transaction {
 
     private Long id;
+    private Account account;
+    private Category category;
+
     private BigDecimal amount;
 
     private OffsetDateTime transactionDate;
@@ -28,9 +31,6 @@ public class Transaction {
     private String originalVendorName;
     private Vendor vendor;
     private TransactionType type;
-    private Account account;
-    private Category category;
-    private Set<Tag> tags = new HashSet<>();
 
     private TableAudit audit;
 

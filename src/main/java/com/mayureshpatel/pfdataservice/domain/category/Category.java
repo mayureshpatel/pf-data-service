@@ -8,9 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.HashSet;
-import java.util.Set;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,12 +15,11 @@ import java.util.Set;
 public class Category {
 
     private Long id;
-    private String name;
-    private Iconography iconography;
-    private CategoryType type;
     private User user;
-    private boolean isParent;
-    private Set<Category> subCategories = new HashSet<>();
+    private String name;
+    private CategoryType type;
+    private Category parent;
 
+    private Iconography iconography;
     private TableAudit audit;
 }

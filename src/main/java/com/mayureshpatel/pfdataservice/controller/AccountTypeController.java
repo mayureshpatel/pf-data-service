@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.domain.account.AccountTypeLookup;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +18,8 @@ public class AccountTypeController {
     private final AccountTypeRepository accountTypeLookupRepository;
 
     @GetMapping
-    public ResponseEntity<List<AccountTypeLookup>> getAccountTypes() {
-        List<AccountTypeLookup> types = accountTypeLookupRepository.findByIsActiveTrueOrderBySortOrder();
+    public ResponseEntity<List<AccountType>> getAccountTypes() {
+        List<AccountType> types = accountTypeLookupRepository.findByIsActiveTrueOrderBySortOrder();
         return ResponseEntity.ok(types);
     }
 }

@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.account;
 
-import com.mayureshpatel.pfdataservice.domain.account.AccountTypeLookup;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountTypeRowMapper;
 import com.mayureshpatel.pfdataservice.repository.account.query.AccountTypeQueries;
@@ -12,19 +12,19 @@ import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
-public class AccountTypeRepository implements JdbcRepository<AccountTypeLookup, String> {
+public class AccountTypeRepository implements JdbcRepository<AccountType, String> {
 
     private final JdbcClient jdbcClient;
     private final AccountTypeRowMapper rowMapper;
 
-    public List<AccountTypeLookup> findByIsActiveTrueOrderBySortOrder() {
+    public List<AccountType> findByIsActiveTrueOrderBySortOrder() {
         return this.jdbcClient.sql(AccountTypeQueries.FIND_ALL_ORDERED)
                 .query(rowMapper)
                 .list();
     }
 
     @Override
-    public AccountTypeLookup save(AccountTypeLookup entity) {
+    public AccountType save(AccountType entity) {
         if (entity.getId() == null) {
             return insert(entity);
         } else {
@@ -33,7 +33,7 @@ public class AccountTypeRepository implements JdbcRepository<AccountTypeLookup, 
     }
 
     @Override
-    public void delete(AccountTypeLookup entity) {
+    public void delete(AccountType entity) {
         if (entity.getId() != null) {
             deleteById(entity.getId());
         }

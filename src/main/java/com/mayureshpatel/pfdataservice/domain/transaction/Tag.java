@@ -13,9 +13,9 @@ import lombok.NoArgsConstructor;
 public class Tag {
 
     private Long id;
-    private Iconography iconography;
-    private String name;
     private User user;
+    private String name;
 
+    private Iconography iconography;
     private TableAudit audit;
 }

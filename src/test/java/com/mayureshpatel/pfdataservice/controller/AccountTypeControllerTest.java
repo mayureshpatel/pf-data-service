@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.domain.account.AccountTypeLookup;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ class AccountTypeControllerTest {
     @WithMockUser
     void getAccountTypes_ShouldReturnActiveAccountTypes() throws Exception {
         // Given
-        AccountTypeLookup type1 = new AccountTypeLookup();
+        AccountType type1 = new AccountType();
         type1.setCode("CHECKING");
         type1.setLabel("Checking Account");
         type1.setActive(true);
