@@ -29,7 +29,6 @@ public class Transaction {
     private OffsetDateTime transactionDate;
     private OffsetDateTime postDate;
     private String description;
-    private String originalVendorName;
     private Merchant merchant;
     private TransactionType type;
 

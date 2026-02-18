@@ -41,6 +41,15 @@ public final class AccountQueries {
             """;
 
     // language=SQL
+    public static final String FIND_BY_ACCOUNT_ID_AND_USER_ID = """
+            select *
+            from accounts
+            where id = :accountId
+                and user_id = :userId
+                and deleted_at is null
+            """;
+
+    // language=SQL
     public static final String FIND_ALL_BY_USER_ID = """
             select *
             from accounts

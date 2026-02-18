@@ -43,6 +43,14 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .list();
     }
 
+    public Optional<Account> findByAccountIdAndUserId(Long accountId, Long userId) {
+        return jdbcClient.sql(AccountQueries.FIND_BY_ACCOUNT_ID_AND_USER_ID)
+                .param("accountId", accountId)
+                .param("userId", userId)
+                .query(rowMapper)
+                .optional();
+    }
+
     @Override
     public Account insert(Account account) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
