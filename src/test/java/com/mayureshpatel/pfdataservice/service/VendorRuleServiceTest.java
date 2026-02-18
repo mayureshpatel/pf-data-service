@@ -9,7 +9,6 @@ import com.mayureshpatel.pfdataservice.dto.vendor.VendorRuleDto;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import com.mayureshpatel.pfdataservice.repository.vendor.VendorRuleRepository;
-import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

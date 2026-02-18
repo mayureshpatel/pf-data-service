@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.dto.vendor.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.vendor.UnmatchedVendorDto;
 import com.mayureshpatel.pfdataservice.dto.vendor.VendorRuleDto;
-import com.mayureshpatel.pfdataservice.service.VendorRuleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

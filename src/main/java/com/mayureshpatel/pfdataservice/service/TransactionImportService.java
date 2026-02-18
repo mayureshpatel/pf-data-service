@@ -16,7 +16,6 @@ import com.mayureshpatel.pfdataservice.repository.file_import_history.FileImport
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
-import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;

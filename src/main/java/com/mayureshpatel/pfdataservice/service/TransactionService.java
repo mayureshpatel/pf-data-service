@@ -16,7 +16,6 @@ import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReposit
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
-import com.mayureshpatel.pfdataservice.service.categorization.VendorCleaner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
