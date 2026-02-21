@@ -11,6 +11,10 @@ import java.util.Map;
 
 public class TransactionSpecification {
 
+    public static FilterResult withFilter(Long userId, TransactionFilter filter) {
+        return buildWhereClause(userId, filter);
+    }
+
     public static FilterResult buildWhereClause(Long userId, TransactionFilter filter) {
         List<String> conditions = new ArrayList<>();
         Map<String, Object> parameters = new HashMap<>();

@@ -1,8 +1,11 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
-import com.mayureshpatel.pfdataservice.dto.vendor.VendorTotal;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardPulseDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.YtdSummaryDto;
@@ -32,7 +35,10 @@ public class DashboardController {
             @RequestParam(required = false) LocalDate endDate) {
         
         if (startDate != null && endDate != null) {
-            return ResponseEntity.ok(dashboardService.getCategoryBreakdown(userDetails.getId(), startDate, endDate));
+            ZoneId eastern = ZoneId.of("America/New_York");
+            OffsetDateTime start = startDate.atStartOfDay(eastern).toOffsetDateTime();
+            OffsetDateTime end = endDate.atTime(23, 59, 59).atZone(eastern).toOffsetDateTime();
+            return ResponseEntity.ok(dashboardService.getCategoryBreakdown(userDetails.getId(), start, end));
         }
 
         LocalDate now = LocalDate.now();
@@ -43,7 +49,7 @@ public class DashboardController {
     }
 
     @GetMapping("/vendors")
-    public ResponseEntity<List<VendorTotal>> getVendorBreakdown(
+    public ResponseEntity<List<MerchantBreakdownDto>> getVendorBreakdown(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year,
@@ -51,7 +57,10 @@ public class DashboardController {
             @RequestParam(required = false) LocalDate endDate) {
 
         if (startDate != null && endDate != null) {
-            return ResponseEntity.ok(dashboardService.getMerchantBreakdown(userDetails.getId(), startDate, endDate));
+            ZoneId eastern = ZoneId.of("America/New_York");
+            OffsetDateTime start = startDate.atStartOfDay(eastern).toOffsetDateTime();
+            OffsetDateTime end = endDate.atTime(23, 59, 59).atZone(eastern).toOffsetDateTime();
+            return ResponseEntity.ok(dashboardService.getMerchantBreakdown(userDetails.getId(), start, end));
         }
 
         LocalDate now = LocalDate.now();
@@ -70,7 +79,10 @@ public class DashboardController {
             @RequestParam(required = false) LocalDate endDate) {
 
         if (startDate != null && endDate != null) {
-            return ResponseEntity.ok(dashboardService.getPulse(userDetails.getId(), startDate, endDate));
+            ZoneId eastern = ZoneId.of("America/New_York");
+            OffsetDateTime start = startDate.atStartOfDay(eastern).toOffsetDateTime();
+            OffsetDateTime end = endDate.atTime(23, 59, 59).atZone(eastern).toOffsetDateTime();
+            return ResponseEntity.ok(dashboardService.getPulse(userDetails.getId(), start, end));
         }
 
         LocalDate now = LocalDate.now();

@@ -42,7 +42,7 @@ public class CategoryService {
         category.setUser(user);
 
         if (categoryDto.parent() != null) {
-            Category parent = categoryRepository.findById(categoryDto.parent().getId())
+            Category parent = categoryRepository.findById(categoryDto.parent().id())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
             if (!parent.getUser().getId().equals(userId)) {
@@ -69,11 +69,11 @@ public class CategoryService {
         category.setType(dto.categoryType());
 
         if (dto.parent() != null) {
-            if (dto.parent().getId().equals(categoryId)) {
+            if (dto.parent().id().equals(categoryId)) {
                 throw new IllegalArgumentException("Category cannot be its own parent");
             }
 
-            Category parent = categoryRepository.findById(dto.parent().getId())
+            Category parent = categoryRepository.findById(dto.parent().id())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
             if (!parent.getUser().getId().equals(userId)) {

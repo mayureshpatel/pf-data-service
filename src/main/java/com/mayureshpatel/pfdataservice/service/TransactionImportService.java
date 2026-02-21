@@ -3,8 +3,10 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
@@ -69,14 +71,24 @@ public class TransactionImportService {
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
             List<TransactionPreview> previews = rawTransactionStream
-                    .map(t -> TransactionPreview.builder()
-                            .date(t.getTransactionDate())
-                            .postDate(t.getPostDate())
-                            .description(t.getDescription())
-                            .amount(t.getAmount())
-                            .type(t.getType())
-                            .suggestedCategory(categorizer.guessCategory(t, userRules, userCategories))
-                            .build())
+                    .map(t -> {
+                        Long categoryId = categorizer.guessCategory(t, userRules, userCategories);
+                        CategoryDto suggestedCategory = categoryId > 0
+                                ? userCategories.stream()
+                                .filter(c -> c.getId().equals(categoryId))
+                                .findFirst()
+                                .map(CategoryDto::mapToDto)
+                                .orElse(null)
+                                : null;
+                        return TransactionPreview.builder()
+                                .date(t.getTransactionDate())
+                                .postDate(t.getPostDate())
+                                .description(t.getDescription())
+                                .amount(t.getAmount())
+                                .type(t.getType())
+                                .suggestedCategory(suggestedCategory)
+                                .build();
+                    })
                     .toList();
 
             log.info("Generated {} transaction previews successfully", previews.size());
@@ -147,7 +159,12 @@ public class TransactionImportService {
         transaction.setDescription(dto.description());
         transaction.setAmount(dto.amount());
         transaction.setType(dto.type());
-        transaction.getMerchant().setName(dto.merchant().cleanName());
+        Merchant merchant = new Merchant();
+        if (dto.merchant() != null) {
+            merchant.setName(dto.merchant().cleanName());
+            merchant.setOriginalName(dto.merchant().originalName());
+        }
+        transaction.setMerchant(merchant);
 
         return transaction;
     }

@@ -20,6 +20,11 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
 
 @Repository("jdbcTransactionRepository")
 @RequiredArgsConstructor
@@ -183,6 +188,93 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .query(BigDecimal.class)
                 .optional()
                 .orElse(BigDecimal.ZERO);
+    }
+
+    public List<Transaction> findRecentNonTransferTransactions(Long userId, LocalDate startDate) {
+        return jdbcClient.sql(TransactionQueries.FIND_RECENT_NON_TRANSFER)
+                .param("userId", userId)
+                .param("startDate", startDate)
+                .query(rowMapper)
+                .list();
+    }
+
+    public List<Transaction> findAllById(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS)
+                .param("ids", ids)
+                .query(rowMapper)
+                .list();
+    }
+
+    public List<Transaction> findAllByIdWithAccountAndUser(List<Long> ids) {
+        return findAllById(ids);
+    }
+
+    public void deleteAll(List<Transaction> transactions) {
+        transactions.forEach(t -> {
+            if (t.getId() != null) deleteById(t.getId());
+        });
+    }
+
+    public long countByIdInAndAccount_User_Id(List<Long> ids, Long userId) {
+        if (ids == null || ids.isEmpty()) return 0;
+        return findAllById(ids).stream()
+                .filter(t -> t.getAccount() != null
+                        && t.getAccount().getUser() != null
+                        && userId.equals(t.getAccount().getUser().getId()))
+                .count();
+    }
+
+    public BigDecimal getNetFlowAfterDate(Long accountId, LocalDate date) {
+        return jdbcClient.sql(TransactionQueries.GET_NET_FLOW_AFTER_DATE)
+                .param("accountId", accountId)
+                .param("date", date)
+                .query(BigDecimal.class)
+                .optional()
+                .orElse(BigDecimal.ZERO);
+    }
+
+    public List<Transaction> findExpensesSince(Long userId, LocalDate startDate) {
+        return jdbcClient.sql(TransactionQueries.FIND_EXPENSES_SINCE)
+                .param("userId", userId)
+                .param("startDate", startDate)
+                .query(rowMapper)
+                .list();
+    }
+
+    public Page<Transaction> findAll(TransactionSpecification.FilterResult filter, Pageable pageable) {
+        String baseFrom = "FROM transactions t " +
+                "JOIN accounts a ON t.account_id = a.id " +
+                "LEFT JOIN categories c ON t.category_id = c.id " +
+                "WHERE " + filter.whereClause();
+
+        long total = jdbcClient.sql("SELECT COUNT(*) " + baseFrom)
+                .params(filter.parameters())
+                .query(Long.class)
+                .single();
+
+        String sortClause = " ORDER BY t.date DESC";
+        if (pageable.getSort().isSorted()) {
+            Sort.Order order = pageable.getSort().iterator().next();
+            String col = switch (order.getProperty()) {
+                case "date" -> "t.date";
+                case "amount" -> "t.amount";
+                case "description" -> "t.description";
+                case "type" -> "t.type";
+                default -> "t.date";
+            };
+            sortClause = " ORDER BY " + col + " " + order.getDirection();
+        }
+
+        String pageSql = "SELECT t.* " + baseFrom + sortClause +
+                " LIMIT " + pageable.getPageSize() + " OFFSET " + pageable.getOffset();
+
+        List<Transaction> content = jdbcClient.sql(pageSql)
+                .params(filter.parameters())
+                .query(rowMapper)
+                .list();
+
+        return new PageImpl<>(content, pageable, total);
     }
 
     public BigDecimal getSumByDateRange(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {

@@ -153,7 +153,7 @@ public class AccountService {
         }
 
         // check if an account has any transactions
-        long transactionCount = transactionRepository.countByUserId(userId);
+        long transactionCount = transactionRepository.countByAccountId(accountId);
         if (transactionCount > 0) {
             throw new IllegalStateException(
                     "Cannot delete account with existing transactions. " +

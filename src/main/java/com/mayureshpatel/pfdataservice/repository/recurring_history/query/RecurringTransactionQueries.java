@@ -6,13 +6,31 @@ import lombok.NoArgsConstructor;
 public final class RecurringTransactionQueries {
 
     // language=SQL
+    public static final String FIND_BY_ID = """
+            select *
+            from recurring_transactions
+            where id = :id
+                and deleted_at is null
+            """;
+
+    // language=SQL
+    public static final String FIND_BY_USER_ID_ACTIVE_ORDER_BY_NEXT_DATE = """
+            select *
+            from recurring_transactions
+            where user_id = :userId
+                and active = true
+                and deleted_at is null
+            order by next_date
+            """;
+
+    // language=SQL
     public static final String FIND_ALL_BY_USER_ID = """
             select *
             from recurring_transactions
             where user_id = :userId
                 and active = true
                 and deleted_at is null
-            order by merchant_name
+            order by merchant_id
             """;
 
     // language=SQL
@@ -21,7 +39,7 @@ public final class RecurringTransactionQueries {
                                                 id,
                                                 user_id,
                                                 account_id,
-                                                merchant_name,
+                                                merchant_id,
                                                 amount,
                                                 frequency,
                                                 last_date,
@@ -45,7 +63,7 @@ public final class RecurringTransactionQueries {
     public static final String UPDATE = """
             update recurring_transactions
             set account_id = :accountId,
-                merchant_name = :merchantName,
+                merchant_id = :merchantId,
                 amount = :amount,
                 frequency = :frequency,
                 last_date = :lastDate,

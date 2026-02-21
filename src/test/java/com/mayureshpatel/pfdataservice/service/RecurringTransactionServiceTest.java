@@ -86,7 +86,7 @@ class RecurringTransactionServiceTest {
     @Test
     void getRecurringTransactions_ShouldReturnList() {
         // Given
-        when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDateAsc(1L)).thenReturn(List.of(recurring));
+        when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(1L)).thenReturn(List.of(recurring));
 
         // When
         List<RecurringTransactionDto> result = recurringTransactionService.getRecurringTransactions(1L);
@@ -94,7 +94,7 @@ class RecurringTransactionServiceTest {
         // Then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).merchantName()).isEqualTo("Netflix");
-        verify(recurringRepository).findByUserIdAndActiveTrueOrderByNextDateAsc(1L);
+        verify(recurringRepository).findByUserIdAndActiveTrueOrderByNextDate(1L);
     }
 
     @Test
@@ -174,7 +174,7 @@ class RecurringTransactionServiceTest {
         t3.setAmount(new BigDecimal("9.99"));
         t3.setDate(now.minusMonths(1));
 
-        when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDateAsc(1L)).thenReturn(Collections.emptyList());
+        when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(1L)).thenReturn(Collections.emptyList());
         when(transactionRepository.findExpensesSince(eq(1L), any(LocalDate.class))).thenReturn(List.of(t1, t2, t3));
 
         // When

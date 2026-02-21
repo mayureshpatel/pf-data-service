@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
-import com.mayureshpatel.pfdataservice.dto.vendor.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.CategoryRuleService;
 import jakarta.validation.Valid;

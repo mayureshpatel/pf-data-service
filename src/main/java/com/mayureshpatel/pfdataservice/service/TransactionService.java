@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
@@ -40,7 +41,6 @@ public class TransactionService {
     private final CategoryRuleRepository categoryRuleRepository;
 
     public List<TransferSuggestionDto> findPotentialTransfers(Long userId) {
-        // Look back 5 years to cover historical data
         LocalDate startDate = LocalDate.now().minusYears(5);
         List<Transaction> transactions = transactionRepository.findRecentNonTransferTransactions(userId, startDate);
 
@@ -57,31 +57,22 @@ public class TransactionService {
 
                 long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getTransactionDate(), t2.getTransactionDate()));
 
-                // Since list is sorted by date DESC, if diff > 3, subsequent items will also be > 3
                 if (daysDiff > 3) {
                     break;
                 }
 
-                // Check 1: Amounts are equal (both positive in DB)
                 if (t1.getAmount().compareTo(t2.getAmount()) == 0) {
-
-                    // Check 2: Types are different (One Income, One Expense)
-                    // This implies money moving OUT of one and INTO another
                     if (t1.getType() != t2.getType()) {
-
-                        // Check 3: Different accounts
                         if (!t1.getAccount().getId().equals(t2.getAccount().getId())) {
-
-                            // High confidence match
                             suggestions.add(new TransferSuggestionDto(
-                                    mapToDto(t1),
-                                    mapToDto(t2),
-                                    0.9 - (daysDiff * 0.1) // 0.9 for same day, 0.8 for 1 day diff, etc.
+                                    TransactionDto.mapToDto(t1),
+                                    TransactionDto.mapToDto(t2),
+                                    0.9 - (daysDiff * 0.1)
                             ));
 
                             matchedIds.add(t1.getId());
                             matchedIds.add(t2.getId());
-                            break; // Stop looking for match for t1
+                            break;
                         }
                     }
                 }
@@ -99,7 +90,6 @@ public class TransactionService {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
             }
 
-            // Invalidate old balance effect
             t.getAccount().undoTransaction(t);
 
             if (t.getType() == TransactionType.INCOME) {
@@ -107,14 +97,10 @@ public class TransactionService {
             } else if (t.getType() == TransactionType.EXPENSE) {
                 t.setType(TransactionType.TRANSFER_OUT);
             } else {
-                // Fallback for existing TRANSFER or other types
                 t.setType(TransactionType.TRANSFER_OUT);
             }
 
-            // Optionally clear category if it was categorized
             t.setCategory(null);
-
-            // Re-apply new balance effect (TRANSFER_IN is positive, TRANSFER_OUT is negative)
             t.getAccount().applyTransaction(t);
         }
 
@@ -122,27 +108,31 @@ public class TransactionService {
     }
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
-        // Legacy support or simple filter
         TransactionFilter filter = new TransactionFilter(null, type, null, null, null, null, null, null, null);
         return getTransactions(userId, filter, pageable);
     }
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionFilter filter, Pageable pageable) {
         return transactionRepository.findAll(TransactionSpecification.withFilter(userId, filter), pageable)
-                .map(this::mapToDto);
+                .map(TransactionDto::mapToDto);
     }
 
     @Transactional
     public void deleteTransactions(Long userId, List<Long> transactionIds) {
         if (transactionIds == null || transactionIds.isEmpty()) return;
 
-        // Validate ownership in one query
-        long ownedCount = transactionRepository.countByIdInAndAccount_User_Id(transactionIds, userId);
+        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
+
+        long ownedCount = transactions.stream()
+                .filter(t -> t.getAccount() != null
+                        && t.getAccount().getUser() != null
+                        && userId.equals(t.getAccount().getUser().getId()))
+                .count();
+
         if (ownedCount != transactionIds.size()) {
             throw new AccessDeniedException("You do not own one or more of these transactions");
         }
 
-        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
         for (Transaction t : transactions) {
             t.getAccount().undoTransaction(t);
         }
@@ -152,7 +142,10 @@ public class TransactionService {
 
     @Transactional
     public TransactionDto createTransaction(Long userId, TransactionDto dto) {
-        Account account = accountRepository.findById(dto.accountId())
+        if (dto.account() == null) {
+            throw new ResourceNotFoundException("Account not found");
+        }
+        Account account = accountRepository.findById(dto.account().id())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
@@ -166,53 +159,43 @@ public class TransactionService {
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
 
-        // Set original vendor name, default to description if not provided
-        String originalVendor = (dto.originalVendorName() != null && !dto.originalVendorName().isBlank())
-                ? dto.originalVendorName() : dto.description();
-        transaction.setOriginalVendorName(originalVendor);
-
-        if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
-            transaction.getVendor().setName(dto.vendorName());
+        Merchant merchant = new Merchant();
+        if (dto.merchant() != null && dto.merchant().cleanName() != null) {
+            merchant.setName(dto.merchant().cleanName());
+            merchant.setOriginalName(dto.merchant().originalName());
         } else {
-            List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
-            // Clean based on original vendor name if possible, else description
-            transaction.getVendor().setName(vendorCleaner.cleanVendorName(originalVendor, rules));
+            merchant.setName(dto.description());
+            merchant.setOriginalName(dto.description());
         }
+        transaction.setMerchant(merchant);
 
-        if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
-            Category category = categoryRepository.findByUserId(userId).stream()
-                    .filter(c -> c.getName().equalsIgnoreCase(dto.categoryName()))
-                    .findFirst()
+        if (dto.category() != null) {
+            Category category = categoryRepository.findById(dto.category().getId())
                     .orElse(null);
-
             if (category != null) {
-                // VALIDATION: Only allow child categories on transactions
-                if (category.isParent()) {
+                if (category.getParent() == null) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
-                                    "Please select a specific subcategory under '" + category.getName() + "'."
-                    );
+                                    "Please select a specific subcategory under '" + category.getName() + "'.");
                 }
                 transaction.setCategory(category);
             }
         } else {
-            // Smart Categorization
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
             List<Category> userCategories = categoryRepository.findByUserId(userId);
-            String suggestedCategory = categorizer.guessCategory(transaction, rules, userCategories);
+            Long categoryId = categorizer.guessCategory(transaction, rules, userCategories);
 
-            if (!"Uncategorized".equals(suggestedCategory)) {
+            if (categoryId > 0) {
                 userCategories.stream()
-                        .filter(c -> c.getName().equalsIgnoreCase(suggestedCategory))
+                        .filter(c -> c.getId().equals(categoryId))
                         .findFirst()
                         .ifPresent(transaction::setCategory);
             }
         }
 
-        // update account balance
         account.applyTransaction(transaction);
 
-        return mapToDto(transactionRepository.save(transaction));
+        return TransactionDto.mapToDto(transactionRepository.save(transaction));
     }
 
     @Transactional
@@ -220,9 +203,8 @@ public class TransactionService {
         if (dtos == null || dtos.isEmpty()) return List.of();
 
         List<Long> ids = dtos.stream().map(TransactionDto::id).toList();
-        List<Transaction> transactions = transactionRepository.findAllByIdWithAccountAndUser(ids);
+        List<Transaction> transactions = transactionRepository.findAllById(ids);
 
-        // Validate ownership and existence
         if (transactions.size() != dtos.size()) {
             throw new ResourceNotFoundException("One or more transactions not found");
         }
@@ -242,7 +224,6 @@ public class TransactionService {
     }
 
     private TransactionDto updateTransactionFromDto(Long userId, Transaction transaction, TransactionDto dto) {
-        // Reverse old amount effect
         Account account = transaction.getAccount();
         account.undoTransaction(transaction);
 
@@ -251,44 +232,36 @@ public class TransactionService {
         transaction.setDescription(dto.description());
         transaction.setType(dto.type());
 
-        // Update original vendor name if provided
-        if (dto.originalVendorName() != null && !dto.originalVendorName().isBlank()) {
-            transaction.setOriginalVendorName(dto.originalVendorName());
+        if (dto.merchant() != null) {
+            Merchant merchant = transaction.getMerchant() != null ? transaction.getMerchant() : new Merchant();
+            if (dto.merchant().cleanName() != null) {
+                merchant.setName(dto.merchant().cleanName());
+            }
+            if (dto.merchant().originalName() != null) {
+                merchant.setOriginalName(dto.merchant().originalName());
+            }
+            transaction.setMerchant(merchant);
         }
 
-        if (dto.vendorName() != null && !dto.vendorName().isBlank()) {
-            transaction.getVendor().setName(dto.vendorName());
-        } else {
-            List<VendorRule> rules = vendorCleaner.loadRulesForUser(userId);
-            // Clean based on original vendor name
-            transaction.getVendor().setName(vendorCleaner.cleanVendorName(transaction.getOriginalVendorName(), rules));
-        }
-
-        if (dto.categoryName() != null && !dto.categoryName().isBlank()) {
-            Category category = categoryRepository.findByUserId(userId).stream()
-                    .filter(c -> c.getName().equalsIgnoreCase(dto.categoryName()))
-                    .findFirst()
+        if (dto.category() != null) {
+            Category category = categoryRepository.findById(dto.category().getId())
                     .orElse(null);
-
             if (category != null) {
-                // VALIDATION: Only allow child categories on transactions
-                if (category.isParent()) {
+                if (category.getParent() == null) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
-                                    "Please select a specific subcategory under '" + category.getName() + "'."
-                    );
+                                    "Please select a specific subcategory under '" + category.getName() + "'.");
                 }
                 transaction.setCategory(category);
             }
         } else {
-            // Smart Categorization
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
             List<Category> userCategories = categoryRepository.findByUserId(userId);
-            String suggestedCategory = categorizer.guessCategory(transaction, rules, userCategories);
+            Long categoryId = categorizer.guessCategory(transaction, rules, userCategories);
 
-            if (!"Uncategorized".equals(suggestedCategory)) {
+            if (categoryId > 0) {
                 userCategories.stream()
-                        .filter(c -> c.getName().equalsIgnoreCase(suggestedCategory))
+                        .filter(c -> c.getId().equals(categoryId))
                         .findFirst()
                         .ifPresent(transaction::setCategory);
             } else {
@@ -296,10 +269,9 @@ public class TransactionService {
             }
         }
 
-        // Apply new amount effect
         account.applyTransaction(transaction);
 
-        return mapToDto(transactionRepository.save(transaction));
+        return TransactionDto.mapToDto(transactionRepository.save(transaction));
     }
 
     @Transactional
@@ -326,19 +298,5 @@ public class TransactionService {
         transaction.getAccount().undoTransaction(transaction);
 
         transactionRepository.delete(transaction);
-    }
-
-    private TransactionDto mapToDto(Transaction t) {
-        return TransactionDto.builder()
-                .id(t.getId())
-                .date(t.getTransactionDate())
-                .amount(t.getAmount())
-                .description(t.getDescription())
-                .originalVendorName(t.getOriginalVendorName())
-                .type(t.getType())
-                .vendorName(t.getVendor().getName())
-                .categoryName(t.getCategory() != null ? t.getCategory().getName() : null)
-                .accountId(t.getAccount() != null ? t.getAccount().getId() : null)
-                .build();
     }
 }

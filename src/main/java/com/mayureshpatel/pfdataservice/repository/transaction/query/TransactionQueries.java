@@ -199,6 +199,53 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
+    public static final String FIND_RECENT_NON_TRANSFER = """
+            select t.*
+            from transactions t
+            join accounts a on t.account_id = a.id
+            where a.user_id = :userId
+              and t.date >= :startDate
+              and t.type not in ('TRANSFER_IN', 'TRANSFER_OUT', 'TRANSFER')
+              and t.deleted_at is null
+            order by t.date desc
+            """;
+
+    // language=SQL
+    public static final String FIND_ALL_BY_IDS = """
+            select t.*
+            from transactions t
+            where t.id in (:ids)
+              and t.deleted_at is null
+            """;
+
+    // language=SQL
+    public static final String GET_NET_FLOW_AFTER_DATE = """
+            select coalesce(sum(
+                case
+                    when t.type in ('INCOME', 'TRANSFER_IN') then t.amount
+                    when t.type in ('EXPENSE', 'TRANSFER_OUT') then -t.amount
+                    else t.amount
+                end
+            ), 0)
+            from transactions t
+            where t.account_id = :accountId
+              and t.date > :date
+              and t.deleted_at is null
+            """;
+
+    // language=SQL
+    public static final String FIND_EXPENSES_SINCE = """
+            select t.*
+            from transactions t
+            join accounts a on t.account_id = a.id
+            where a.user_id = :userId
+              and t.date >= :startDate
+              and t.type = 'EXPENSE'
+              and t.deleted_at is null
+            order by t.date desc
+            """;
+
+    // language=SQL
     public static final String GET_UNCATEGORIZED_EXPENSE_TOTALS = """
             select coalesce(sum(t.amount), 0)
             from transactions t

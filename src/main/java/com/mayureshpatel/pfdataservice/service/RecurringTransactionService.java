@@ -1,5 +1,8 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
+import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,15 +38,17 @@ public class RecurringTransactionService {
     private final UserRepository userRepository;
 
     public List<RecurringTransactionDto> getRecurringTransactions(Long userId) {
-        return recurringRepository.findByUserIdAndActiveTrueOrderByNextDateAsc(userId).stream()
+        return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
                 .map(this::mapToDto)
                 .toList();
     }
 
     public List<RecurringSuggestionDto> findSuggestions(Long userId) {
         // 1. Get existing recurring items to exclude duplicates
-        Set<String> existingMerchants = recurringRepository.findByUserIdAndActiveTrueOrderByNextDateAsc(userId).stream()
-                .map(r -> r.getMerchantName().toLowerCase())
+        Set<String> existingMerchants = recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
+                .map(r -> r.getMerchant() != null && r.getMerchant().getName() != null
+                        ? r.getMerchant().getName().toLowerCase()
+                        : "")
                 .collect(Collectors.toSet());
 
         // 2. Fetch expenses from last 12 months
@@ -50,21 +56,17 @@ public class RecurringTransactionService {
         List<Transaction> transactions = transactionRepository.findExpensesSince(userId, oneYearAgo);
 
         // 3. Group by Merchant Name (or Description) + Amount
-        // Key format: "merchant_name|amount"
         Map<String, List<Transaction>> groups = new HashMap<>();
-        
+
         for (Transaction t : transactions) {
-            String name = t.getVendorName() != null ? t.getVendorName() : t.getDescription();
+            String name = t.getMerchant() != null && t.getMerchant().getName() != null
+                    ? t.getMerchant().getName()
+                    : t.getDescription();
             if (name == null) continue;
-            
-            // Normalize name (simple cleanup)
+
             name = name.trim();
             if (existingMerchants.contains(name.toLowerCase())) continue;
 
-            // Grouping key: Name + Amount (to distinguish Netflix Basic vs Premium if user upgraded, or different subscriptions)
-            // But strict amount matching might miss small variations ($15.99 vs $16.99). 
-            // For MVP, let's group by Name only first, then check amounts? 
-            // Better: Group by Name + Amount to be safe for distinct bills.
             String key = name + "|" + t.getAmount();
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(t);
         }
@@ -74,14 +76,11 @@ public class RecurringTransactionService {
         // 4. Analyze groups
         for (Map.Entry<String, List<Transaction>> entry : groups.entrySet()) {
             List<Transaction> group = entry.getValue();
-            
-            // Need at least 3 occurrences to be confident about a pattern
+
             if (group.size() < 3) continue;
 
-            // Sort by date ASC
-            group.sort(Comparator.comparing(Transaction::getDate));
+            group.sort(Comparator.comparing(Transaction::getTransactionDate));
 
-            // Analyze intervals
             Frequency frequency = detectFrequency(group);
             if (frequency != null) {
                 Transaction lastTxn = group.get(group.size() - 1);
@@ -90,18 +89,18 @@ public class RecurringTransactionService {
                 BigDecimal amount = new BigDecimal(parts[1]);
 
                 suggestions.add(RecurringSuggestionDto.builder()
-                        .merchantName(merchantName)
+                        .merchant(new MerchantDto(null, null, null, merchantName))
                         .amount(amount)
                         .frequency(frequency)
-                        .lastDate(lastTxn.getDate())
-                        .nextDate(calculateNextDate(lastTxn.getDate(), frequency))
+                        .lastDate(lastTxn.getTransactionDate())
+                        .nextDate(calculateNextDate(lastTxn.getTransactionDate().toLocalDate(), frequency)
+                                .atStartOfDay(ZoneOffset.UTC).toOffsetDateTime())
                         .occurrenceCount(group.size())
-                        .confidenceScore(0.8 + (group.size() * 0.05)) // Base 0.8, increases with count
+                        .confidenceScore(0.8 + (group.size() * 0.05))
                         .build());
             }
         }
 
-        // Sort by confidence
         return suggestions.stream()
                 .sorted(Comparator.comparingDouble(RecurringSuggestionDto::confidenceScore).reversed())
                 .toList();
@@ -110,14 +109,14 @@ public class RecurringTransactionService {
     private Frequency detectFrequency(List<Transaction> group) {
         List<Long> intervals = new ArrayList<>();
         for (int i = 1; i < group.size(); i++) {
-            intervals.add(ChronoUnit.DAYS.between(group.get(i - 1).getDate(), group.get(i).getDate()));
+            intervals.add(ChronoUnit.DAYS.between(
+                    group.get(i - 1).getTransactionDate(),
+                    group.get(i).getTransactionDate()));
         }
 
         double avgInterval = intervals.stream().mapToLong(val -> val).average().orElse(0);
-        
-        // Check for stability (Standard Deviation or simple range check)
-        // Simple range check for MVP
-        boolean stable = intervals.stream().allMatch(i -> Math.abs(i - avgInterval) < 5); // Allow 5 days variance
+
+        boolean stable = intervals.stream().allMatch(i -> Math.abs(i - avgInterval) < 5);
 
         if (!stable) return null;
 
@@ -145,18 +144,24 @@ public class RecurringTransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Account account = null;
-        if (dto.accountId() != null) {
-            account = accountRepository.findById(dto.accountId())
+        if (dto.account() != null) {
+            account = accountRepository.findById(dto.account().id())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             if (!account.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to account");
             }
         }
 
+        Merchant merchant = new Merchant();
+        if (dto.merchant() != null) {
+            merchant.setName(dto.merchant().cleanName());
+            merchant.setOriginalName(dto.merchant().originalName());
+        }
+
         RecurringTransaction recurring = RecurringTransaction.builder()
                 .user(user)
                 .account(account)
-                .merchantName(dto.merchantName())
+                .merchant(merchant)
                 .amount(dto.amount())
                 .frequency(dto.frequency())
                 .lastDate(dto.lastDate())
@@ -176,8 +181,8 @@ public class RecurringTransactionService {
             throw new AccessDeniedException("Access denied");
         }
 
-        if (dto.accountId() != null) {
-            Account account = accountRepository.findById(dto.accountId())
+        if (dto.account() != null) {
+            Account account = accountRepository.findById(dto.account().id())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             if (!account.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to account");
@@ -187,7 +192,13 @@ public class RecurringTransactionService {
             recurring.setAccount(null);
         }
 
-        recurring.setMerchantName(dto.merchantName());
+        if (dto.merchant() != null) {
+            Merchant merchant = recurring.getMerchant() != null ? recurring.getMerchant() : new Merchant();
+            merchant.setName(dto.merchant().cleanName());
+            merchant.setOriginalName(dto.merchant().originalName());
+            recurring.setMerchant(merchant);
+        }
+
         recurring.setAmount(dto.amount());
         recurring.setFrequency(dto.frequency());
         recurring.setLastDate(dto.lastDate());
@@ -206,17 +217,15 @@ public class RecurringTransactionService {
             throw new AccessDeniedException("Access denied");
         }
 
-        recurring.setDeletedAt(java.time.LocalDateTime.now());
-        recurring.setActive(false);
-        recurringRepository.save(recurring);
+        recurringRepository.delete(id, userId);
     }
 
     private RecurringTransactionDto mapToDto(RecurringTransaction r) {
         return RecurringTransactionDto.builder()
                 .id(r.getId())
-                .accountId(r.getAccount() != null ? r.getAccount().getId() : null)
-                .accountName(r.getAccount() != null ? r.getAccount().getName() : null)
-                .merchantName(r.getMerchantName())
+                .user(r.getUser())
+                .account(r.getAccount() != null ? AccountDto.fromDomain(r.getAccount()) : null)
+                .merchant(r.getMerchant() != null ? MerchantDto.mapToDto(r.getMerchant()) : null)
                 .amount(r.getAmount())
                 .frequency(r.getFrequency())
                 .lastDate(r.getLastDate())
