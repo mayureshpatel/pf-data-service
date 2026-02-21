@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.dto.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import lombok.Builder;
 
@@ -15,7 +16,7 @@ public record TransactionPreview(
         String description,
         BigDecimal amount,
         TransactionType type,
-        Category suggestedCategory,
+        CategoryDto suggestedCategory,
         MerchantDto suggestedMerchant
 ) {
 }
