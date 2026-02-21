@@ -51,14 +51,14 @@ public class DashboardController {
             @RequestParam(required = false) LocalDate endDate) {
 
         if (startDate != null && endDate != null) {
-            return ResponseEntity.ok(dashboardService.getVendorBreakdown(userDetails.getId(), startDate, endDate));
+            return ResponseEntity.ok(dashboardService.getMerchantBreakdown(userDetails.getId(), startDate, endDate));
         }
 
         LocalDate now = LocalDate.now();
         int m = month != null ? month : now.getMonthValue();
         int y = year != null ? year : now.getYear();
 
-        return ResponseEntity.ok(dashboardService.getVendorBreakdown(userDetails.getId(), m, y));
+        return ResponseEntity.ok(dashboardService.getMerchantBreakdown(userDetails.getId(), m, y));
     }
 
     @GetMapping("/pulse")

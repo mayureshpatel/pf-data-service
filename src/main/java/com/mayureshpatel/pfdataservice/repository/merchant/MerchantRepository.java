@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,10 +52,16 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
     }
 
     public List<MerchantBreakdownDto> findMerchantTotals(Long userId, int month, int year) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.plusMonths(1);
+        return findMerchantTotals(userId, startDate, endDate);
+    }
+
+    public List<MerchantBreakdownDto> findMerchantTotals(Long userId, LocalDate startDate, LocalDate endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_TOTALS)
                 .param("userId", userId)
-                .param("month", month)
-                .param("year", year)
+                .param("startDate", startDate)
+                .param("endDate", endDate)
                 .query(merchantTotalRowMapper)
                 .list();
     }

@@ -1,13 +1,10 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
-import com.mayureshpatel.pfdataservice.dto.vendor.VendorTotal;
-import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardData;
-import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
-import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
-import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardPulseDto;
-import com.mayureshpatel.pfdataservice.dto.dashboard.YtdSummaryDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
+import com.mayureshpatel.pfdataservice.dto.dashboard.*;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,13 +25,15 @@ import java.util.stream.Collectors;
 public class DashboardService {
 
     private final TransactionRepository transactionRepository;
+    private final MerchantRepository merchantRepository;
     private final TransactionService transactionService;
 
     /**
      * Retrieves dashboard data for a given user, month, and year.
+     *
      * @param userId the user identifier
-     * @param month the month of the dashboard data
-     * @param year the year of the dashboard data
+     * @param month  the month of the dashboard data
+     * @param year   the year of the dashboard data
      * @return dashboard data for the specified user, month, and year
      */
     public DashboardData getDashboardData(Long userId, int month, int year) {
@@ -65,20 +64,20 @@ public class DashboardService {
         return transactionRepository.findCategoryTotals(userId, startDate, endDate);
     }
 
-    public List<VendorTotal> getVendorBreakdown(Long userId, int month, int year) {
+    public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, int month, int year) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-        return getVendorBreakdown(userId, startDate, endDate);
+        return getMerchantBreakdown(userId, startDate, endDate);
     }
 
-    public List<VendorTotal> getVendorBreakdown(Long userId, LocalDate startDate, LocalDate endDate) {
-        return transactionRepository.findVendorTotals(userId, startDate, endDate);
+    public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, LocalDate startDate, LocalDate endDate) {
+        return this.merchantRepository.findMerchantTotals(userId, startDate, endDate);
     }
 
     public DashboardPulseDto getPulse(Long userId, int month, int year) {
         LocalDate startCurrent = LocalDate.of(year, month, 1);
         LocalDate endCurrent = startCurrent.plusMonths(1).minusDays(1);
-        
+
         // For monthly pulse, previous is exactly one month back
         LocalDate startPrevious = startCurrent.minusMonths(1);
         LocalDate endPrevious = startCurrent.minusDays(1);
@@ -95,8 +94,8 @@ public class DashboardService {
         return calculatePulse(userId, start, end, startPrevious, endPrevious);
     }
 
-    private DashboardPulseDto calculatePulse(Long userId, LocalDate startCurrent, LocalDate endCurrent, 
-                                           LocalDate startPrevious, LocalDate endPrevious) {
+    private DashboardPulseDto calculatePulse(Long userId, LocalDate startCurrent, LocalDate endCurrent,
+                                             LocalDate startPrevious, LocalDate endPrevious) {
         BigDecimal currentIncome = getSum(userId, startCurrent, endCurrent, TransactionType.INCOME);
         BigDecimal currentExpense = getSum(userId, startCurrent, endCurrent, TransactionType.EXPENSE);
         BigDecimal previousIncome = getSum(userId, startPrevious, endPrevious, TransactionType.INCOME);
@@ -112,47 +111,48 @@ public class DashboardService {
         );
     }
 
-        public List<CashFlowTrendDto> getCashFlowTrend(Long userId) {
-            LocalDate startDate = LocalDate.now().minusMonths(11).withDayOfMonth(1); // Last 12 months
-            List<Object[]> results = transactionRepository.findMonthlySums(userId, startDate);
-    
-            // Map results to trend DTOs
-            // Object[]: [year, month, type, total]
-            
-            Map<String, CashFlowTrendDto> trendMap = results.stream().collect(Collectors.toMap(
-                    row -> ((Number) row[0]).intValue() + "-" + ((Number) row[1]).intValue(), // Key: "2025-11"
-                    row -> new CashFlowTrendDto(
-                            ((Number) row[1]).intValue(),
-                            ((Number) row[0]).intValue(),
-                            TransactionType.INCOME.equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO,
-                            TransactionType.EXPENSE.equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO
-                    ),
-                    (d1, d2) -> new CashFlowTrendDto(
-                            d1.month(),
-                            d1.year(),
-                            d1.income().add(d2.income()),
-                            d1.expense().add(d2.expense())
-                    )
-            ));
-    
-            // Fill last 12 months to ensure continuity
-            List<CashFlowTrendDto> trendList = new ArrayList<>();
-            LocalDate iterator = startDate;
-            LocalDate now = LocalDate.now();
-            
-            while (!iterator.isAfter(now)) {
-                String key = iterator.getYear() + "-" + iterator.getMonthValue();
-                trendList.add(trendMap.getOrDefault(key, new CashFlowTrendDto(
-                        iterator.getMonthValue(),
-                        iterator.getYear(),
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO
-                )));
-                iterator = iterator.plusMonths(1);
-            }
-    
-            return trendList;
+    public List<CashFlowTrendDto> getCashFlowTrend(Long userId) {
+        LocalDate startDate = LocalDate.now().minusMonths(11).withDayOfMonth(1); // Last 12 months
+        List<Object[]> results = transactionRepository.findMonthlySums(userId, startDate);
+
+        // Map results to trend DTOs
+        // Object[]: [year, month, type, total]
+
+        Map<String, CashFlowTrendDto> trendMap = results.stream().collect(Collectors.toMap(
+                row -> ((Number) row[0]).intValue() + "-" + ((Number) row[1]).intValue(), // Key: "2025-11"
+                row -> new CashFlowTrendDto(
+                        ((Number) row[1]).intValue(),
+                        ((Number) row[0]).intValue(),
+                        TransactionType.INCOME.equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO,
+                        TransactionType.EXPENSE.equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO
+                ),
+                (d1, d2) -> new CashFlowTrendDto(
+                        d1.month(),
+                        d1.year(),
+                        d1.income().add(d2.income()),
+                        d1.expense().add(d2.expense())
+                )
+        ));
+
+        // Fill last 12 months to ensure continuity
+        List<CashFlowTrendDto> trendList = new ArrayList<>();
+        LocalDate iterator = startDate;
+        LocalDate now = LocalDate.now();
+
+        while (!iterator.isAfter(now)) {
+            String key = iterator.getYear() + "-" + iterator.getMonthValue();
+            trendList.add(trendMap.getOrDefault(key, new CashFlowTrendDto(
+                    iterator.getMonthValue(),
+                    iterator.getYear(),
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO
+            )));
+            iterator = iterator.plusMonths(1);
         }
+
+        return trendList;
+    }
+
     public YtdSummaryDto getYtdSummary(Long userId, int year) {
         LocalDate startYtd = LocalDate.of(year, 1, 1);
         LocalDate endYtd = LocalDate.now();

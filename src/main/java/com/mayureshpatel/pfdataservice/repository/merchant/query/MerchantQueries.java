@@ -43,8 +43,8 @@ public final class MerchantQueries {
             join accounts a on t.account_id = a.id
             join merchants m on t.merchant_id = m.id
             where a.user_id = :userId
-              and extract(month from t.date) = :month
-              and extract(year from t.date) = :year
+              and t.date >= :startDate
+              and t.date < :endDate
               and t.type = 'EXPENSE'
               and t.deleted_at is null
             group by m.id
