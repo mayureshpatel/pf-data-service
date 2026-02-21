@@ -42,6 +42,13 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .list();
     }
 
+    public List<Category> findAllSubCategories(Long userId) {
+        return jdbcClient.sql(CategoryQueries.FIND_ALL_SUB_CATEGORIES)
+                .param("userId", userId)
+                .query(rowMapper)
+                .list();
+    }
+
     @Override
     public Category insert(Category category) {
         KeyHolder keyHolder = new GeneratedKeyHolder();

@@ -137,9 +137,16 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .single();
     }
 
-    public long countByUserId(Long accountId) {
+    public long countByAccountId(Long accountId) {
         return jdbcClient.sql(TransactionQueries.COUNT_BY_ACCOUNT_ID)
                 .param("accountId", accountId)
+                .query(Long.class)
+                .single();
+    }
+
+    public long countByCategoryId(Long categoryId) {
+        return jdbcClient.sql(TransactionQueries.COUNT_BY_CATEGORY_ID)
+                .param("categoryId", categoryId)
                 .query(Long.class)
                 .single();
     }

@@ -10,6 +10,7 @@ public final class CategoryQueries {
             select *
             from categories
             where id = :id
+                and user_id = :userId
             """;
 
     // language=SQL
@@ -25,11 +26,28 @@ public final class CategoryQueries {
             where user_id = :userId
             """;
 
+    // language=SQl
+    public static final String FIND_ALL_SUB_CATEGORIES = """
+            select *
+            from categories
+            where parent_id = :categoryId
+                and user_id = :userId
+            """;
+
+    // language=SQL
+    public static final String FIND_ALL_PARENT_CATEGORIES = """
+            select *
+            from categories
+            where id in (select parent_id from categories where parent_id is not null)
+            and user_id = :userId
+            """;
+
     // language=SQL
     public static final String EXISTS_BY_ID = """
             select count(*)
             from categories
             where id = :id
+                and user_id = :userId
             """;
 
     // language=SQL
@@ -53,17 +71,20 @@ public final class CategoryQueries {
                 parent_id = :parentId,
                 updated_at = CURRENT_TIMESTAMP
             where id = :id
+                and user_id = :userId
             """;
 
     // language=SQL
     public static final String DELETE = """
             delete from categories
             where id = :id
+                and user_id = :userId
             """;
 
     // language=SQL
     public static final String COUNT = """
             select count(*)
             from categories
+            where user_id = :userId
             """;
 }

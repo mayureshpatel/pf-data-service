@@ -94,8 +94,16 @@ public final class TransactionQueries {
             select count(*)
             from transactions
             where account_id = :accountId
-                and deleted_at is null
-            """;
+              and deleted_at is null
+    """;
+
+    // language=SQL
+    public static final String COUNT_BY_CATEGORY_ID = """
+            select count(*)
+            from transactions
+            where category_id = :categoryId
+              and deleted_at is null
+    """;
 
     // language=SQL
     public static final String EXISTS_BY_ID = """

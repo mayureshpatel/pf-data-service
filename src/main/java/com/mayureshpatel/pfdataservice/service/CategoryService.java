@@ -1,8 +1,8 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.category.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -12,8 +12,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,89 +25,79 @@ public class CategoryService {
     private final TransactionRepository transactionRepository;
 
     @Transactional(readOnly = true)
-    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getCategoriesByUserId(Long userId) {
+    public List<CategoryDto> getCategoriesByUserId(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
-                .map(this::mapToDto)
-                .toList();
+                .map(CategoryDto::mapToDto).toList();
     }
 
     @Transactional
-    public com.mayureshpatel.pfdataservice.dto.category.CategoryDto createCategory(Long userId, com.mayureshpatel.pfdataservice.dto.category.CategoryDto categoryDto) {
+    public CategoryDto createCategory(Long userId, CategoryDto categoryDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Category category = new Category();
         category.setName(categoryDto.name());
-        category.getIconography().setColor(categoryDto.color());
-        category.getIconography().setIcon(categoryDto.icon());
-        if (categoryDto.type() != null) {
-            category.setType(categoryDto.type());
+        category.setIconography(categoryDto.iconography());
+        if (categoryDto.categoryType() != null) {
+            category.setType(categoryDto.categoryType());
         }
         category.setUser(user);
 
-        if (categoryDto.parentId() != null) {
-            Category parent = categoryRepository.findById(categoryDto.parentId())
+        if (categoryDto.parent() != null) {
+            Category parent = categoryRepository.findById(categoryDto.parent().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
+
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
         }
 
-        return mapToDto(categoryRepository.save(category));
+        return CategoryDto.mapToDto(categoryRepository.save(category));
     }
 
     @Transactional
-    public com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateCategory(Long userId, Long categoryId, com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto) {
+    public CategoryDto updateCategory(Long userId, Long categoryId, CategoryDto dto) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException("Access denied");
         }
 
         category.setName(dto.name());
-        category.getIconography().setColor(dto.color());
-        category.getIconography().setIcon(dto.icon());
-        if (dto.type() != null) {
-            category.setType(dto.type());
+        category.setIconography(dto.iconography());
+        if (dto.categoryType() != null) {
+            category.setType(dto.categoryType());
         }
-        
-        if (dto.parentId() != null) {
-            // Prevent circular dependency (simple check: parent cannot be self)
-            if (dto.parentId().equals(categoryId)) {
+
+        if (dto.parent() != null) {
+            if (dto.parent().getId().equals(categoryId)) {
                 throw new IllegalArgumentException("Category cannot be its own parent");
             }
-            
-            Category parent = categoryRepository.findById(dto.parentId())
+
+            Category parent = categoryRepository.findById(dto.parent().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
+
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
-        } else {
         }
-        
-        return mapToDto(categoryRepository.save(category));
+
+        return CategoryDto.mapToDto(this.categoryRepository.save(category));
     }
 
     @Transactional
     public void deleteCategory(Long userId, Long categoryId) {
-        Category category = categoryRepository.findById(categoryId)
+        Category category = this.categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException("Access denied");
         }
 
-        long transactionCount = transactionRepository.countByCategoryId(categoryId);
+        long transactionCount = this.transactionRepository.countByCategoryId(categoryId);
         if (transactionCount > 0) {
             throw new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first.");
-        }
-        
-        // Prevent deleting if it has children? Or cascade?
-        // JPA CascadeType.ALL on subCategories might handle it, but usually we want to prevent orphans.
-        // Let's assume for now user must delete children first or we explicitly check.
-        if (!category.getSubCategories().isEmpty()) {
-             throw new IllegalStateException("Cannot delete category that has sub-categories.");
         }
 
         categoryRepository.delete(category);
@@ -116,40 +107,27 @@ public class CategoryService {
      * Get categories grouped by parent for dropdown display
      */
     @Transactional(readOnly = true)
-    public List<CategoryGroupDto> getCategoriesGrouped(Long userId) {
+    public Map<CategoryDto, List<CategoryDto>> getCategoriesGrouped(Long userId) {
         List<Category> allCategories = categoryRepository.findByUserId(userId);
 
-        return grouped.entrySet().stream()
-                .map(entry -> new CategoryGroupDto(
-                        entry.getKey().getName(),
-                        entry.getKey().getId(),
-                        entry.getValue().stream()
-                                .map(this::mapToDto)
-                                .sorted(Comparator.comparing(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::name))
-                                .toList()
-                ))
-                .sorted(Comparator.comparing(CategoryGroupDto::groupLabel))
-                .toList();
+        return allCategories.stream()
+                .collect(Collectors.groupingBy(
+                        CategoryDto::mapToDto,
+                        Collectors.mapping(CategoryDto::mapToDto, Collectors.toList()))
+                )
+                .entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /**
-     * Get only child categories (for filtering/autocomplete)
+     * Get all sub-categories for a given user.
+     *
+     * @param userId the user id to get categories for
+     * @return list of {@link CategoryDto}
      */
     @Transactional(readOnly = true)
-    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getChildCategories(Long userId) {
-        return categoryRepository.findByUserId(userId).stream()
-                .filter(c -> c.getParent() != null)  // Only child categories
-                .map(this::mapToDto)
-                .sorted(Comparator.comparing(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::name))
-                .toList();
-    }
-
-    private com.mayureshpatel.pfdataservice.dto.category.CategoryDto mapToDto(Category category) {
-        return new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
-                category.getId(),
-                category.getName(),
-                category.getIconography(),
-                category.getType()
-        );
+    public List<CategoryDto> getChildCategories(Long userId) {
+        return this.categoryRepository.findAllSubCategories(userId).stream()
+                .map(CategoryDto::mapToDto).toList();
     }
 }
