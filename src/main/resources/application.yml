@@ -15,6 +15,7 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
+      connection-init-sql: SET timezone='America/New_York'
 
   flyway:
     enabled: true

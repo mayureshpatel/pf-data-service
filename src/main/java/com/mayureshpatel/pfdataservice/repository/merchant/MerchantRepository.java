@@ -11,6 +11,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,13 +53,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
-    public List<MerchantBreakdownDto> findMerchantTotals(Long userId, int month, int year) {
-        LocalDate startDate = LocalDate.of(year, month, 1);
-        LocalDate endDate = startDate.plusMonths(1);
-        return findMerchantTotals(userId, startDate, endDate);
-    }
-
-    public List<MerchantBreakdownDto> findMerchantTotals(Long userId, LocalDate startDate, LocalDate endDate) {
+    public List<MerchantBreakdownDto> findMerchantTotals(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_TOTALS)
                 .param("userId", userId)
                 .param("startDate", startDate)

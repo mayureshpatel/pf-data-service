@@ -14,6 +14,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DashboardService {
+
+    private static final ZoneId EASTERN = ZoneId.of("America/New_York");
 
     private final TransactionRepository transactionRepository;
     private final MerchantRepository merchantRepository;
@@ -37,7 +42,7 @@ public class DashboardService {
      * @return dashboard data for the specified user, month, and year
      */
     public DashboardData getDashboardData(Long userId, int month, int year) {
-        OffsetDateTime startOfMonth = OffsetDateTime.of(year, month, 1, 0, 0, 0, 0, OffsetDateTime.now().getOffset());
+        OffsetDateTime startOfMonth = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
         OffsetDateTime endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
 
         BigDecimal totalIncome = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.INCOME);
@@ -54,10 +59,10 @@ public class DashboardService {
     }
 
     public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, int month, int year) {
-        OffsetDateTime startOfMonth = OffsetDateTime.of(year, month, 1, 0, 0, 0, 0, OffsetDateTime.now().getOffset());
-        OffsetDateTime endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
+        OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
 
-        return getCategoryBreakdown(userId, startOfMonth, endOfMonth);
+        return getCategoryBreakdown(userId, startDate, endDate);
     }
 
     public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
@@ -65,40 +70,45 @@ public class DashboardService {
     }
 
     public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, int month, int year) {
-        LocalDate startDate = LocalDate.of(year, month, 1);
-        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+        OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
+
         return getMerchantBreakdown(userId, startDate, endDate);
     }
 
-    public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, LocalDate startDate, LocalDate endDate) {
+    public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return this.merchantRepository.findMerchantTotals(userId, startDate, endDate);
     }
 
     public DashboardPulseDto getPulse(Long userId, int month, int year) {
-        LocalDate startCurrent = LocalDate.of(year, month, 1);
-        LocalDate endCurrent = startCurrent.plusMonths(1).minusDays(1);
+        OffsetDateTime startCurrent = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime endCurrent = startCurrent.plusMonths(1).minusDays(1);
 
-        // For monthly pulse, previous is exactly one month back
-        LocalDate startPrevious = startCurrent.minusMonths(1);
-        LocalDate endPrevious = startCurrent.minusDays(1);
+        // previous month
+        OffsetDateTime startPrevious = startCurrent.minusMonths(1);
+        OffsetDateTime endPrevious = endCurrent.minusDays(1);
 
         return calculatePulse(userId, startCurrent, endCurrent, startPrevious, endPrevious);
     }
 
-    public DashboardPulseDto getPulse(Long userId, LocalDate start, LocalDate end) {
+    public DashboardPulseDto getPulse(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         // Calculate duration to find equivalent previous period
-        long days = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
-        LocalDate startPrevious = start.minusDays(days);
-        LocalDate endPrevious = start.minusDays(1);
+        long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        OffsetDateTime startPrevious = startDate.minusDays(days);
+        OffsetDateTime endPrevious = endDate.minusDays(1);
 
-        return calculatePulse(userId, start, end, startPrevious, endPrevious);
+        return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
     }
 
-    private DashboardPulseDto calculatePulse(Long userId, LocalDate startCurrent, LocalDate endCurrent,
-                                             LocalDate startPrevious, LocalDate endPrevious) {
+    private DashboardPulseDto calculatePulse(
+            Long userId,
+            OffsetDateTime startCurrent, OffsetDateTime endCurrent,
+            OffsetDateTime startPrevious, OffsetDateTime endPrevious) {
+
         BigDecimal currentIncome = getSum(userId, startCurrent, endCurrent, TransactionType.INCOME);
-        BigDecimal currentExpense = getSum(userId, startCurrent, endCurrent, TransactionType.EXPENSE);
         BigDecimal previousIncome = getSum(userId, startPrevious, endPrevious, TransactionType.INCOME);
+
+        BigDecimal currentExpense = getSum(userId, startCurrent, endCurrent, TransactionType.EXPENSE);
         BigDecimal previousExpense = getSum(userId, startPrevious, endPrevious, TransactionType.EXPENSE);
 
         return new DashboardPulseDto(
@@ -198,13 +208,16 @@ public class DashboardService {
         return actions;
     }
 
-    private BigDecimal getSum(Long userId, LocalDate start, LocalDate end, TransactionType type) {
+    private BigDecimal getSum(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
         BigDecimal sum = transactionRepository.getSumByDateRange(userId, start, end, type);
         return sum != null ? sum : BigDecimal.ZERO;
     }
 
     private BigDecimal calculateSavingsRate(BigDecimal income, BigDecimal expense) {
-        if (income.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+        if (income.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
         return income.subtract(expense)
                 .divide(income, 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"));
