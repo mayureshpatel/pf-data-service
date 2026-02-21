@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.CategoryService;
 import jakarta.validation.Valid;
@@ -11,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/v1/categories", "/api/categories"})
@@ -25,7 +25,7 @@ public class CategoryController {
     }
 
     @GetMapping("/grouped")
-    public ResponseEntity<List<CategoryGroupDto>> getCategoriesGrouped(
+    public ResponseEntity<Map<CategoryDto, List<CategoryDto>>> getCategoriesGrouped(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(categoryService.getCategoriesGrouped(userDetails.getId()));
     }
