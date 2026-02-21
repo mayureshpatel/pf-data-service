@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,8 +20,11 @@ import java.util.UUID;
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
         long startTime = System.currentTimeMillis();
         String correlationId = UUID.randomUUID().toString();
@@ -30,7 +34,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             long duration = System.currentTimeMillis() - startTime;
-            String userId = getUserId();
+            String userId = getAuthenticatedUserId();
             String method = request.getMethod();
             String uri = request.getRequestURI();
             int status = response.getStatus();
@@ -49,8 +53,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         }
     }
 
-    private String getUserId() {
+    /**
+     * Retrieves the user ID from the current security context.
+     *
+     * @return The user ID if authenticated, otherwise "anonymous".
+     */
+    private String getAuthenticatedUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
         if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
             return auth.getName();
         }
