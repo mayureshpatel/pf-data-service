@@ -141,13 +141,14 @@ public class TransactionImportService {
 
     private Transaction mapToEntity(TransactionDto dto) {
         Transaction transaction = new Transaction();
+
         transaction.setTransactionDate(dto.date());
         transaction.setPostDate(dto.postDate());
         transaction.setDescription(dto.description());
-        transaction.setOriginalVendorName(dto.description());
         transaction.setAmount(dto.amount());
         transaction.setType(dto.type());
         transaction.getMerchant().setName(dto.merchant().cleanName());
+
         return transaction;
     }
 
