@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.vendor.VendorTotal;
 import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardData;
 import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,33 +30,38 @@ public class DashboardService {
     private final TransactionRepository transactionRepository;
     private final TransactionService transactionService;
 
+    /**
+     * Retrieves dashboard data for a given user, month, and year.
+     * @param userId the user identifier
+     * @param month the month of the dashboard data
+     * @param year the year of the dashboard data
+     * @return dashboard data for the specified user, month, and year
+     */
     public DashboardData getDashboardData(Long userId, int month, int year) {
-        LocalDate startDate = LocalDate.of(year, month, 1);
-        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        OffsetDateTime startOfMonth = OffsetDateTime.of(year, month, 1, 0, 0, 0, 0, OffsetDateTime.now().getOffset());
+        OffsetDateTime endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
 
-        BigDecimal income = this.transactionRepository.getSumByDateRange(userId, startDate, endDate, TransactionType.INCOME);
-        BigDecimal expense = this.transactionRepository.getSumByDateRange(userId, startDate, endDate, TransactionType.EXPENSE);
+        BigDecimal totalIncome = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.INCOME);
+        BigDecimal totalExpenses = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.EXPENSE);
 
-        income = (income == null) ? BigDecimal.ZERO : income;
-        expense = (expense == null) ? BigDecimal.ZERO : expense;
-
-        List<CategoryTotal> breakdown = this.transactionRepository.findCategoryTotals(userId, startDate, endDate);
+        List<CategoryBreakdownDto> breakdown = this.transactionRepository.findCategoryTotals(userId, startOfMonth, endOfMonth);
 
         return DashboardData.builder()
-                .totalIncome(income)
-                .totalExpense(expense)
-                .netSavings(income.subtract(expense))
+                .totalIncome(totalIncome)
+                .totalExpense(totalExpenses)
+                .netSavings(totalIncome.subtract(totalExpenses))
                 .categoryBreakdown(breakdown)
                 .build();
     }
 
-    public List<CategoryTotal> getCategoryBreakdown(Long userId, int month, int year) {
-        LocalDate startDate = LocalDate.of(year, month, 1);
-        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-        return getCategoryBreakdown(userId, startDate, endDate);
+    public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, int month, int year) {
+        OffsetDateTime startOfMonth = OffsetDateTime.of(year, month, 1, 0, 0, 0, 0, OffsetDateTime.now().getOffset());
+        OffsetDateTime endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
+
+        return getCategoryBreakdown(userId, startOfMonth, endOfMonth);
     }
 
-    public List<CategoryTotal> getCategoryBreakdown(Long userId, LocalDate startDate, LocalDate endDate) {
+    public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return transactionRepository.findCategoryTotals(userId, startDate, endDate);
     }
 

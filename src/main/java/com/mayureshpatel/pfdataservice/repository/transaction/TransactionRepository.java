@@ -2,8 +2,10 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
+import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     private final JdbcClient jdbcClient;
     private final TransactionRowMapper rowMapper;
+    private final CategoryBreakdownRowMapper categoryBreakdownRowMapper;
 
     @Override
     public Optional<Transaction> findById(Long id) {
@@ -44,6 +47,15 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return jdbcClient.sql(TransactionQueries.FIND_BY_USER_ID)
                 .param("userId", userId)
                 .query(rowMapper)
+                .list();
+    }
+
+    public List<CategoryBreakdownDto> findCategoryTotals(Long userId, OffsetDateTime start, OffsetDateTime end) {
+        return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_TOTALS)
+                .param("userId", userId)
+                .param("startDate", start)
+                .param("endDate", end)
+                .query(categoryBreakdownRowMapper)
                 .list();
     }
 
@@ -149,5 +161,17 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("categoryId", categoryId)
                 .query(Long.class)
                 .single();
+    }
+
+    public BigDecimal getSumByDateRange(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
+        return jdbcClient.sql(TransactionQueries.GET_SUM_BY_DATE_RANGE)
+                .param("userId", userId)
+                .param("startDate", start)
+                .param("endDate", end)
+                .param("type", type.name())
+                .query(BigDecimal.class)
+                .optional()
+                .orElse(BigDecimal.ZERO);
+
     }
 }

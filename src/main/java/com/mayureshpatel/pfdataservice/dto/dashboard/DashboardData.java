@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.dashboard;
 
-import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -11,6 +11,6 @@ public record DashboardData(
         BigDecimal totalIncome,
         BigDecimal totalExpense,
         BigDecimal netSavings,
-        List<CategoryTotal> categoryBreakdown
+        List<CategoryBreakdownDto> categoryBreakdown
 ) {
 }

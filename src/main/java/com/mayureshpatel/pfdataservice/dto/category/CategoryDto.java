@@ -10,7 +10,7 @@ public record CategoryDto(
         User user,
         String name,
         CategoryType categoryType,
-        Category parent,
+        CategoryDto parent,
         Iconography iconography
 ) {
 
@@ -21,12 +21,17 @@ public record CategoryDto(
      * @return The {@link CategoryDto} representation of the provided {@link Category}.
      */
     public static CategoryDto mapToDto(Category category) {
+        CategoryDto parent = null;
+        if (category.getParent() != null) {
+            parent = mapToDto(category.getParent());
+        }
+
         return new CategoryDto(
                 category.getId(),
                 category.getUser(),
                 category.getName(),
                 category.getType(),
-                category.getParent(),
+                parent,
                 category.getIconography()
         );
     }

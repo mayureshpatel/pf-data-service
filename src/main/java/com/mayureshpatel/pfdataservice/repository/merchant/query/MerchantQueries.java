@@ -32,4 +32,21 @@ public final class MerchantQueries {
             from merchants
             where clean_name like :cleanName
             """;
+
+    // language=SQL
+    public static final String FIND_MERCHANT_TOTALS = """
+            select m.id as merchant_id,
+                   m.original_name as merchant_original_name,
+                   m.clean_name as merchant_clean_name,
+                   sum(t.amount) as total
+            from transactions t
+            join accounts a on t.account_id = a.id
+            join merchants m on t.merchant_id = m.id
+            where a.user_id = :userId
+              and extract(month from t.date) = :month
+              and extract(year from t.date) = :year
+              and t.type = 'EXPENSE'
+              and t.deleted_at is null
+            group by m.id
+            """;
 }

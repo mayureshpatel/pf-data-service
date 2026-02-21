@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardData;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ class DashboardServiceTest {
         when(transactionRepository.getSumByDateRange(userId, start, end, TransactionType.EXPENSE))
                 .thenReturn(BigDecimal.valueOf(500));
         
-        List<CategoryTotal> breakdown = List.of(new CategoryTotal("Food", BigDecimal.valueOf(200)));
+        List<CategoryBreakdownDto> breakdown = List.of(new CategoryBreakdownDto("Food", BigDecimal.valueOf(200)));
         when(transactionRepository.findCategoryTotals(userId, start, end)).thenReturn(breakdown);
 
         DashboardData result = dashboardService.getDashboardData(userId, month, year);

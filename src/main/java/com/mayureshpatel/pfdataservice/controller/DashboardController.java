@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.vendor.VendorTotal;
 import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
@@ -24,7 +24,7 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/categories")
-    public ResponseEntity<List<CategoryTotal>> getCategoryBreakdown(
+    public ResponseEntity<List<CategoryBreakdownDto>> getCategoryBreakdown(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year,

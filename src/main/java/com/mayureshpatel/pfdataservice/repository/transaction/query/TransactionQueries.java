@@ -138,7 +138,12 @@ public final class TransactionQueries {
 
     // language=SQL
     public static final String FIND_CATEGORY_TOTALS = """
-            select coalesce(c.name, 'Uncategorized') as category_name,
+            select c.id as category_id,
+                   c.name as category_name,
+                   c.color as category_color,
+                   c.icon as category_icon,
+                   c.type as category_type,
+                   c.parent_id as category_parent_id,
                    sum(t.amount) as total
             from transactions t
             left join categories c on t.category_id = c.id
@@ -147,7 +152,7 @@ public final class TransactionQueries {
               and t.date between :startDate and :endDate
               and t.type = 'EXPENSE'
               and t.deleted_at is null
-            group by c.name
+            group by c.id
             order by total desc
             """;
 
