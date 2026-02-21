@@ -58,7 +58,7 @@ class AccountControllerTest {
     void getAllAccounts_ShouldReturnAccountList() throws Exception {
         // Given
         AccountDto accountDto = new AccountDto(1L, "Checking Account", "CHECKING", new BigDecimal("1000.00"), null);
-        when(accountService.getAccountsByUserId(1L)).thenReturn(List.of(accountDto));
+        when(accountService.getAllAccountsByUserId(1L)).thenReturn(List.of(accountDto));
 
         // When/Then
         mockMvc.perform(get("/api/v1/accounts"))

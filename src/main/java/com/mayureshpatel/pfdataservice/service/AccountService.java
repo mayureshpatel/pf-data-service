@@ -33,9 +33,9 @@ public class AccountService {
      * @return the list of accounts
      */
     @Transactional(readOnly = true)
-    public List<AccountDto> getAccountsByUserId(Long userId) {
+    public List<AccountDto> getAllAccountsByUserId(Long userId) {
         return accountRepository.findByUserId(userId).stream()
-                .map(this::mapToDto)
+                .map(AccountDto::fromDomain)
                 .toList();
     }
 
@@ -58,7 +58,7 @@ public class AccountService {
         account.setBankName(accountDto.bankName());
         account.setUser(user);
 
-        return mapToDto(accountRepository.save(account));
+        return AccountDto.fromDomain(accountRepository.save(account));
     }
 
     /**
@@ -82,7 +82,7 @@ public class AccountService {
         account.setType(dto.type());
         account.setBankName(dto.bankName());
 
-        return mapToDto(accountRepository.save(account));
+        return AccountDto.fromDomain(accountRepository.save(account));
     }
 
     /**
@@ -103,7 +103,7 @@ public class AccountService {
         BigDecimal diff = targetBalance.subtract(currentBalance);
 
         if (diff.compareTo(BigDecimal.ZERO) == 0) {
-            return mapToDto(account);
+            return AccountDto.fromDomain(account);
         }
 
         // create an adjustment transaction
@@ -111,9 +111,16 @@ public class AccountService {
 
         // update account balance
         account.applyTransaction(adjustment);
-        return mapToDto(accountRepository.save(account));
+        return AccountDto.fromDomain(accountRepository.save(account));
     }
 
+    /**
+     * Create an adjustment transaction to reconcile account balance.
+     *
+     * @param account the account to adjust
+     * @param diff    the difference between current and target balance
+     * @return the created adjustment transaction
+     */
     private Transaction createAdjustmentTransaction(Account account, BigDecimal diff) {
         Transaction adjustment = new Transaction();
         adjustment.setAccount(account);
@@ -133,14 +140,16 @@ public class AccountService {
      *
      * @param userId    the user id
      * @param accountId the account id
+     * @throws AccessDeniedException if the user does not own the account
+     * @throws IllegalStateException if the account has any transactions
      */
     @Transactional
-    public void deleteAccount(Long userId, Long accountId) {
+    public void deleteAccount(Long userId, Long accountId) throws AccessDeniedException, IllegalStateException {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException("Access denied");
         }
 
         // check if an account has any transactions
@@ -153,23 +162,5 @@ public class AccountService {
         }
 
         accountRepository.delete(account);
-    }
-
-    /**
-     * Maps an {@link Account} to a {@link AccountDto}
-     *
-     * @param account the account to map
-     * @return the mapped {@link AccountDto}
-     */
-    private AccountDto mapToDto(Account account) {
-        return new AccountDto(
-                account.getId(),
-                account.getUser(),
-                account.getName(),
-                account.getType(),
-                account.getCurrentBalance(),
-                account.getCurrency(),
-                account.getBankName()
-        );
     }
 }

@@ -68,7 +68,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(1L)).thenReturn(List.of(account));
 
         // When
-        List<AccountDto> accounts = accountService.getAccountsByUserId(1L);
+        List<AccountDto> accounts = accountService.getAllAccountsByUserId(1L);
 
         // Then
         assertThat(accounts).hasSize(1);

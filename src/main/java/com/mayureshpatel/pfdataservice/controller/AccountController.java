@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -20,7 +21,7 @@ public class AccountController {
 
     @GetMapping
     public ResponseEntity<List<AccountDto>> getAccounts(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(accountService.getAccountsByUserId(userDetails.getId()));
+        return ResponseEntity.ok(accountService.getAllAccountsByUserId(userDetails.getId()));
     }
 
     @PostMapping
@@ -54,5 +55,6 @@ public class AccountController {
         return ResponseEntity.ok(accountService.reconcileAccount(userDetails.getId(), id, request.targetBalance()));
     }
 
-    public record ReconcileRequest(java.math.BigDecimal targetBalance) {}
+    public record ReconcileRequest(BigDecimal targetBalance) {
+    }
 }

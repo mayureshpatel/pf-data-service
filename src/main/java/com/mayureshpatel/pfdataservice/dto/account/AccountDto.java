@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
@@ -27,4 +28,22 @@ public record AccountDto(
         Currency currency,
         BankName bankName
 ) {
+
+    /**
+     * Maps an {@link Account} to a {@link AccountDto}
+     *
+     * @param account the account to map
+     * @return the mapped {@link AccountDto}
+     */
+    public static AccountDto fromDomain(Account account) {
+        return new AccountDto(
+                account.getId(),
+                account.getUser(),
+                account.getName(),
+                account.getType(),
+                account.getCurrentBalance(),
+                account.getCurrency(),
+                account.getBankName()
+        );
+    }
 }
