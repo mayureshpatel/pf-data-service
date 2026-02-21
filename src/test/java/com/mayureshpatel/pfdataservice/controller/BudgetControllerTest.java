@@ -41,7 +41,7 @@ class BudgetControllerTest {
         BudgetDto budgetDto = new BudgetDto(null, 1L, null, new BigDecimal("500.00"), 1, 2024);
         BudgetDto responseDto = new BudgetDto(1L, 1L, "Groceries", new BigDecimal("500.00"), 1, 2024);
 
-        when(budgetService.setBudget(eq(1L), any(BudgetDto.class))).thenReturn(responseDto);
+        when(budgetService.save(eq(1L), any(BudgetDto.class))).thenReturn(responseDto);
 
         // When/Then
         mockMvc.perform(post("/api/v1/budgets")

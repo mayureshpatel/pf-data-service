@@ -1,11 +1,12 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
-import com.mayureshpatel.pfdataservice.dto.vendor.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
@@ -34,38 +35,78 @@ public class CategoryRuleService {
     private final TransactionCategorizer categorizer;
     private final CategoryRepository categoryRepository;
 
+    /**
+     * Get all category rules for a user
+     *
+     * @param userId the user id
+     * @return the list of {@link CategoryRuleDto}
+     */
     public List<CategoryRuleDto> getRules(Long userId) {
         return categoryRuleRepository.findByUserId(userId).stream()
-                .map(this::mapToDto)
+                .map(CategoryRuleDto::mapToDto)
                 .toList();
     }
 
+    /**
+     * Create a new category rule for a user
+     *
+     * @param userId the user id
+     * @param dto    the category rule dto
+     * @return the created {@link CategoryRuleDto}
+     */
     @Transactional
     public CategoryRuleDto createRule(Long userId, CategoryRuleDto dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        CategoryRule rule = new CategoryRule();
-        rule.setUser(user);
-        rule.setKeyword(dto.keyword());
-        rule.setCategory(dto.category());
-        rule.setPriority(dto.priority() != null ? dto.priority() : 0);
+        Category category = new Category();
+        category.setId(dto.category().id());
 
-        return mapToDto(categoryRuleRepository.save(rule));
+        TableAudit audit = new TableAudit();
+        audit.setCreatedAt(OffsetDateTime.now());
+        audit.setUpdatedAt(OffsetDateTime.now());
+
+        CategoryRule rule = new CategoryRule(
+                null,
+                dto.keyword(),
+                category,
+                dto.priority() != null ? dto.priority() : 0,
+                user,
+                audit
+        );
+
+        return CategoryRuleDto.mapToDto(categoryRuleRepository.save(rule));
     }
 
+    /**
+     * Update an existing category rule for a user
+     *
+     * @param ruleId the rule id to update
+     * @param dto    the updated category rule dto
+     * @return the updated {@link CategoryRuleDto}
+     */
     @Transactional
     public CategoryRuleDto updateRule(Long ruleId, CategoryRuleDto dto) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
+
+        Category category = new Category();
+        category.setId(dto.category().id());
+
         rule.setKeyword(dto.keyword());
-        rule.setCategory(dto.category());
+        rule.setCategory(category);
         rule.setPriority(dto.priority());
         rule.getAudit().setUpdatedAt(OffsetDateTime.now());
 
-        return mapToDto(categoryRuleRepository.save(rule));
+        return CategoryRuleDto.mapToDto(categoryRuleRepository.save(rule));
     }
 
+    /**
+     * Delete an existing category rule for a user
+     *
+     * @param userId the user id
+     * @param ruleId the rule id to delete
+     */
     @Transactional
     public void deleteRule(Long userId, Long ruleId) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
@@ -81,24 +122,32 @@ public class CategoryRuleService {
     public List<RuleChangePreviewDto> previewApply(Long userId) {
         List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
         List<Category> categories = categoryRepository.findByUserId(userId);
-        List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
+        List<Transaction> transactions = transactionRepository.findByUserId(userId);
 
-        Map<String, Category> categoryMap = categories.stream()
-                .collect(Collectors.toMap(c -> c.getName().toLowerCase(), c -> c, (a, b) -> a));
+        Map<Long, Category> categoryMap = categories.stream()
+                .collect(Collectors.toMap(
+                        Category::getId,
+                        category -> category, (categoryA, categoryB) -> categoryA)
+                );
 
         List<RuleChangePreviewDto> previews = new ArrayList<>();
+        for (Transaction transaction : transactions) {
+            if (transaction.getCategory() != null) {
+                continue;
+            }
 
-        for (Transaction t : transactions) {
-            if (t.getCategory() != null) continue;
+            Long guessedCategory = this.categorizer.guessCategory(transaction, rules, categories);
+            if (guessedCategory == null) {
+                continue;
+            }
 
-            Long guessed = categorizer.guessCategory(t, rules, categories);
-            if ("Uncategorized".equals(guessed)) continue;
-
-            Category matchedCategory = categoryMap.get(guessed);
-            if (matchedCategory == null) continue;
+            Category matchedCategory = categoryMap.get(guessedCategory);
+            if (matchedCategory == null) {
+                continue;
+            }
 
             previews.add(new RuleChangePreviewDto(
-                    t.getDescription(),
+                    transaction.getDescription(),
                     "Uncategorized",
                     matchedCategory.getName()
             ));
@@ -109,41 +158,40 @@ public class CategoryRuleService {
 
     @Transactional
     public int applyRules(Long userId) {
-        List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
-        List<Category> categories = categoryRepository.findByUserId(userId);
-        List<Transaction> transactions = transactionRepository.findByAccount_User_Id(userId);
+        List<CategoryRule> rules = this.categoryRuleRepository.findByUserId(userId);
+        List<Category> categories = this.categoryRepository.findByUserId(userId);
+        List<Transaction> transactions = this.transactionRepository.findByUserId(userId);
 
-        Map<String, Category> categoryMap = categories.stream()
-                .collect(Collectors.toMap(c -> c.getName().toLowerCase(), c -> c, (a, b) -> a));
+        Map<Long, Category> categoryMap = categories.stream()
+                .collect(Collectors.toMap(
+                        Category::getId,
+                        category -> category, (categoryA, categoryB) -> categoryA));
 
         List<Transaction> toUpdate = new ArrayList<>();
 
         for (Transaction t : transactions) {
-            if (t.getCategory() != null) continue;
+            if (t.getCategory() != null) {
+                continue;
+            }
 
-            Long guessed = categorizer.guessCategory(t, rules, categories);
-            if ("Uncategorized".equals(guessed)) continue;
+            Long guessedCategory = this.categorizer.guessCategory(t, rules, categories);
+            if (null == guessedCategory) {
+                continue;
+            }
 
-            Category matchedCategory = categoryMap.get(guessed);
-            if (matchedCategory == null) continue;
+            Category matchedCategory = categoryMap.get(guessedCategory);
+            if (matchedCategory == null) {
+                continue;
+            }
 
             t.setCategory(matchedCategory);
             toUpdate.add(t);
         }
 
         if (!toUpdate.isEmpty()) {
-            transactionRepository.saveAll(toUpdate);
+            this.transactionRepository.saveAll(toUpdate);
         }
 
         return toUpdate.size();
-    }
-
-    private CategoryRuleDto mapToDto(CategoryRule rule) {
-        return CategoryRuleDto.builder()
-                .id(rule.getId())
-                .keyword(rule.getKeyword())
-                .category(rule.getCategory())
-                .priority(rule.getPriority())
-                .build();
     }
 }

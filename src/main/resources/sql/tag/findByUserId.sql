@@ -1,1 +1,0 @@
-SELECT * FROM tags WHERE user_id = :userId

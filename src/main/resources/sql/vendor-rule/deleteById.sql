@@ -1,1 +1,0 @@
-DELETE FROM vendor_rules WHERE id = :id

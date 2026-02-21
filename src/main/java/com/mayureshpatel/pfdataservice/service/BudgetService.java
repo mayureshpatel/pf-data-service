@@ -1,11 +1,10 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
-import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryTotal;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
@@ -15,13 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,14 +26,13 @@ public class BudgetService {
     private final BudgetRepository budgetRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
-    private final TransactionRepository transactionRepository;
 
     /**
      * Gets budgets for a user given a specific month and year.
      *
      * @param userId the user id
-     * @param month the month
-     * @param year the year
+     * @param month  the month
+     * @param year   the year
      * @return the list of {@link BudgetDto}
      */
     public List<BudgetDto> getBudgets(Long userId, Integer month, Integer year) {
@@ -61,76 +55,38 @@ public class BudgetService {
                 .toList();
     }
 
+    /**
+     * Gets the budget status for a user for a given month and year.
+     *
+     * @param userId the user id
+     * @param month  the month
+     * @param year   the year
+     * @return the list of {@link BudgetStatusDto}
+     */
     public List<BudgetStatusDto> getBudgetStatus(Long userId, Integer month, Integer year) {
-        LocalDate startDate = LocalDate.of(year, month, 1);
-        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-
-        // get all budgets for the period
-        List<BudgetDto> budgets = budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(userId, month, year)
-                .stream()
-                .map(BudgetDto::mapToDto)
-                .toList();
-        
-        // get actual spending for the period
-        List<CategoryTotal> spending = transactionRepository.findCategoryTotals(userId, startDate, endDate);
-        Map<String, BigDecimal> spendingMap = spending.stream()
-                .collect(Collectors.toMap(CategoryTotal::categoryName, CategoryTotal::total));
-
-        // map budgets to status dtos
-        List<BudgetStatusDto> status = budgets.stream().map(budget -> {
-            BigDecimal spent = spendingMap.getOrDefault(budget.getCategory().getName(), BigDecimal.ZERO);
-            BigDecimal remaining = budget.getAmount().subtract(spent);
-            double percent = calculatePercentage(spent, budget.getAmount());
-            
-            return BudgetStatusDto.builder()
-                    .category(budget.getCategory())
-                    .budgetedAmount(budget.getAmount())
-                    .spentAmount(spent)
-                    .remainingAmount(remaining)
-                    .percentageUsed(percent)
-                    .build();
-        }).collect(Collectors.toList());
-
-        // 4. Optionally add categories that have spending but NO budget
-        // This helps user see where they are spending without a plan
-        for (CategoryTotal s : spending) {
-            boolean hasBudget = status.stream().anyMatch(st -> st.categoryName().equals(s.categoryName()));
-            if (!hasBudget) {
-                status.add(BudgetStatusDto.builder()
-                        .categoryName(s.categoryName())
-                        .budgetedAmount(BigDecimal.ZERO)
-                        .spentAmount(s.total())
-                        .remainingAmount(s.total().negate())
-                        .percentageUsed(100.0) // Technically infinite but 100 is a good flag
-                        .build());
-            }
-        }
-
-        return status;
-    }
-
-    private double calculatePercentage(BigDecimal spent, BigDecimal budgeted) {
-        if (budgeted.compareTo(BigDecimal.ZERO) == 0) return 0;
-        return spent.divide(budgeted, 4, RoundingMode.HALF_UP)
-                .multiply(new BigDecimal("100"))
-                .doubleValue();
+        return this.budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(userId, month, year);
     }
 
     @Transactional
-    public BudgetDto setBudget(Long userId, BudgetDto dto) {
+    public BudgetDto save(Long userId, BudgetDto dto) {
+        // get the user; throw exception if not found
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Category category = categoryRepository.findById(dto.categoryId())
+        // get the category; throw exception if not found
+        Category category = categoryRepository.findById(dto.category().id())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
+        // ensure user has access to the category
         if (!category.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied to category");
         }
 
+        // check if budget already exists for the user, category, month and year
         Optional<Budget> existing = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(
-                userId, dto.categoryId(), dto.month(), dto.year());
+                userId, dto.category().id(), dto.month(), dto.year());
 
+        // create or update budget
         Budget budget;
         if (existing.isPresent()) {
             budget = existing.get();
@@ -145,19 +101,20 @@ public class BudgetService {
                     .build();
         }
 
-        return mapToDto(budgetRepository.save(budget));
+        return BudgetDto.mapToDto(budgetRepository.save(budget));
     }
 
     @Transactional
-    public void deleteBudget(Long userId, Long id) {
-        Budget budget = budgetRepository.findById(id)
+    public void delete(Long userId, Long budgetId) {
+        Budget budget = budgetRepository.findById(budgetId)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget not found"));
 
+        // ensure user has access to the budget
         if (!budget.getUser().getId().equals(userId)) {
             throw new RuntimeException("Access denied");
         }
 
-        budget.setDeletedAt(java.time.LocalDateTime.now());
+        budget.getAudit().setDeletedAt(OffsetDateTime.now());
         budgetRepository.save(budget);
     }
 }

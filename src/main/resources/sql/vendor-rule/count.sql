@@ -1,1 +1,0 @@
-SELECT COUNT(*) FROM vendor_rules

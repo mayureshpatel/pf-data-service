@@ -1,1 +1,0 @@
-SELECT COUNT(*) FROM tags WHERE id = :id

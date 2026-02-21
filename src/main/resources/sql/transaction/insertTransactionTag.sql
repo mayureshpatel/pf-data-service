@@ -1,1 +1,0 @@
-INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (:transactionId, :tagId)

@@ -1,9 +1,11 @@
 package com.mayureshpatel.pfdataservice.repository.budget;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetRowMapper;
+import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetStatusRowMapper;
 import com.mayureshpatel.pfdataservice.repository.budget.query.BudgetQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -20,6 +22,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
 
     private final JdbcClient jdbcClient;
     private final BudgetRowMapper rowMapper;
+    private final BudgetStatusRowMapper budgetStatusRowMapper;
 
     @Override
     public Optional<Budget> findById(Long id) {
@@ -102,5 +105,14 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .param("year", year)
                 .query(rowMapper)
                 .optional();
+    }
+
+    public List<BudgetStatusDto> findBudgetStatusByUserIdAndMonthAndYear(Long userId, Integer month, Integer year) {
+        return jdbcClient.sql(BudgetQueries.FIND_BUDGET_STATUS_BY_USER_ID_AND_MONTH_AND_YEAR)
+                .param("userId", userId)
+                .param("month", month)
+                .param("year", year)
+                .query(budgetStatusRowMapper)
+                .list();
     }
 }

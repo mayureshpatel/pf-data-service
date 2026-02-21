@@ -67,7 +67,7 @@ class BudgetServiceTest {
     }
 
     @Test
-    void setBudget_NewBudget_ShouldCreateBudget() {
+    void save() {
         // Given
         BudgetDto createDto = new BudgetDto(
                 null, 1L, null, new BigDecimal("500.00"), 1, 2024);
@@ -79,7 +79,7 @@ class BudgetServiceTest {
         when(budgetRepository.save(any(Budget.class))).thenReturn(testBudget);
 
         // When
-        BudgetDto result = budgetService.setBudget(1L, createDto);
+        BudgetDto result = budgetService.save(1L, createDto);
 
         // Then
         assertThat(result).isNotNull();
@@ -88,7 +88,7 @@ class BudgetServiceTest {
     }
 
     @Test
-    void setBudget_ExistingBudget_ShouldUpdateBudget() {
+    void save() {
         // Given
         BudgetDto updateDto = new BudgetDto(
                 null, 1L, null, new BigDecimal("750.00"), 1, 2024);
@@ -100,7 +100,7 @@ class BudgetServiceTest {
         when(budgetRepository.save(any(Budget.class))).thenReturn(testBudget);
 
         // When
-        BudgetDto result = budgetService.setBudget(1L, updateDto);
+        BudgetDto result = budgetService.save(1L, updateDto);
 
         // Then
         assertThat(result).isNotNull();
@@ -108,7 +108,7 @@ class BudgetServiceTest {
     }
 
     @Test
-    void setBudget_UserNotFound_ShouldThrowException() {
+    void save_UserNotFound_ShouldThrowException() {
         // Given
         BudgetDto createDto = new BudgetDto(
                 null, 1L, null, new BigDecimal("500.00"), 1, 2024);
@@ -116,12 +116,12 @@ class BudgetServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
         // When/Then
-        assertThatThrownBy(() -> budgetService.setBudget(1L, createDto))
+        assertThatThrownBy(() -> budgetService.save(1L, createDto))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
-    void setBudget_CategoryNotFound_ShouldThrowException() {
+    void save_CategoryNotFound_ShouldThrowException() {
         // Given
         BudgetDto createDto = new BudgetDto(
                 null, 1L, null, new BigDecimal("500.00"), 1, 2024);
@@ -130,7 +130,7 @@ class BudgetServiceTest {
         when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
 
         // When/Then
-        assertThatThrownBy(() -> budgetService.setBudget(1L, createDto))
+        assertThatThrownBy(() -> budgetService.save(1L, createDto))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -162,34 +162,34 @@ class BudgetServiceTest {
     }
 
     @Test
-    void deleteBudget_ValidId_ShouldDeleteBudget() {
+    void deleteBudget_ValidId_ShouldDelete() {
         // Given
         when(budgetRepository.findById(1L)).thenReturn(Optional.of(testBudget));
 
         // When
-        budgetService.deleteBudget(1L, 1L);
+        budgetService.delete(1L, 1L);
 
         // Then
         verify(budgetRepository).delete(testBudget);
     }
 
     @Test
-    void deleteBudget_BudgetNotFound_ShouldThrowException() {
+    void deleteBudget_NotFound_ShouldThrowException() {
         // Given
         when(budgetRepository.findById(1L)).thenReturn(Optional.empty());
 
         // When/Then
-        assertThatThrownBy(() -> budgetService.deleteBudget(1L, 1L))
+        assertThatThrownBy(() -> budgetService.delete(1L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
-    void deleteBudget_WrongUser_ShouldThrowException() {
+    void delete_WrongUser_ShouldThrowException() {
         // Given
         when(budgetRepository.findById(1L)).thenReturn(Optional.of(testBudget));
 
         // When/Then
-        assertThatThrownBy(() -> budgetService.deleteBudget(999L, 1L))
+        assertThatThrownBy(() -> budgetService.delete(999L, 1L))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("does not belong to user");
     }
