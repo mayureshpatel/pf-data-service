@@ -12,14 +12,26 @@ import java.util.stream.Collectors;
 public class TransactionParserFactory {
     private final Map<BankName, TransactionParser> transactionParsers;
 
+    /**
+     * Creates a factory for transaction parsers.
+     *
+     * @param parsers list of transaction parsers
+     */
     public TransactionParserFactory(List<TransactionParser> parsers) {
         this.transactionParsers = parsers.stream()
                 .collect(Collectors.toMap(TransactionParser::getBankName, Function.identity()));
     }
 
+    /**
+     * Retrieves a transaction parser for the specified bank name.
+     *
+     * @param bankName the name of the bank
+     * @return the transaction parser for the bank
+     * @throws IllegalArgumentException if no parser is found for the bank
+     */
     public TransactionParser getTransactionParser(String bankName) {
         BankName bank = BankName.fromString(bankName);
-        TransactionParser transactionParser = transactionParsers.get(bank);
+        TransactionParser transactionParser = this.transactionParsers.get(bank);
 
         if (transactionParser == null) {
             throw new IllegalArgumentException("No parser found for bank: " + bankName);

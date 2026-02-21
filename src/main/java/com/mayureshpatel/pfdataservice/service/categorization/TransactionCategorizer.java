@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -33,16 +35,20 @@ public class TransactionCategorizer {
      */
     public Long guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {
         CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
-                .userId(transaction.getAccount() != null ? transaction.getAccount().getUser().getId() : null)
+                .userId(transaction.getAccount() != null
+                        ? transaction.getAccount().getUser() != null
+                        ? transaction.getAccount().getUser().getId()
+                        : null
+                        : null)
                 .rules(rules)
                 .categories(categories)
                 .build();
 
-        return strategies.stream()
-                .sorted(java.util.Comparator.comparingInt(CategorizationStrategy::getOrder))
+        return this.strategies.stream()
+                .sorted(Comparator.comparingInt(CategorizationStrategy::getOrder))
                 .map(s -> s.categorize(transaction, context))
-                .filter(java.util.Optional::isPresent)
-                .map(java.util.Optional::get)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .findFirst()
                 .orElse(-1L);
     }

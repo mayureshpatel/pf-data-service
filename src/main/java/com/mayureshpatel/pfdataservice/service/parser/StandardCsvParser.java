@@ -31,6 +31,7 @@ public class StandardCsvParser implements TransactionParser {
             return csvParser.stream()
                     .map(csvRecord -> {
                         Transaction t = new Transaction();
+
                         String description = csvRecord.get("description");
                         String amountStr = csvRecord.get("amount").replace("$", "").replace(",", "");
                         BigDecimal amount = new BigDecimal(amountStr);
@@ -39,6 +40,7 @@ public class StandardCsvParser implements TransactionParser {
                         t.setAmount(amount.abs());
                         t.setTransactionDate(OffsetDateTime.parse(csvRecord.get("date")));
                         t.setType(type);
+
                         return t;
                     })
                     .onClose(() -> {

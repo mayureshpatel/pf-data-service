@@ -2,20 +2,16 @@ package com.mayureshpatel.pfdataservice.service.parser;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Optional;
@@ -26,8 +22,6 @@ public class DiscoverCsvParser implements TransactionParser {
     private static final String HEADER_DATE = "Trans. Date";
     private static final String HEADER_DESC = "Description";
     private static final String HEADER_AMOUNT = "Amount";
-    private static final String HEADER_CATEGORY = "Category";
-    private static final BankName BANK_NAME = BankName.DISCOVER;
 
     private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendPattern("[M/d/yyyy][MM/dd/yyyy][yyyy-MM-dd]")
@@ -43,7 +37,7 @@ public class DiscoverCsvParser implements TransactionParser {
 
     @Override
     public BankName getBankName() {
-        return BANK_NAME;
+        return BankName.DISCOVER;
     }
 
     @Override
@@ -52,7 +46,7 @@ public class DiscoverCsvParser implements TransactionParser {
         try {
             CSVParser csvParser = CSV_FORMAT.parse(reader);
             return csvParser.stream()
-                    .filter(this::isValidRecord)
+                    .filter(csvRecord -> isValidRecord(csvRecord, HEADER_DATE))
                     .map(this::parseTransaction)
                     .flatMap(Optional::stream)
                     .onClose(() -> {
@@ -66,65 +60,31 @@ public class DiscoverCsvParser implements TransactionParser {
         } catch (Exception e) {
             try {
                 reader.close();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             throw new RuntimeException("Failed to parse Discover CSV", e);
         }
     }
 
-    private boolean isValidRecord(CSVRecord csvRecord) {
-        return csvRecord.isMapped(HEADER_DATE) && StringUtils.hasText(csvRecord.get(HEADER_DATE));
-    }
-
+    /**
+     * Parses a CSV record into a Transaction object.
+     *
+     * @param csvRecord the CSV record to parse
+     * @return the parsed Transaction or empty if invalid
+     */
     private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
         try {
             Transaction transaction = new Transaction();
-            transaction.setTransactionDate(parseDate(csvRecord.get(HEADER_DATE)));
-            transaction.setDescription(buildDescription(csvRecord));
-            BigDecimal rawAmount = parseAmount(csvRecord);
+
+            transaction.setTransactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_FORMATTER));
+            transaction.getMerchant().setOriginalName(csvRecord.get(HEADER_DESC));
+            BigDecimal rawAmount = parseAmount(csvRecord, HEADER_AMOUNT);
             configureTransactionTypeAndAmount(transaction, rawAmount);
             transaction.setCategory(null);
+
             return Optional.of(transaction);
         } catch (Exception e) {
             return Optional.empty();
-        }
-    }
-
-    private OffsetDateTime parseDate(String dateStr) {
-        return OffsetDateTime.parse(dateStr, DATE_FORMATTER);
-    }
-
-    private String buildDescription(CSVRecord csvRecord) {
-        String description = csvRecord.get(HEADER_DESC);
-        String bankCategory = csvRecord.isMapped(HEADER_CATEGORY) ? csvRecord.get(HEADER_CATEGORY) : null;
-        if (StringUtils.hasText(bankCategory)) {
-            return description + " (" + bankCategory + ")";
-        }
-        return description;
-    }
-
-    private BigDecimal parseAmount(CSVRecord csvRecord) {
-        if (!csvRecord.isMapped(HEADER_AMOUNT)) {
-            return BigDecimal.ZERO;
-        }
-        String val = csvRecord.get(HEADER_AMOUNT);
-        if (!StringUtils.hasText(val)) {
-            return BigDecimal.ZERO;
-        }
-        String cleanVal = val.replaceAll("[^0-9.-]", "");
-        try {
-            return new BigDecimal(cleanVal);
-        } catch (NumberFormatException e) {
-            return BigDecimal.ZERO;
-        }
-    }
-
-    private void configureTransactionTypeAndAmount(Transaction transaction, BigDecimal rawAmount) {
-        if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
-            transaction.setType(TransactionType.INCOME);
-            transaction.setAmount(rawAmount.abs());
-        } else {
-            transaction.setType(TransactionType.EXPENSE);
-            transaction.setAmount(rawAmount);
         }
     }
 }

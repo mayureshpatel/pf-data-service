@@ -18,7 +18,9 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -78,11 +80,18 @@ public class UniversalCsvParser implements TransactionParser {
         } catch (Exception e) {
             try {
                 reader.close();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             throw new RuntimeException("Failed to parse Universal CSV", e);
         }
     }
 
+    /**
+     * Identifies column mappings based on header names.
+     *
+     * @param headerMap Map of header names to column indices
+     * @return ColumnMapping object with identified column names
+     */
     private ColumnMapping identifyColumns(Map<String, Integer> headerMap) {
         String dateCol = null;
         String postDateCol = null;
@@ -108,7 +117,7 @@ public class UniversalCsvParser implements TransactionParser {
             }
         }
 
-        // Fallback: If "Date" not found but "Post Date" is, use Post Date as Date
+        // fallback: if "Date" not found but "Post Date" is, use Post Date as Date
         if (dateCol == null && postDateCol != null) {
             dateCol = postDateCol;
         }
@@ -120,14 +129,10 @@ public class UniversalCsvParser implements TransactionParser {
             throw new IllegalArgumentException("Could not find a valid 'Description' column in CSV headers.");
         }
         if (amountCol == null && (debitCol == null || creditCol == null)) {
-            // Need either Amount OR (Debit AND Credit)
-             if (debitCol == null && creditCol == null) {
-                 throw new IllegalArgumentException("Could not find valid 'Amount' or 'Debit/Credit' columns.");
-             }
-             // If only one of Debit/Credit exists, that's ambiguous unless implied.
-             // We'll require at least Amount OR (Debit AND/OR Credit).
-             // Actually, if we have Debit but no Credit, we can assume Credit is implied 0?
-             // Let's allow loose matching for Debit/Credit.
+            // need either Amount OR (Debit AND Credit)
+            if (debitCol == null && creditCol == null) {
+                throw new IllegalArgumentException("Could not find valid 'Amount' or 'Debit/Credit' columns.");
+            }
         }
 
         log.info("Universal Parser Mapped Columns - Date: {}, PostDate: {}, Desc: {}, Amount: {}, Debit: {}, Credit: {}",
@@ -136,26 +141,33 @@ public class UniversalCsvParser implements TransactionParser {
         return new ColumnMapping(dateCol, postDateCol, descCol, amountCol, debitCol, creditCol);
     }
 
+    /**
+     * Parses a single CSV record into a Transaction object.
+     *
+     * @param record  CSV record to parse
+     * @param mapping Column mapping configuration
+     * @return Parsed Transaction object
+     */
     private Transaction parseRecord(CSVRecord record, ColumnMapping mapping) {
         try {
-            // 1. Parse Date
+            // parse date
             OffsetDateTime date = OffsetDateTime.from(parseDate(record.get(mapping.dateCol)));
             OffsetDateTime postDate = mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)
                     ? OffsetDateTime.from(parseDate(record.get(mapping.postDateCol)))
                     : null;
 
-            // 2. Parse Description
+            // parse description
             String description = record.get(mapping.descCol);
 
-            // 3. Parse Amount & Type
+            // parse amount and transaction type
             BigDecimal amount = BigDecimal.ZERO;
             TransactionType type = TransactionType.EXPENSE; // Default
 
             if (mapping.debitCol != null && mapping.creditCol != null) {
-                // Strategy: Two columns
+                // two column strategy
                 String debitStr = record.get(mapping.debitCol);
                 String creditStr = record.get(mapping.creditCol);
-                
+
                 BigDecimal debit = parseAmount(debitStr);
                 BigDecimal credit = parseAmount(creditStr);
 
@@ -166,8 +178,9 @@ public class UniversalCsvParser implements TransactionParser {
                     type = TransactionType.INCOME;
                 }
             } else if (mapping.amountCol != null) {
-                // Strategy: Single Amount column
+                // single amount strategy
                 BigDecimal rawAmount = parseAmount(record.get(mapping.amountCol));
+
                 if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
                     amount = rawAmount.abs();
                 } else {
@@ -175,15 +188,13 @@ public class UniversalCsvParser implements TransactionParser {
                     amount = rawAmount;
                 }
             } else if (mapping.debitCol != null) {
-                // Only Debit column found
                 amount = parseAmount(record.get(mapping.debitCol));
             } else if (mapping.creditCol != null) {
-                 // Only Credit column found
                 amount = parseAmount(record.get(mapping.creditCol));
                 type = TransactionType.INCOME;
             }
 
-            // Skip zero-amount transactions (often pending or auth holds)
+            // skip zero-amount transactions (often pending or auth holds)
             if (amount.compareTo(BigDecimal.ZERO) == 0) {
                 return null;
             }
@@ -194,9 +205,8 @@ public class UniversalCsvParser implements TransactionParser {
             t.setDescription(description);
             t.setAmount(amount);
             t.setType(type);
-            // Default original vendor name to description for now
-            t.setOriginalVendorName(description); 
-            
+            t.getMerchant().setOriginalName(description);
+
             return t;
 
         } catch (Exception e) {
@@ -205,16 +215,25 @@ public class UniversalCsvParser implements TransactionParser {
         }
     }
 
+    /**
+     * Parses a transaction amount string into a {@link BigDecimal} object.
+     *
+     * @param amountStr the amount string to parse
+     * @return the parsed BigDecimal amount or BigDecimal.ZERO if parsing fails
+     */
     private BigDecimal parseAmount(String amountStr) {
         if (amountStr == null || amountStr.isBlank()) {
             return BigDecimal.ZERO;
         }
-        // Remove currency symbols, commas
+
+        // remove currency symbols, commas
         String clean = amountStr.replace("$", "").replace(",", "").trim();
-        // Handle parenthesis for negative: (100.00) -> -100.00
+
+        // handle parenthesis for negative: (100.00) -> -100.00
         if (clean.startsWith("(") && clean.endsWith(")")) {
             clean = "-" + clean.substring(1, clean.length() - 1);
         }
+
         try {
             return new BigDecimal(clean);
         } catch (NumberFormatException e) {
@@ -222,13 +241,20 @@ public class UniversalCsvParser implements TransactionParser {
         }
     }
 
+    /**
+     * Parses a date string into a {@link LocalDate} object using multiple date formats.
+     *
+     * @param dateStr the date string to parse
+     * @return the parsed LocalDate or null if parsing fails
+     * @throws IllegalArgumentException if no valid date format is found
+     */
     private LocalDate parseDate(String dateStr) {
         if (dateStr == null || dateStr.isBlank()) return null;
         for (DateTimeFormatter formatter : DATE_FORMATS) {
             try {
                 return LocalDate.parse(dateStr, formatter);
             } catch (DateTimeParseException ignored) {
-                // Try next
+                // try next formatter
             }
         }
         throw new IllegalArgumentException("Unknown date format: " + dateStr);
@@ -241,5 +267,6 @@ public class UniversalCsvParser implements TransactionParser {
             String amountCol,
             String debitCol,
             String creditCol
-    ) {}
+    ) {
+    }
 }
