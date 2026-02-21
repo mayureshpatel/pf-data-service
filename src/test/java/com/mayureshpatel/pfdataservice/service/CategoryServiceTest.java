@@ -3,7 +3,6 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
@@ -36,7 +35,7 @@ class CategoryServiceTest {
 
     private User testUser;
     private Category testCategory;
-    private CategoryDto testCategoryDto;
+    private com.mayureshpatel.pfdataservice.dto.category.CategoryDto testCategoryDto;
 
     @BeforeEach
     void setUp() {
@@ -50,21 +49,21 @@ class CategoryServiceTest {
         testCategory.setType(CategoryType.EXPENSE);
         testCategory.setUser(testUser);
 
-        testCategoryDto = new CategoryDto(
+        testCategoryDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
                 1L, "Groceries", "#FF0000", "shopping-cart", CategoryType.EXPENSE, null, null);
     }
 
     @Test
     void createCategory_ValidData_ShouldCreateCategory() {
         // Given
-        CategoryDto createDto = new CategoryDto(
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto createDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
                 null, "Groceries", "#FF0000", "shopping-cart", CategoryType.EXPENSE, null, null);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(categoryRepository.save(any(Category.class))).thenReturn(testCategory);
 
         // When
-        CategoryDto result = categoryService.createCategory(1L, createDto);
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto result = categoryService.createCategory(1L, createDto);
 
         // Then
         assertThat(result).isNotNull();
@@ -75,7 +74,7 @@ class CategoryServiceTest {
     @Test
     void createCategory_UserNotFound_ShouldThrowException() {
         // Given
-        CategoryDto createDto = new CategoryDto(
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto createDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
                 null, "Groceries", "#FF0000", "shopping-cart", CategoryType.EXPENSE, null, null);
 
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
@@ -91,7 +90,7 @@ class CategoryServiceTest {
         when(categoryRepository.findByUserId(1L)).thenReturn(List.of(testCategory));
 
         // When
-        List<CategoryDto> result = categoryService.getCategoriesByUserId(1L);
+        List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> result = categoryService.getCategoriesByUserId(1L);
 
         // Then
         assertThat(result).hasSize(1);
@@ -101,14 +100,14 @@ class CategoryServiceTest {
     @Test
     void updateCategory_ValidData_ShouldUpdateCategory() {
         // Given
-        CategoryDto updateDto = new CategoryDto(
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
                 null, "Food & Dining", "#00FF00", "utensils", CategoryType.EXPENSE, null, null);
 
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
         when(categoryRepository.save(any(Category.class))).thenReturn(testCategory);
 
         // When
-        CategoryDto result = categoryService.updateCategory(1L, 1L, updateDto);
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto result = categoryService.updateCategory(1L, 1L, updateDto);
 
         // Then
         assertThat(result).isNotNull();
@@ -118,7 +117,7 @@ class CategoryServiceTest {
     @Test
     void updateCategory_CategoryNotFound_ShouldThrowException() {
         // Given
-        CategoryDto updateDto = new CategoryDto(
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
                 null, "Food & Dining", "#00FF00", "utensils", CategoryType.EXPENSE, null, null);
 
         when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
@@ -131,7 +130,7 @@ class CategoryServiceTest {
     @Test
     void updateCategory_WrongUser_ShouldThrowException() {
         // Given
-        CategoryDto updateDto = new CategoryDto(
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
                 null, "Food & Dining", "#00FF00", "utensils", CategoryType.EXPENSE, null, null);
 
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));

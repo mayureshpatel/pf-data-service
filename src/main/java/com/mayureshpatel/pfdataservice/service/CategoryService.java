@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryGroupDto;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -25,14 +24,14 @@ public class CategoryService {
     private final TransactionRepository transactionRepository;
 
     @Transactional(readOnly = true)
-    public List<CategoryDto> getCategoriesByUserId(Long userId) {
+    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getCategoriesByUserId(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
                 .map(this::mapToDto)
                 .toList();
     }
 
     @Transactional
-    public CategoryDto createCategory(Long userId, CategoryDto categoryDto) {
+    public com.mayureshpatel.pfdataservice.dto.category.CategoryDto createCategory(Long userId, com.mayureshpatel.pfdataservice.dto.category.CategoryDto categoryDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -57,7 +56,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryDto updateCategory(Long userId, Long categoryId, CategoryDto dto) {
+    public com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateCategory(Long userId, Long categoryId, com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
@@ -126,7 +125,7 @@ public class CategoryService {
                         entry.getKey().getId(),
                         entry.getValue().stream()
                                 .map(this::mapToDto)
-                                .sorted(Comparator.comparing(CategoryDto::name))
+                                .sorted(Comparator.comparing(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::name))
                                 .toList()
                 ))
                 .sorted(Comparator.comparing(CategoryGroupDto::groupLabel))
@@ -137,16 +136,16 @@ public class CategoryService {
      * Get only child categories (for filtering/autocomplete)
      */
     @Transactional(readOnly = true)
-    public List<CategoryDto> getChildCategories(Long userId) {
+    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getChildCategories(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
                 .filter(c -> c.getParent() != null)  // Only child categories
                 .map(this::mapToDto)
-                .sorted(Comparator.comparing(CategoryDto::name))
+                .sorted(Comparator.comparing(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::name))
                 .toList();
     }
 
-    private CategoryDto mapToDto(Category category) {
-        return new CategoryDto(
+    private com.mayureshpatel.pfdataservice.dto.category.CategoryDto mapToDto(Category category) {
+        return new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(
                 category.getId(),
                 category.getName(),
                 category.getIconography(),

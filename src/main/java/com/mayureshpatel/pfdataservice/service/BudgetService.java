@@ -33,17 +33,31 @@ public class BudgetService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
 
+    /**
+     * Gets budgets for a user given a specific month and year.
+     *
+     * @param userId the user id
+     * @param month the month
+     * @param year the year
+     * @return the list of {@link BudgetDto}
+     */
     public List<BudgetDto> getBudgets(Long userId, Integer month, Integer year) {
         return budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(userId, month, year)
                 .stream()
-                .map(this::mapToDto)
+                .map(BudgetDto::mapToDto)
                 .toList();
     }
 
+    /**
+     * Gets all budgets for a user.
+     *
+     * @param userId the user id
+     * @return the list of {@link BudgetDto}
+     */
     public List<BudgetDto> getAllBudgets(Long userId) {
         return budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(userId)
                 .stream()
-                .map(this::mapToDto)
+                .map(BudgetDto::mapToDto)
                 .toList();
     }
 
@@ -51,24 +65,26 @@ public class BudgetService {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
 
-        // 1. Get all budgets for the period
-        List<Budget> budgets = budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(userId, month, year);
+        // get all budgets for the period
+        List<BudgetDto> budgets = budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(userId, month, year)
+                .stream()
+                .map(BudgetDto::mapToDto)
+                .toList();
         
-        // 2. Get actual spending for the period
+        // get actual spending for the period
         List<CategoryTotal> spending = transactionRepository.findCategoryTotals(userId, startDate, endDate);
         Map<String, BigDecimal> spendingMap = spending.stream()
                 .collect(Collectors.toMap(CategoryTotal::categoryName, CategoryTotal::total));
 
-        // 3. Map budgets to status DTOs
-        List<BudgetStatusDto> status = budgets.stream().map(b -> {
-            BigDecimal spent = spendingMap.getOrDefault(b.getCategory().getName(), BigDecimal.ZERO);
-            BigDecimal remaining = b.getAmount().subtract(spent);
-            double percent = calculatePercentage(spent, b.getAmount());
+        // map budgets to status dtos
+        List<BudgetStatusDto> status = budgets.stream().map(budget -> {
+            BigDecimal spent = spendingMap.getOrDefault(budget.getCategory().getName(), BigDecimal.ZERO);
+            BigDecimal remaining = budget.getAmount().subtract(spent);
+            double percent = calculatePercentage(spent, budget.getAmount());
             
             return BudgetStatusDto.builder()
-                    .categoryId(b.getCategory().getId())
-                    .categoryName(b.getCategory().getName())
-                    .budgetedAmount(b.getAmount())
+                    .category(budget.getCategory())
+                    .budgetedAmount(budget.getAmount())
                     .spentAmount(spent)
                     .remainingAmount(remaining)
                     .percentageUsed(percent)
@@ -143,16 +159,5 @@ public class BudgetService {
 
         budget.setDeletedAt(java.time.LocalDateTime.now());
         budgetRepository.save(budget);
-    }
-
-    private BudgetDto mapToDto(Budget b) {
-        return BudgetDto.builder()
-                .id(b.getId())
-                .categoryId(b.getCategory().getId())
-                .categoryName(b.getCategory().getName())
-                .amount(b.getAmount())
-                .month(b.getMonth())
-                .year(b.getYear())
-                .build();
     }
 }
