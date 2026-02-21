@@ -38,9 +38,7 @@ public class CategoryService {
         Category category = new Category();
         category.setName(categoryDto.name());
         category.setIconography(categoryDto.iconography());
-        if (categoryDto.categoryType() != null) {
-            category.setType(categoryDto.categoryType());
-        }
+        category.setType(categoryDto.categoryType());
         category.setUser(user);
 
         if (categoryDto.parent() != null) {
@@ -50,6 +48,8 @@ public class CategoryService {
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
+
+            category.setParent(parent);
         }
 
         return CategoryDto.mapToDto(categoryRepository.save(category));
@@ -66,9 +66,7 @@ public class CategoryService {
 
         category.setName(dto.name());
         category.setIconography(dto.iconography());
-        if (dto.categoryType() != null) {
-            category.setType(dto.categoryType());
-        }
+        category.setType(dto.categoryType());
 
         if (dto.parent() != null) {
             if (dto.parent().getId().equals(categoryId)) {
@@ -81,6 +79,8 @@ public class CategoryService {
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
+
+            category.setParent(parent);
         }
 
         return CategoryDto.mapToDto(this.categoryRepository.save(category));
@@ -104,7 +104,10 @@ public class CategoryService {
     }
 
     /**
-     * Get categories grouped by parent for dropdown display
+     * Gets a map of categories grouped by parent-child relationship.
+     *
+     * @param userId the user id to get categories for
+     * @return map of {@link CategoryDto} grouped by parent-child relationship
      */
     @Transactional(readOnly = true)
     public Map<CategoryDto, List<CategoryDto>> getCategoriesGrouped(Long userId) {
