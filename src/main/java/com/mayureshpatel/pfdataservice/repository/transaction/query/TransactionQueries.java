@@ -157,6 +157,22 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
+    public static final String FIND_MONTHLY_SUMS = """
+            select extract(year from t.date)  as year,
+                   extract(month from t.date) as month,
+                   t.type,
+                   sum(t.amount)              as total
+            from transactions t
+            join accounts a on t.account_id = a.id
+            where a.user_id = :userId
+              and t.date >= :startDate
+              and t.type in ('INCOME', 'EXPENSE')
+              and t.deleted_at is null
+            group by extract(year from t.date), extract(month from t.date), t.type
+            order by year, month
+            """;
+
+    // language=SQL
     public static final String GET_MONTHLY_SPENDING = """
             select extract(year from t.date) as year,
                    extract(month from t.date) as month,

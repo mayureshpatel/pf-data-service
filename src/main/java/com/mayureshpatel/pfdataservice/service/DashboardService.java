@@ -125,16 +125,13 @@ public class DashboardService {
         LocalDate startDate = LocalDate.now().minusMonths(11).withDayOfMonth(1); // Last 12 months
         List<Object[]> results = transactionRepository.findMonthlySums(userId, startDate);
 
-        // Map results to trend DTOs
-        // Object[]: [year, month, type, total]
-
         Map<String, CashFlowTrendDto> trendMap = results.stream().collect(Collectors.toMap(
                 row -> ((Number) row[0]).intValue() + "-" + ((Number) row[1]).intValue(), // Key: "2025-11"
                 row -> new CashFlowTrendDto(
                         ((Number) row[1]).intValue(),
                         ((Number) row[0]).intValue(),
-                        TransactionType.INCOME.equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO,
-                        TransactionType.EXPENSE.equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO
+                        TransactionType.INCOME.name().equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO,
+                        TransactionType.EXPENSE.name().equals(row[2]) ? (BigDecimal) row[3] : BigDecimal.ZERO
                 ),
                 (d1, d2) -> new CashFlowTrendDto(
                         d1.month(),

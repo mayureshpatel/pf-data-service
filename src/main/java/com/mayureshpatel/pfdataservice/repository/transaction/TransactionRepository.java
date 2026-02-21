@@ -15,6 +15,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -161,6 +162,27 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("categoryId", categoryId)
                 .query(Long.class)
                 .single();
+    }
+
+    public List<Object[]> findMonthlySums(Long userId, LocalDate startDate) {
+        return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_SUMS)
+                .param("userId", userId)
+                .param("startDate", startDate)
+                .query((rs, rowNum) -> new Object[]{
+                        rs.getInt("year"),
+                        rs.getInt("month"),
+                        rs.getString("type"),
+                        rs.getBigDecimal("total")
+                })
+                .list();
+    }
+
+    public BigDecimal getUncategorizedExpenseTotals(Long userId) {
+        return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_TOTALS)
+                .param("userId", userId)
+                .query(BigDecimal.class)
+                .optional()
+                .orElse(BigDecimal.ZERO);
     }
 
     public BigDecimal getSumByDateRange(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
