@@ -22,22 +22,31 @@ public class AuthenticationService {
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
 
+    /**
+     * Authenticates the user and generates a JWT token.
+     *
+     * @param request the authentication request
+     * @return the authentication response
+     */
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        authenticationManager.authenticate(
+        // authenticate the user and load the user details
+        this.authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.username(),
                         request.password()
                 )
         );
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.username());
+        UserDetails userDetails = this.userDetailsService.loadUserByUsername(request.username());
 
+        // add custom claims to the token
         Map<String, Object> extraClaims = new HashMap<>();
         if (userDetails instanceof CustomUserDetails customUser) {
             extraClaims.put("userId", customUser.getId());
             extraClaims.put("email", customUser.getEmail());
         }
 
-        var jwtToken = jwtService.generateToken(extraClaims, userDetails);
+        // generate the token
+        String jwtToken = this.jwtService.generateToken(extraClaims, userDetails);
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .build();
