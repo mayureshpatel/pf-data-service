@@ -161,11 +161,17 @@ public class DashboardService {
     }
 
     public YtdSummaryDto getYtdSummary(Long userId, int year) {
-        LocalDate startYtd = LocalDate.of(year, 1, 1);
-        LocalDate endYtd = LocalDate.now();
-        if (endYtd.getYear() > year) endYtd = LocalDate.of(year, 12, 31); // Past year full
-        if (endYtd.getYear() < year)
+//        LocalDate startYtd = LocalDate.of(year, 1, 1);
+//        LocalDate endYtd = LocalDate.now();
+        OffsetDateTime startYtd = ZonedDateTime.of(year, 1, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, EASTERN).toOffsetDateTime();
+
+        if (endYtd.getYear() > year) {
+            endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, EASTERN).toOffsetDateTime();
+        }
+        if (endYtd.getYear() < year) {
             return new YtdSummaryDto(year, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
 
         BigDecimal income = getSum(userId, startYtd, endYtd, TransactionType.INCOME);
         BigDecimal expense = getSum(userId, startYtd, endYtd, TransactionType.EXPENSE);
@@ -178,7 +184,7 @@ public class DashboardService {
     public List<ActionItemDto> getActionItems(Long userId) {
         List<ActionItemDto> actions = new ArrayList<>();
 
-        // 1. Potential Transfers
+        // potential transfers
         int transferCount = transactionService.findPotentialTransfers(userId).size();
         if (transferCount > 0) {
             actions.add(new ActionItemDto(
@@ -189,14 +195,12 @@ public class DashboardService {
             ));
         }
 
-        // 2. Uncategorized Transactions
+        // uncategorized expenses
         BigDecimal uncategorizedSum = transactionRepository.getUncategorizedExpenseTotals(userId);
-        // Note: Repository method returns sum, we might want count. Let's stick with sum for now or add count query later.
-        // For MVP, if sum > 0, we show alert.
         if (uncategorizedSum != null && uncategorizedSum.compareTo(BigDecimal.ZERO) > 0) {
             actions.add(new ActionItemDto(
                     ActionItemDto.ActionType.UNCATEGORIZED,
-                    1, // Using 1 as flag for now, ideally count query
+                    uncategorizedSum.longValue(),
                     "Uncategorized expenses found",
                     "/transactions?category=null"
             ));
