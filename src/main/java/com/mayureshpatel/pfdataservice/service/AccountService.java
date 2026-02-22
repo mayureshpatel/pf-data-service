@@ -123,6 +123,7 @@ public class AccountService {
      */
     private Transaction createAdjustmentTransaction(Account account, BigDecimal diff) {
         Transaction adjustment = new Transaction();
+
         adjustment.setAccount(account);
         adjustment.setAmount(diff);
         adjustment.setTransactionDate(OffsetDateTime.now());
