@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(mvn clean compile:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(comm:*)",
+      "Bash(mvn compile:*)",
+      "Bash(java -version:*)",
+      "Bash(mvn:*)",
+      "Bash(JAVA_HOME=/c/Users/Mayuresh/.jdks/openjdk-21 mvn compile:*)",
+      "Bash(JAVA_HOME=/c/Users/Mayuresh/.jdks/ms-21.0.9 mvn compile:*)",
+      "Bash(tail:*)"
+    ]
+  }
+}
