@@ -3,7 +3,6 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
@@ -30,7 +28,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AccountService unit tests")
@@ -84,7 +84,7 @@ class AccountServiceTest {
         return account;
     }
 
-    private AccountDto buildAccountDto(String name, String typeCode, BigDecimal balance, String bankName) {
+    private AccountDto buildAccountDto(String name, String typeCode, BigDecimal balance) {
         AccountType type = buildAccountType(typeCode);
 
         return new AccountDto(null, null, name, type, balance, null, null);
@@ -96,7 +96,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("should return mapped DTOs for all accounts belonging to the user")
         void getAllAccountsByUserId_happyPath_returnsMappedDtos() {
-            // arrange
+            // Arrange
             Account account1 = buildAccount(10L, USER_ID);
             account1.setName("Checking");
             Account account2 = buildAccount(11L, USER_ID);
@@ -104,10 +104,10 @@ class AccountServiceTest {
 
             when(accountRepository.findByUserId(USER_ID)).thenReturn(List.of(account1, account2));
 
-            // act
+            // Act
             List<AccountDto> result = accountService.getAllAccountsByUserId(USER_ID);
 
-            // assert
+            // Assert
             assertThat(result).hasSize(2);
             assertThat(result).extracting(AccountDto::name)
                     .containsExactly("Checking", "Savings");
@@ -118,13 +118,13 @@ class AccountServiceTest {
         @Test
         @DisplayName("should return empty list when no accounts exist for the user")
         void getAllAccountsByUserId_noAccounts_returnsEmptyList() {
-            // arrange
+            // Arrange
             when(accountRepository.findByUserId(USER_ID)).thenReturn(List.of());
 
-            // act
+            // Act
             List<AccountDto> result = accountService.getAllAccountsByUserId(USER_ID);
 
-            // assert
+            // Assert
             assertThat(result).isEmpty();
         }
     }
@@ -135,9 +135,9 @@ class AccountServiceTest {
         @Test
         @DisplayName("should save new account and return DTO when user exists")
         void createAccount_userExists_savesAndReturnsMappedDto() {
-            // arrange
+            // Arrange
             User user = buildUser(USER_ID);
-            AccountDto dto = buildAccountDto("My Checking", "CHECKING", new BigDecimal("500.00"), "Chase");
+            AccountDto dto = buildAccountDto("My Checking", "CHECKING", new BigDecimal("500.00"));
 
             Account savedAccount = buildAccount(ACCOUNT_ID, USER_ID);
             savedAccount.setName("My Checking");
@@ -145,7 +145,7 @@ class AccountServiceTest {
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
 
-            // act
+            // Act
             AccountDto result = accountService.createAccount(USER_ID, dto);
 
             // Assert
@@ -164,11 +164,11 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException when user does not exist")
         void createAccount_userNotFound_throwsResourceNotFoundException() {
-            // arrange
-            AccountDto dto = buildAccountDto("My Checking", "CHECKING", new BigDecimal("500.00"), "Chase");
+            // Arrange
+            AccountDto dto = buildAccountDto("My Checking", "CHECKING", new BigDecimal("500.00"));
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-            // act & assert
+            // Act & Assert
             assertThatThrownBy(() -> accountService.createAccount(USER_ID, dto))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
@@ -183,18 +183,18 @@ class AccountServiceTest {
         @Test
         @DisplayName("should update name, type, and bank name when account found for user")
         void updateAccount_accountFound_updatesFieldsAndReturnsDto() {
-            // arrange
+            // Arrange
             Account existing = buildAccount(ACCOUNT_ID, USER_ID);
             existing.setName("Old Name");
 
-            AccountDto updateDto = buildAccountDto("New Name", "SAVINGS", new BigDecimal("999.00"), "BankOfAmerica");
+            AccountDto updateDto = buildAccountDto("New Name", "SAVINGS", new BigDecimal("999.00"));
             Account savedAccount = buildAccount(ACCOUNT_ID, USER_ID);
             savedAccount.setName("New Name");
 
             when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(existing));
             when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
 
-            // act
+            // Act
             AccountDto result = accountService.updateAccount(USER_ID, ACCOUNT_ID, updateDto);
 
             // Assert
@@ -209,11 +209,11 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException when account not found")
         void updateAccount_accountNotFound_throwsResourceNotFoundException() {
-            // arrange
-            AccountDto updateDto = buildAccountDto("New Name", "SAVINGS", new BigDecimal("999.00"), "BankOfAmerica");
+            // Arrange
+            AccountDto updateDto = buildAccountDto("New Name", "SAVINGS", new BigDecimal("999.00"));
             when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
-            // act & assert
+            // Act & Assert
             assertThatThrownBy(() -> accountService.updateAccount(USER_ID, ACCOUNT_ID, updateDto))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Account not found");
@@ -228,7 +228,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("should create adjustment transaction and update balance when positive diff")
         void reconcileAccount_positiveDiff_createsAdjustmentAndUpdatesBalance() {
-            // arrange
+            // Arrange
             BigDecimal currentBalance = new BigDecimal("800.00");
             BigDecimal targetBalance = new BigDecimal("1000.00");
             BigDecimal expectedDiff = new BigDecimal("200.00");
@@ -239,45 +239,35 @@ class AccountServiceTest {
             Account savedAccount = buildAccount(ACCOUNT_ID, USER_ID);
             savedAccount.setCurrentBalance(targetBalance);
 
-            // AccountService.createAdjustmentTransaction() calls new Transaction() then immediately
-            // calls adjustment.getMerchant().setOriginalName(...). Because Transaction's no-arg
-            // constructor leaves merchant=null, we use mockConstruction to ensure every new
-            // Transaction() instance has a pre-initialised Merchant so the call does not NPE.
-            try (MockedConstruction<Transaction> txMock = mockConstruction(Transaction.class,
-                    (mock, context) -> {
-                        Merchant merchant = new Merchant();
-                        when(mock.getMerchant()).thenReturn(merchant);
-                        when(mock.getNetChange()).thenReturn(expectedDiff);
-                    })) {
+            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+                Transaction tx = inv.getArgument(0);
+                tx.setId(99L);
+                return tx;
+            });
+            when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
 
-                when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
-                when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
-                    Transaction tx = inv.getArgument(0);
-                    tx.setId(99L);
-                    return tx;
-                });
-                when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
+            // Act
+            AccountDto result = accountService.reconcileAccount(USER_ID, ACCOUNT_ID, targetBalance);
 
-                // act
-                AccountDto result = accountService.reconcileAccount(USER_ID, ACCOUNT_ID, targetBalance);
+            // Assert
+            assertThat(result).isNotNull();
+            assertThat(result.currentBalance()).isEqualByComparingTo(targetBalance);
 
-                // Assert
-                assertThat(result).isNotNull();
-                assertThat(result.currentBalance()).isEqualByComparingTo(targetBalance);
-
-                // Verify the transaction passed to save has the correct amount, type and description
-                Transaction constructedTx = txMock.constructed().get(0);
-                verify(constructedTx).setAmount(expectedDiff);
-                verify(constructedTx).setType(TransactionType.ADJUSTMENT);
-                verify(constructedTx).setDescription("Balance Reconciliation");
-                verify(transactionRepository).save(constructedTx);
-            }
+            ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+            verify(transactionRepository).save(txCaptor.capture());
+            Transaction savedTx = txCaptor.getValue();
+            assertThat(savedTx.getAmount()).isEqualByComparingTo(expectedDiff);
+            assertThat(savedTx.getType()).isEqualTo(TransactionType.ADJUSTMENT);
+            assertThat(savedTx.getDescription()).isEqualTo("Balance Reconciliation");
+            assertThat(savedTx.getMerchant().getOriginalName()).isEqualTo("Balance Reconciliation");
+            assertThat(savedTx.getAccount()).isEqualTo(account);
         }
 
         @Test
         @DisplayName("should create adjustment transaction and update balance when negative diff")
         void reconcileAccount_negativeDiff_createsNegativeAdjustmentAndUpdatesBalance() {
-            // arrange
+            // Arrange
             BigDecimal currentBalance = new BigDecimal("1000.00");
             BigDecimal targetBalance = new BigDecimal("700.00");
             BigDecimal expectedDiff = new BigDecimal("-300.00");
@@ -288,38 +278,32 @@ class AccountServiceTest {
             Account savedAccount = buildAccount(ACCOUNT_ID, USER_ID);
             savedAccount.setCurrentBalance(targetBalance);
 
-            try (MockedConstruction<Transaction> txMock = mockConstruction(Transaction.class,
-                    (mock, context) -> {
-                        Merchant merchant = new Merchant();
-                        when(mock.getMerchant()).thenReturn(merchant);
-                        when(mock.getNetChange()).thenReturn(expectedDiff);
-                    })) {
+            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+                Transaction tx = inv.getArgument(0);
+                tx.setId(100L);
+                return tx;
+            });
+            when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
 
-                when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
-                when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
-                    Transaction tx = inv.getArgument(0);
-                    tx.setId(100L);
-                    return tx;
-                });
-                when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
+            // Act
+            AccountDto result = accountService.reconcileAccount(USER_ID, ACCOUNT_ID, targetBalance);
 
-                // act
-                AccountDto result = accountService.reconcileAccount(USER_ID, ACCOUNT_ID, targetBalance);
+            // Assert
+            assertThat(result.currentBalance()).isEqualByComparingTo(targetBalance);
 
-                // Assert
-                assertThat(result.currentBalance()).isEqualByComparingTo(targetBalance);
-
-                Transaction constructedTx = txMock.constructed().get(0);
-                verify(constructedTx).setAmount(expectedDiff);
-                verify(constructedTx).setType(TransactionType.ADJUSTMENT);
-                verify(transactionRepository).save(constructedTx);
-            }
+            ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+            verify(transactionRepository).save(txCaptor.capture());
+            Transaction savedTx = txCaptor.getValue();
+            assertThat(savedTx.getAmount()).isEqualByComparingTo(expectedDiff);
+            assertThat(savedTx.getType()).isEqualTo(TransactionType.ADJUSTMENT);
+            assertThat(savedTx.getDescription()).isEqualTo("Balance Reconciliation");
         }
 
         @Test
         @DisplayName("should return current account DTO without saving when diff is zero")
         void reconcileAccount_zeroDiff_returnsCurrentDtoWithoutSavingTransaction() {
-            // arrange
+            // Arrange
             BigDecimal balance = new BigDecimal("1000.00");
 
             Account account = buildAccount(ACCOUNT_ID, USER_ID);
@@ -327,7 +311,7 @@ class AccountServiceTest {
 
             when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
 
-            // act
+            // Act
             AccountDto result = accountService.reconcileAccount(USER_ID, ACCOUNT_ID, balance);
 
             // Assert
@@ -340,10 +324,10 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException when account not found")
         void reconcileAccount_accountNotFound_throwsResourceNotFoundException() {
-            // arrange
+            // Arrange
             when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
-            // act & assert
+            // Act & Assert
             assertThatThrownBy(() -> accountService.reconcileAccount(USER_ID, ACCOUNT_ID, new BigDecimal("500.00")))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Account not found");
@@ -356,13 +340,13 @@ class AccountServiceTest {
         @Test
         @DisplayName("should delete account when owned by user and has no transactions")
         void deleteAccount_happyPath_deletesAccount() {
-            // arrange
+            // Arrange
             Account account = buildAccount(ACCOUNT_ID, USER_ID);
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(0L);
 
-            // act
+            // Act
             accountService.deleteAccount(USER_ID, ACCOUNT_ID);
 
             // Assert
@@ -372,10 +356,10 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException when account not found")
         void deleteAccount_accountNotFound_throwsResourceNotFoundException() {
-            // arrange
+            // Arrange
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
 
-            // act & assert
+            // Act & Assert
             assertThatThrownBy(() -> accountService.deleteAccount(USER_ID, ACCOUNT_ID))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Account not found");
@@ -386,12 +370,12 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw AccessDeniedException when account is owned by a different user")
         void deleteAccount_accountOwnedByDifferentUser_throwsAccessDeniedException() {
-            // arrange
+            // Arrange
             Account account = buildAccount(ACCOUNT_ID, OTHER_USER_ID);
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // act & assert
+            // Act & Assert
             assertThatThrownBy(() -> accountService.deleteAccount(USER_ID, ACCOUNT_ID))
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied");
@@ -403,14 +387,14 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw IllegalStateException when account has existing transactions")
         void deleteAccount_accountHasTransactions_throwsIllegalStateException() {
-            // arrange
+            // Arrange
             final long transactionCount = 3L;
             Account account = buildAccount(ACCOUNT_ID, USER_ID);
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(transactionCount);
 
-            // act & assert
+            // Act & Assert
             assertThatThrownBy(() -> accountService.deleteAccount(USER_ID, ACCOUNT_ID))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("3");
@@ -419,15 +403,15 @@ class AccountServiceTest {
         }
 
         @Test
-        @DisplayName("should throw IllegalStateException when account has existing transactions")
+        @DisplayName("should throw IllegalStateException when account has exactly one transaction")
         void deleteAccount_exactlyOneTransaction_throwsIllegalStateException() {
-            // arrange
+            // Arrange
             Account account = buildAccount(ACCOUNT_ID, USER_ID);
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(1L);
 
-            // act & assert
+            // Act & Assert
             assertThatThrownBy(() -> accountService.deleteAccount(USER_ID, ACCOUNT_ID))
                     .isInstanceOf(IllegalStateException.class);
 

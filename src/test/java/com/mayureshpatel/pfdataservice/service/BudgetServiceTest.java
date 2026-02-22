@@ -12,6 +12,7 @@ import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -196,6 +197,20 @@ class BudgetServiceTest {
             assertThat(result.get(0).percentageUsed()).isEqualTo(73.33);
             verify(budgetRepository).findBudgetStatusByUserIdAndMonthAndYear(USER_ID, MONTH, YEAR);
         }
+
+        @Test
+        @DisplayName("should return empty list when no budgets have status data")
+        void getBudgetStatus_noBudgets_returnsEmptyList() {
+            // arrange
+            when(budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(USER_ID, MONTH, YEAR))
+                    .thenReturn(List.of());
+
+            // act
+            List<BudgetStatusDto> result = budgetService.getBudgetStatus(USER_ID, MONTH, YEAR);
+
+            // assert
+            assertThat(result).isEmpty();
+        }
     }
 
     @Nested
@@ -299,8 +314,8 @@ class BudgetServiceTest {
         }
 
         @Test
-        @DisplayName("should throw RuntimeException when category is owned by a different user")
-        void save_categoryOwnedByDifferentUser_throwsRuntimeException() {
+        @DisplayName("should throw AccessDeniedException when category is owned by a different user")
+        void save_categoryOwnedByDifferentUser_throwsAccessDeniedException() {
             // arrange
             User user = buildUser(USER_ID);
             Category foreignCategory = buildCategory(CATEGORY_ID, OTHER_USER_ID);
@@ -311,7 +326,7 @@ class BudgetServiceTest {
 
             // act & assert
             assertThatThrownBy(() -> budgetService.save(USER_ID, dto))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied to category");
 
             verify(budgetRepository, never()).save(any());
@@ -355,15 +370,15 @@ class BudgetServiceTest {
         }
 
         @Test
-        @DisplayName("should throw RuntimeException when budget is owned by a different user")
-        void delete_budgetOwnedByDifferentUser_throwsRuntimeException() {
+        @DisplayName("should throw AccessDeniedException when budget is owned by a different user")
+        void delete_budgetOwnedByDifferentUser_throwsAccessDeniedException() {
             // arrange
             Budget budget = buildBudget(BUDGET_ID, OTHER_USER_ID, CATEGORY_ID, new BigDecimal("300.00"));
             when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.of(budget));
 
             // act & assert
             assertThatThrownBy(() -> budgetService.delete(USER_ID, BUDGET_ID))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied");
 
             verify(budgetRepository, never()).save(any());

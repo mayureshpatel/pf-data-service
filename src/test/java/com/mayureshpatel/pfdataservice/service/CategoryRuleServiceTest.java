@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,7 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CategoryRuleService unit tests")
@@ -58,6 +61,9 @@ class CategoryRuleServiceTest {
 
     @InjectMocks
     private CategoryRuleService categoryRuleService;
+
+    @Captor
+    private ArgumentCaptor<List<Transaction>> transactionListCaptor;
 
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 99L;
@@ -232,7 +238,7 @@ class CategoryRuleServiceTest {
         }
 
         @Test
-        @DisplayName("should set audit timestamps on the created role")
+        @DisplayName("should set audit timestamps on the created rule")
         void createRule_happyPath_setsAuditTimestamps() {
             // arrange
             User user = buildUser(USER_ID);
@@ -269,7 +275,7 @@ class CategoryRuleServiceTest {
             when(categoryRuleRepository.save(any(CategoryRule.class))).thenReturn(updatedRule);
 
             // act
-            CategoryRuleDto result = categoryRuleService.updateRule(RULE_ID, dto);
+            CategoryRuleDto result = categoryRuleService.updateRule(USER_ID, RULE_ID, dto);
 
             // assert
             assertThat(result).isNotNull();
@@ -291,9 +297,26 @@ class CategoryRuleServiceTest {
             when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.empty());
 
             // act & assert
-            assertThatThrownBy(() -> categoryRuleService.updateRule(RULE_ID, dto))
+            assertThatThrownBy(() -> categoryRuleService.updateRule(USER_ID, RULE_ID, dto))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Rule not found");
+
+            verify(categoryRuleRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException when rule is owned by a different user")
+        void updateRule_ruleOwnedByDifferentUser_throwsAccessDeniedException() {
+            // arrange
+            CategoryRule existing = buildRule(RULE_ID, OTHER_USER_ID, CATEGORY_ID, "amazon", 1);
+            CategoryRuleDto dto = buildRuleDto("new-keyword", CATEGORY_ID, 10);
+
+            when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(existing));
+
+            // act & assert
+            assertThatThrownBy(() -> categoryRuleService.updateRule(USER_ID, RULE_ID, dto))
+                    .isInstanceOf(AccessDeniedException.class)
+                    .hasMessageContaining("You do not own this rule");
 
             verify(categoryRuleRepository, never()).save(any());
         }
@@ -485,10 +508,10 @@ class CategoryRuleServiceTest {
             assertThat(count).isEqualTo(1);
             assertThat(uncategorized.getCategory()).isEqualTo(groceryCategory);
 
-            ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
-            verify(transactionRepository).saveAll(captor.capture());
-            assertThat(captor.getValue()).hasSize(1);
-            assertThat(((Transaction) captor.getValue().get(0)).getCategory().getName()).isEqualTo("Groceries");
+            verify(transactionRepository).saveAll(transactionListCaptor.capture());
+            List<Transaction> saved = transactionListCaptor.getValue();
+            assertThat(saved).hasSize(1);
+            assertThat(saved.get(0).getCategory().getName()).isEqualTo("Groceries");
         }
 
         @Test
@@ -569,9 +592,9 @@ class CategoryRuleServiceTest {
             assertThat(uncategorized2.getCategory().getId()).isEqualTo(21L);
             assertThat(alreadyCategorized.getCategory()).isNotNull(); // unchanged
 
-            ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
-            verify(transactionRepository).saveAll(captor.capture());
-            assertThat(captor.getValue()).hasSize(2);
+            verify(transactionRepository).saveAll(transactionListCaptor.capture());
+            List<Transaction> saved = transactionListCaptor.getValue();
+            assertThat(saved).hasSize(2);
         }
 
         @Test

@@ -86,9 +86,13 @@ public class CategoryRuleService {
      * @return the updated {@link CategoryRuleDto}
      */
     @Transactional
-    public CategoryRuleDto updateRule(Long ruleId, CategoryRuleDto dto) {
+    public CategoryRuleDto updateRule(Long userId, Long ruleId, CategoryRuleDto dto) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
+
+        if (!rule.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You do not own this rule");
+        }
 
         Category category = new Category();
         category.setId(dto.category().id());

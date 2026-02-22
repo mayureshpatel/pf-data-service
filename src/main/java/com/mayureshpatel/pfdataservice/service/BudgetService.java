@@ -11,6 +11,7 @@ import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,7 +80,7 @@ public class BudgetService {
 
         // ensure user has access to the category
         if (!category.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Access denied to category");
+            throw new AccessDeniedException("Access denied to category");
         }
 
         // check if budget already exists for the user, category, month and year
@@ -111,7 +112,7 @@ public class BudgetService {
 
         // ensure user has access to the budget
         if (!budget.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException("Access denied");
         }
 
         budget.getAudit().setDeletedAt(OffsetDateTime.now());

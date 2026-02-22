@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -129,6 +130,8 @@ public class AccountService {
         adjustment.setTransactionDate(OffsetDateTime.now());
         adjustment.setType(TransactionType.ADJUSTMENT);
         adjustment.setDescription("Balance Reconciliation");
+
+        adjustment.setMerchant(new Merchant());
         adjustment.getMerchant().setOriginalName("Balance Reconciliation");
 
         return transactionRepository.save(adjustment);
