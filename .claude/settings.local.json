@@ -12,7 +12,8 @@
       "Bash(mvn:*)",
       "Bash(JAVA_HOME=/c/Users/Mayuresh/.jdks/openjdk-21 mvn compile:*)",
       "Bash(JAVA_HOME=/c/Users/Mayuresh/.jdks/ms-21.0.9 mvn compile:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(grep PfDataServiceApplicationTests:*)"
     ]
   }
 }

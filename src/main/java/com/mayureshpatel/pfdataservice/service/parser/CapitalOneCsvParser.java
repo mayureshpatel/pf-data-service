@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -26,6 +27,10 @@ public class CapitalOneCsvParser implements TransactionParser {
 
     private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendPattern("[yyyy-MM-dd][M/d/yyyy][MM/dd/yyyy]")
+            .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
+            .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
+            .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
+            .parseDefaulting(ChronoField.OFFSET_SECONDS, 0)
             .toFormatter();
 
     private static final CSVFormat CSV_FORMAT = CSVFormat.DEFAULT.builder()
