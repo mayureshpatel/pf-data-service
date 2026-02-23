@@ -8,6 +8,8 @@ import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantTotalR
 import com.mayureshpatel.pfdataservice.repository.merchant.query.MerchantQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -60,5 +62,38 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .param("endDate", endDate)
                 .query(merchantTotalRowMapper)
                 .list();
+    }
+
+    @Override
+    public Merchant save(Merchant merchant) {
+        if (merchant.getId() == null) {
+            return insert(merchant);
+        } else {
+            return update(merchant);
+        }
+    }
+
+    @Override
+    public Merchant insert(Merchant merchant) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcClient.sql(MerchantQueries.INSERT)
+                .param("userId", merchant.getUser().getId())
+                .param("originalName", merchant.getOriginalName())
+                .param("name", merchant.getName())
+                .update(keyHolder);
+        
+        merchant.setId(keyHolder.getKeyAs(Long.class));
+        return merchant;
+    }
+
+    @Override
+    public Merchant update(Merchant merchant) {
+        jdbcClient.sql(MerchantQueries.UPDATE)
+                .param("userId", merchant.getUser().getId())
+                .param("originalName", merchant.getOriginalName())
+                .param("name", merchant.getName())
+                .param("id", merchant.getId())
+                .update();
+        return merchant;
     }
 }

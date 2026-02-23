@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.user.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -15,14 +16,18 @@ public class UserRowMapper implements RowMapper<User> {
     @Override
     public User mapRow(ResultSet rs , int rowNum) throws SQLException {
         User user = new User();
+        user.setAudit(new TableAudit());
         user.setId(rs.getLong("id"));
         user.setUsername(rs.getString("username"));
         user.setEmail(rs.getString("email"));
         user.setPasswordHash(rs.getString("password_hash"));
 
-        Long lastUpdatedBy = rs.getLong("last_updated_by");
-        if (!rs.wasNull()) {
-            user.getAudit().getUpdatedBy().setId(lastUpdatedBy);
+        String lastUpdatedBy = rs.getString("last_updated_by");
+        if (lastUpdatedBy != null) {
+            if (user.getAudit().getUpdatedBy() == null) {
+                user.getAudit().setUpdatedBy(new User());
+            }
+            user.getAudit().getUpdatedBy().setUsername(lastUpdatedBy);
         }
 
         Timestamp lastUpdatedTimestamp =  rs.getTimestamp("last_updated_timestamp");

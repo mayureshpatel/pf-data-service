@@ -49,4 +49,20 @@ public final class MerchantQueries {
               and t.deleted_at is null
             group by m.id
             """;
+
+    // language=SQL
+    public static final String INSERT = """
+            insert into merchants (user_id, original_name, clean_name)
+            values (:userId, :originalName, :name)
+            returning id
+            """;
+
+    // language=SQL
+    public static final String UPDATE = """
+            update merchants
+            set user_id = :userId,
+                original_name = :originalName,
+                clean_name = :name
+            where id = :id
+            """;
 }
