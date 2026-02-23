@@ -1,10 +1,8 @@
 package com.mayureshpatel.pfdataservice;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class PfDataServiceApplicationTests {
+class PfDataServiceApplicationTests extends BaseIntegrationTest {
 
     @Test
     void contextLoads() {

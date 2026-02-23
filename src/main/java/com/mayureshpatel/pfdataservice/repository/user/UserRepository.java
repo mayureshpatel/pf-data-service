@@ -81,11 +81,15 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
     @Override
     public User insert(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
+        String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null) 
+                ? user.getAudit().getUpdatedBy().getUsername() 
+                : "system";
 
         this.jdbcClient.sql(UserQueries.INSERT)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash",  user.getPasswordHash())
+                .param("lastUpdatedBy", lastUpdatedBy)
                 .update(keyHolder);
 
         user.setId(keyHolder.getKeyAs(Long.class));
@@ -94,11 +98,15 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
 
     @Override
     public User update(User user) {
+        String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null) 
+                ? user.getAudit().getUpdatedBy().getUsername() 
+                : "system";
+                
         this.jdbcClient.sql(UserQueries.UPDATE)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash",  user.getPasswordHash())
-                .param("lastUpdatedBy", user.getAudit().getUpdatedBy())
+                .param("lastUpdatedBy", lastUpdatedBy)
                 .param("id", user.getId())
                 .update();
 

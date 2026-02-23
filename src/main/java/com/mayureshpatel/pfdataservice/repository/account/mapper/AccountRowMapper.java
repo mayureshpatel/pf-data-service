@@ -18,8 +18,13 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         Account account = new Account();
         account.setId(rs.getLong("id"));
         account.setName(rs.getString("name"));
+        
+        account.setType(new com.mayureshpatel.pfdataservice.domain.account.AccountType());
         account.getType().setCode(rs.getString("type"));
+        
         account.setCurrentBalance(getBigDecimal(rs, "current_balance"));
+        
+        account.setCurrency(new com.mayureshpatel.pfdataservice.domain.currency.Currency());
         account.getCurrency().setCode(rs.getString("currency_code"));
 
         String bankName = rs.getString("bank_name");
@@ -35,6 +40,8 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         }
 
         account.setVersion(getLongOrNull(rs, "version"));
+        
+        account.setAudit(new com.mayureshpatel.pfdataservice.domain.TableAudit());
         account.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
         account.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
         account.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));

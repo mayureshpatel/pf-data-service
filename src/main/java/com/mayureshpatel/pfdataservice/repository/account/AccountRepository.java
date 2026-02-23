@@ -56,7 +56,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(AccountQueries.INSERT)
                 .param("name", account.getName())
-                .param("type", account.getType())
+                .param("type", account.getType().getCode())
                 .param("currentBalance", account.getCurrentBalance())
                 .param("currencyCode", account.getCurrency().getCode())
                 .param("bankName", account.getBankName() != null ? account.getBankName().name() : null)
@@ -74,7 +74,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
     public Account update(Account account) {
         int updated = jdbcClient.sql(AccountQueries.UPDATE)
                 .param("name", account.getName())
-                .param("type", account.getType())
+                .param("type", account.getType().getCode())
                 .param("currentBalance", account.getCurrentBalance())
                 .param("currencyCode", account.getCurrency().getCode())
                 .param("bankName", account.getBankName() != null ? account.getBankName().name() : null)
@@ -103,14 +103,19 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
     @Override
     public void delete(Account account) {
         if (account.getId() != null) {
-            Long deletedBy = account.getAudit() != null && account.getAudit().getUpdatedBy() != null
-                    ? account.getAudit().getUpdatedBy().getId()
+            Long deletedBy = (account.getAudit() != null && account.getAudit().getDeletedBy() != null)
+                    ? account.getAudit().getDeletedBy().getId()
                     : null;
+            // Fallback to updatedBy or createdBy if deletedBy is not set yet (soft delete happens now)
+            // Ideally, the caller sets deletedBy before calling delete()
+            if (deletedBy == null && account.getAudit() != null && account.getAudit().getUpdatedBy() != null) {
+                 deletedBy = account.getAudit().getUpdatedBy().getId();
+            }
+            
             deleteById(account.getId(), deletedBy);
         }
     }
 
-    @Override
     public void deleteById(Long id, Long deletedBy) {
         jdbcClient.sql(AccountQueries.DELETE_BY_ID)
                 .param("id", id)

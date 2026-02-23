@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -25,11 +26,17 @@ public class AccountTypeRowMapper implements RowMapper<AccountType> {
 
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
+            if (accountType.getAudit() == null) {
+                accountType.setAudit(new TableAudit());
+            }
             accountType.getAudit().setCreatedAt(createdAt.toInstant().atOffset(ZoneOffset.UTC));
         }
 
         Timestamp updatedAt = rs.getTimestamp("updated_at");
         if (updatedAt != null) {
+            if (accountType.getAudit() == null) {
+                accountType.setAudit(new TableAudit());
+            }
             accountType.getAudit().setUpdatedAt(updatedAt.toInstant().atOffset(ZoneOffset.UTC));
         }
 

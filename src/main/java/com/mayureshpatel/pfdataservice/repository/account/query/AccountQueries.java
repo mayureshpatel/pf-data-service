@@ -108,9 +108,10 @@ public final class AccountQueries {
                 current_balance = :currentBalance,
                 currency_code = :currencyCode,
                 bank_name = :bankName,
-                version = :version,
+                version = version + 1,
                 updated_at = CURRENT_TIMESTAMP, updated_by = :updatedBy
             where id = :id
+              and version = :version
               and deleted_at is null
     """;
 }
