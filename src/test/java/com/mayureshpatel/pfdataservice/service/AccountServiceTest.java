@@ -15,6 +15,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -225,13 +227,17 @@ class AccountServiceTest {
     @Nested
     class ReconcileAccountTest {
 
-        @Test
-        @DisplayName("should create adjustment transaction and update balance when positive diff")
-        void reconcileAccount_positiveDiff_createsAdjustmentAndUpdatesBalance() {
+        @ParameterizedTest
+        @CsvSource({
+                "800.00, 1000.00, 200.00, 99",
+                "1000.00, 700.00, -300.00, 100"
+        })
+        @DisplayName("should create adjustment transaction and update balance")
+        void reconcileAccount_createsAdjustment(String currentStr, String targetStr, String expectedDiffStr, long txId) {
             // Arrange
-            BigDecimal currentBalance = new BigDecimal("800.00");
-            BigDecimal targetBalance = new BigDecimal("1000.00");
-            BigDecimal expectedDiff = new BigDecimal("200.00");
+            BigDecimal currentBalance = new BigDecimal(currentStr);
+            BigDecimal targetBalance = new BigDecimal(targetStr);
+            BigDecimal expectedDiff = new BigDecimal(expectedDiffStr);
 
             Account account = buildAccount(ACCOUNT_ID, USER_ID);
             account.setCurrentBalance(currentBalance);
@@ -242,7 +248,7 @@ class AccountServiceTest {
             when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
                 Transaction tx = inv.getArgument(0);
-                tx.setId(99L);
+                tx.setId(txId);
                 return tx;
             });
             when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
@@ -260,44 +266,10 @@ class AccountServiceTest {
             assertThat(savedTx.getAmount()).isEqualByComparingTo(expectedDiff);
             assertThat(savedTx.getType()).isEqualTo(TransactionType.ADJUSTMENT);
             assertThat(savedTx.getDescription()).isEqualTo("Balance Reconciliation");
-            assertThat(savedTx.getMerchant().getOriginalName()).isEqualTo("Balance Reconciliation");
-            assertThat(savedTx.getAccount()).isEqualTo(account);
-        }
-
-        @Test
-        @DisplayName("should create adjustment transaction and update balance when negative diff")
-        void reconcileAccount_negativeDiff_createsNegativeAdjustmentAndUpdatesBalance() {
-            // Arrange
-            BigDecimal currentBalance = new BigDecimal("1000.00");
-            BigDecimal targetBalance = new BigDecimal("700.00");
-            BigDecimal expectedDiff = new BigDecimal("-300.00");
-
-            Account account = buildAccount(ACCOUNT_ID, USER_ID);
-            account.setCurrentBalance(currentBalance);
-
-            Account savedAccount = buildAccount(ACCOUNT_ID, USER_ID);
-            savedAccount.setCurrentBalance(targetBalance);
-
-            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
-                Transaction tx = inv.getArgument(0);
-                tx.setId(100L);
-                return tx;
-            });
-            when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
-
-            // Act
-            AccountDto result = accountService.reconcileAccount(USER_ID, ACCOUNT_ID, targetBalance);
-
-            // Assert
-            assertThat(result.currentBalance()).isEqualByComparingTo(targetBalance);
-
-            ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
-            verify(transactionRepository).save(txCaptor.capture());
-            Transaction savedTx = txCaptor.getValue();
-            assertThat(savedTx.getAmount()).isEqualByComparingTo(expectedDiff);
-            assertThat(savedTx.getType()).isEqualTo(TransactionType.ADJUSTMENT);
-            assertThat(savedTx.getDescription()).isEqualTo("Balance Reconciliation");
+            if (expectedDiff.compareTo(BigDecimal.ZERO) > 0) {
+                assertThat(savedTx.getMerchant().getOriginalName()).isEqualTo("Balance Reconciliation");
+                assertThat(savedTx.getAccount()).isEqualTo(account);
+            }
         }
 
         @Test
@@ -384,32 +356,15 @@ class AccountServiceTest {
             verify(accountRepository, never()).delete(any(Account.class));
         }
 
-        @Test
-        @DisplayName("should throw IllegalStateException when account has existing transactions")
-        void deleteAccount_accountHasTransactions_throwsIllegalStateException() {
+        @ParameterizedTest
+        @CsvSource({"1", "3"})
+        @DisplayName("should throw IllegalStateException when account has transactions")
+        void deleteAccount_accountHasTransactions_throwsIllegalStateException(long transactionCount) {
             // Arrange
-            final long transactionCount = 3L;
             Account account = buildAccount(ACCOUNT_ID, USER_ID);
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(transactionCount);
-
-            // Act & Assert
-            assertThatThrownBy(() -> accountService.deleteAccount(USER_ID, ACCOUNT_ID))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("3");
-
-            verify(accountRepository, never()).delete(any(Account.class));
-        }
-
-        @Test
-        @DisplayName("should throw IllegalStateException when account has exactly one transaction")
-        void deleteAccount_exactlyOneTransaction_throwsIllegalStateException() {
-            // Arrange
-            Account account = buildAccount(ACCOUNT_ID, USER_ID);
-
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(1L);
 
             // Act & Assert
             assertThatThrownBy(() -> accountService.deleteAccount(USER_ID, ACCOUNT_ID))
