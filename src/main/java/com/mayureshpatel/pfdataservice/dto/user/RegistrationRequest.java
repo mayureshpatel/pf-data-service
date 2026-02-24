@@ -10,7 +10,7 @@ import lombok.Builder;
 public record RegistrationRequest(
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9_]{3,50}$", message = "Username can only contain letters, numbers, and underscores")
+    @Pattern(regexp = "^\\w{3,50}$", message = "Username can only contain letters, numbers, and underscores")
     String username,
 
     @NotBlank(message = "Email is required")

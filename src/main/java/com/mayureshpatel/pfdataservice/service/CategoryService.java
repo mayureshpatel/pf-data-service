@@ -1,8 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -25,24 +24,24 @@ public class CategoryService {
     private final TransactionRepository transactionRepository;
 
     @Transactional(readOnly = true)
-    public List<CategoryDto> getCategoriesByUserId(Long userId) {
+    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getCategoriesByUserId(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
-                .map(CategoryDto::mapToDto).toList();
+                .map(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto).toList();
     }
 
     @Transactional
-    public CategoryDto createCategory(Long userId, CategoryDto categoryDto) {
+    public com.mayureshpatel.pfdataservice.dto.category.CategoryDto createCategory(Long userId, com.mayureshpatel.pfdataservice.dto.category.CategoryDto categoryDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Category category = new Category();
+        CategoryDto category = new CategoryDto();
         category.setName(categoryDto.name());
         category.setIconography(categoryDto.iconography());
         category.setType(categoryDto.categoryType());
         category.setUser(user);
 
         if (categoryDto.parent() != null) {
-            Category parent = categoryRepository.findById(categoryDto.parent().id())
+            CategoryDto parent = categoryRepository.findById(categoryDto.parent().id())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
             if (!parent.getUser().getId().equals(userId)) {
@@ -52,12 +51,12 @@ public class CategoryService {
             category.setParent(parent);
         }
 
-        return CategoryDto.mapToDto(categoryRepository.save(category));
+        return com.mayureshpatel.pfdataservice.dto.category.CategoryDto.mapToDto(categoryRepository.save(category));
     }
 
     @Transactional
-    public CategoryDto updateCategory(Long userId, Long categoryId, CategoryDto dto) {
-        Category category = categoryRepository.findById(categoryId)
+    public com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateCategory(Long userId, Long categoryId, com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto) {
+        CategoryDto category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
@@ -73,7 +72,7 @@ public class CategoryService {
                 throw new IllegalArgumentException("Category cannot be its own parent");
             }
 
-            Category parent = categoryRepository.findById(dto.parent().id())
+            CategoryDto parent = categoryRepository.findById(dto.parent().id())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
             if (!parent.getUser().getId().equals(userId)) {
@@ -83,12 +82,12 @@ public class CategoryService {
             category.setParent(parent);
         }
 
-        return CategoryDto.mapToDto(this.categoryRepository.save(category));
+        return com.mayureshpatel.pfdataservice.dto.category.CategoryDto.mapToDto(this.categoryRepository.save(category));
     }
 
     @Transactional
     public void deleteCategory(Long userId, Long categoryId) {
-        Category category = this.categoryRepository.findById(categoryId)
+        CategoryDto category = this.categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
@@ -107,16 +106,16 @@ public class CategoryService {
      * Gets a map of categories grouped by parent-child relationship.
      *
      * @param userId the user id to get categories for
-     * @return map of {@link CategoryDto} grouped by parent-child relationship
+     * @return map of {@link com.mayureshpatel.pfdataservice.dto.category.CategoryDto} grouped by parent-child relationship
      */
     @Transactional(readOnly = true)
-    public Map<CategoryDto, List<CategoryDto>> getCategoriesGrouped(Long userId) {
-        List<Category> allCategories = categoryRepository.findByUserId(userId);
+    public Map<com.mayureshpatel.pfdataservice.dto.category.CategoryDto, List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto>> getCategoriesGrouped(Long userId) {
+        List<CategoryDto> allCategories = categoryRepository.findByUserId(userId);
 
         return allCategories.stream()
                 .collect(Collectors.groupingBy(
-                        CategoryDto::mapToDto,
-                        Collectors.mapping(CategoryDto::mapToDto, Collectors.toList()))
+                        com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto,
+                        Collectors.mapping(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto, Collectors.toList()))
                 )
                 .entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -126,11 +125,11 @@ public class CategoryService {
      * Get all sub-categories for a given user.
      *
      * @param userId the user id to get categories for
-     * @return list of {@link CategoryDto}
+     * @return list of {@link com.mayureshpatel.pfdataservice.dto.category.CategoryDto}
      */
     @Transactional(readOnly = true)
-    public List<CategoryDto> getChildCategories(Long userId) {
+    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getChildCategories(Long userId) {
         return this.categoryRepository.findAllSubCategories(userId).stream()
-                .map(CategoryDto::mapToDto).toList();
+                .map(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto).toList();
     }
 }

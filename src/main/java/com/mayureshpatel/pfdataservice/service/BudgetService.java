@@ -1,14 +1,13 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -75,7 +74,7 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // get the category; throw exception if not found
-        Category category = categoryRepository.findById(dto.category().id())
+        CategoryDto category = categoryRepository.findById(dto.category().id())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         // ensure user has access to the category

@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -170,7 +170,7 @@ public class TransactionService {
         transaction.setMerchant(merchant);
 
         if (dto.category() != null) {
-            Category category = categoryRepository.findById(dto.category().getId())
+            CategoryDto category = categoryRepository.findById(dto.category().getId())
                     .orElse(null);
             if (category != null) {
                 if (category.getParent() == null) {
@@ -182,7 +182,7 @@ public class TransactionService {
             }
         } else {
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
-            List<Category> userCategories = categoryRepository.findByUserId(userId);
+            List<CategoryDto> userCategories = categoryRepository.findByUserId(userId);
             Long categoryId = categorizer.guessCategory(transaction, rules, userCategories);
 
             if (categoryId > 0) {
@@ -244,7 +244,7 @@ public class TransactionService {
         }
 
         if (dto.category() != null) {
-            Category category = categoryRepository.findById(dto.category().getId())
+            CategoryDto category = categoryRepository.findById(dto.category().getId())
                     .orElse(null);
             if (category != null) {
                 if (category.getParent() == null) {
@@ -256,7 +256,7 @@ public class TransactionService {
             }
         } else {
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
-            List<Category> userCategories = categoryRepository.findByUserId(userId);
+            List<CategoryDto> userCategories = categoryRepository.findByUserId(userId);
             Long categoryId = categorizer.guessCategory(transaction, rules, userCategories);
 
             if (categoryId > 0) {

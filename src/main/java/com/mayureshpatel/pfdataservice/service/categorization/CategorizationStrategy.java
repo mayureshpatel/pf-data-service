@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import lombok.Builder;
@@ -16,7 +16,7 @@ public interface CategorizationStrategy {
     class CategorizationContext {
         private final Long userId;
         private final List<CategoryRule> rules;
-        private final List<Category> categories;
+        private final List<CategoryDto> categories;
     }
 
     /**

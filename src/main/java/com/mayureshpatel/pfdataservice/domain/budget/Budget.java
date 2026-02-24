@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.budget;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +18,7 @@ public class Budget {
 
     private Long id;
     private User user;
-    private Category category;
+    private CategoryDto category;
     private BigDecimal amount;
 
     private Integer month;

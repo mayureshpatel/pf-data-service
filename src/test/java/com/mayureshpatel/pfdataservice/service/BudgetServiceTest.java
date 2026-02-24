@@ -2,12 +2,11 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
@@ -63,8 +62,8 @@ class BudgetServiceTest {
         return user;
     }
 
-    private Category buildCategory(Long id, Long userId) {
-        Category category = new Category();
+    private CategoryDto buildCategory(Long id, Long userId) {
+        CategoryDto category = new CategoryDto();
 
         category.setId(id);
         category.setUser(buildUser(userId));
@@ -88,8 +87,8 @@ class BudgetServiceTest {
         return budget;
     }
 
-    private CategoryDto buildCategoryDto(Long categoryId) {
-        return new CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, null);
+    private com.mayureshpatel.pfdataservice.dto.category.CategoryDto buildCategoryDto(Long categoryId) {
+        return new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, null);
     }
 
     private BudgetDto buildBudgetDto(Long categoryId, BigDecimal amount, Integer month, Integer year) {
@@ -174,7 +173,7 @@ class BudgetServiceTest {
         @DisplayName("should delegate to repository and return status DTOs directly")
         void getBudgetStatus_happyPath_returnsStatusDtos() {
             // arrange
-            Category category = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto category = buildCategory(CATEGORY_ID, USER_ID);
             BudgetStatusDto status = BudgetStatusDto.builder()
                     .category(category)
                     .budgetedAmount(new BigDecimal("300.00"))
@@ -221,7 +220,7 @@ class BudgetServiceTest {
         void save_noBudgetExists_createsAndSavesNewBudget() {
             // arrange
             User user = buildUser(USER_ID);
-            Category category = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto category = buildCategory(CATEGORY_ID, USER_ID);
             BudgetDto dto = buildBudgetDto(CATEGORY_ID, new BigDecimal("400.00"), MONTH, YEAR);
 
             Budget savedBudget = buildBudget(BUDGET_ID, USER_ID, CATEGORY_ID, new BigDecimal("400.00"));
@@ -255,7 +254,7 @@ class BudgetServiceTest {
         void save_budgetAlreadyExists_updatesExistingBudgetAmount() {
             // arrange
             User user = buildUser(USER_ID);
-            Category category = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto category = buildCategory(CATEGORY_ID, USER_ID);
             BudgetDto dto = buildBudgetDto(CATEGORY_ID, new BigDecimal("500.00"), MONTH, YEAR);
 
             Budget existingBudget = buildBudget(BUDGET_ID, USER_ID, CATEGORY_ID, new BigDecimal("300.00"));
@@ -318,7 +317,7 @@ class BudgetServiceTest {
         void save_categoryOwnedByDifferentUser_throwsAccessDeniedException() {
             // arrange
             User user = buildUser(USER_ID);
-            Category foreignCategory = buildCategory(CATEGORY_ID, OTHER_USER_ID);
+            CategoryDto foreignCategory = buildCategory(CATEGORY_ID, OTHER_USER_ID);
             BudgetDto dto = buildBudgetDto(CATEGORY_ID, new BigDecimal("300.00"), MONTH, YEAR);
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));

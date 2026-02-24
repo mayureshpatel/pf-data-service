@@ -25,11 +25,13 @@ public class CategoryBreakdownRowMapper extends JdbcMapperUtils implements RowMa
                 null, null, null, null, null
         );
 
+        CategoryType categoryType = rs.getString("category_type") != null ? CategoryType.fromValue(rs.getString("category_type")) : null;
+
         CategoryDto categoryDto = new CategoryDto(
                 rs.getLong("category_id"),
                 null,
                 rs.getString("category_name"),
-                CategoryType.fromValue(rs.getString("category_type")),
+                categoryType,
                 parentCategory,
                 categoryIconography
         );

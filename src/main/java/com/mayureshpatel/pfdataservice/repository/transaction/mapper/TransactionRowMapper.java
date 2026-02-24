@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
@@ -16,13 +18,16 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
 
     @Override
     public Transaction mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Merchant merchant = new Merchant();
+        merchant.setId(rs.getLong("merchant_id"));
+
         Transaction transaction = new Transaction();
         transaction.setId(rs.getLong("id"));
         transaction.setAmount(getBigDecimal(rs, "amount"));
         transaction.setTransactionDate(getOffsetDateTime(rs, "date"));
         transaction.setPostDate(getOffsetDateTime(rs, "post_date"));
         transaction.setDescription(rs.getString("description"));
-        transaction.getMerchant().setId(rs.getLong("merchant_id"));
+        transaction.setMerchant(merchant);
 
         String type = rs.getString("type");
         if (type != null) {
@@ -38,11 +43,12 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
 
         Long categoryId = getLongOrNull(rs, "category_id");
         if (categoryId != null) {
-            Category category = new Category();
+            CategoryDto category = new CategoryDto();
             category.setId(categoryId);
             transaction.setCategory(category);
         }
 
+        transaction.setAudit(new TableAudit());
         transaction.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
         transaction.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
         transaction.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));

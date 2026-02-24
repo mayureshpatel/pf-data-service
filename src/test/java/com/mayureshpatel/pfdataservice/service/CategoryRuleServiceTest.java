@@ -1,14 +1,13 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
@@ -79,8 +78,8 @@ class CategoryRuleServiceTest {
         return user;
     }
 
-    private Category buildCategory(Long id, Long userId) {
-        Category category = new Category();
+    private CategoryDto buildCategory(Long id, Long userId) {
+        CategoryDto category = new CategoryDto();
 
         category.setId(id);
         category.setUser(buildUser(userId));
@@ -106,8 +105,8 @@ class CategoryRuleServiceTest {
         );
     }
 
-    private CategoryDto buildCategoryDto(Long categoryId) {
-        return new CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, null);
+    private com.mayureshpatel.pfdataservice.dto.category.CategoryDto buildCategoryDto(Long categoryId) {
+        return new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, null);
     }
 
     private CategoryRuleDto buildRuleDto(String keyword, Long categoryId, Integer priority) {
@@ -118,7 +117,7 @@ class CategoryRuleServiceTest {
                 .build();
     }
 
-    private Transaction buildTransaction(Long id, Category category, String description) {
+    private Transaction buildTransaction(Long id, CategoryDto category, String description) {
         Transaction tx = new Transaction();
 
         tx.setId(id);
@@ -376,7 +375,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should skip already-categorized transactions and returns preview only for uncategorized ones")
         void previewApply_uncategorizedTransactionMatchesRule_returnsPreview() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             groceryCategory.setName("Groceries");
 
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
@@ -405,7 +404,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should return empty list when all transactions are already categorized")
         void previewApply_allTransactionsCategorized_returnsEmptyList() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
             Transaction categorized = buildTransaction(1L, groceryCategory, "Amazon Purchase");
 
@@ -425,7 +424,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should skip uncategorized transaction when no rule matches (guessCategory returns null)")
         void previewApply_noRuleMatchesUncategorized_returnsEmptyList() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
             Transaction uncategorized = buildTransaction(1L, null, "Random Vendor");
 
@@ -446,7 +445,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should skip uncategorized transaction when guessed category is not in category map")
         void previewApply_guessedCategoryNotInMap_returnsEmptyList() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
             Transaction uncategorized = buildTransaction(1L, null, "Amazon Purchase");
 
@@ -489,7 +488,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should assign category to uncategorized transactions and save them; returns count")
         void applyRules_uncategorizedTransactionMatched_savesAndReturnsCount() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             groceryCategory.setName("Groceries");
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
 
@@ -518,7 +517,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should not call saveAll when all transactions are already categorized")
         void applyRules_allCategorized_doesNotCallSaveAllReturnsZero() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
             Transaction categorized = buildTransaction(1L, groceryCategory, "Amazon Purchase");
 
@@ -538,7 +537,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should not call saveAll when no rule matches uncategorized transactions")
         void applyRules_noRuleMatchesAnyTransaction_doesNotCallSaveAllReturnsZero() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
             Transaction uncategorized = buildTransaction(1L, null, "Random Vendor");
 
@@ -560,8 +559,8 @@ class CategoryRuleServiceTest {
         @DisplayName("should processes multiple transactions and return correct count of updated ones")
         void applyRules_multipleTransactions_returnsCorrectCount() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
-            Category diningCategory = buildCategory(21L, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto diningCategory = buildCategory(21L, USER_ID);
             diningCategory.setName("Dining");
 
             CategoryRule rule1 = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
@@ -573,7 +572,7 @@ class CategoryRuleServiceTest {
             Transaction noMatch = buildTransaction(4L, null, "Unknown Vendor");
 
             List<CategoryRule> rules = List.of(rule1, rule2);
-            List<Category> categories = List.of(groceryCategory, diningCategory);
+            List<CategoryDto> categories = List.of(groceryCategory, diningCategory);
 
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(rules);
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(categories);
@@ -601,7 +600,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should skip uncategorized transaction when guessed category is not in category map")
         void applyRules_guessedCategoryNotInMap_skipsTransaction() {
             // arrange
-            Category groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto groceryCategory = buildCategory(CATEGORY_ID, USER_ID);
             CategoryRule rule = buildRule(RULE_ID, USER_ID, CATEGORY_ID, "amazon", 1);
             Transaction uncategorized = buildTransaction(1L, null, "Amazon Purchase");
 

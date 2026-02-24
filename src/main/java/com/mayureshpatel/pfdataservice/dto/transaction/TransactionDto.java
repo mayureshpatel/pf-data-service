@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
@@ -19,7 +19,7 @@ public record TransactionDto(
         MerchantDto merchant,
         BigDecimal amount,
         TransactionType type,
-        Category category,
+        CategoryDto category,
         AccountDto account
 ) {
 

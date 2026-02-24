@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.domain.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +18,7 @@ public class Transaction {
 
     private Long id;
     private Account account;
-    private Category category;
+    private CategoryDto category;
 
     private BigDecimal amount;
 

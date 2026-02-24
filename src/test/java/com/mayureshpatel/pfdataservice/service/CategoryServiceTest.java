@@ -2,10 +2,9 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -59,12 +58,12 @@ class CategoryServiceTest {
         return user;
     }
 
-    private Category buildCategory(Long id, Long userId) {
+    private CategoryDto buildCategory(Long id, Long userId) {
         return buildCategory(id, userId, null);
     }
 
-    private Category buildCategory(Long id, Long userId, Category parent) {
-        Category category = new Category();
+    private CategoryDto buildCategory(Long id, Long userId, CategoryDto parent) {
+        CategoryDto category = new CategoryDto();
         category.setId(id);
         category.setUser(buildUser(userId));
         category.setName("Food");
@@ -75,13 +74,13 @@ class CategoryServiceTest {
         return category;
     }
 
-    private CategoryDto buildCategoryDto(String name) {
-        return new CategoryDto(null, null, name, CategoryType.EXPENSE, null, new Iconography("icon", "#000000"));
+    private com.mayureshpatel.pfdataservice.dto.category.CategoryDto buildCategoryDto(String name) {
+        return new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(null, null, name, CategoryType.EXPENSE, null, new Iconography("icon", "#000000"));
     }
 
-    private CategoryDto buildCategoryDtoWithParent(String name, Long parentId) {
-        CategoryDto parentDto = new CategoryDto(parentId, null, "Parent", CategoryType.EXPENSE, null, null);
-        return new CategoryDto(null, null, name, CategoryType.EXPENSE, parentDto, new Iconography("icon", "#000000"));
+    private com.mayureshpatel.pfdataservice.dto.category.CategoryDto buildCategoryDtoWithParent(String name, Long parentId) {
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto parentDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(parentId, null, "Parent", CategoryType.EXPENSE, null, null);
+        return new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(null, null, name, CategoryType.EXPENSE, parentDto, new Iconography("icon", "#000000"));
     }
 
     @Nested
@@ -91,19 +90,19 @@ class CategoryServiceTest {
         @DisplayName("should return mapped DTOs for all categories of the user")
         void getCategoriesByUserId_happyPath_returnsMappedDtos() {
             // Arrange
-            Category cat1 = buildCategory(20L, USER_ID);
+            CategoryDto cat1 = buildCategory(20L, USER_ID);
             cat1.setName("Food");
-            Category cat2 = buildCategory(21L, USER_ID);
+            CategoryDto cat2 = buildCategory(21L, USER_ID);
             cat2.setName("Transport");
 
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(cat1, cat2));
 
             // Act
-            List<CategoryDto> result = categoryService.getCategoriesByUserId(USER_ID);
+            List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> result = categoryService.getCategoriesByUserId(USER_ID);
 
             // Assert
             assertThat(result).hasSize(2);
-            assertThat(result).extracting(CategoryDto::name)
+            assertThat(result).extracting(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::name)
                     .containsExactlyInAnyOrder("Food", "Transport");
         }
 
@@ -114,7 +113,7 @@ class CategoryServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
 
             // Act
-            List<CategoryDto> result = categoryService.getCategoriesByUserId(USER_ID);
+            List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> result = categoryService.getCategoriesByUserId(USER_ID);
 
             // Assert
             assertThat(result).isEmpty();
@@ -128,27 +127,27 @@ class CategoryServiceTest {
         @DisplayName("should return a map where each category maps to itself as a list")
         void getCategoriesGrouped_multipleCategories_returnsGroupedMap() {
             // Arrange
-            Category cat1 = buildCategory(20L, USER_ID);
+            CategoryDto cat1 = buildCategory(20L, USER_ID);
             cat1.setName("Food");
-            Category cat2 = buildCategory(21L, USER_ID);
+            CategoryDto cat2 = buildCategory(21L, USER_ID);
             cat2.setName("Transport");
 
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(cat1, cat2));
 
             // Act
-            Map<CategoryDto, List<CategoryDto>> result = categoryService.getCategoriesGrouped(USER_ID);
+            Map<com.mayureshpatel.pfdataservice.dto.category.CategoryDto, List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto>> result = categoryService.getCategoriesGrouped(USER_ID);
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result).hasSize(2);
-            assertThat(result.keySet()).extracting(CategoryDto::name)
+            assertThat(result.keySet()).extracting(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::name)
                     .containsExactlyInAnyOrder("Food", "Transport");
             // Each category key should map to a list containing itself
-            for (Map.Entry<CategoryDto, List<CategoryDto>> entry : result.entrySet()) {
+            for (Map.Entry<com.mayureshpatel.pfdataservice.dto.category.CategoryDto, List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto>> entry : result.entrySet()) {
                 assertThat(entry.getValue())
                         .hasSize(1)
                         .first()
-                        .extracting(CategoryDto::name)
+                        .extracting(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::name)
                         .isEqualTo(entry.getKey().name());
             }
         }
@@ -160,7 +159,7 @@ class CategoryServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
 
             // Act
-            Map<CategoryDto, List<CategoryDto>> result = categoryService.getCategoriesGrouped(USER_ID);
+            Map<com.mayureshpatel.pfdataservice.dto.category.CategoryDto, List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto>> result = categoryService.getCategoriesGrouped(USER_ID);
 
             // Assert
             assertThat(result).isEmpty();
@@ -174,15 +173,15 @@ class CategoryServiceTest {
         @DisplayName("should return mapped DTOs of all sub-categories")
         void getChildCategories_happyPath_returnsMappedSubCategories() {
             // Arrange
-            Category parent = buildCategory(5L, USER_ID);
+            CategoryDto parent = buildCategory(5L, USER_ID);
             parent.setName("Shopping");
-            Category child = buildCategory(6L, USER_ID, parent);
+            CategoryDto child = buildCategory(6L, USER_ID, parent);
             child.setName("Clothes");
 
             when(categoryRepository.findAllSubCategories(USER_ID)).thenReturn(List.of(child));
 
             // Act
-            List<CategoryDto> result = categoryService.getChildCategories(USER_ID);
+            List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> result = categoryService.getChildCategories(USER_ID);
 
             // Assert
             assertThat(result).hasSize(1);
@@ -200,23 +199,23 @@ class CategoryServiceTest {
         void createCategory_withoutParent_savesAndReturnsDto() {
             // Arrange
             User user = buildUser(USER_ID);
-            CategoryDto dto = buildCategoryDto("Food");
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto = buildCategoryDto("Food");
 
-            Category savedCategory = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto savedCategory = buildCategory(CATEGORY_ID, USER_ID);
             savedCategory.setName("Food");
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(categoryRepository.save(any(Category.class))).thenReturn(savedCategory);
+            when(categoryRepository.save(any(CategoryDto.class))).thenReturn(savedCategory);
 
             // Act
-            CategoryDto result = categoryService.createCategory(USER_ID, dto);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto result = categoryService.createCategory(USER_ID, dto);
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result.id()).isEqualTo(CATEGORY_ID);
             assertThat(result.name()).isEqualTo("Food");
 
-            ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+            ArgumentCaptor<CategoryDto> captor = ArgumentCaptor.forClass(CategoryDto.class);
             verify(categoryRepository).save(captor.capture());
             assertThat(captor.getValue().getParent()).isNull();
             assertThat(captor.getValue().getUser().getId()).isEqualTo(USER_ID);
@@ -227,27 +226,27 @@ class CategoryServiceTest {
         void createCategory_withValidParent_savesWithParentSet() {
             // Arrange
             User user = buildUser(USER_ID);
-            CategoryDto dto = buildCategoryDtoWithParent("Clothes", PARENT_CATEGORY_ID);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto = buildCategoryDtoWithParent("Clothes", PARENT_CATEGORY_ID);
 
-            Category parentCategory = buildCategory(PARENT_CATEGORY_ID, USER_ID);
+            CategoryDto parentCategory = buildCategory(PARENT_CATEGORY_ID, USER_ID);
             parentCategory.setName("Shopping");
 
-            Category savedCategory = buildCategory(CATEGORY_ID, USER_ID, parentCategory);
+            CategoryDto savedCategory = buildCategory(CATEGORY_ID, USER_ID, parentCategory);
             savedCategory.setName("Clothes");
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(categoryRepository.findById(PARENT_CATEGORY_ID)).thenReturn(Optional.of(parentCategory));
-            when(categoryRepository.save(any(Category.class))).thenReturn(savedCategory);
+            when(categoryRepository.save(any(CategoryDto.class))).thenReturn(savedCategory);
 
             // Act
-            CategoryDto result = categoryService.createCategory(USER_ID, dto);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto result = categoryService.createCategory(USER_ID, dto);
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result.parent()).isNotNull();
             assertThat(result.parent().name()).isEqualTo("Shopping");
 
-            ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+            ArgumentCaptor<CategoryDto> captor = ArgumentCaptor.forClass(CategoryDto.class);
             verify(categoryRepository).save(captor.capture());
             assertThat(captor.getValue().getParent().getId()).isEqualTo(PARENT_CATEGORY_ID);
         }
@@ -256,7 +255,7 @@ class CategoryServiceTest {
         @DisplayName("should throw ResourceNotFoundException when user is not found")
         void createCategory_userNotFound_throwsResourceNotFoundException() {
             // Arrange
-            CategoryDto dto = buildCategoryDto("Food");
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto = buildCategoryDto("Food");
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
             // Act & Assert
@@ -272,7 +271,7 @@ class CategoryServiceTest {
         void createCategory_parentCategoryNotFound_throwsResourceNotFoundException() {
             // Arrange
             User user = buildUser(USER_ID);
-            CategoryDto dto = buildCategoryDtoWithParent("Clothes", PARENT_CATEGORY_ID);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto = buildCategoryDtoWithParent("Clothes", PARENT_CATEGORY_ID);
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(categoryRepository.findById(PARENT_CATEGORY_ID)).thenReturn(Optional.empty());
@@ -290,9 +289,9 @@ class CategoryServiceTest {
         void createCategory_parentOwnedByDifferentUser_throwsAccessDeniedException() {
             // Arrange
             User user = buildUser(USER_ID);
-            CategoryDto dto = buildCategoryDtoWithParent("Clothes", PARENT_CATEGORY_ID);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto dto = buildCategoryDtoWithParent("Clothes", PARENT_CATEGORY_ID);
 
-            Category parentCategory = buildCategory(PARENT_CATEGORY_ID, OTHER_USER_ID);
+            CategoryDto parentCategory = buildCategory(PARENT_CATEGORY_ID, OTHER_USER_ID);
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(categoryRepository.findById(PARENT_CATEGORY_ID)).thenReturn(Optional.of(parentCategory));
@@ -313,30 +312,30 @@ class CategoryServiceTest {
         @DisplayName("should update name, type, and iconography when category exists and is owned by user")
         void updateCategory_happyPath_updatesAndReturnsDto() {
             // Arrange
-            Category existing = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto existing = buildCategory(CATEGORY_ID, USER_ID);
             existing.setName("Old Name");
 
-            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.INCOME, null,
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(null, null, "New Name", CategoryType.INCOME, null,
                     new Iconography("new-icon", "#FFFFFF"));
 
-            Category saved = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto saved = buildCategory(CATEGORY_ID, USER_ID);
             saved.setName("New Name");
             saved.setType(CategoryType.INCOME);
             saved.setIconography(new Iconography("new-icon", "#FFFFFF"));
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
-            when(categoryRepository.save(any(Category.class))).thenReturn(saved);
+            when(categoryRepository.save(any(CategoryDto.class))).thenReturn(saved);
 
             // Act
-            CategoryDto result = categoryService.updateCategory(USER_ID, CATEGORY_ID, updateDto);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto result = categoryService.updateCategory(USER_ID, CATEGORY_ID, updateDto);
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result.name()).isEqualTo("New Name");
 
-            ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+            ArgumentCaptor<CategoryDto> captor = ArgumentCaptor.forClass(CategoryDto.class);
             verify(categoryRepository).save(captor.capture());
-            Category captured = captor.getValue();
+            CategoryDto captured = captor.getValue();
             assertThat(captured.getName()).isEqualTo("New Name");
             assertThat(captured.getType()).isEqualTo(CategoryType.INCOME);
             assertThat(captured.getIconography().getIcon()).isEqualTo("new-icon");
@@ -347,7 +346,7 @@ class CategoryServiceTest {
         @DisplayName("should throw ResourceNotFoundException when category does not exist")
         void updateCategory_categoryNotFound_throwsResourceNotFoundException() {
             // Arrange
-            CategoryDto updateDto = buildCategoryDto("New Name");
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = buildCategoryDto("New Name");
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.empty());
 
             // Act & Assert
@@ -362,8 +361,8 @@ class CategoryServiceTest {
         @DisplayName("should throw AccessDeniedException when category is owned by a different user")
         void updateCategory_categoryOwnedByDifferentUser_throwsAccessDeniedException() {
             // Arrange
-            Category existing = buildCategory(CATEGORY_ID, OTHER_USER_ID);
-            CategoryDto updateDto = buildCategoryDto("New Name");
+            CategoryDto existing = buildCategory(CATEGORY_ID, OTHER_USER_ID);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = buildCategoryDto("New Name");
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
 
@@ -379,10 +378,10 @@ class CategoryServiceTest {
         @DisplayName("should throw IllegalArgumentException when category references itself as parent")
         void updateCategory_selfReferencingParent_throwsIllegalArgumentException() {
             // Arrange
-            Category existing = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto existing = buildCategory(CATEGORY_ID, USER_ID);
             // dto sets parentId = same as CATEGORY_ID
-            CategoryDto selfRefDto = new CategoryDto(null, null, "Self", CategoryType.EXPENSE,
-                    new CategoryDto(CATEGORY_ID, null, "Self", CategoryType.EXPENSE, null, null),
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto selfRefDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(null, null, "Self", CategoryType.EXPENSE,
+                    new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(CATEGORY_ID, null, "Self", CategoryType.EXPENSE, null, null),
                     new Iconography("icon", "#000"));
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
@@ -399,9 +398,9 @@ class CategoryServiceTest {
         @DisplayName("should throw ResourceNotFoundException when new parent category is not found")
         void updateCategory_parentCategoryNotFound_throwsResourceNotFoundException() {
             // Arrange
-            Category existing = buildCategory(CATEGORY_ID, USER_ID);
-            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.EXPENSE,
-                    new CategoryDto(PARENT_CATEGORY_ID, null, "Parent", CategoryType.EXPENSE, null, null),
+            CategoryDto existing = buildCategory(CATEGORY_ID, USER_ID);
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(null, null, "New Name", CategoryType.EXPENSE,
+                    new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(PARENT_CATEGORY_ID, null, "Parent", CategoryType.EXPENSE, null, null),
                     new Iconography("icon", "#000"));
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
@@ -419,11 +418,11 @@ class CategoryServiceTest {
         @DisplayName("should throw AccessDeniedException when new parent is owned by a different user")
         void updateCategory_parentOwnedByDifferentUser_throwsAccessDeniedException() {
             // Arrange
-            Category existing = buildCategory(CATEGORY_ID, USER_ID);
-            Category foreignParent = buildCategory(PARENT_CATEGORY_ID, OTHER_USER_ID);
+            CategoryDto existing = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto foreignParent = buildCategory(PARENT_CATEGORY_ID, OTHER_USER_ID);
 
-            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.EXPENSE,
-                    new CategoryDto(PARENT_CATEGORY_ID, null, "Foreign Parent", CategoryType.EXPENSE, null, null),
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto updateDto = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(null, null, "New Name", CategoryType.EXPENSE,
+                    new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(PARENT_CATEGORY_ID, null, "Foreign Parent", CategoryType.EXPENSE, null, null),
                     new Iconography("icon", "#000"));
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
@@ -445,7 +444,7 @@ class CategoryServiceTest {
         @DisplayName("should delete category when owned by user and has no transactions")
         void deleteCategory_happyPath_deletesCategory() {
             // Arrange
-            Category category = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto category = buildCategory(CATEGORY_ID, USER_ID);
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
@@ -468,14 +467,14 @@ class CategoryServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Category not found");
 
-            verify(categoryRepository, never()).delete(any(Category.class));
+            verify(categoryRepository, never()).delete(any(CategoryDto.class));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException when category is owned by a different user")
         void deleteCategory_categoryOwnedByDifferentUser_throwsAccessDeniedException() {
             // Arrange
-            Category category = buildCategory(CATEGORY_ID, OTHER_USER_ID);
+            CategoryDto category = buildCategory(CATEGORY_ID, OTHER_USER_ID);
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
             // Act & Assert
@@ -484,14 +483,14 @@ class CategoryServiceTest {
                     .hasMessageContaining("Access denied");
 
             verify(transactionRepository, never()).countByCategoryId(any());
-            verify(categoryRepository, never()).delete(any(Category.class));
+            verify(categoryRepository, never()).delete(any(CategoryDto.class));
         }
 
         @Test
         @DisplayName("should throw IllegalStateException when category has associated transactions")
         void deleteCategory_hasTransactions_throwsIllegalStateException() {
             // Arrange
-            Category category = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto category = buildCategory(CATEGORY_ID, USER_ID);
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(5L);
@@ -501,14 +500,14 @@ class CategoryServiceTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Cannot delete category with associated transactions");
 
-            verify(categoryRepository, never()).delete(any(Category.class));
+            verify(categoryRepository, never()).delete(any(CategoryDto.class));
         }
 
         @Test
         @DisplayName("should throw IllegalStateException when category has exactly one transaction")
         void deleteCategory_exactlyOneTransaction_throwsIllegalStateException() {
             // Arrange
-            Category category = buildCategory(CATEGORY_ID, USER_ID);
+            CategoryDto category = buildCategory(CATEGORY_ID, USER_ID);
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(1L);
@@ -517,7 +516,7 @@ class CategoryServiceTest {
             assertThatThrownBy(() -> categoryService.deleteCategory(USER_ID, CATEGORY_ID))
                     .isInstanceOf(IllegalStateException.class);
 
-            verify(categoryRepository, never()).delete(any(Category.class));
+            verify(categoryRepository, never()).delete(any(CategoryDto.class));
         }
     }
 }

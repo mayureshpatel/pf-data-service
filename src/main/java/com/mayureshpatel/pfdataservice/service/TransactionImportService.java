@@ -1,12 +1,11 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
@@ -67,7 +66,7 @@ public class TransactionImportService {
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
         List<CategoryRule> userRules = this.categoryRuleRepository.findByUserId(userId);
-        List<Category> userCategories = categoryRepository.findByUserId(userId);
+        List<CategoryDto> userCategories = categoryRepository.findByUserId(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
             List<TransactionPreview> previews = rawTransactionStream
@@ -77,7 +76,6 @@ public class TransactionImportService {
                                 ? userCategories.stream()
                                 .filter(c -> c.getId().equals(categoryId))
                                 .findFirst()
-                                .map(CategoryDto::mapToDto)
                                 .orElse(null)
                                 : null;
                         return TransactionPreview.builder()

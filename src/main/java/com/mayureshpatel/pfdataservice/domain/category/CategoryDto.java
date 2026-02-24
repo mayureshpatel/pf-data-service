@@ -12,13 +12,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Category {
+public class CategoryDto {
 
     private Long id;
     private User user;
     private String name;
     private CategoryType type;
-    private Category parent;
+    private CategoryDto parent;
 
     private Iconography iconography;
     private TableAudit audit;

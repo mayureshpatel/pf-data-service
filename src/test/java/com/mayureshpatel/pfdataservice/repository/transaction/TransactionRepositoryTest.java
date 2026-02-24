@@ -3,7 +3,7 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -94,8 +94,8 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         return accountRepository.save(account);
     }
 
-    private Category createCategory(User user, String name) {
-        Category category = new Category();
+    private CategoryDto createCategory(User user, String name) {
+        CategoryDto category = new CategoryDto();
         category.setUser(user);
         category.setName(name);
         category.setType(CategoryType.EXPENSE);
@@ -141,8 +141,8 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         // Arrange
         User user = createUser("catuser");
         Account account = createAccount(user, "Cat Account");
-        Category cat1 = createCategory(user, "Food");
-        Category cat2 = createCategory(user, "Transport");
+        CategoryDto cat1 = createCategory(user, "Food");
+        CategoryDto cat2 = createCategory(user, "Transport");
         Merchant merchant = createMerchant(user, "Generic");
 
         Transaction t1 = new Transaction();
