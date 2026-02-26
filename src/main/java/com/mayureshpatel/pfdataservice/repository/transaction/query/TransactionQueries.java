@@ -255,4 +255,28 @@ public final class TransactionQueries {
               and t.type = 'EXPENSE'
               and t.deleted_at is null
             """;
+
+    // language=SQL
+    public static final String COUNT_BY_CATEGORY = """
+            select c.id        as category_id,
+                   c.name      as category_name,
+                   c.color     as category_color,
+                   c.icon      as category_icon,
+                   c.type      as category_type,
+                   pc.id       as parent_category_id,
+                   pc.name     as parent_category_name,
+                   pc.color    as parent_category_color,
+                   pc.icon     as parent_category_icon,
+                   pc.type     as parent_category_type,
+                   count(t.id) as transaction_count
+            from transactions t
+            join accounts a on t.account_id = a.id
+            join categories c on t.category_id = c.id
+            left join categories pc on c.parent_id = pc.id
+            where a.user_id = :userId
+              and t.deleted_at is null
+            group by c.id, c.name, c.color, c.icon, c.type,
+                     pc.id, pc.name, pc.color, pc.icon, pc.type
+            order by transaction_count desc
+            """;
 }

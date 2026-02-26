@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
@@ -62,6 +63,13 @@ public class TransactionCrudController {
         );
 
         return ResponseEntity.ok(transactionService.getTransactions(userDetails.getId(), filter, pageable));
+    }
+
+    @GetMapping("/count-by-category")
+    public ResponseEntity<List<CategoryTransactionsDto>> getCountByCategory(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(transactionService.getCountByCategory(userDetails.getId()));
     }
 
     @PostMapping

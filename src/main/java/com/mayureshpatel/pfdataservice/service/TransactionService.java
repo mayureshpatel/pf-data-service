@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
@@ -298,5 +299,9 @@ public class TransactionService {
         transaction.getAccount().undoTransaction(transaction);
 
         transactionRepository.delete(transaction);
+    }
+
+    public List<CategoryTransactionsDto> getCountByCategory(Long userId) {
+        return transactionRepository.getCountByCategory(userId);
     }
 }
