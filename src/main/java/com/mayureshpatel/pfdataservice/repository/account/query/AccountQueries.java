@@ -51,8 +51,16 @@ public final class AccountQueries {
 
     // language=SQL
     public static final String FIND_ALL_BY_USER_ID = """
-            select *
+            select accounts.*,
+                   account_types.code as account_type_code,
+                   account_types.label as account_type_label,
+                   account_types.icon as account_type_icon,
+                   account_types.color as account_type_color,
+                   account_types.is_asset as account_type_is_asset,
+                   account_types.sort_order as account_type_sort_order,
+                   account_types.is_active as account_type_is_active
             from accounts
+            left join account_types on accounts.type = account_types.code
             where user_id = :userId
                 and deleted_at is null
             """;

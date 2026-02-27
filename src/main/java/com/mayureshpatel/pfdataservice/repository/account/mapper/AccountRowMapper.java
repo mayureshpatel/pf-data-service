@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
@@ -38,6 +40,19 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
             user.setId(userId);
             account.setUser(user);
         }
+
+        AccountType accountType = new AccountType();
+        accountType.setCode(rs.getString("account_type_code"));
+        accountType.setLabel(rs.getString("account_type_label"));
+        accountType.setIsAsset(rs.getBoolean("account_type_is_asset"));
+        accountType.setSortOrder(rs.getInt("account_type_sort_order"));
+        accountType.setIsActive(rs.getBoolean("account_type_is_active"));
+
+        Iconography accountTypeIconography = new Iconography();
+        accountTypeIconography.setColor(rs.getString("account_type_color"));
+        accountTypeIconography.setIcon(rs.getString("account_type_icon"));
+        accountType.setIconography(accountTypeIconography);
+        account.setType(accountType);
 
         account.setVersion(getLongOrNull(rs, "version"));
         
