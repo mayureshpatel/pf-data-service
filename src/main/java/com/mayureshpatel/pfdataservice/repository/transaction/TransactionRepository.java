@@ -269,8 +269,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
             Sort.Order order = pageable.getSort().iterator().next();
             String col = switch (order.getProperty()) {
                 case "date" -> "t.date";
-                case "amount" -> "t.amount";
                 case "description" -> "t.description";
+                case "merchant.name" -> "m.clean_name";
+                case "category.name" -> "c.name";
+                case "amount" -> "t.amount";
                 case "type" -> "t.type";
                 default -> "t.date";
             };
