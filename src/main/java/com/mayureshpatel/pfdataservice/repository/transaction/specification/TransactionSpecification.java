@@ -53,7 +53,7 @@ public class TransactionSpecification {
             }
 
             if (filter.vendorName() != null && !filter.vendorName().isBlank()) {
-                conditions.add("LOWER(t.vendor_name) LIKE :vendorName");
+                conditions.add("LOWER(m.clean_name) LIKE :vendorName");
                 parameters.put("vendorName", "%" + filter.vendorName().toLowerCase() + "%");
             }
 
