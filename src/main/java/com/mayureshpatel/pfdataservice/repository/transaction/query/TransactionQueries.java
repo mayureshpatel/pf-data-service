@@ -5,6 +5,45 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class TransactionQueries {
 
+    /**
+     * Comma-separated list of aliased columns for fully hydrated transaction queries.
+     * Covers transaction, account (with type), category (with parent), and merchant.
+     */
+    public static final String ENRICHED_COLUMNS =
+            "t.id, t.amount, t.date, t.post_date, t.description, t.type, " +
+            "t.account_id, t.category_id, t.merchant_id, t.created_at, t.updated_at, t.deleted_at, " +
+            "a.name AS acc_name, a.current_balance AS acc_balance, a.currency_code AS acc_currency_code, " +
+            "a.bank_name AS acc_bank_name, a.user_id AS acc_user_id, a.version AS acc_version, " +
+            "at.code AS acc_type_code, at.label AS acc_type_label, at.icon AS acc_type_icon, " +
+            "at.color AS acc_type_color, at.is_asset AS acc_type_is_asset, " +
+            "at.sort_order AS acc_type_sort_order, at.is_active AS acc_type_is_active, " +
+            "c.name AS cat_name, c.color AS cat_color, c.icon AS cat_icon, " +
+            "c.type AS cat_type, c.user_id AS cat_user_id, " +
+            "pc.id AS pcat_id, pc.name AS pcat_name, pc.color AS pcat_color, " +
+            "pc.icon AS pcat_icon, pc.type AS pcat_type, " +
+            "m.original_name AS merch_original_name, m.clean_name AS merch_clean_name, " +
+            "m.user_id AS merch_user_id";
+
+    /**
+     * JOIN clauses that hydrate account (with type), category (with parent), and merchant.
+     */
+    public static final String ENRICHED_JOINS =
+            "JOIN accounts a ON t.account_id = a.id " +
+            "LEFT JOIN account_types at ON a.type = at.code " +
+            "LEFT JOIN categories c ON t.category_id = c.id " +
+            "LEFT JOIN categories pc ON c.parent_id = pc.id " +
+            "LEFT JOIN merchants m ON t.merchant_id = m.id";
+
+    // language=SQL
+    public static final String FIND_BY_ID_WITH_DETAILS =
+            "SELECT " + ENRICHED_COLUMNS + " FROM transactions t " + ENRICHED_JOINS +
+            " WHERE t.id = :id AND t.deleted_at IS NULL";
+
+    // language=SQL
+    public static final String FIND_ALL_BY_IDS_WITH_DETAILS =
+            "SELECT " + ENRICHED_COLUMNS + " FROM transactions t " + ENRICHED_JOINS +
+            " WHERE t.id IN (:ids) AND t.deleted_at IS NULL";
+
     // language=SQL
     public static final String FIND_BY_ID = """
             select *

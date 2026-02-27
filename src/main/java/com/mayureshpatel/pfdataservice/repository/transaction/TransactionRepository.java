@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryTransactionsRowMapper;
+import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionDetailRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
 import lombok.RequiredArgsConstructor;
@@ -34,14 +35,15 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     private final JdbcClient jdbcClient;
     private final TransactionRowMapper rowMapper;
+    private final TransactionDetailRowMapper detailRowMapper;
     private final CategoryBreakdownRowMapper categoryBreakdownRowMapper;
     private final CategoryTransactionsRowMapper categoryTransactionsDtoMapper;
 
     @Override
     public Optional<Transaction> findById(Long id) {
-        return jdbcClient.sql(TransactionQueries.FIND_BY_ID)
+        return jdbcClient.sql(TransactionQueries.FIND_BY_ID_WITH_DETAILS)
                 .param("id", id)
-                .query(rowMapper)
+                .query(detailRowMapper)
                 .optional();
     }
 
@@ -210,9 +212,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     public List<Transaction> findAllById(List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
-        return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS)
+        return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS_WITH_DETAILS)
                 .param("ids", ids)
-                .query(rowMapper)
+                .query(detailRowMapper)
                 .list();
     }
 
@@ -254,8 +256,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     public Page<Transaction> findAll(TransactionSpecification.FilterResult filter, Pageable pageable) {
         String baseFrom = "FROM transactions t " +
-                "JOIN accounts a ON t.account_id = a.id " +
-                "LEFT JOIN categories c ON t.category_id = c.id " +
+                TransactionQueries.ENRICHED_JOINS + " " +
                 "WHERE " + filter.whereClause();
 
         long total = jdbcClient.sql("SELECT COUNT(*) " + baseFrom)
@@ -276,12 +277,12 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
             sortClause = " ORDER BY " + col + " " + order.getDirection();
         }
 
-        String pageSql = "SELECT t.* " + baseFrom + sortClause +
+        String pageSql = "SELECT " + TransactionQueries.ENRICHED_COLUMNS + " " + baseFrom + sortClause +
                 " LIMIT " + pageable.getPageSize() + " OFFSET " + pageable.getOffset();
 
         List<Transaction> content = jdbcClient.sql(pageSql)
                 .params(filter.parameters())
-                .query(rowMapper)
+                .query(detailRowMapper)
                 .list();
 
         return new PageImpl<>(content, pageable, total);

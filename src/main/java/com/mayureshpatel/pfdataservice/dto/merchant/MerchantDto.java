@@ -17,6 +17,7 @@ public record MerchantDto(
      * @return The {@link MerchantDto} representation of the provided Merchant.
      */
     public static MerchantDto mapToDto(Merchant merchant) {
+        if (merchant == null) return null;
         return new MerchantDto(
                 merchant.getId(),
                 merchant.getUser(),
