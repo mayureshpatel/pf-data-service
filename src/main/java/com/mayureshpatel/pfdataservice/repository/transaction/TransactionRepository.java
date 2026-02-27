@@ -270,7 +270,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
             String col = switch (order.getProperty()) {
                 case "date" -> "t.date";
                 case "description" -> "t.description";
-                case "merchant.name" -> "m.clean_name";
+                case "merchant.cleanName" -> "m.clean_name";
                 case "category.name" -> "c.name";
                 case "amount" -> "t.amount";
                 case "type" -> "t.type";
