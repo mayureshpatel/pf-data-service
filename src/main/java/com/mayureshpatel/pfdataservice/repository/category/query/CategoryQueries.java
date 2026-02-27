@@ -30,7 +30,7 @@ public final class CategoryQueries {
     public static final String FIND_ALL_SUB_CATEGORIES = """
             select *
             from categories
-            where parent_id = :categoryId
+            where parent_id is not null
                 and user_id = :userId
             """;
 
