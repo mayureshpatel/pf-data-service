@@ -9,6 +9,7 @@ import org.springframework.util.StringUtils;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
@@ -36,7 +37,7 @@ public interface TransactionParser {
      * @return the parsed {@link OffsetDateTime}
      */
     default OffsetDateTime parseDate(String dateStr, DateTimeFormatter dateTimeFormatter) {
-        return OffsetDateTime.parse(dateStr, dateTimeFormatter);
+        return ZonedDateTime.parse(dateStr, dateTimeFormatter).toOffsetDateTime();
     }
 
     /**

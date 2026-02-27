@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -12,12 +14,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 @Component
+@Slf4j
 public class DiscoverCsvParser implements TransactionParser {
     private static final String HEADER_DATE = "Trans. Date";
     private static final String HEADER_DESC = "Description";
@@ -25,7 +30,9 @@ public class DiscoverCsvParser implements TransactionParser {
 
     private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendPattern("[M/d/yyyy][MM/dd/yyyy][yyyy-MM-dd]")
-            .toFormatter();
+            .parseDefaulting(ChronoField.NANO_OF_DAY, 0)
+            .toFormatter()
+            .withZone(ZoneId.of("America/New_York"));
 
     private static final CSVFormat CSV_FORMAT = CSVFormat.DEFAULT.builder()
             .setHeader()
@@ -77,6 +84,8 @@ public class DiscoverCsvParser implements TransactionParser {
             Transaction transaction = new Transaction();
 
             transaction.setTransactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_FORMATTER));
+            transaction.setDescription(csvRecord.get(HEADER_DESC));
+            transaction.setMerchant(new Merchant());
             transaction.getMerchant().setOriginalName(csvRecord.get(HEADER_DESC));
             BigDecimal rawAmount = parseAmount(csvRecord, HEADER_AMOUNT);
             configureTransactionTypeAndAmount(transaction, rawAmount);
@@ -84,6 +93,7 @@ public class DiscoverCsvParser implements TransactionParser {
 
             return Optional.of(transaction);
         } catch (Exception e) {
+            log.warn("Failed to parse transaction from CSV record: {}", csvRecord, e);
             return Optional.empty();
         }
     }
