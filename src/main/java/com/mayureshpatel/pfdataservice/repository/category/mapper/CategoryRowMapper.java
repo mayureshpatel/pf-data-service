@@ -21,6 +21,10 @@ public class CategoryRowMapper implements RowMapper<CategoryDto> {
         category.setId(rs.getLong("id"));
         category.setName(rs.getString("name"));
 
+        CategoryDto parentCategory = new CategoryDto();
+        parentCategory.setId(rs.getLong("parent_id"));
+        category.setParent(parentCategory);
+
         category.setIconography(new Iconography());
         category.getIconography().setColor(rs.getString("color"));
         category.getIconography().setIcon(rs.getString("icon"));
