@@ -1,7 +1,10 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.Iconography;
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -18,8 +21,18 @@ public class CategoryRuleRowMapper implements RowMapper<CategoryRule> {
         CategoryRule categoryRule = new CategoryRule();
         categoryRule.setId(rs.getLong("id"));
         categoryRule.setKeyword(rs.getString("keyword"));
-        categoryRule.getCategory().setId(rs.getLong("category_id"));
         categoryRule.setPriority(rs.getInt("priority"));
+
+        CategoryDto category = new CategoryDto();
+        category.setId(rs.getLong("category_id"));
+        category.setName(rs.getString("category_name"));
+
+        Iconography categoryIconography = new Iconography();
+        categoryIconography.setColor(rs.getString("category_color"));
+        categoryIconography.setIcon(rs.getString("category_icon"));
+
+        category.setIconography(categoryIconography);
+        categoryRule.setCategory(category);
 
         // set user object
         User user = new User();
@@ -28,6 +41,7 @@ public class CategoryRuleRowMapper implements RowMapper<CategoryRule> {
         categoryRule.setUser(user);
 
         // set audit columns
+        categoryRule.setAudit(new TableAudit());
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
             categoryRule.getAudit().setCreatedAt(createdAt.toInstant().atOffset(ZoneOffset.UTC));

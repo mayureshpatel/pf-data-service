@@ -7,10 +7,14 @@ public final class CategoryRuleQueries {
 
     // language=SQL
     public static final String FIND_ALL_BY_USER_ID = """
-                select *
-                from category_rules
-                where user_id = :userId
-                order by priority desc, length(keyword) desc
+                select cr.*,
+                       c.name as category_name,
+                       c.color as category_color,
+                       c.icon as category_icon
+                from category_rules cr
+                left join categories c on cr.category_id = c.id
+                where cr.user_id = :userId
+                order by cr.priority desc, length(cr.keyword) desc
             """;
 
     // language=SQL
