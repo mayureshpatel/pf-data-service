@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
@@ -35,6 +36,11 @@ public record AccountDto(
      * @param account the account to map
      * @return the mapped {@link AccountDto}
      */
+    @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+    public static AccountDto fromId(Long id) {
+        return new AccountDto(id, null, null, null, null, null, null);
+    }
+
     public static AccountDto fromDomain(Account account) {
         return new AccountDto(
                 account.getId(),

@@ -89,7 +89,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("transactionDate", transactionDate)
                 .param("amount", amount)
                 .param("description", description)
-                .param("type", type)
+                .param("type", type.name())
                 .query(rowMapper)
                 .optional().isPresent();
     }
