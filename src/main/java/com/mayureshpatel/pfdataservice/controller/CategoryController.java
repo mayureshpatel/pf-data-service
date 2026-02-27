@@ -25,7 +25,7 @@ public class CategoryController {
     }
 
     @GetMapping("/grouped")
-    public ResponseEntity<Map<CategoryDto, List<CategoryDto>>> getCategoriesGrouped(
+    public ResponseEntity<List<CategoryDto>> getCategoriesGrouped(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(categoryService.getCategoriesGrouped(userDetails.getId()));
     }

@@ -12,8 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -109,16 +107,9 @@ public class CategoryService {
      * @return map of {@link com.mayureshpatel.pfdataservice.dto.category.CategoryDto} grouped by parent-child relationship
      */
     @Transactional(readOnly = true)
-    public Map<com.mayureshpatel.pfdataservice.dto.category.CategoryDto, List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto>> getCategoriesGrouped(Long userId) {
-        List<CategoryDto> allCategories = categoryRepository.findByUserId(userId);
-
-        return allCategories.stream()
-                .collect(Collectors.groupingBy(
-                        com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto,
-                        Collectors.mapping(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto, Collectors.toList()))
-                )
-                .entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getCategoriesGrouped(Long userId) {
+        return categoryRepository.findAllWIthParent(userId)
+                .stream().map(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto).toList();
     }
 
     /**

@@ -21,9 +21,25 @@ public class CategoryRowMapper implements RowMapper<CategoryDto> {
         category.setId(rs.getLong("id"));
         category.setName(rs.getString("name"));
 
-        CategoryDto parentCategory = new CategoryDto();
-        parentCategory.setId(rs.getLong("parent_id"));
-        category.setParent(parentCategory);
+        long parentId = rs.getLong("parent_id");
+        if (!rs.wasNull()) {
+            CategoryDto parentCategory = new CategoryDto();
+            parentCategory.setId(parentId);
+            try {
+                parentCategory.setName(rs.getString("parent_name"));
+                String parentType = rs.getString("parent_type");
+                if (parentType != null) {
+                    parentCategory.setType(CategoryType.valueOf(parentType));
+                }
+                Iconography parentIconography = new Iconography();
+                parentIconography.setColor(rs.getString("parent_color"));
+                parentIconography.setIcon(rs.getString("parent_icon"));
+                parentCategory.setIconography(parentIconography);
+            } catch (SQLException ignored) {
+                // p_* columns not present in queries without the parent join
+            }
+            category.setParent(parentCategory);
+        }
 
         category.setIconography(new Iconography());
         category.getIconography().setColor(rs.getString("color"));
