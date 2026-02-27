@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
@@ -307,5 +308,12 @@ public class TransactionService {
     public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getCategoriesWithTransactions(Long userId) {
         List<com.mayureshpatel.pfdataservice.domain.category.CategoryDto> categories = transactionRepository.getCategoriesWithTransactions(userId);
         return categories.stream().map(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto).toList();
+    }
+
+    public List<MerchantDto> getMerchantsWithTransactions(Long userId) {
+        return transactionRepository.getMerchantsWithTransactions(userId)
+                .stream()
+                .map(MerchantDto::mapToDto)
+                .toList();
     }
 }

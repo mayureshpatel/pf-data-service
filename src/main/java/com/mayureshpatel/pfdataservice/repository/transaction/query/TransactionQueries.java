@@ -358,4 +358,16 @@ public final class TransactionQueries {
                 and c.parent_id is not null
             order by c.name
             """;
+
+    //language=SQL
+    public static final String MERCHANTS_WITH_TRANSACTIONS = """
+            select distinct
+                m.*
+            from transactions t
+            left join accounts a on t.account_id = a.id
+            left join merchants m on t.merchant_id = m.id
+            where a.user_id = :userId
+                and t.deleted_at is null
+            order by m.clean_name
+            """;
 }
