@@ -22,4 +22,17 @@ public class CategoryDto {
 
     private Iconography iconography;
     private TableAudit audit;
+
+    public CategoryDto(com.mayureshpatel.pfdataservice.dto.category.CategoryDto category) {
+        this.id = category.id();
+        this.user = category.user();
+        this.name = category.name();
+        this.type = category.categoryType();
+
+        if (category.parent() != null) {
+            this.parent = new CategoryDto(category.parent());
+        }
+
+        this.iconography = category.iconography();
+    }
 }

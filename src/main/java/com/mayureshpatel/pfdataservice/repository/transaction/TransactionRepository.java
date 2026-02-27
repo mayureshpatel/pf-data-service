@@ -3,9 +3,11 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
+import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryTransactionsRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionDetailRowMapper;
@@ -38,6 +40,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     private final TransactionDetailRowMapper detailRowMapper;
     private final CategoryBreakdownRowMapper categoryBreakdownRowMapper;
     private final CategoryTransactionsRowMapper categoryTransactionsDtoMapper;
+    private final CategoryRowMapper categoryRowMapper;
 
     @Override
     public Optional<Transaction> findById(Long id) {
@@ -178,6 +181,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return jdbcClient.sql(TransactionQueries.COUNT_BY_CATEGORY)
                 .param("userId", userId)
                 .query(categoryTransactionsDtoMapper)
+                .list();
+    }
+
+    public List<CategoryDto> getCategoriesWithTransactions(Long userId) {
+        return jdbcClient.sql(TransactionQueries.CATEGORIES_WITH_TRANSACTIONS)
+                .param("userId", userId)
+                .query(categoryRowMapper)
                 .list();
     }
 
