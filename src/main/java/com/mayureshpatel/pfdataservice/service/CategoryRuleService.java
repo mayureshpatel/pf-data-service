@@ -43,7 +43,7 @@ public class CategoryRuleService {
      */
     public List<CategoryRuleDto> getRules(Long userId) {
         return categoryRuleRepository.findByUserId(userId).stream()
-                .map(CategoryRuleDto::mapToDto)
+                .map(CategoryRule::toDto)
                 .toList();
     }
 
@@ -68,14 +68,14 @@ public class CategoryRuleService {
 
         CategoryRule rule = new CategoryRule(
                 null,
-                dto.keyword(),
-                category,
-                dto.priority() != null ? dto.priority() : 0,
                 user,
+                dto.keyword(),
+                dto.priority() != null ? dto.priority() : 0,
+                category,
                 audit
         );
 
-        return CategoryRuleDto.mapToDto(categoryRuleRepository.save(rule));
+        return categoryRuleRepository.save(rule).toDto();
     }
 
     /**
@@ -102,7 +102,7 @@ public class CategoryRuleService {
         rule.setPriority(dto.priority());
         rule.getAudit().setUpdatedAt(OffsetDateTime.now());
 
-        return CategoryRuleDto.mapToDto(categoryRuleRepository.save(rule));
+        return categoryRuleRepository.save(rule).toDto();
     }
 
     /**

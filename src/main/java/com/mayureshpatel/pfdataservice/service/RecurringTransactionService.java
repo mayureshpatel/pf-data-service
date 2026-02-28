@@ -1,15 +1,14 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
-import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
+import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
-import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
-import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
-import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
@@ -224,7 +223,7 @@ public class RecurringTransactionService {
         return RecurringTransactionDto.builder()
                 .id(r.getId())
                 .userId(r.getUser().getId())
-                .account(r.getAccount() != null ? AccountDto.fromDomain(r.getAccount()) : null)
+                .account(r.getAccount() != null ? r.getAccount().toDto() : null)
                 .merchant(r.getMerchant() != null ? MerchantDto.mapToDto(r.getMerchant()) : null)
                 .amount(r.getAmount())
                 .frequency(r.getFrequency())

@@ -40,7 +40,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(TagQueries.INSERT)
                 .param("name", tag.getName())
-                .param("color", tag.getIconography().getColor())
+                .param("color", tag.getColor())
                 .param("userId", tag.getUser().getId())
                 .update(keyHolder);
 
@@ -52,7 +52,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
     public Tag update(Tag tag) {
         jdbcClient.sql(TagQueries.UPDATE)
                 .param("name", tag.getName())
-                .param("color", tag.getIconography().getColor())
+                .param("color", tag.getColor())
                 .param("id", tag.getId())
                 .update();
 

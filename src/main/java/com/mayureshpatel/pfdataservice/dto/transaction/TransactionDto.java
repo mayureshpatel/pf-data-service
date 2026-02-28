@@ -39,7 +39,7 @@ public record TransactionDto(
                 transaction.getAmount(),
                 transaction.getType(),
                 transaction.getCategory().toDto(),
-                AccountDto.fromDomain(transaction.getAccount())
+                transaction.getAccount().toDto()
         );
     }
 }

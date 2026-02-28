@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -49,5 +50,17 @@ public class Account {
             this.currentBalance = BigDecimal.ZERO;
         }
         this.currentBalance = this.currentBalance.subtract(transaction.getNetChange());
+    }
+
+    public AccountDto toDto() {
+        return new AccountDto(
+                id,
+                user.getId(),
+                name,
+                type,
+                currentBalance,
+                currency,
+                bankName
+        );
     }
 }

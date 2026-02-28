@@ -17,7 +17,7 @@ public class TagRowMapper extends JdbcMapperUtils implements RowMapper<Tag> {
         Tag tag = new Tag();
         tag.setId(rs.getLong("id"));
         tag.setName(rs.getString("name"));
-        tag.getIconography().setColor(rs.getString("color"));
+        tag.setColor(rs.getString("color"));
 
         Long userId = getLongOrNull(rs, "user_id");
         if (userId != null) {

@@ -21,7 +21,7 @@ public record AccountSnapshotDto(
     public static AccountSnapshotDto mapToDto(AccountSnapshot accountSnapshot) {
         return new AccountSnapshotDto(
                 accountSnapshot.getId(),
-                AccountDto.fromDomain(accountSnapshot.getAccount()),
+                accountSnapshot.getAccount().toDto(),
                 accountSnapshot.getSnapshotDate(),
                 accountSnapshot.getBalance()
         );

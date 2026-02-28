@@ -32,7 +32,7 @@ public record RecurringTransactionDto(
         return new RecurringTransactionDto(
                 recurringTransaction.getId(),
                 recurringTransaction.getUser().getId(),
-                AccountDto.fromDomain(recurringTransaction.getAccount()),
+                recurringTransaction.getAccount().toDto(),
                 MerchantDto.mapToDto(recurringTransaction.getMerchant()),
                 recurringTransaction.getAmount(),
                 recurringTransaction.getFrequency(),

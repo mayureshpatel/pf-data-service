@@ -27,16 +27,4 @@ public record AccountDto(
         Currency currency,
         BankName bankName
 ) {
-
-    public static AccountDto fromDomain(Account account) {
-        return new AccountDto(
-                account.getId(),
-                account.getUser().getId(),
-                account.getName(),
-                account.getType(),
-                account.getCurrentBalance(),
-                account.getCurrency(),
-                account.getBankName()
-        );
-    }
 }

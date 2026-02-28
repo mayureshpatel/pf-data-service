@@ -36,7 +36,7 @@ public class AccountService {
     @Transactional(readOnly = true)
     public List<AccountDto> getAllAccountsByUserId(Long userId) {
         return accountRepository.findByUserId(userId).stream()
-                .map(AccountDto::fromDomain)
+                .map(Account::toDto)
                 .toList();
     }
 
@@ -59,7 +59,7 @@ public class AccountService {
         account.setBankName(accountDto.bankName());
         account.setUser(user);
 
-        return AccountDto.fromDomain(accountRepository.save(account));
+        return accountRepository.save(account).toDto();
     }
 
     /**
@@ -83,7 +83,7 @@ public class AccountService {
         account.setType(dto.type());
         account.setBankName(dto.bankName());
 
-        return AccountDto.fromDomain(accountRepository.save(account));
+        return accountRepository.save(account).toDto();
     }
 
     /**
@@ -104,7 +104,7 @@ public class AccountService {
         BigDecimal diff = targetBalance.subtract(currentBalance);
 
         if (diff.compareTo(BigDecimal.ZERO) == 0) {
-            return AccountDto.fromDomain(account);
+            return account.toDto();
         }
 
         // create an adjustment transaction
@@ -112,7 +112,7 @@ public class AccountService {
 
         // update account balance
         account.applyTransaction(adjustment);
-        return AccountDto.fromDomain(accountRepository.save(account));
+        return accountRepository.save(account).toDto();
     }
 
     /**
