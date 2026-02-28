@@ -5,27 +5,35 @@ import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString
 public class Account {
 
     private Long id;
+    @ToString.Exclude
     private User user;
     private String name;
+    @ToString.Exclude
     private AccountType type;
     private BigDecimal currentBalance;
+    @ToString.Exclude
     private Currency currency;
     private Long version;
     private BankName bankName;
 
+    @ToString.Exclude
     private TableAudit audit;
 
     /**
@@ -52,15 +60,16 @@ public class Account {
         this.currentBalance = this.currentBalance.subtract(transaction.getNetChange());
     }
 
-    public AccountDto toDto() {
-        return new AccountDto(
-                id,
-                user.getId(),
-                name,
-                type,
-                currentBalance,
-                currency,
-                bankName
-        );
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Account account = (Account) o;
+        return id != null && id.equals(account.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

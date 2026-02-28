@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -69,17 +69,17 @@ class CategoryServiceTest {
         category.setType(CategoryType.EXPENSE);
         category.setIconography(new Iconography("food-icon", "#FF0000"));
         category.setParent(parent);
-        category.setAudit(new TableAudit());
+        category.setAudit(new TimestampAudit());
         return category;
     }
 
     private CategoryDto buildCategoryDto(String name) {
-        return new CategoryDto(null, null, name, CategoryType.EXPENSE, null, new Iconography("icon", "#000000"));
+        return new CategoryDto(null, null, name, CategoryType.EXPENSE, null, "icon", "color");
     }
 
     private CategoryDto buildCategoryDtoWithParent(String name, Long parentId) {
-        CategoryDto parentDto = new CategoryDto(parentId, null, "Parent", CategoryType.EXPENSE, null, null);
-        return new CategoryDto(null, null, name, CategoryType.EXPENSE, parentDto, new Iconography("icon", "#000000"));
+        CategoryDto parentDto = new CategoryDto(parentId, null, "Parent", CategoryType.EXPENSE, null, "icon", "color");
+        return new CategoryDto(null, null, name, CategoryType.EXPENSE, parentDto, "icon", "color");
     }
 
     @Nested
@@ -131,34 +131,26 @@ class CategoryServiceTest {
             Category cat2 = buildCategory(21L, USER_ID);
             cat2.setName("Transport");
 
-            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(cat1, cat2));
+            when(categoryRepository.findAllWIthParent(USER_ID)).thenReturn(List.of(cat1, cat2));
 
             // Act
-            Map<CategoryDto, List<CategoryDto>> result = categoryService.getCategoriesGrouped(USER_ID);
+            List<CategoryDto> result = categoryService.getCategoriesGrouped(USER_ID);
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result).hasSize(2);
-            assertThat(result.keySet()).extracting(CategoryDto::name)
+            assertThat(result).extracting(CategoryDto::name)
                     .containsExactlyInAnyOrder("Food", "Transport");
-            // Each category key should map to a list containing itself
-            for (Map.Entry<CategoryDto, List<CategoryDto>> entry : result.entrySet()) {
-                assertThat(entry.getValue())
-                        .hasSize(1)
-                        .first()
-                        .extracting(CategoryDto::name)
-                        .isEqualTo(entry.getKey().name());
-            }
         }
 
         @Test
-        @DisplayName("should return empty map when no categories exist")
+        @DisplayName("should return empty list when no categories exist")
         void getCategoriesGrouped_noCategories_returnsEmptyMap() {
             // Arrange
-            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findAllWIthParent(USER_ID)).thenReturn(List.of());
 
             // Act
-            Map<CategoryDto, List<CategoryDto>> result = categoryService.getCategoriesGrouped(USER_ID);
+            List<CategoryDto> result = categoryService.getCategoriesGrouped(USER_ID);
 
             // Assert
             assertThat(result).isEmpty();
@@ -314,8 +306,7 @@ class CategoryServiceTest {
             Category existing = buildCategory(CATEGORY_ID, USER_ID);
             existing.setName("Old Name");
 
-            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.INCOME, null,
-                    new Iconography("new-icon", "#FFFFFF"));
+            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.INCOME, null, "icon", "color");
 
             Category saved = buildCategory(CATEGORY_ID, USER_ID);
             saved.setName("New Name");
@@ -379,9 +370,8 @@ class CategoryServiceTest {
             // Arrange
             Category existing = buildCategory(CATEGORY_ID, USER_ID);
             // dto sets parentId = same as CATEGORY_ID
-            CategoryDto selfRefDto = new CategoryDto(null, null, "Self", CategoryType.EXPENSE,
-                    new CategoryDto(CATEGORY_ID, null, "Self", CategoryType.EXPENSE, null, null),
-                    new Iconography("icon", "#000"));
+            CategoryDto selfRefDto = new CategoryDto(null, null, "Self", CategoryType.EXPENSE, new CategoryDto(CATEGORY_ID, null, null, null, null, "icon", "color"),
+                    "icon", "color");
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
 
@@ -398,9 +388,8 @@ class CategoryServiceTest {
         void updateCategory_parentCategoryNotFound_throwsResourceNotFoundException() {
             // Arrange
             Category existing = buildCategory(CATEGORY_ID, USER_ID);
-            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.EXPENSE,
-                    new CategoryDto(PARENT_CATEGORY_ID, null, "Parent", CategoryType.EXPENSE, null, null),
-                    new Iconography("icon", "#000"));
+            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.EXPENSE, new CategoryDto(PARENT_CATEGORY_ID, null, null, null, null, "icon", "color"),
+                    "icon", "color");
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
             when(categoryRepository.findById(PARENT_CATEGORY_ID)).thenReturn(Optional.empty());
@@ -420,9 +409,8 @@ class CategoryServiceTest {
             Category existing = buildCategory(CATEGORY_ID, USER_ID);
             Category foreignParent = buildCategory(PARENT_CATEGORY_ID, OTHER_USER_ID);
 
-            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.EXPENSE,
-                    new CategoryDto(PARENT_CATEGORY_ID, null, "Foreign Parent", CategoryType.EXPENSE, null, null),
-                    new Iconography("icon", "#000"));
+            CategoryDto updateDto = new CategoryDto(null, null, "New Name", CategoryType.EXPENSE, new CategoryDto(PARENT_CATEGORY_ID, null, null, null, null, "icon", "color"),
+                    "icon", "color");
 
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(existing));
             when(categoryRepository.findById(PARENT_CATEGORY_ID)).thenReturn(Optional.of(foreignParent));

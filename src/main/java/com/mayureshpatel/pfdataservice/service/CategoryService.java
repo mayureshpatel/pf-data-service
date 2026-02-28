@@ -1,9 +1,11 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
@@ -25,7 +27,7 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesByUserId(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
-                .map(Category::toDto).toList();
+                .map(CategoryDtoMapper::toDto).toList();
     }
 
     @Transactional
@@ -35,7 +37,7 @@ public class CategoryService {
 
         Category category = new Category();
         category.setName(categoryDto.name());
-        category.setIconography(categoryDto.iconography());
+        category.setIconography(new Iconography(categoryDto.icon(), categoryDto.color()));
         category.setType(categoryDto.categoryType());
         category.setUser(user);
 
@@ -50,7 +52,7 @@ public class CategoryService {
             category.setParent(parent);
         }
 
-        return categoryRepository.save(category).toDto();
+        return CategoryDtoMapper.toDto(categoryRepository.save(category));
     }
 
     @Transactional
@@ -63,7 +65,7 @@ public class CategoryService {
         }
 
         category.setName(dto.name());
-        category.setIconography(dto.iconography());
+        category.setIconography(new Iconography(dto.icon(), dto.color()));
         category.setType(dto.categoryType());
 
         if (dto.parent() != null) {
@@ -81,7 +83,7 @@ public class CategoryService {
             category.setParent(parent);
         }
 
-        return this.categoryRepository.save(category).toDto();
+        return CategoryDtoMapper.toDto(this.categoryRepository.save(category));
     }
 
     @Transactional
@@ -110,7 +112,7 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesGrouped(Long userId) {
         return categoryRepository.findAllWIthParent(userId)
-                .stream().map(Category::toDto).toList();
+                .stream().map(CategoryDtoMapper::toDto).toList();
     }
 
     /**
@@ -122,6 +124,6 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryDto> getChildCategories(Long userId) {
         return this.categoryRepository.findAllSubCategories(userId).stream()
-                .map(Category::toDto).toList();
+                .map(CategoryDtoMapper::toDto).toList();
     }
 }

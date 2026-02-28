@@ -44,7 +44,7 @@ public class CurrencyRepository implements JdbcRepository<Currency, String> {
                 .param("code", currency.getCode())
                 .param("name", currency.getName())
                 .param("symbol", currency.getSymbol())
-                .param("isActive", currency.getIsActive())
+                .param("isActive", currency.isActive())
                 .update();
 
         return currency;

@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.BudgetDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
@@ -38,7 +39,7 @@ public class BudgetService {
     public List<BudgetDto> getBudgets(Long userId, Integer month, Integer year) {
         return budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(userId, month, year)
                 .stream()
-                .map(Budget::toDto)
+                .map(BudgetDtoMapper::toDto)
                 .toList();
     }
 
@@ -51,7 +52,7 @@ public class BudgetService {
     public List<BudgetDto> getAllBudgets(Long userId) {
         return budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(userId)
                 .stream()
-                .map(Budget::toDto)
+                .map(BudgetDtoMapper::toDto)
                 .toList();
     }
 
@@ -101,7 +102,7 @@ public class BudgetService {
                     .build();
         }
 
-        return budgetRepository.save(budget).toDto();
+        return BudgetDtoMapper.toDto(budgetRepository.save(budget));
     }
 
     @Transactional

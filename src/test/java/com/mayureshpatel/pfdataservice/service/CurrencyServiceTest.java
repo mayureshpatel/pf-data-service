@@ -37,7 +37,7 @@ class CurrencyServiceTest {
         currency.setCode(code);
         currency.setName(name);
         currency.setSymbol(symbol);
-        currency.setIsActive(active);
+        currency.setActive(active);
         return currency;
     }
 
@@ -58,7 +58,7 @@ class CurrencyServiceTest {
             assertThat(result).extracting(Currency::getCode).containsExactly("USD", "EUR");
             assertThat(result).extracting(Currency::getName).containsExactly("US Dollar", "Euro");
             assertThat(result).extracting(Currency::getSymbol).containsExactly("$", "€");
-            assertThat(result).allMatch(Currency::getIsActive);
+            assertThat(result).allMatch(Currency::isActive);
             verify(currencyRepository).findByIsActive();
             verifyNoMoreInteractions(currencyRepository);
         }
@@ -86,7 +86,7 @@ class CurrencyServiceTest {
             assertThat(result.get(0).getCode()).isEqualTo("GBP");
             assertThat(result.get(0).getName()).isEqualTo("British Pound");
             assertThat(result.get(0).getSymbol()).isEqualTo("£");
-            assertThat(result.get(0).getIsActive()).isTrue();
+            assertThat(result.get(0).isActive()).isTrue();
         }
 
         @Test
@@ -116,7 +116,7 @@ class CurrencyServiceTest {
             assertThat(result.getCode()).isEqualTo("USD");
             assertThat(result.getName()).isEqualTo("US Dollar");
             assertThat(result.getSymbol()).isEqualTo("$");
-            assertThat(result.getIsActive()).isTrue();
+            assertThat(result.isActive()).isTrue();
             verify(currencyRepository).findById("USD");
             verifyNoMoreInteractions(currencyRepository);
         }
@@ -154,7 +154,7 @@ class CurrencyServiceTest {
             Currency result = currencyService.getCurrencyByCode("OLD");
 
             assertThat(result.getCode()).isEqualTo("OLD");
-            assertThat(result.getIsActive()).isFalse();
+            assertThat(result.isActive()).isFalse();
         }
 
         @Test

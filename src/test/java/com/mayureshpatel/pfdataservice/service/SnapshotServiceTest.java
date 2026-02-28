@@ -128,7 +128,7 @@ class SnapshotServiceTest {
             assertThat(saved.getId()).isEqualTo(77L);
             assertThat(saved.getBalance()).isEqualByComparingTo(expectedHistoric);
             assertThat(saved.getAccount()).isSameAs(account);
-            assertThat(saved.getSnapshotDate().toLocalDate()).isEqualTo(expectedEndOfMonth);
+            assertThat(saved.getSnapshotDate()).isEqualTo(expectedEndOfMonth.toLocalDate());
         }
 
         @Test
@@ -193,11 +193,7 @@ class SnapshotServiceTest {
             ArgumentCaptor<AccountSnapshot> captor = ArgumentCaptor.forClass(AccountSnapshot.class);
             verify(snapshotRepository).save(captor.capture());
 
-            assertThat(captor.getValue().getSnapshotDate().getOffset()).isEqualTo(ZoneOffset.UTC);
-            assertThat(captor.getValue().getSnapshotDate().toLocalDate()).isEqualTo(expectedEndOfMonth);
-            assertThat(captor.getValue().getSnapshotDate().getHour()).isZero();
-            assertThat(captor.getValue().getSnapshotDate().getMinute()).isZero();
-            assertThat(captor.getValue().getSnapshotDate().getSecond()).isZero();
+            assertThat(captor.getValue().getSnapshotDate()).isEqualTo(expectedEndOfMonth);
         }
 
         @ParameterizedTest(name = "dateInMonth={0} should compute endOfMonth={1}")

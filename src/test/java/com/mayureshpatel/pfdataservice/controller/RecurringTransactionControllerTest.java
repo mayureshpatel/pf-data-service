@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -72,7 +73,7 @@ class RecurringTransactionControllerTest {
     @DisplayName("GET /api/v1/recurring should return list of recurring transactions")
     void getRecurringTransactions_shouldReturnList() throws Exception {
         // Arrange
-        RecurringTransactionDto recurringDto = new RecurringTransactionDto(RECURRING_ID, null, null, null, new BigDecimal("100.00"), Frequency.MONTHLY, OffsetDateTime.now(), OffsetDateTime.now().plusMonths(1), true);
+        RecurringTransactionDto recurringDto = new RecurringTransactionDto(RECURRING_ID, null, null, null, new BigDecimal("100.00"), Frequency.MONTHLY, LocalDate.now(), LocalDate.now().plusMonths(1), true);
         when(recurringService.getRecurringTransactions(USER_ID)).thenReturn(List.of(recurringDto));
 
         // Act & Assert

@@ -16,23 +16,16 @@ public class CategoryTransactionsRowMapper extends JdbcMapperUtils implements Ro
 
     @Override
     public CategoryTransactionsDto mapRow(ResultSet rs, int rowNum) throws SQLException {
-        Iconography iconography = new Iconography();
-        iconography.setColor(rs.getString("category_color"));
-        iconography.setIcon(rs.getString("category_icon"));
-
         CategoryDto parentCategory = null;
         if (rs.getString("parent_category_id") != null) {
-            Iconography parentIconography = new Iconography();
-            parentIconography.setColor(rs.getString("parent_category_color"));
-            parentIconography.setIcon(rs.getString("parent_category_icon"));
-
             parentCategory = new CategoryDto(
                     rs.getLong("parent_category_id"),
                     null,
                     rs.getString("parent_category_name"),
                     CategoryType.fromValue(rs.getString("parent_category_type")),
                     null,
-                    parentIconography
+                    rs.getString("parent_category_icon"),
+                    rs.getString("parent_category_color")
             );
         }
 
@@ -42,7 +35,8 @@ public class CategoryTransactionsRowMapper extends JdbcMapperUtils implements Ro
                 rs.getString("category_name"),
                 CategoryType.fromValue(rs.getString("category_type")),
                 parentCategory,
-                iconography
+                rs.getString("category_icon"),
+                rs.getString("category_color")
         );
 
         return new CategoryTransactionsDto(categoryDto, rs.getInt("transaction_count"));

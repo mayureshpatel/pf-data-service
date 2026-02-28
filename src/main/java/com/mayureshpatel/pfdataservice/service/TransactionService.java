@@ -12,6 +12,9 @@ import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
+import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
+import com.mayureshpatel.pfdataservice.mapper.TransactionDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
@@ -68,8 +71,8 @@ public class TransactionService {
                     if (t1.getType() != t2.getType()) {
                         if (!t1.getAccount().getId().equals(t2.getAccount().getId())) {
                             suggestions.add(new TransferSuggestionDto(
-                                    t1.toDto(),
-                                    t2.toDto(),
+                                    TransactionDtoMapper.toDto(t1),
+                                    TransactionDtoMapper.toDto(t2),
                                     0.9 - (daysDiff * 0.1)
                             ));
 
@@ -117,7 +120,7 @@ public class TransactionService {
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionFilter filter, Pageable pageable) {
         return transactionRepository.findAll(TransactionSpecification.withFilter(userId, filter), pageable)
-                .map(Transaction::toDto);
+                .map(TransactionDtoMapper::toDto);
     }
 
     @Transactional
@@ -164,10 +167,10 @@ public class TransactionService {
 
         Merchant merchant = new Merchant();
         if (dto.merchant() != null && dto.merchant().cleanName() != null) {
-            merchant.setName(dto.merchant().cleanName());
+            merchant.setCleanName(dto.merchant().cleanName());
             merchant.setOriginalName(dto.merchant().originalName());
         } else {
-            merchant.setName(dto.description());
+            merchant.setCleanName(dto.description());
             merchant.setOriginalName(dto.description());
         }
         transaction.setMerchant(merchant);
@@ -198,7 +201,7 @@ public class TransactionService {
 
         account.applyTransaction(transaction);
 
-        return transactionRepository.save(transaction).toDto();
+        return TransactionDtoMapper.toDto(transactionRepository.save(transaction));
     }
 
     @Transactional
@@ -238,7 +241,7 @@ public class TransactionService {
         if (dto.merchant() != null) {
             Merchant merchant = transaction.getMerchant() != null ? transaction.getMerchant() : new Merchant();
             if (dto.merchant().cleanName() != null) {
-                merchant.setName(dto.merchant().cleanName());
+                merchant.setCleanName(dto.merchant().cleanName());
             }
             if (dto.merchant().originalName() != null) {
                 merchant.setOriginalName(dto.merchant().originalName());
@@ -274,7 +277,7 @@ public class TransactionService {
 
         account.applyTransaction(transaction);
 
-        return transactionRepository.save(transaction).toDto();
+        return TransactionDtoMapper.toDto(transactionRepository.save(transaction));
     }
 
     @Transactional
@@ -309,13 +312,13 @@ public class TransactionService {
 
     public List<CategoryDto> getCategoriesWithTransactions(Long userId) {
         List<Category> categories = transactionRepository.getCategoriesWithTransactions(userId);
-        return categories.stream().map(Category::toDto).toList();
+        return categories.stream().map(CategoryDtoMapper::toDto).toList();
     }
 
     public List<MerchantDto> getMerchantsWithTransactions(Long userId) {
         return transactionRepository.getMerchantsWithTransactions(userId)
                 .stream()
-                .map(Merchant::toDto)
+                .map(MerchantDtoMapper::toDto)
                 .toList();
     }
 }

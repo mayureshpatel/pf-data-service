@@ -53,7 +53,7 @@ class DashboardControllerTest {
     @DisplayName("GET /api/v1/dashboard/categories should return breakdown")
     void getCategoryBreakdown_shouldReturnBreakdown() throws Exception {
         // Arrange
-        CategoryDto category = new CategoryDto(1L, null, "Food", null, null, null);
+        CategoryDto category = new CategoryDto(1L, null, "Food", null, null, "icon", "color");
         CategoryBreakdownDto dto = new CategoryBreakdownDto(category, new BigDecimal("100.00"));
         
         when(dashboardService.getCategoryBreakdown(eq(USER_ID), anyInt(), anyInt())).thenReturn(List.of(dto));

@@ -1,37 +1,46 @@
 package com.mayureshpatel.pfdataservice.domain.category;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Category {
 
     private Long id;
+    @ToString.Exclude
     private User user;
     private String name;
     private CategoryType type;
+    @ToString.Exclude
     private Category parent;
 
+    @ToString.Exclude
     private Iconography iconography;
-    private TableAudit audit;
+    @ToString.Exclude
+    private TimestampAudit audit;
 
-    public CategoryDto toDto() {
-        return new CategoryDto(
-                id,
-                user.getId(),
-                name,
-                type,
-                parent != null ? parent.toDto() : null,
-                iconography
-        );
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Category category = (Category) o;
+        return id != null && id.equals(category.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

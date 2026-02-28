@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.CategoryRuleDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -43,7 +44,7 @@ public class CategoryRuleService {
      */
     public List<CategoryRuleDto> getRules(Long userId) {
         return categoryRuleRepository.findByUserId(userId).stream()
-                .map(CategoryRule::toDto)
+                .map(CategoryRuleDtoMapper::toDto)
                 .toList();
     }
 
@@ -62,7 +63,7 @@ public class CategoryRuleService {
         Category category = new Category();
         category.setId(dto.category().id());
 
-        TableAudit audit = new TableAudit();
+        TimestampAudit audit = new TimestampAudit();
         audit.setCreatedAt(OffsetDateTime.now());
         audit.setUpdatedAt(OffsetDateTime.now());
 
@@ -75,7 +76,7 @@ public class CategoryRuleService {
                 audit
         );
 
-        return categoryRuleRepository.save(rule).toDto();
+        return CategoryRuleDtoMapper.toDto(categoryRuleRepository.save(rule));
     }
 
     /**
@@ -102,7 +103,7 @@ public class CategoryRuleService {
         rule.setPriority(dto.priority());
         rule.getAudit().setUpdatedAt(OffsetDateTime.now());
 
-        return categoryRuleRepository.save(rule).toDto();
+        return CategoryRuleDtoMapper.toDto(categoryRuleRepository.save(rule));
     }
 
     /**

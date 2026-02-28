@@ -108,7 +108,7 @@ class BudgetControllerTest {
         category.setId(100L);
         category.setName("Groceries");
         
-        BudgetStatusDto statusDto = new BudgetStatusDto(category, new BigDecimal("500.00"), new BigDecimal("200.00"), new BigDecimal("300.00"), 60.0);
+        BudgetStatusDto statusDto = new BudgetStatusDto(com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper.toDto(category), new BigDecimal("500.00"), new BigDecimal("200.00"), new BigDecimal("300.00"), 60.0);
         
         when(budgetService.getBudgetStatus(USER_ID, month, year)).thenReturn(List.of(statusDto));
 

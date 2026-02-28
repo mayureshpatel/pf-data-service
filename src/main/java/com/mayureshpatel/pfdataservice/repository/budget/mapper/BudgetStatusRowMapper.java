@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
+import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +31,7 @@ public class BudgetStatusRowMapper implements RowMapper<BudgetStatusDto> {
         category.setParent(parentCategory);
 
         return new BudgetStatusDto(
-                category.toDto(),
+                CategoryDtoMapper.toDto(category),
                 rs.getBigDecimal("budgeted_amount"),
                 rs.getBigDecimal("spending_amount"),
                 rs.getBigDecimal("remaining_amount"),

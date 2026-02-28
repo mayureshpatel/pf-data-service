@@ -1,10 +1,14 @@
 package com.mayureshpatel.pfdataservice.domain.account;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+import java.util.Objects;
 
 /**
  * Lookup table for account types with metadata (icons, colors, labels).
@@ -12,15 +16,32 @@ import lombok.NoArgsConstructor;
  */
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString
 public class AccountType {
 
     private String code;
     private String label;
+    @ToString.Exclude
     private Iconography iconography;
-    private Boolean isAsset;
+    private boolean asset;
     private Integer sortOrder;
-    private Boolean isActive = true;
+    private boolean active = true;
 
-    private TableAudit audit;
+    @ToString.Exclude
+    private TimestampAudit audit;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AccountType that = (AccountType) o;
+        return code != null && code.equals(that.code);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(code);
+    }
 }

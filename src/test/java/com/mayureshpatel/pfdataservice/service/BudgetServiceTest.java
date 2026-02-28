@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
@@ -83,13 +84,13 @@ class BudgetServiceTest {
         budget.setAmount(amount);
         budget.setMonth(MONTH);
         budget.setYear(YEAR);
-        budget.setAudit(new TableAudit());
+        budget.setAudit(new SoftDeleteAudit());
 
         return budget;
     }
 
     private CategoryDto buildCategoryDto(Long categoryId) {
-        return new CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, null);
+        return new CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, "icon", "color");
     }
 
     private BudgetDto buildBudgetDto(Long categoryId, BigDecimal amount, Integer month, Integer year) {
@@ -176,7 +177,7 @@ class BudgetServiceTest {
             // arrange
             Category category = buildCategory(CATEGORY_ID, USER_ID);
             BudgetStatusDto status = BudgetStatusDto.builder()
-                    .category(category)
+                    .category(com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper.toDto(category))
                     .budgetedAmount(new BigDecimal("300.00"))
                     .spentAmount(new BigDecimal("220.00"))
                     .remainingAmount(new BigDecimal("80.00"))

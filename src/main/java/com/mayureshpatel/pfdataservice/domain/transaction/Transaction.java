@@ -1,24 +1,29 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class Transaction {
 
     private Long id;
+    @ToString.Exclude
     private Account account;
+    @ToString.Exclude
     private Category category;
 
     private BigDecimal amount;
@@ -26,24 +31,12 @@ public class Transaction {
     private OffsetDateTime transactionDate;
     private OffsetDateTime postDate;
     private String description;
+    @ToString.Exclude
     private Merchant merchant;
     private TransactionType type;
 
-    private TableAudit audit;
-
-    public TransactionDto toDto() {
-        return new TransactionDto(
-                id,
-                transactionDate,
-                postDate,
-                description,
-                merchant.toDto(),
-                amount,
-                type,
-                category.toDto(),
-                account.toDto()
-        );
-    }
+    @ToString.Exclude
+    private SoftDeleteAudit audit;
 
     /**
      * Calculates the net change this transaction applies to an account balance.
@@ -59,5 +52,18 @@ public class Transaction {
             return amount.abs();
         }
         return amount.abs().negate();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Transaction that = (Transaction) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

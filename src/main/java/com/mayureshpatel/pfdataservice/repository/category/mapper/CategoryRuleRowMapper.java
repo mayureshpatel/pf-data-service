@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
@@ -41,7 +41,7 @@ public class CategoryRuleRowMapper implements RowMapper<CategoryRule> {
         categoryRule.setUser(user);
 
         // set audit columns
-        categoryRule.setAudit(new TableAudit());
+        categoryRule.setAudit(new TimestampAudit());
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
             categoryRule.getAudit().setCreatedAt(createdAt.toInstant().atOffset(ZoneOffset.UTC));

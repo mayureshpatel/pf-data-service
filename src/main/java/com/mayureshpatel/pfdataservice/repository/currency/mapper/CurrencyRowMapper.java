@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.currency.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.CreatedAtAudit;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -18,13 +19,14 @@ public class CurrencyRowMapper implements RowMapper<Currency> {
         currency.setCode(rs.getString("code"));
         currency.setName(rs.getString("name"));
         currency.setSymbol(rs.getString("symbol"));
-        currency.setIsActive(rs.getBoolean("is_active"));
+        currency.setActive(rs.getBoolean("is_active"));
 
+        CreatedAtAudit audit = new CreatedAtAudit();
         Timestamp createdAtTimestamp = rs.getTimestamp("created_at");
         if (createdAtTimestamp != null) {
-            currency.getAudit().setCreatedAt(createdAtTimestamp.toInstant()
-                    .atOffset(ZoneOffset.UTC));
+            audit.setCreatedAt(createdAtTimestamp.toInstant().atOffset(ZoneOffset.UTC));
         }
+        currency.setAudit(audit);
 
         return currency;
     }

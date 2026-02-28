@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.account;
 
 import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
@@ -53,7 +54,7 @@ class AccountRepositoryTest extends BaseIntegrationTest {
         testCurrency.setCode("USD");
         testCurrency.setName("US Dollar");
         testCurrency.setSymbol("$");
-        testCurrency.setIsActive(true);
+        testCurrency.setActive(true);
         currencyRepository.save(testCurrency);
 
         // AccountType is likely seeded by Flyway, let's try to find one or create if needed
@@ -62,7 +63,7 @@ class AccountRepositoryTest extends BaseIntegrationTest {
             testAccountType = new AccountType();
             testAccountType.setCode("CHECKING");
             testAccountType.setLabel("Checking");
-            testAccountType.setIsActive(true);
+            testAccountType.setActive(true);
             // Since AccountTypeRepository doesn't have a full insert, we might need to rely on seeded data
             // or use JdbcClient to insert. For now let's assume it's seeded as per V13__seed_initial_data.sql
         } else {

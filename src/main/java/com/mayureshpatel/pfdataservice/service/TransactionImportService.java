@@ -11,6 +11,7 @@ import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
@@ -84,7 +85,7 @@ public class TransactionImportService {
                                 .description(t.getDescription())
                                 .amount(t.getAmount())
                                 .type(t.getType())
-                                .suggestedCategory(suggestedCategory.toDto())
+                                .suggestedCategory(CategoryDtoMapper.toDto(suggestedCategory))
                                 .build();
                     })
                     .toList();
@@ -159,7 +160,7 @@ public class TransactionImportService {
         transaction.setType(dto.type());
         Merchant merchant = new Merchant();
         if (dto.merchant() != null) {
-            merchant.setName(dto.merchant().cleanName());
+            merchant.setCleanName(dto.merchant().cleanName());
             merchant.setOriginalName(dto.merchant().originalName());
         }
         transaction.setMerchant(merchant);

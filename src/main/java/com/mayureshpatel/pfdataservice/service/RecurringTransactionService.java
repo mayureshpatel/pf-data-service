@@ -10,6 +10,9 @@ import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper;
+import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
+import com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -21,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,15 +40,15 @@ public class RecurringTransactionService {
 
     public List<RecurringTransactionDto> getRecurringTransactions(Long userId) {
         return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(RecurringTransaction::toDto)
+                .map(RecurringTransactionDtoMapper::toDto)
                 .toList();
     }
 
     public List<RecurringSuggestionDto> findSuggestions(Long userId) {
         // 1. Get existing recurring items to exclude duplicates
         Set<String> existingMerchants = recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(r -> r.getMerchant() != null && r.getMerchant().getName() != null
-                        ? r.getMerchant().getName().toLowerCase()
+                .map(r -> r.getMerchant() != null && r.getMerchant().getCleanName() != null
+                        ? r.getMerchant().getCleanName().toLowerCase()
                         : "")
                 .collect(Collectors.toSet());
 
@@ -58,8 +60,8 @@ public class RecurringTransactionService {
         Map<String, List<Transaction>> groups = new HashMap<>();
 
         for (Transaction t : transactions) {
-            String name = t.getMerchant() != null && t.getMerchant().getName() != null
-                    ? t.getMerchant().getName()
+            String name = t.getMerchant() != null && t.getMerchant().getCleanName() != null
+                    ? t.getMerchant().getCleanName()
                     : t.getDescription();
             if (name == null) continue;
 
@@ -91,9 +93,8 @@ public class RecurringTransactionService {
                         .merchant(new MerchantDto(null, null, null, merchantName))
                         .amount(amount)
                         .frequency(frequency)
-                        .lastDate(lastTxn.getTransactionDate())
-                        .nextDate(calculateNextDate(lastTxn.getTransactionDate().toLocalDate(), frequency)
-                                .atStartOfDay(ZoneOffset.UTC).toOffsetDateTime())
+                        .lastDate(lastTxn.getTransactionDate().toLocalDate())
+                        .nextDate(calculateNextDate(lastTxn.getTransactionDate().toLocalDate(), frequency))
                         .occurrenceCount(group.size())
                         .confidenceScore(0.8 + (group.size() * 0.05))
                         .build());
@@ -153,15 +154,15 @@ public class RecurringTransactionService {
 
         Merchant merchant = new Merchant();
         if (dto.merchant() != null) {
-            merchant.setName(dto.merchant().cleanName());
+            merchant.setCleanName(dto.merchant().cleanName());
             merchant.setOriginalName(dto.merchant().originalName());
         }
 
         RecurringTransactionDto recurring = new RecurringTransactionDto(
                 null,
                 user.getId(),
-                account.toDto(),
-                merchant.toDto(),
+                AccountDtoMapper.toDto(account),
+                MerchantDtoMapper.toDto(merchant),
                 dto.amount(),
                 dto.frequency(),
                 dto.lastDate(),
@@ -194,7 +195,7 @@ public class RecurringTransactionService {
 
         if (dto.merchant() != null) {
             Merchant merchant = recurring.getMerchant() != null ? recurring.getMerchant() : new Merchant();
-            merchant.setName(dto.merchant().cleanName());
+            merchant.setCleanName(dto.merchant().cleanName());
             merchant.setOriginalName(dto.merchant().originalName());
             recurring.setMerchant(merchant);
         }
@@ -205,7 +206,7 @@ public class RecurringTransactionService {
         recurring.setNextDate(dto.nextDate());
         recurring.setActive(dto.active());
 
-        return recurringRepository.save(recurring).toDto();
+        return recurringRepository.save(RecurringTransactionDtoMapper.toDto(recurring));
     }
 
     @Transactional

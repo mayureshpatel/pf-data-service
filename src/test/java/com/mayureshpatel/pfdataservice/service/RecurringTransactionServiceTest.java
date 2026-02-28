@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
@@ -84,30 +84,31 @@ class RecurringTransactionServiceTest {
         account.setUser(buildUser(userId));
         account.setName("Checking");
         account.setCurrentBalance(new BigDecimal("1000.00"));
-        account.setAudit(new TableAudit());
+        account.setAudit(new com.mayureshpatel.pfdataservice.domain.TableAudit());
         return account;
     }
 
     private Merchant buildMerchant(String name) {
         Merchant merchant = new Merchant();
-        merchant.setName(name);
+        merchant.setCleanName(name);
         merchant.setOriginalName(name);
         return merchant;
     }
 
     private RecurringTransaction buildRecurring(Long id, Long userId) {
-        OffsetDateTime now = OffsetDateTime.now();
-        return RecurringTransaction.builder()
-                .id(id)
-                .user(buildUser(userId))
-                .account(buildAccount(ACCOUNT_ID, userId))
-                .merchant(buildMerchant("Netflix"))
-                .amount(new BigDecimal("15.99"))
-                .frequency(Frequency.MONTHLY)
-                .lastDate(now.minusMonths(1))
-                .nextDate(now.plusDays(5))
-                .active(true)
-                .build();
+        LocalDate now = LocalDate.now();
+        return new RecurringTransaction(
+                id,
+                buildUser(userId),
+                buildAccount(ACCOUNT_ID, userId),
+                buildMerchant("Netflix"),
+                new BigDecimal("15.99"),
+                Frequency.MONTHLY,
+                now.minusMonths(1),
+                now.plusDays(5),
+                true,
+                new com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit()
+        );
     }
 
     private RecurringTransactionDto buildDto(Long accountId, String merchantName,
@@ -115,7 +116,7 @@ class RecurringTransactionServiceTest {
                                              OffsetDateTime lastDate, OffsetDateTime nextDate,
                                              boolean active) {
         AccountDto accountDto = accountId != null
-                ? new AccountDto(accountId, null, "Checking", null, null, null, null)
+                ? new AccountDto(accountId, null, "Checking", null, "Label", null, "USD", "$", null)
                 : null;
         MerchantDto merchantDto = merchantName != null
                 ? new MerchantDto(null, null, merchantName, merchantName)
@@ -125,8 +126,8 @@ class RecurringTransactionServiceTest {
                 .merchant(merchantDto)
                 .amount(amount)
                 .frequency(frequency)
-                .lastDate(lastDate)
-                .nextDate(nextDate)
+                .lastDate(lastDate != null ? lastDate.toLocalDate() : null)
+                .nextDate(nextDate != null ? nextDate.toLocalDate() : null)
                 .active(active)
                 .build();
     }
@@ -208,7 +209,7 @@ class RecurringTransactionServiceTest {
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
+            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.createRecurringTransaction(USER_ID, dto);
@@ -238,18 +239,21 @@ class RecurringTransactionServiceTest {
             RecurringTransactionDto dto = buildDto(null, "Netflix", new BigDecimal("15.99"),
                     Frequency.MONTHLY, lastDate, nextDate, true);
 
-            RecurringTransaction saved = RecurringTransaction.builder()
-                    .id(RECURRING_ID)
-                    .user(user)
-                    .account(null)
-                    .merchant(buildMerchant("Netflix"))
-                    .amount(new BigDecimal("15.99"))
-                    .frequency(Frequency.MONTHLY)
-                    .active(true)
-                    .build();
+            RecurringTransaction saved = new RecurringTransaction(
+                    RECURRING_ID,
+                    user,
+                    null,
+                    buildMerchant("Netflix"),
+                    new BigDecimal("15.99"),
+                    Frequency.MONTHLY,
+                    lastDate.toLocalDate(),
+                    nextDate.toLocalDate(),
+                    true,
+                    new com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit()
+            );
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
+            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.createRecurringTransaction(USER_ID, dto);
@@ -274,7 +278,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
-            verify(recurringRepository, never()).save(any());
+            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
         }
 
         @Test
@@ -294,7 +298,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Account not found");
 
-            verify(recurringRepository, never()).save(any());
+            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
         }
 
         @Test
@@ -315,7 +319,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied to account");
 
-            verify(recurringRepository, never()).save(any());
+            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
         }
     }
 
@@ -339,7 +343,7 @@ class RecurringTransactionServiceTest {
 
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(existing));
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
+            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.updateRecurringTransaction(USER_ID, RECURRING_ID, dto);
@@ -370,7 +374,7 @@ class RecurringTransactionServiceTest {
             saved.setAccount(null);
 
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(existing));
-            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
+            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.updateRecurringTransaction(USER_ID, RECURRING_ID, dto);
@@ -398,7 +402,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Recurring transaction not found");
 
-            verify(recurringRepository, never()).save(any());
+            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
         }
 
         @Test
@@ -416,7 +420,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied");
 
-            verify(recurringRepository, never()).save(any());
+            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
         }
 
         @Test
@@ -436,7 +440,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Account not found");
 
-            verify(recurringRepository, never()).save(any());
+            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
         }
 
         @Test
@@ -457,7 +461,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied to account");
 
-            verify(recurringRepository, never()).save(any());
+            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
         }
     }
 
@@ -535,7 +539,7 @@ class RecurringTransactionServiceTest {
             // next date should be lastDate + 1 month
             OffsetDateTime expectedLastDate = base.plusDays(90); // 3rd interval of 30 days
             LocalDate expectedNextDate = expectedLastDate.toLocalDate().plusMonths(1);
-            assertThat(suggestion.nextDate().toLocalDate()).isEqualTo(expectedNextDate);
+            assertThat(suggestion.nextDate()).isEqualTo(expectedNextDate);
         }
 
         @Test
@@ -557,7 +561,7 @@ class RecurringTransactionServiceTest {
             assertThat(suggestions.get(0).frequency()).isEqualTo(Frequency.WEEKLY);
             // next date = last date + 1 week
             LocalDate expectedNext = base.plusDays(21).toLocalDate().plusWeeks(1);
-            assertThat(suggestions.get(0).nextDate().toLocalDate()).isEqualTo(expectedNext);
+            assertThat(suggestions.get(0).nextDate()).isEqualTo(expectedNext);
         }
 
         @Test
@@ -578,7 +582,7 @@ class RecurringTransactionServiceTest {
             assertThat(suggestions).hasSize(1);
             assertThat(suggestions.get(0).frequency()).isEqualTo(Frequency.BI_WEEKLY);
             LocalDate expectedNext = base.plusDays(42).toLocalDate().plusWeeks(2);
-            assertThat(suggestions.get(0).nextDate().toLocalDate()).isEqualTo(expectedNext);
+            assertThat(suggestions.get(0).nextDate()).isEqualTo(expectedNext);
         }
 
         @Test
@@ -599,7 +603,7 @@ class RecurringTransactionServiceTest {
             assertThat(suggestions).hasSize(1);
             assertThat(suggestions.get(0).frequency()).isEqualTo(Frequency.YEARLY);
             LocalDate expectedNext = base.plusDays(730).toLocalDate().plusYears(1);
-            assertThat(suggestions.get(0).nextDate().toLocalDate()).isEqualTo(expectedNext);
+            assertThat(suggestions.get(0).nextDate()).isEqualTo(expectedNext);
         }
 
         @Test
@@ -675,7 +679,7 @@ class RecurringTransactionServiceTest {
             List<Transaction> transactions = buildTransactionGroup("Netflix", new BigDecimal("15.99"), base, 30, 4);
 
             RecurringTransaction existingNetflix = buildRecurring(RECURRING_ID, USER_ID);
-            existingNetflix.getMerchant().setName("Netflix");
+            existingNetflix.getMerchant().setCleanName("Netflix");
 
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID))
                     .thenReturn(List.of(existingNetflix));
@@ -767,7 +771,7 @@ class RecurringTransactionServiceTest {
             assertThat(suggestions.get(0).frequency()).isEqualTo(frequency);
             // Verify: the last transaction date is baseDate + 3*interval (4 txs, 0-indexed)
             LocalDate expectedLastDate = baseDateTime.plusDays((long) intervalDays * 3).toLocalDate();
-            assertThat(suggestions.get(0).lastDate().toLocalDate()).isEqualTo(expectedLastDate);
+            assertThat(suggestions.get(0).lastDate()).isEqualTo(expectedLastDate);
             // Verify the next date using the expected offset for the frequency
             LocalDate expectedNextDate = switch (frequency) {
                 case MONTHLY -> expectedLastDate.plusMonths(1);
@@ -776,7 +780,7 @@ class RecurringTransactionServiceTest {
                 case YEARLY -> expectedLastDate.plusYears(1);
                 default -> expectedLastDate;
             };
-            assertThat(suggestions.get(0).nextDate().toLocalDate()).isEqualTo(expectedNextDate);
+            assertThat(suggestions.get(0).nextDate()).isEqualTo(expectedNextDate);
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
@@ -42,7 +42,7 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
             transaction.setType(TransactionType.valueOf(type));
         }
 
-        transaction.setAudit(new TableAudit());
+        transaction.setAudit(new SoftDeleteAudit());
         transaction.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
         transaction.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
         transaction.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));
@@ -88,9 +88,9 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
             AccountType accountType = new AccountType();
             accountType.setCode(accTypeCode);
             accountType.setLabel(rs.getString("acc_type_label"));
-            accountType.setIsAsset(rs.getBoolean("acc_type_is_asset"));
+            accountType.setAsset(rs.getBoolean("acc_type_is_asset"));
             accountType.setSortOrder(rs.getInt("acc_type_sort_order"));
-            accountType.setIsActive(rs.getBoolean("acc_type_is_active"));
+            accountType.setActive(rs.getBoolean("acc_type_is_active"));
             accountType.setIconography(new Iconography(
                     rs.getString("acc_type_icon"),
                     rs.getString("acc_type_color")
@@ -151,7 +151,7 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
         Merchant merchant = new Merchant();
         merchant.setId(merchantId);
         merchant.setOriginalName(rs.getString("merch_original_name"));
-        merchant.setName(rs.getString("merch_clean_name"));
+        merchant.setCleanName(rs.getString("merch_clean_name"));
 
         Long merchUserId = getLongOrNull(rs, "merch_user_id");
         if (merchUserId != null) {

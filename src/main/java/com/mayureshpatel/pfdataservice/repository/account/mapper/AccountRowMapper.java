@@ -21,11 +21,8 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         account.setId(rs.getLong("id"));
         account.setName(rs.getString("name"));
         
-        account.setType(new com.mayureshpatel.pfdataservice.domain.account.AccountType());
-        account.getType().setCode(rs.getString("type"));
-        
         account.setCurrentBalance(getBigDecimal(rs, "current_balance"));
-        
+
         account.setCurrency(new com.mayureshpatel.pfdataservice.domain.currency.Currency());
         account.getCurrency().setCode(rs.getString("currency_code"));
 
@@ -44,9 +41,9 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         AccountType accountType = new AccountType();
         accountType.setCode(rs.getString("account_type_code"));
         accountType.setLabel(rs.getString("account_type_label"));
-        accountType.setIsAsset(rs.getBoolean("account_type_is_asset"));
+        accountType.setAsset(rs.getBoolean("account_type_is_asset"));
         accountType.setSortOrder(rs.getInt("account_type_sort_order"));
-        accountType.setIsActive(rs.getBoolean("account_type_is_active"));
+        accountType.setActive(rs.getBoolean("account_type_is_active"));
 
         Iconography accountTypeIconography = new Iconography();
         accountTypeIconography.setColor(rs.getString("account_type_color"));

@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 @Component
@@ -25,7 +26,7 @@ public class CategoryRowMapper implements RowMapper<Category> {
         if (!rs.wasNull()) {
             Category parentCategory = new Category();
             parentCategory.setId(parentId);
-            try {
+            if (hasColumn(rs, "parent_name")) {
                 parentCategory.setName(rs.getString("parent_name"));
                 String parentType = rs.getString("parent_type");
                 if (parentType != null) {
@@ -35,8 +36,6 @@ public class CategoryRowMapper implements RowMapper<Category> {
                 parentIconography.setColor(rs.getString("parent_color"));
                 parentIconography.setIcon(rs.getString("parent_icon"));
                 parentCategory.setIconography(parentIconography);
-            } catch (SQLException ignored) {
-                // p_* columns not present in queries without the parent join
             }
             category.setParent(parentCategory);
         }
@@ -45,13 +44,9 @@ public class CategoryRowMapper implements RowMapper<Category> {
         category.getIconography().setColor(rs.getString("color"));
         category.getIconography().setIcon(rs.getString("icon"));
 
-        try {
-            String type = rs.getString("type");
-            if (type != null) {
-                category.setType(CategoryType.valueOf(type));
-            }
-        } catch (Exception e) {
-            category.setType(null);
+        String type = rs.getString("type");
+        if (type != null) {
+            category.setType(CategoryType.valueOf(type));
         }
 
         Long userId = JdbcMapperUtils.getLongOrNull(rs, "user_id");
@@ -61,10 +56,20 @@ public class CategoryRowMapper implements RowMapper<Category> {
             category.setUser(user);
         }
 
-        category.setAudit(new TableAudit());
+        category.setAudit(new TimestampAudit());
         category.getAudit().setCreatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "created_at"));
         category.getAudit().setUpdatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "updated_at"));
 
         return category;
+    }
+
+    private boolean hasColumn(ResultSet rs, String columnName) throws SQLException {
+        ResultSetMetaData meta = rs.getMetaData();
+        for (int i = 1; i <= meta.getColumnCount(); i++) {
+            if (columnName.equalsIgnoreCase(meta.getColumnLabel(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

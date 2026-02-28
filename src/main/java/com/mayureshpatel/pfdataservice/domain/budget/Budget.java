@@ -1,40 +1,48 @@
 package com.mayureshpatel.pfdataservice.domain.budget;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Budget {
 
     private Long id;
+    @ToString.Exclude
     private User user;
+    @ToString.Exclude
     private Category category;
     private BigDecimal amount;
 
     private Integer month;
     private Integer year;
 
-    private TableAudit audit;
+    @ToString.Exclude
+    private SoftDeleteAudit audit;
 
-    public BudgetDto toDto() {
-        return new BudgetDto(
-                id,
-                user.getId(),
-                category.toDto(),
-                amount,
-                month,
-                year
-        );
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Budget budget = (Budget) o;
+        return id != null && id.equals(budget.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

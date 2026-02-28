@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
@@ -36,7 +37,7 @@ public class AccountService {
     @Transactional(readOnly = true)
     public List<AccountDto> getAllAccountsByUserId(Long userId) {
         return accountRepository.findByUserId(userId).stream()
-                .map(Account::toDto)
+                .map(AccountDtoMapper::toDto)
                 .toList();
     }
 
@@ -54,12 +55,10 @@ public class AccountService {
 
         Account account = new Account();
         account.setName(accountDto.name());
-        account.setType(accountDto.type());
         account.setCurrentBalance(accountDto.currentBalance());
-        account.setBankName(accountDto.bankName());
         account.setUser(user);
 
-        return accountRepository.save(account).toDto();
+        return AccountDtoMapper.toDto(accountRepository.save(account));
     }
 
     /**
@@ -80,10 +79,8 @@ public class AccountService {
         }
 
         account.setName(dto.name());
-        account.setType(dto.type());
-        account.setBankName(dto.bankName());
 
-        return accountRepository.save(account).toDto();
+        return AccountDtoMapper.toDto(accountRepository.save(account));
     }
 
     /**
@@ -104,7 +101,7 @@ public class AccountService {
         BigDecimal diff = targetBalance.subtract(currentBalance);
 
         if (diff.compareTo(BigDecimal.ZERO) == 0) {
-            return account.toDto();
+            return AccountDtoMapper.toDto(account);
         }
 
         // create an adjustment transaction
@@ -112,7 +109,7 @@ public class AccountService {
 
         // update account balance
         account.applyTransaction(adjustment);
-        return accountRepository.save(account).toDto();
+        return AccountDtoMapper.toDto(accountRepository.save(account));
     }
 
     /**

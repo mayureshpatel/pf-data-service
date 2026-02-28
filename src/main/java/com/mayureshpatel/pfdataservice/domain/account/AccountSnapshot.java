@@ -1,22 +1,41 @@
 package com.mayureshpatel.pfdataservice.domain.account;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.CreatedAtAudit;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString
 public class AccountSnapshot {
 
     private Long id;
+    @ToString.Exclude
     private Account account;
-    private OffsetDateTime snapshotDate;
+    private LocalDate snapshotDate;
     private BigDecimal balance;
 
-    private TableAudit audit;
+    @ToString.Exclude
+    private CreatedAtAudit audit;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AccountSnapshot that = (AccountSnapshot) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

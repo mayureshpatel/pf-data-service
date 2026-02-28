@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
@@ -48,7 +48,7 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
             transaction.setCategory(category);
         }
 
-        transaction.setAudit(new TableAudit());
+        transaction.setAudit(new SoftDeleteAudit());
         transaction.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
         transaction.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
         transaction.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));

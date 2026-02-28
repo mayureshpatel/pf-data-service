@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -89,7 +90,7 @@ class AccountServiceTest {
     private AccountDto buildAccountDto(String name, String typeCode, BigDecimal balance) {
         AccountType type = buildAccountType(typeCode);
 
-        return new AccountDto(null, null, name, type, balance, null, null);
+        return new AccountDto(null, null, name, type.getCode(), "Label", balance, "USD", "$", null);
     }
 
     @Nested

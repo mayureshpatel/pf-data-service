@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.recurring_history.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -29,16 +30,25 @@ public class RecurringTransactionRowMapper implements RowMapper<RecurringTransac
         recurringTransaction.setUser(user);
 
         Merchant merchant = new Merchant();
-        merchant.setName(rs.getString("merchant_name"));
+        merchant.setCleanName(rs.getString("merchant_name"));
         recurringTransaction.setMerchant(merchant);
 
         recurringTransaction.setAmount(rs.getBigDecimal("amount"));
         recurringTransaction.setFrequency(Frequency.valueOf(rs.getString("frequency")));
-        recurringTransaction.setLastDate(JdbcMapperUtils.getOffsetDateTime(rs, "last_date"));
-        recurringTransaction.setNextDate(JdbcMapperUtils.getOffsetDateTime(rs, "next_date"));
+
+        Date lastDate = rs.getDate("last_date");
+        if (lastDate != null) {
+            recurringTransaction.setLastDate(lastDate.toLocalDate());
+        }
+
+        Date nextDate = rs.getDate("next_date");
+        if (nextDate != null) {
+            recurringTransaction.setNextDate(nextDate.toLocalDate());
+        }
+
         recurringTransaction.setActive(rs.getBoolean("active"));
 
-        TableAudit audit = new TableAudit();
+        SoftDeleteAudit audit = new SoftDeleteAudit();
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
             audit.setCreatedAt(createdAt.toInstant().atZone(EASTERN).toOffsetDateTime());

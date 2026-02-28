@@ -56,7 +56,7 @@ class CategoryControllerTest {
     @DisplayName("GET /api/v1/categories should return list of categories")
     void getCategories_shouldReturnListOfCategories() throws Exception {
         // Arrange
-        CategoryDto categoryDto = new CategoryDto(CATEGORY_ID, null, "Groceries", null, null, null);
+        CategoryDto categoryDto = new CategoryDto(CATEGORY_ID, null, "Groceries", null, null, "icon", "color");
         when(categoryService.getCategoriesByUserId(USER_ID)).thenReturn(List.of(categoryDto));
 
         // Act & Assert
@@ -74,10 +74,10 @@ class CategoryControllerTest {
     @DisplayName("GET /api/v1/categories/grouped should return grouped categories")
     void getCategoriesGrouped_shouldReturnGroupedCategories() throws Exception {
         // Arrange
-        CategoryDto parentDto = new CategoryDto(CATEGORY_ID, null, "Food", null, null, null);
-        CategoryDto childDto = new CategoryDto(CATEGORY_ID + 1, null, "Groceries", null, parentDto, null);
+        CategoryDto parentDto = new CategoryDto(CATEGORY_ID, null, "Food", null, null, "icon", "color");
+        CategoryDto childDto = new CategoryDto(CATEGORY_ID + 1, null, "Groceries", null, parentDto, "icon", "color");
         
-        Map<CategoryDto, List<CategoryDto>> grouped = Collections.singletonMap(parentDto, List.of(childDto));
+        List<CategoryDto> grouped = List.of(parentDto, childDto);
         
         when(categoryService.getCategoriesGrouped(USER_ID)).thenReturn(grouped);
 
@@ -97,7 +97,7 @@ class CategoryControllerTest {
     @DisplayName("GET /api/v1/categories/children should return child categories")
     void getChildCategories_shouldReturnChildCategories() throws Exception {
         // Arrange
-        CategoryDto childDto = new CategoryDto(CATEGORY_ID + 1, null, "Groceries", null, null, null);
+        CategoryDto childDto = new CategoryDto(CATEGORY_ID + 1, null, "Groceries", null, null, "icon", "color");
         when(categoryService.getChildCategories(USER_ID)).thenReturn(List.of(childDto));
 
         // Act & Assert
@@ -113,8 +113,8 @@ class CategoryControllerTest {
     @DisplayName("POST /api/v1/categories should create category")
     void createCategory_shouldCreateCategory() throws Exception {
         // Arrange
-        CategoryDto requestDto = new CategoryDto(null, null, "New Category", null, null, null);
-        CategoryDto responseDto = new CategoryDto(CATEGORY_ID, null, "New Category", null, null, null);
+        CategoryDto requestDto = new CategoryDto(null, null, "New Category", null, null, "icon", "color");
+        CategoryDto responseDto = new CategoryDto(CATEGORY_ID, null, "New Category", null, null, "icon", "color");
         
         when(categoryService.createCategory(eq(USER_ID), any(CategoryDto.class))).thenReturn(responseDto);
 
@@ -135,7 +135,7 @@ class CategoryControllerTest {
     @DisplayName("PUT /api/v1/categories/{id} should update category")
     void updateCategory_shouldUpdateCategory() throws Exception {
         // Arrange
-        CategoryDto requestDto = new CategoryDto(CATEGORY_ID, null, "Updated Name", null, null, null);
+        CategoryDto requestDto = new CategoryDto(CATEGORY_ID, null, "Updated Name", null, null, "icon", "color");
         
         when(categoryService.updateCategory(eq(USER_ID), eq(CATEGORY_ID), any(CategoryDto.class))).thenReturn(requestDto);
 

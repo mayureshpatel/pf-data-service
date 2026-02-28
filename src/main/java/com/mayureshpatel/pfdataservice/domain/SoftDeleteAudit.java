@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.domain;
 
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,13 +7,17 @@ import lombok.Setter;
 
 import java.time.OffsetDateTime;
 
+/**
+ * Audit fields for entities that track timestamps and support soft deletes,
+ * but do not track which user performed the action.
+ * Maps to tables with {@code created_at}, {@code updated_at}, and {@code deleted_at} columns.
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-public class MutableAudit {
+public class SoftDeleteAudit {
     private OffsetDateTime createdAt;
-    private User createdBy;
     private OffsetDateTime updatedAt;
-    private User updatedBy;
+    private OffsetDateTime deletedAt;
 }

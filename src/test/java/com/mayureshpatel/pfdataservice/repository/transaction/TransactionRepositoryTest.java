@@ -106,7 +106,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
     private Merchant createMerchant(User user, String name) {
         Merchant merchant = new Merchant();
         merchant.setUser(user);
-        merchant.setName(name);
+        merchant.setCleanName(name);
         merchant.setOriginalName(name);
         return merchantRepository.save(merchant);
     }

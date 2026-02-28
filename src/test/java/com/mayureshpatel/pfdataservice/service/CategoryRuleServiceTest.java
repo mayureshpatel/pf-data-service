@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
@@ -89,31 +89,27 @@ class CategoryRuleServiceTest {
     }
 
     private CategoryRule buildRule(Long ruleId, Long userId, Long categoryId, String keyword, Integer priority) {
-        TableAudit audit = new TableAudit();
+        TimestampAudit audit = new TimestampAudit();
 
         audit.setCreatedAt(OffsetDateTime.now());
         audit.setUpdatedAt(OffsetDateTime.now());
 
         return new CategoryRule(
                 ruleId,
-                keyword,
-                buildCategory(categoryId, userId),
-                priority,
                 buildUser(userId),
+                keyword,
+                priority,
+                buildCategory(categoryId, userId),
                 audit
         );
     }
 
     private CategoryDto buildCategoryDto(Long categoryId) {
-        return new CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, null);
+        return new CategoryDto(categoryId, null, "Groceries", CategoryType.EXPENSE, null, "icon", "color");
     }
 
     private CategoryRuleDto buildRuleDto(String keyword, Long categoryId, Integer priority) {
-        return CategoryRuleDto.builder()
-                .keyword(keyword)
-                .category(buildCategoryDto(categoryId))
-                .priority(priority)
-                .build();
+        return new CategoryRuleDto(null, null, keyword, priority, buildCategoryDto(categoryId));
     }
 
     private Transaction buildTransaction(Long id, Category category, String description) {

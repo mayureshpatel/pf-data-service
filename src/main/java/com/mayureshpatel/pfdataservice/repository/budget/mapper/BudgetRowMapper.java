@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.budget.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -35,9 +36,11 @@ public class BudgetRowMapper implements RowMapper<Budget> {
             budget.setCategory(category);
         }
 
-        budget.getAudit().setCreatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "created_at"));
-        budget.getAudit().setUpdatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "updated_at"));
-        budget.getAudit().setDeletedAt(JdbcMapperUtils.getOffsetDateTime(rs, "deleted_at"));
+        SoftDeleteAudit audit = new SoftDeleteAudit();
+        audit.setCreatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "created_at"));
+        audit.setUpdatedAt(JdbcMapperUtils.getOffsetDateTime(rs, "updated_at"));
+        audit.setDeletedAt(JdbcMapperUtils.getOffsetDateTime(rs, "deleted_at"));
+        budget.setAudit(audit);
 
         return budget;
     }

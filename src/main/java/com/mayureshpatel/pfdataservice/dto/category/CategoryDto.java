@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
-import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 
 public record CategoryDto(
@@ -9,6 +8,7 @@ public record CategoryDto(
         String name,
         CategoryType categoryType,
         CategoryDto parent,
-        Iconography iconography
+        String icon,
+        String color
 ) {
 }

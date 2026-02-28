@@ -398,7 +398,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException when account is not found in repository")
         void createTransaction_accountNotFound_throwsResourceNotFoundException() {
-            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, null, null, null);
+            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, "Label", null, "USD", "$", null);
             TransactionDto dto = TransactionDto.builder()
                     .account(accountDto)
                     .date(OffsetDateTime.now())
@@ -419,7 +419,7 @@ class TransactionServiceTest {
         void createTransaction_notOwnedAccount_throwsAccessDeniedException() {
             User anotherUser = buildUser(99L);
             Account account = buildAccount(ACCOUNT_ID, anotherUser, new BigDecimal("500"));
-            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, null, null, null);
+            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, "Label", null, "USD", "$", null);
             TransactionDto dto = TransactionDto.builder()
                     .account(accountDto)
                     .date(OffsetDateTime.now())
@@ -439,7 +439,7 @@ class TransactionServiceTest {
         void createTransaction_parentCategory_throwsIllegalArgumentException() {
             User user = buildUser(USER_ID);
             Account account = buildAccount(ACCOUNT_ID, user, new BigDecimal("500"));
-            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, null, null, null);
+            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, "Label", null, "USD", "$", null);
 
             Category parentCategory = Category.builder().id(1L).name("Food").parent(null).build();
 
@@ -449,7 +449,7 @@ class TransactionServiceTest {
                     .description("Test")
                     .amount(BigDecimal.TEN)
                     .type(TransactionType.EXPENSE)
-                    .category(parentCategory)
+                    .category(com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper.toDto(parentCategory))
                     .build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
@@ -465,7 +465,7 @@ class TransactionServiceTest {
         void createTransaction_noCategorySpecified_usesCategorizerAndSaves() {
             User user = buildUser(USER_ID);
             Account account = buildAccount(ACCOUNT_ID, user, new BigDecimal("1000"));
-            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, null, null, null);
+            AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, "Label", null, "USD", "$", null);
             TransactionDto dto = TransactionDto.builder()
                     .account(accountDto)
                     .date(OffsetDateTime.now())

@@ -1,25 +1,39 @@
 package com.mayureshpatel.pfdataservice.domain.merchant;
 
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class Merchant {
 
     private Long id;
+    @ToString.Exclude
     private User user;
     private String originalName;
-    private String name;
+    private String cleanName;
 
-    private TableAudit audit;
+    @ToString.Exclude
+    private TimestampAudit audit;
 
-    public MerchantDto toDto() {
-        return new MerchantDto(id, user.getId(), originalName, name);
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Merchant merchant = (Merchant) o;
+        return id != null && id.equals(merchant.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

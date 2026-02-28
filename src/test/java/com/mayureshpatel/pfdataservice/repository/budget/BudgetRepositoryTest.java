@@ -102,7 +102,7 @@ class BudgetRepositoryTest extends BaseIntegrationTest {
     private Merchant createMerchant(User user, String name) {
         Merchant merchant = new Merchant();
         merchant.setUser(user);
-        merchant.setName(name);
+        merchant.setCleanName(name);
         merchant.setOriginalName(name);
         return merchantRepository.save(merchant);
     }
@@ -154,7 +154,7 @@ class BudgetRepositoryTest extends BaseIntegrationTest {
 
         // Check Food (Budgeted)
         BudgetStatusDto foodStatus = statuses.stream()
-                .filter(s -> s.category().getName().equals("Food"))
+                .filter(s -> s.category().name().equals("Food"))
                 .findFirst().orElseThrow();
         assertThat(foodStatus.budgetedAmount()).isEqualByComparingTo("500.00");
         assertThat(foodStatus.spentAmount()).isEqualByComparingTo("100.00");
@@ -162,7 +162,7 @@ class BudgetRepositoryTest extends BaseIntegrationTest {
 
         // Check Rent (Unbudgeted)
         BudgetStatusDto rentStatus = statuses.stream()
-                .filter(s -> s.category().getName().equals("Rent"))
+                .filter(s -> s.category().name().equals("Rent"))
                 .findFirst().orElseThrow();
         assertThat(rentStatus.budgetedAmount()).isEqualByComparingTo("0.00");
         assertThat(rentStatus.spentAmount()).isEqualByComparingTo("1000.00");

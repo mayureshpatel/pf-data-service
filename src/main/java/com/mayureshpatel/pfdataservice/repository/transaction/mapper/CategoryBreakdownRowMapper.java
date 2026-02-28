@@ -22,7 +22,7 @@ public class CategoryBreakdownRowMapper extends JdbcMapperUtils implements RowMa
 
         CategoryDto parentCategory = new CategoryDto(
                 rs.getLong("category_parent_id"),
-                null, null, null, null, null
+                null, null, null, null, null, null
         );
 
         CategoryType categoryType = rs.getString("category_type") != null ? CategoryType.fromValue(rs.getString("category_type")) : null;
@@ -33,7 +33,8 @@ public class CategoryBreakdownRowMapper extends JdbcMapperUtils implements RowMa
                 rs.getString("category_name"),
                 categoryType,
                 parentCategory,
-                categoryIconography
+                rs.getString("category_icon"),
+                rs.getString("category_color")
         );
 
         return new CategoryBreakdownDto(categoryDto, rs.getBigDecimal("total"));

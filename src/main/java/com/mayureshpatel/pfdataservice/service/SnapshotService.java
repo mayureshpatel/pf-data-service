@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.Optional;
 
 @Service
@@ -55,7 +54,7 @@ public class SnapshotService {
 
         AccountSnapshot snapshot = existing.orElse(new AccountSnapshot());
         snapshot.setAccount(account);
-        snapshot.setSnapshotDate(endOfMonth.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime());
+        snapshot.setSnapshotDate(endOfMonth);
         snapshot.setBalance(historicBalance);
 
         snapshotRepository.save(snapshot);

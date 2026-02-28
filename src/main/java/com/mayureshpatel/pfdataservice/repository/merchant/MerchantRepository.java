@@ -79,7 +79,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         jdbcClient.sql(MerchantQueries.INSERT)
                 .param("userId", merchant.getUser().getId())
                 .param("originalName", merchant.getOriginalName())
-                .param("name", merchant.getName())
+                .param("name", merchant.getCleanName())
                 .update(keyHolder);
         
         merchant.setId(keyHolder.getKeyAs(Long.class));
@@ -91,7 +91,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         jdbcClient.sql(MerchantQueries.UPDATE)
                 .param("userId", merchant.getUser().getId())
                 .param("originalName", merchant.getOriginalName())
-                .param("name", merchant.getName())
+                .param("name", merchant.getCleanName())
                 .param("id", merchant.getId())
                 .update();
         return merchant;

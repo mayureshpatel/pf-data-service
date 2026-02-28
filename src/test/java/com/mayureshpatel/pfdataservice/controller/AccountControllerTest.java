@@ -59,7 +59,7 @@ class AccountControllerTest {
         // Arrange
         AccountType type = new AccountType();
         type.setCode("CHECKING");
-        AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, "Checking Account", type, new BigDecimal("1000.00"), null, BankName.CAPITAL_ONE);
+        AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, "Checking Account", type.getCode(), "Label", new BigDecimal("1000.00"), "USD", "$", BankName.CAPITAL_ONE.name());
         when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(List.of(accountDto));
 
         // Act & Assert
@@ -80,8 +80,8 @@ class AccountControllerTest {
         // Arrange
         AccountType type = new AccountType();
         type.setCode("CHECKING");
-        AccountDto requestDto = new AccountDto(null, null, "New Account", type, new BigDecimal("500.00"), null, BankName.DISCOVER);
-        AccountDto responseDto = new AccountDto(ACCOUNT_ID, null, "New Account", type, new BigDecimal("500.00"), null, BankName.DISCOVER);
+        AccountDto requestDto = new AccountDto(null, null, "New Account", type.getCode(), "Label", new BigDecimal("500.00"), "USD", "$", BankName.DISCOVER.name());
+        AccountDto responseDto = new AccountDto(ACCOUNT_ID, null, "New Account", type.getCode(), "Label", new BigDecimal("500.00"), "USD", "$", BankName.DISCOVER.name());
         
         when(accountService.createAccount(eq(USER_ID), any(AccountDto.class))).thenReturn(responseDto);
 
@@ -104,7 +104,7 @@ class AccountControllerTest {
         // Arrange
         AccountType type = new AccountType();
         type.setCode("SAVINGS");
-        AccountDto requestDto = new AccountDto(ACCOUNT_ID, null, "Updated Name", type, new BigDecimal("1200.00"), null, BankName.SYNOVUS);
+        AccountDto requestDto = new AccountDto(ACCOUNT_ID, null, "Updated Name", type.getCode(), "Label", new BigDecimal("1200.00"), "USD", "$", BankName.SYNOVUS.name());
         
         when(accountService.updateAccount(eq(USER_ID), eq(ACCOUNT_ID), any(AccountDto.class))).thenReturn(requestDto);
 
@@ -141,7 +141,7 @@ class AccountControllerTest {
         
         AccountType type = new AccountType();
         type.setCode("CHECKING");
-        AccountDto responseDto = new AccountDto(ACCOUNT_ID, null, "Checking Account", type, targetBalance, null, BankName.CAPITAL_ONE);
+        AccountDto responseDto = new AccountDto(ACCOUNT_ID, null, "Checking Account", type.getCode(), "Label", targetBalance, "USD", "$", BankName.CAPITAL_ONE.name());
         
         when(accountService.reconcileAccount(eq(USER_ID), eq(ACCOUNT_ID), eq(targetBalance))).thenReturn(responseDto);
 

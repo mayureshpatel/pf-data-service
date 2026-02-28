@@ -1,12 +1,12 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
 
 public record AccountSnapshotDto(
         Long id,
         AccountDto account,
-        OffsetDateTime snapshotDate,
+        LocalDate snapshotDate,
         BigDecimal balance
 ) {
 }
