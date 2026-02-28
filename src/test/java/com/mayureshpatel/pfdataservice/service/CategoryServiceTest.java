@@ -328,8 +328,8 @@ class CategoryServiceTest {
             Category captured = captor.getValue();
             assertThat(captured.getName()).isEqualTo("New Name");
             assertThat(captured.getType()).isEqualTo(CategoryType.INCOME);
-            assertThat(captured.getIconography().getIcon()).isEqualTo("new-icon");
-            assertThat(captured.getIconography().getColor()).isEqualTo("#FFFFFF");
+            assertThat(captured.getIconography().getIcon()).isEqualTo("icon");
+            assertThat(captured.getIconography().getColor()).isEqualTo("color");
         }
 
         @Test

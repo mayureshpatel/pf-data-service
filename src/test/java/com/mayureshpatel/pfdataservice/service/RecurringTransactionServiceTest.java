@@ -219,14 +219,14 @@ class RecurringTransactionServiceTest {
             assertThat(result.id()).isEqualTo(RECURRING_ID);
             assertThat(result.active()).isTrue();
 
-            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
+            ArgumentCaptor<RecurringTransactionDto> captor = ArgumentCaptor.forClass(RecurringTransactionDto.class);
             verify(recurringRepository).save(captor.capture());
-            RecurringTransaction captured = captor.getValue();
-            assertThat(captured.getUser().getId()).isEqualTo(USER_ID);
-            assertThat(captured.getAccount().getId()).isEqualTo(ACCOUNT_ID);
-            assertThat(captured.getAmount()).isEqualByComparingTo(new BigDecimal("15.99"));
-            assertThat(captured.getFrequency()).isEqualTo(Frequency.MONTHLY);
-            assertThat(captured.isActive()).isTrue();
+            RecurringTransactionDto captured = captor.getValue();
+            assertThat(captured.userId()).isEqualTo(USER_ID);
+            assertThat(captured.account().id()).isEqualTo(ACCOUNT_ID);
+            assertThat(captured.amount()).isEqualByComparingTo(new BigDecimal("15.99"));
+            assertThat(captured.frequency()).isEqualTo(Frequency.MONTHLY);
+            assertThat(captured.active()).isTrue();
         }
 
         @Test
@@ -353,12 +353,12 @@ class RecurringTransactionServiceTest {
             assertThat(result.amount()).isEqualByComparingTo(new BigDecimal("9.99"));
             assertThat(result.active()).isFalse();
 
-            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
+            ArgumentCaptor<RecurringTransactionDto> captor = ArgumentCaptor.forClass(RecurringTransactionDto.class);
             verify(recurringRepository).save(captor.capture());
-            RecurringTransaction captured = captor.getValue();
-            assertThat(captured.getAmount()).isEqualByComparingTo(new BigDecimal("9.99"));
-            assertThat(captured.getFrequency()).isEqualTo(Frequency.MONTHLY);
-            assertThat(captured.isActive()).isFalse();
+            RecurringTransactionDto captured = captor.getValue();
+            assertThat(captured.amount()).isEqualByComparingTo(new BigDecimal("9.99"));
+            assertThat(captured.frequency()).isEqualTo(Frequency.MONTHLY);
+            assertThat(captured.active()).isFalse();
         }
 
         @Test
@@ -382,9 +382,9 @@ class RecurringTransactionServiceTest {
             // Assert
             assertThat(result.account()).isNull();
 
-            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
+            ArgumentCaptor<RecurringTransactionDto> captor = ArgumentCaptor.forClass(RecurringTransactionDto.class);
             verify(recurringRepository).save(captor.capture());
-            assertThat(captor.getValue().getAccount()).isNull();
+            assertThat(captor.getValue().account()).isNull();
             verify(accountRepository, never()).findById(any());
         }
 
