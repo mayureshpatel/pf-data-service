@@ -4,7 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +23,7 @@ public class CategoryRuleRowMapper implements RowMapper<CategoryRule> {
         categoryRule.setKeyword(rs.getString("keyword"));
         categoryRule.setPriority(rs.getInt("priority"));
 
-        CategoryDto category = new CategoryDto();
+        Category category = new Category();
         category.setId(rs.getLong("category_id"));
         category.setName(rs.getString("category_name"));
 

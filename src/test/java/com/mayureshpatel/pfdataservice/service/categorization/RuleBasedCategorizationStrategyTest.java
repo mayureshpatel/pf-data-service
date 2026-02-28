@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +24,7 @@ class RuleBasedCategorizationStrategyTest {
     }
 
     private CategoryRule buildRule(String keyword, Long categoryId) {
-        CategoryDto category = new CategoryDto();
+        Category category = new Category();
         category.setId(categoryId);
         CategoryRule rule = new CategoryRule();
         rule.setKeyword(keyword);

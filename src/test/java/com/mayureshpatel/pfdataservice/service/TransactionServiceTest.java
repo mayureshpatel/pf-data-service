@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
@@ -259,7 +259,7 @@ class TransactionServiceTest {
             Account account = buildAccount(1L, user, new BigDecimal("200"));
             Transaction t = buildTransaction(1L, account, new BigDecimal("50"), TransactionType.EXPENSE,
                     OffsetDateTime.now());
-            CategoryDto cat = new CategoryDto();
+            Category cat = new Category();
             cat.setId(5L);
             t.setCategory(cat);
 
@@ -441,7 +441,7 @@ class TransactionServiceTest {
             Account account = buildAccount(ACCOUNT_ID, user, new BigDecimal("500"));
             AccountDto accountDto = new AccountDto(ACCOUNT_ID, null, null, null, null, null, null);
 
-            CategoryDto parentCategory = CategoryDto.builder().id(1L).name("Food").parent(null).build();
+            Category parentCategory = Category.builder().id(1L).name("Food").parent(null).build();
 
             TransactionDto dto = TransactionDto.builder()
                     .account(accountDto)

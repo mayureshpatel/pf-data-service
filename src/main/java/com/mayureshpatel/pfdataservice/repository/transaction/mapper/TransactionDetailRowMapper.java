@@ -5,7 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
@@ -101,11 +101,11 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
         return account;
     }
 
-    private CategoryDto mapCategory(ResultSet rs) throws SQLException {
+    private Category mapCategory(ResultSet rs) throws SQLException {
         Long categoryId = getLongOrNull(rs, "category_id");
         if (categoryId == null) return null;
 
-        CategoryDto category = new CategoryDto();
+        Category category = new Category();
         category.setId(categoryId);
         category.setName(rs.getString("cat_name"));
         category.setIconography(new Iconography(
@@ -127,7 +127,7 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
 
         Long parentId = getLongOrNull(rs, "pcat_id");
         if (parentId != null) {
-            CategoryDto parent = new CategoryDto();
+            Category parent = new Category();
             parent.setId(parentId);
             parent.setName(rs.getString("pcat_name"));
             parent.setIconography(new Iconography(

@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.budget.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
@@ -18,11 +18,11 @@ public class BudgetStatusRowMapper implements RowMapper<BudgetStatusDto> {
         User user = new User();
         user.setId(rs.getLong("category_user_id"));
 
-        CategoryDto parentCategory = new CategoryDto();
+        Category parentCategory = new Category();
         parentCategory.setId(rs.getLong("parent_category_id"));
         parentCategory.setName(rs.getString("parent_category_name"));
 
-        CategoryDto category = new CategoryDto();
+        Category category = new Category();
         category.setId(rs.getLong("category_id"));
         category.setUser(user);
         category.setName(rs.getString("category_name"));

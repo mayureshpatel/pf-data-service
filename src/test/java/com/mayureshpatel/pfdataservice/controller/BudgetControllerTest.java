@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
 import com.mayureshpatel.pfdataservice.security.JwtService;
@@ -104,7 +104,7 @@ class BudgetControllerTest {
         int month = LocalDate.now().getMonthValue();
         int year = LocalDate.now().getYear();
         
-        CategoryDto category = new CategoryDto();
+        Category category = new Category();
         category.setId(100L);
         category.setName("Groceries");
         

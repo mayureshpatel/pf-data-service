@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
@@ -74,7 +74,7 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // get the category; throw exception if not found
-        CategoryDto category = categoryRepository.findById(dto.category().id())
+        Category category = categoryRepository.findById(dto.category().id())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         // ensure user has access to the category

@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
@@ -133,7 +133,7 @@ class TransactionImportServiceTest {
         @DisplayName("should populate suggestedCategory when categorizer returns a valid category ID")
         void previewTransactions_categorizerMatchesCategory_previewHasSuggestedCategory() {
             Transaction t = buildTransaction();
-            CategoryDto category = new CategoryDto();
+            Category category = new Category();
             category.setId(5L);
             category.setName("Food & Dining");
 

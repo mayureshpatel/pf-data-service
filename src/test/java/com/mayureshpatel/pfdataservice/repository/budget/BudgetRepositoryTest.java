@@ -4,7 +4,7 @@ import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -65,8 +65,8 @@ class BudgetRepositoryTest extends BaseIntegrationTest {
         return userRepository.save(user);
     }
 
-    private CategoryDto createCategory(User user, String name) {
-        CategoryDto category = new CategoryDto();
+    private Category createCategory(User user, String name) {
+        Category category = new Category();
         category.setUser(user);
         category.setName(name);
         category.setType(CategoryType.EXPENSE);
@@ -112,8 +112,8 @@ class BudgetRepositoryTest extends BaseIntegrationTest {
     void findBudgetStatus_shouldReturnStatus() {
         // Arrange
         User user = createUser("budgetuser");
-        CategoryDto food = createCategory(user, "Food");
-        CategoryDto rent = createCategory(user, "Rent"); // Unbudgeted
+        Category food = createCategory(user, "Food");
+        Category rent = createCategory(user, "Rent"); // Unbudgeted
         Account account = createAccount(user, "Budget Account");
         Merchant merchant = createMerchant(user, "Shop");
 

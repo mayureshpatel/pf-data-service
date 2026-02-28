@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -59,7 +59,7 @@ public class CategoryRuleService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        CategoryDto category = new CategoryDto();
+        Category category = new Category();
         category.setId(dto.category().id());
 
         TableAudit audit = new TableAudit();
@@ -94,7 +94,7 @@ public class CategoryRuleService {
             throw new AccessDeniedException("You do not own this rule");
         }
 
-        CategoryDto category = new CategoryDto();
+        Category category = new Category();
         category.setId(dto.category().id());
 
         rule.setKeyword(dto.keyword());
@@ -125,12 +125,12 @@ public class CategoryRuleService {
 
     public List<RuleChangePreviewDto> previewApply(Long userId) {
         List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
-        List<CategoryDto> categories = categoryRepository.findByUserId(userId);
+        List<Category> categories = categoryRepository.findByUserId(userId);
         List<Transaction> transactions = transactionRepository.findByUserId(userId);
 
-        Map<Long, CategoryDto> categoryMap = categories.stream()
+        Map<Long, Category> categoryMap = categories.stream()
                 .collect(Collectors.toMap(
-                        CategoryDto::getId,
+                        Category::getId,
                         category -> category, (categoryA, categoryB) -> categoryA)
                 );
 
@@ -145,7 +145,7 @@ public class CategoryRuleService {
                 continue;
             }
 
-            CategoryDto matchedCategory = categoryMap.get(guessedCategory);
+            Category matchedCategory = categoryMap.get(guessedCategory);
             if (matchedCategory == null) {
                 continue;
             }
@@ -163,12 +163,12 @@ public class CategoryRuleService {
     @Transactional
     public int applyRules(Long userId) {
         List<CategoryRule> rules = this.categoryRuleRepository.findByUserId(userId);
-        List<CategoryDto> categories = this.categoryRepository.findByUserId(userId);
+        List<Category> categories = this.categoryRepository.findByUserId(userId);
         List<Transaction> transactions = this.transactionRepository.findByUserId(userId);
 
-        Map<Long, CategoryDto> categoryMap = categories.stream()
+        Map<Long, Category> categoryMap = categories.stream()
                 .collect(Collectors.toMap(
-                        CategoryDto::getId,
+                        Category::getId,
                         category -> category, (categoryA, categoryB) -> categoryA));
 
         List<Transaction> toUpdate = new ArrayList<>();
@@ -183,7 +183,7 @@ public class CategoryRuleService {
                 continue;
             }
 
-            CategoryDto matchedCategory = categoryMap.get(guessedCategory);
+            Category matchedCategory = categoryMap.get(guessedCategory);
             if (matchedCategory == null) {
                 continue;
             }

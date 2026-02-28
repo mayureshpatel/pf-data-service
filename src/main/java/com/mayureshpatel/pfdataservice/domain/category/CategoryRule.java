@@ -13,7 +13,7 @@ public class CategoryRule {
 
     private Long id;
     private String keyword;
-    private CategoryDto category;
+    private Category category;
     private Integer priority;
     private User user;
 

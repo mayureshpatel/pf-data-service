@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.budget.mapper;
 
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import org.springframework.jdbc.core.RowMapper;
@@ -30,7 +30,7 @@ public class BudgetRowMapper implements RowMapper<Budget> {
 
         Long categoryId = JdbcMapperUtils.getLongOrNull(rs, "category_id");
         if (categoryId != null) {
-            CategoryDto category = new CategoryDto();
+            Category category = new Category();
             category.setId(categoryId);
             budget.setCategory(category);
         }

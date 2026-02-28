@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class TransactionCategorizer {
      * @param categories  Optional list of categories to validate against
      * @return The suggested category name, or "Uncategorized" if no match found
      */
-    public Long guessCategory(Transaction transaction, List<CategoryRule> rules, List<CategoryDto> categories) {
+    public Long guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {
         CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                 .userId(transaction.getAccount() != null
                         ? transaction.getAccount().getUser() != null

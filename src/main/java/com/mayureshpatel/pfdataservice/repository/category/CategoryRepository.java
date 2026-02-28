@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.category;
 
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.category.query.CategoryQueries;
@@ -15,13 +15,13 @@ import java.util.Optional;
 
 @Repository("jdbcCategoryRepository")
 @RequiredArgsConstructor
-public class CategoryRepository implements JdbcRepository<CategoryDto, Long> {
+public class CategoryRepository implements JdbcRepository<Category, Long> {
 
     private final JdbcClient jdbcClient;
     private final CategoryRowMapper rowMapper;
 
     @Override
-    public Optional<CategoryDto> findById(Long id) {
+    public Optional<Category> findById(Long id) {
         return jdbcClient.sql(CategoryQueries.FIND_BY_ID)
                 .param("id", id)
                 .query(rowMapper)
@@ -29,27 +29,27 @@ public class CategoryRepository implements JdbcRepository<CategoryDto, Long> {
     }
 
     @Override
-    public List<CategoryDto> findAll() {
+    public List<Category> findAll() {
         return jdbcClient.sql(CategoryQueries.FIND_ALL)
                 .query(rowMapper)
                 .list();
     }
 
-    public List<CategoryDto> findByUserId(Long userId) {
+    public List<Category> findByUserId(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
     }
 
-    public List<CategoryDto> findAllWIthParent(Long userId) {
+    public List<Category> findAllWIthParent(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_WITH_PARENT)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
     }
 
-    public List<CategoryDto> findAllSubCategories(Long userId) {
+    public List<Category> findAllSubCategories(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_SUB_CATEGORIES)
                 .param("userId", userId)
                 .query(rowMapper)
@@ -57,7 +57,7 @@ public class CategoryRepository implements JdbcRepository<CategoryDto, Long> {
     }
 
     @Override
-    public CategoryDto insert(CategoryDto category) {
+    public Category insert(Category category) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(CategoryQueries.INSERT)
                 .param("name", category.getName())
@@ -73,7 +73,7 @@ public class CategoryRepository implements JdbcRepository<CategoryDto, Long> {
     }
 
     @Override
-    public CategoryDto update(CategoryDto category) {
+    public Category update(Category category) {
         jdbcClient.sql(CategoryQueries.UPDATE)
                 .param("name", category.getName())
                 .param("color", category.getIconography().getColor())
@@ -87,7 +87,7 @@ public class CategoryRepository implements JdbcRepository<CategoryDto, Long> {
     }
 
     @Override
-    public CategoryDto save(CategoryDto category) {
+    public Category save(Category category) {
         if (category.getId() == null) {
             return insert(category);
         } else {
@@ -96,7 +96,7 @@ public class CategoryRepository implements JdbcRepository<CategoryDto, Long> {
     }
 
     @Override
-    public void delete(CategoryDto category) {
+    public void delete(Category category) {
         if (category.getId() != null) {
             deleteById(category.getId());
         }

@@ -1,10 +1,12 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
@@ -171,7 +173,7 @@ public class TransactionService {
         transaction.setMerchant(merchant);
 
         if (dto.category() != null) {
-            com.mayureshpatel.pfdataservice.domain.category.CategoryDto category = categoryRepository.findById(dto.category().getId())
+            Category category = categoryRepository.findById(dto.category().getId())
                     .orElse(null);
             if (category != null) {
                 if (category.getParent() == null) {
@@ -183,7 +185,7 @@ public class TransactionService {
             }
         } else {
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
-            List<com.mayureshpatel.pfdataservice.domain.category.CategoryDto> userCategories = categoryRepository.findByUserId(userId);
+            List<Category> userCategories = categoryRepository.findByUserId(userId);
             Long categoryId = categorizer.guessCategory(transaction, rules, userCategories);
 
             if (categoryId > 0) {
@@ -245,7 +247,7 @@ public class TransactionService {
         }
 
         if (dto.category() != null) {
-            com.mayureshpatel.pfdataservice.domain.category.CategoryDto category = categoryRepository.findById(dto.category().getId())
+            Category category = categoryRepository.findById(dto.category().getId())
                     .orElse(null);
             if (category != null) {
                 if (category.getParent() == null) {
@@ -257,7 +259,7 @@ public class TransactionService {
             }
         } else {
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
-            List<com.mayureshpatel.pfdataservice.domain.category.CategoryDto> userCategories = categoryRepository.findByUserId(userId);
+            List<Category> userCategories = categoryRepository.findByUserId(userId);
             Long categoryId = categorizer.guessCategory(transaction, rules, userCategories);
 
             if (categoryId > 0) {
@@ -305,9 +307,9 @@ public class TransactionService {
         return transactionRepository.getCountByCategory(userId);
     }
 
-    public List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> getCategoriesWithTransactions(Long userId) {
-        List<com.mayureshpatel.pfdataservice.domain.category.CategoryDto> categories = transactionRepository.getCategoriesWithTransactions(userId);
-        return categories.stream().map(com.mayureshpatel.pfdataservice.dto.category.CategoryDto::mapToDto).toList();
+    public List<CategoryDto> getCategoriesWithTransactions(Long userId) {
+        List<Category> categories = transactionRepository.getCategoriesWithTransactions(userId);
+        return categories.stream().map(CategoryDto::mapToDto).toList();
     }
 
     public List<MerchantDto> getMerchantsWithTransactions(Long userId) {

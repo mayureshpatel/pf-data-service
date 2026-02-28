@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
@@ -43,7 +43,7 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
 
         Long categoryId = getLongOrNull(rs, "category_id");
         if (categoryId != null) {
-            CategoryDto category = new CategoryDto();
+            Category category = new Category();
             category.setId(categoryId);
             transaction.setCategory(category);
         }

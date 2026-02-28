@@ -4,8 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
@@ -188,7 +187,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
-    public List<CategoryDto> getCategoriesWithTransactions(Long userId) {
+    public List<Category> getCategoriesWithTransactions(Long userId) {
         return jdbcClient.sql(TransactionQueries.CATEGORIES_WITH_TRANSACTIONS)
                 .param("userId", userId)
                 .query(categoryRowMapper)

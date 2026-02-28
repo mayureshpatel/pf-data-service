@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
@@ -66,13 +66,13 @@ public class TransactionImportService {
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
         List<CategoryRule> userRules = this.categoryRuleRepository.findByUserId(userId);
-        List<CategoryDto> userCategories = categoryRepository.findByUserId(userId);
+        List<Category> userCategories = categoryRepository.findByUserId(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
             List<TransactionPreview> previews = rawTransactionStream
                     .map(t -> {
                         Long categoryId = categorizer.guessCategory(t, userRules, userCategories);
-                        CategoryDto suggestedCategory = categoryId > 0
+                        Category suggestedCategory = categoryId > 0
                                 ? userCategories.stream()
                                 .filter(c -> c.getId().equals(categoryId))
                                 .findFirst()

@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
@@ -13,17 +13,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Component
-public class CategoryRowMapper implements RowMapper<CategoryDto> {
+public class CategoryRowMapper implements RowMapper<Category> {
 
     @Override
-    public CategoryDto mapRow(ResultSet rs, int rowNum) throws SQLException {
-        CategoryDto category = new CategoryDto();
+    public Category mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Category category = new Category();
         category.setId(rs.getLong("id"));
         category.setName(rs.getString("name"));
 
         long parentId = rs.getLong("parent_id");
         if (!rs.wasNull()) {
-            CategoryDto parentCategory = new CategoryDto();
+            Category parentCategory = new Category();
             parentCategory.setId(parentId);
             try {
                 parentCategory.setName(rs.getString("parent_name"));
