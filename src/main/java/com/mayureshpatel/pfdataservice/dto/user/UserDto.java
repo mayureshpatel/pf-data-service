@@ -1,4 +1,6 @@
-package com.mayureshpatel.pfdataservice.domain.user;
+package com.mayureshpatel.pfdataservice.dto.user;
+
+import com.mayureshpatel.pfdataservice.domain.user.User;
 
 public record UserDto(
         Long id,
