@@ -18,6 +18,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.List;
@@ -88,7 +89,8 @@ class TransactionControllerTest {
     @DisplayName("POST /api/v1/accounts/{accountId}/transactions should save transactions and return success message")
     void saveTransactions_shouldReturnSuccessMessage() throws Exception {
         // Arrange
-        SaveTransactionRequest request = new SaveTransactionRequest(List.of(), "test.csv", "hash123");
+        TransactionDto tx = TransactionDto.builder().id(1L).description("Test").build();
+        SaveTransactionRequest request = new SaveTransactionRequest(List.of(tx), "test.csv", "hash123");
         
         when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
         when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq("test.csv"), eq("hash123")))

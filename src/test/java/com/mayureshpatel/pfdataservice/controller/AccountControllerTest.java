@@ -155,4 +155,21 @@ class AccountControllerTest {
 
         verify(accountService).reconcileAccount(USER_ID, ACCOUNT_ID, targetBalance);
     }
+
+    @Test
+    @DisplayName("GET /api/v1/accounts should return 401 when not authenticated")
+    void getAccounts_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/accounts"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/accounts should return 401 when not authenticated")
+    void createAccount_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/accounts")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
 }

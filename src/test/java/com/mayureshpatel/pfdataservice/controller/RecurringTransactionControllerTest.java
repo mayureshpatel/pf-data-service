@@ -138,4 +138,21 @@ class RecurringTransactionControllerTest {
 
         verify(recurringService).deleteRecurringTransaction(USER_ID, RECURRING_ID);
     }
+
+    @Test
+    @DisplayName("GET /api/v1/recurring should return 401 when not authenticated")
+    void getRecurring_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/recurring"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/recurring should return 401 when not authenticated")
+    void createRecurring_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/recurring")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
 }

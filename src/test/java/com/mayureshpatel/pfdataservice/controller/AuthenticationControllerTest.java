@@ -85,4 +85,50 @@ class AuthenticationControllerTest {
 
         verify(registrationService).register(any(RegistrationRequest.class));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/register should return 400 when username is blank")
+    void register_blankUsername_returns400() throws Exception {
+        RegistrationRequest request = new RegistrationRequest("", "user@example.com", "P@ssword1");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/register should return 400 when email is invalid")
+    void register_invalidEmail_returns400() throws Exception {
+        RegistrationRequest request = new RegistrationRequest("validuser", "not-an-email", "P@ssword1");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/register should return 400 when password is too weak")
+    void register_weakPassword_returns400() throws Exception {
+        RegistrationRequest request = new RegistrationRequest("validuser", "user@example.com", "weak");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/register should return validation errors with field details")
+    void register_multipleViolations_returnsFieldErrors() throws Exception {
+        RegistrationRequest request = new RegistrationRequest("", "", "");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors").isArray())
+                .andExpect(jsonPath("$.validationErrors").isNotEmpty());
+    }
 }

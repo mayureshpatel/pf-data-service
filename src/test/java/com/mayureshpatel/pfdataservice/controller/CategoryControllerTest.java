@@ -161,4 +161,21 @@ class CategoryControllerTest {
 
         verify(categoryService).deleteCategory(USER_ID, CATEGORY_ID);
     }
+
+    @Test
+    @DisplayName("GET /api/v1/categories should return 401 when not authenticated")
+    void getCategories_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/categories"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/categories should return 401 when not authenticated")
+    void createCategory_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/categories")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
 }

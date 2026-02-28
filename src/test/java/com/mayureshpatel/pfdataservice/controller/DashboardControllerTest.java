@@ -176,4 +176,13 @@ class DashboardControllerTest {
 
         verify(dashboardService).getActionItems(USER_ID);
     }
+
+    @Test
+    @DisplayName("GET /api/v1/dashboard/categories should return 401 when not authenticated")
+    void getCategoryBreakdown_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/dashboard/categories")
+                        .param("month", "1")
+                        .param("year", "2023"))
+                .andExpect(status().isUnauthorized());
+    }
 }

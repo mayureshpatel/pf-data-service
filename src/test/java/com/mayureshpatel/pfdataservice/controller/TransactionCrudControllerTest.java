@@ -17,8 +17,18 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
+import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -226,5 +236,88 @@ class TransactionCrudControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(transactionService).deleteTransactions(USER_ID, ids);
+    }
+
+    @Test
+    @WithCustomMockUser(id = USER_ID)
+    @DisplayName("GET /api/v1/transactions should return paginated transactions")
+    void getTransactions_shouldReturnPaginatedTransactions() throws Exception {
+        TransactionDto dto = TransactionDto.builder().id(1L).description("Test").build();
+        Page<TransactionDto> page = new PageImpl<>(List.of(dto));
+
+        when(transactionService.getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/transactions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].description").value("Test"));
+
+        verify(transactionService).getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class));
+    }
+
+    @Test
+    @WithCustomMockUser(id = USER_ID)
+    @DisplayName("GET /api/v1/transactions with filter params should pass filter to service")
+    void getTransactions_withFilters_shouldPassFilterToService() throws Exception {
+        Page<TransactionDto> page = new PageImpl<>(Collections.emptyList());
+        when(transactionService.getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/transactions")
+                        .param("accountId", "5")
+                        .param("type", "EXPENSE")
+                        .param("description", "coffee")
+                        .param("minAmount", "10.00")
+                        .param("maxAmount", "100.00"))
+                .andExpect(status().isOk());
+
+        verify(transactionService).getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class));
+    }
+
+    @Test
+    @WithCustomMockUser(id = USER_ID)
+    @DisplayName("GET /api/v1/transactions/count-by-category should return category counts")
+    void getCountByCategory_shouldReturnCounts() throws Exception {
+        CategoryDto cat = new CategoryDto(1L, USER_ID, "Groceries", CategoryType.EXPENSE, null, "cart", "#00FF00");
+        CategoryTransactionsDto dto = new CategoryTransactionsDto(cat, 15);
+
+        when(transactionService.getCountByCategory(USER_ID)).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/api/v1/transactions/count-by-category"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].category.name").value("Groceries"))
+                .andExpect(jsonPath("$[0].transactionCount").value(15));
+    }
+
+    @Test
+    @WithCustomMockUser(id = USER_ID)
+    @DisplayName("GET /api/v1/transactions/existing-categories should return categories")
+    void getExistingCategories_shouldReturnCategories() throws Exception {
+        CategoryDto cat = new CategoryDto(1L, USER_ID, "Groceries", CategoryType.EXPENSE, null, "cart", "#00FF00");
+
+        when(transactionService.getCategoriesWithTransactions(USER_ID)).thenReturn(List.of(cat));
+
+        mockMvc.perform(get("/api/v1/transactions/existing-categories"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Groceries"));
+    }
+
+    @Test
+    @WithCustomMockUser(id = USER_ID)
+    @DisplayName("GET /api/v1/transactions/existing-merchants should return merchants")
+    void getExistingMerchants_shouldReturnMerchants() throws Exception {
+        MerchantDto merchant = new MerchantDto(1L, USER_ID, "KROGER #431", "Kroger");
+
+        when(transactionService.getMerchantsWithTransactions(USER_ID)).thenReturn(List.of(merchant));
+
+        mockMvc.perform(get("/api/v1/transactions/existing-merchants"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].cleanName").value("Kroger"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/transactions should return 401 when not authenticated")
+    void getTransactions_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/transactions"))
+                .andExpect(status().isUnauthorized());
     }
 }

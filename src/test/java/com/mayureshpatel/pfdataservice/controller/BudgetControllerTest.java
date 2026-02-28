@@ -172,4 +172,21 @@ class BudgetControllerTest {
 
         verify(budgetService).delete(USER_ID, BUDGET_ID);
     }
+
+    @Test
+    @DisplayName("GET /api/v1/budgets should return 401 when not authenticated")
+    void getBudgets_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/budgets"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/budgets should return 401 when not authenticated")
+    void setBudget_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/budgets")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
 }
