@@ -38,7 +38,7 @@ public class RecurringTransactionService {
 
     public List<RecurringTransactionDto> getRecurringTransactions(Long userId) {
         return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(this::mapToDto)
+                .map(RecurringTransaction::toDto)
                 .toList();
     }
 
@@ -205,7 +205,7 @@ public class RecurringTransactionService {
         recurring.setNextDate(dto.nextDate());
         recurring.setActive(dto.active());
 
-        return mapToDto(recurringRepository.save(recurring));
+        return recurringRepository.save(recurring).toDto();
     }
 
     @Transactional
@@ -218,19 +218,5 @@ public class RecurringTransactionService {
         }
 
         recurringRepository.delete(id, userId);
-    }
-
-    private RecurringTransactionDto mapToDto(RecurringTransaction r) {
-        return RecurringTransactionDto.builder()
-                .id(r.getId())
-                .userId(r.getUser().getId())
-                .account(r.getAccount() != null ? r.getAccount().toDto() : null)
-                .merchant(r.getMerchant() != null ? r.getMerchant().toDto() : null)
-                .amount(r.getAmount())
-                .frequency(r.getFrequency())
-                .lastDate(r.getLastDate())
-                .nextDate(r.getNextDate())
-                .active(r.isActive())
-                .build();
     }
 }
