@@ -1,23 +1,31 @@
 package com.mayureshpatel.pfdataservice.util;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.AccountSnapshot;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
+import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
+import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.CreatedAtAudit;
+import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.account.AccountSnapshotRepository;
 import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
+import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
+import com.mayureshpatel.pfdataservice.repository.file_import_history.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
@@ -25,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -42,6 +51,10 @@ public class TestDataFactory {
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private MerchantRepository merchantRepository;
     @Autowired private TransactionRepository transactionRepository;
+    @Autowired private BudgetRepository budgetRepository;
+    @Autowired private CategoryRuleRepository categoryRuleRepository;
+    @Autowired private FileImportHistoryRepository fileImportHistoryRepository;
+    @Autowired private AccountSnapshotRepository accountSnapshotRepository;
 
     public User createUser(String username) {
         User user = new User();
@@ -114,7 +127,48 @@ public class TestDataFactory {
         tx.setType(type);
         tx.setDescription("Test Transaction " + UUID.randomUUID().toString().substring(0, 8));
         tx.setAudit(new SoftDeleteAudit());
-        
+
         return transactionRepository.save(tx);
+    }
+
+    public Budget createBudget(User user, Category category, BigDecimal amount, int month, int year) {
+        Budget budget = Budget.builder()
+                .user(user)
+                .category(category)
+                .amount(amount)
+                .month(month)
+                .year(year)
+                .audit(new SoftDeleteAudit())
+                .build();
+        return budgetRepository.save(budget);
+    }
+
+    public CategoryRule createCategoryRule(User user, Category category, String keyword, int priority) {
+        CategoryRule rule = new CategoryRule();
+        rule.setUser(user);
+        rule.setCategory(category);
+        rule.setKeyword(keyword);
+        rule.setPriority(priority);
+        rule.setAudit(new TimestampAudit());
+        return categoryRuleRepository.save(rule);
+    }
+
+    public FileImportHistory createFileImportHistory(Account account, String fileName, String fileHash, int transactionCount) {
+        FileImportHistory history = new FileImportHistory();
+        history.setAccount(account);
+        history.setFileName(fileName);
+        history.setFileHash(fileHash);
+        history.setTransactionCount(transactionCount);
+        history.setAudit(new CreatedAtAudit());
+        return fileImportHistoryRepository.save(history);
+    }
+
+    public AccountSnapshot createAccountSnapshot(Account account, LocalDate snapshotDate, BigDecimal balance) {
+        AccountSnapshot snapshot = new AccountSnapshot();
+        snapshot.setAccount(account);
+        snapshot.setSnapshotDate(snapshotDate);
+        snapshot.setBalance(balance);
+        snapshot.setAudit(new CreatedAtAudit());
+        return accountSnapshotRepository.save(snapshot);
     }
 }

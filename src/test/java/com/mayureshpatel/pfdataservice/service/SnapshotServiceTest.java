@@ -18,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,8 +95,7 @@ class SnapshotServiceTest {
             assertThat(saved.getId()).isNull();
             assertThat(saved.getAccount()).isSameAs(account);
             assertThat(saved.getBalance()).isEqualByComparingTo(expectedHistoric);
-            assertThat(saved.getSnapshotDate())
-                    .isEqualTo(expectedEndOfMonth.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime());
+            assertThat(saved.getSnapshotDate()).isEqualTo(expectedEndOfMonth);
         }
 
         @Test
@@ -128,7 +126,7 @@ class SnapshotServiceTest {
             assertThat(saved.getId()).isEqualTo(77L);
             assertThat(saved.getBalance()).isEqualByComparingTo(expectedHistoric);
             assertThat(saved.getAccount()).isSameAs(account);
-            assertThat(saved.getSnapshotDate()).isEqualTo(expectedEndOfMonth.toLocalDate());
+            assertThat(saved.getSnapshotDate()).isEqualTo(expectedEndOfMonth);
         }
 
         @Test
