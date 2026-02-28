@@ -1,11 +1,9 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 
 import java.math.BigDecimal;
 
@@ -13,7 +11,7 @@ import java.math.BigDecimal;
  * Represents an account object.
  *
  * @param id             the account id
- * @param user           the user who owns the account
+ * @param userId         the user who owns the account
  * @param name           the account name
  * @param type           the account type code
  * @param currentBalance the current balance
@@ -22,7 +20,7 @@ import java.math.BigDecimal;
  */
 public record AccountDto(
         Long id,
-        User user,
+        Long userId,
         String name,
         AccountType type,
         BigDecimal currentBalance,
@@ -30,21 +28,10 @@ public record AccountDto(
         BankName bankName
 ) {
 
-    /**
-     * Maps an {@link Account} to a {@link AccountDto}
-     *
-     * @param account the account to map
-     * @return the mapped {@link AccountDto}
-     */
-    @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
-    public static AccountDto fromId(Long id) {
-        return new AccountDto(id, null, null, null, null, null, null);
-    }
-
     public static AccountDto fromDomain(Account account) {
         return new AccountDto(
                 account.getId(),
-                account.getUser(),
+                account.getUser().getId(),
                 account.getName(),
                 account.getType(),
                 account.getCurrentBalance(),

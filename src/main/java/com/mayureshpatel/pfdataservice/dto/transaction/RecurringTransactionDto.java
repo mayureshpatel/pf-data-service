@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.dto.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import lombok.Builder;
@@ -13,7 +12,7 @@ import java.time.OffsetDateTime;
 @Builder
 public record RecurringTransactionDto(
         Long id,
-        User user,
+        Long userId,
         AccountDto account,
         MerchantDto merchant,
         BigDecimal amount,
@@ -32,7 +31,7 @@ public record RecurringTransactionDto(
     public static RecurringTransactionDto mapToDto(RecurringTransaction recurringTransaction) {
         return new RecurringTransactionDto(
                 recurringTransaction.getId(),
-                recurringTransaction.getUser(),
+                recurringTransaction.getUser().getId(),
                 AccountDto.fromDomain(recurringTransaction.getAccount()),
                 MerchantDto.mapToDto(recurringTransaction.getMerchant()),
                 recurringTransaction.getAmount(),

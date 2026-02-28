@@ -7,7 +7,7 @@ import lombok.Builder;
 @Builder
 public record CategoryRuleDto(
         Long id,
-        User user,
+        Long userId,
         String keyword,
         Integer priority,
         CategoryDto category
@@ -22,6 +22,7 @@ public record CategoryRuleDto(
     public static CategoryRuleDto mapToDto(CategoryRule rule) {
         return CategoryRuleDto.builder()
                 .id(rule.getId())
+                .userId(rule.getUser().getId())
                 .keyword(rule.getKeyword())
                 .category(CategoryDto.mapToDto(rule.getCategory()))
                 .priority(rule.getPriority())

@@ -6,7 +6,7 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 
 public record TagDto(
         Long id,
-        User user,
+        Long userId,
         String name,
         Iconography iconography
 ) {
@@ -20,7 +20,7 @@ public record TagDto(
     public static TagDto mapToDto(Tag tag) {
         return new TagDto(
                 tag.getId(),
-                tag.getUser(),
+                tag.getUser().getId(),
                 tag.getName(),
                 tag.getIconography()
         );

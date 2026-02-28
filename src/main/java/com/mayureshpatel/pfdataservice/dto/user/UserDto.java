@@ -5,8 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 public record UserDto(
         Long id,
         String username,
-        String email,
-        String passwordHash
+        String email
 ) {
 
     /**
@@ -19,8 +18,7 @@ public record UserDto(
         return new UserDto(
                 user.getId(),
                 user.getUsername(),
-                user.getEmail(),
-                user.getPasswordHash()
+                user.getEmail()
         );
     }
 }

@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.budget;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import lombok.Builder;
 
@@ -11,7 +10,7 @@ import java.math.BigDecimal;
  * Represents a budget object.
  *
  * @param id       the budget id
- * @param user     the budget user
+ * @param userId   the budget user
  * @param category the budget category
  * @param amount   the budget amount
  * @param month    the budget month
@@ -20,7 +19,7 @@ import java.math.BigDecimal;
 @Builder
 public record BudgetDto(
         Long id,
-        User user,
+        Long userId,
         CategoryDto category,
         BigDecimal amount,
         Integer month,
@@ -36,7 +35,7 @@ public record BudgetDto(
     public static BudgetDto mapToDto(Budget budget) {
         return BudgetDto.builder()
                 .id(budget.getId())
-                .user(budget.getUser())
+                .userId(budget.getUser().getId())
                 .category(CategoryDto.mapToDto(budget.getCategory()))
                 .amount(budget.getAmount())
                 .month(budget.getMonth())

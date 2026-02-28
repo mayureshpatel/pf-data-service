@@ -5,7 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 
 public record MerchantDto(
         Long id,
-        User user,
+        Long userId,
         String originalName,
         String cleanName
 ) {
@@ -20,7 +20,7 @@ public record MerchantDto(
         if (merchant == null) return null;
         return new MerchantDto(
                 merchant.getId(),
-                merchant.getUser(),
+                merchant.getUser().getId(),
                 merchant.getOriginalName(),
                 merchant.getName()
         );

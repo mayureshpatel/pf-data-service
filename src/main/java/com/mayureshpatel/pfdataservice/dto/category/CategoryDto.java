@@ -3,11 +3,10 @@ package com.mayureshpatel.pfdataservice.dto.category;
 import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 
 public record CategoryDto(
         Long id,
-        User user,
+        Long userId,
         String name,
         CategoryType categoryType,
         CategoryDto parent,
@@ -28,7 +27,7 @@ public record CategoryDto(
 
         return new CategoryDto(
                 category.getId(),
-                category.getUser(),
+                category.getUser().getId(),
                 category.getName(),
                 category.getType(),
                 parent,
