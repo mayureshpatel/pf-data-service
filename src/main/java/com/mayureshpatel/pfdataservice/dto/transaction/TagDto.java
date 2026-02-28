@@ -1,14 +1,12 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
-import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 
 public record TagDto(
         Long id,
         Long userId,
         String name,
-        Iconography iconography
+        String color
 ) {
 
     /**
@@ -22,7 +20,7 @@ public record TagDto(
                 tag.getId(),
                 tag.getUser().getId(),
                 tag.getName(),
-                tag.getIconography()
+                tag.getColor()
         );
     }
 }
