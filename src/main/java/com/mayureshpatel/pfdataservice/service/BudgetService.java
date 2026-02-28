@@ -38,7 +38,7 @@ public class BudgetService {
     public List<BudgetDto> getBudgets(Long userId, Integer month, Integer year) {
         return budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(userId, month, year)
                 .stream()
-                .map(BudgetDto::mapToDto)
+                .map(Budget::toDto)
                 .toList();
     }
 
@@ -51,7 +51,7 @@ public class BudgetService {
     public List<BudgetDto> getAllBudgets(Long userId) {
         return budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(userId)
                 .stream()
-                .map(BudgetDto::mapToDto)
+                .map(Budget::toDto)
                 .toList();
     }
 
@@ -101,7 +101,7 @@ public class BudgetService {
                     .build();
         }
 
-        return BudgetDto.mapToDto(budgetRepository.save(budget));
+        return budgetRepository.save(budget).toDto();
     }
 
     @Transactional

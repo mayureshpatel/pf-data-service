@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,6 +30,20 @@ public class Transaction {
     private TransactionType type;
 
     private TableAudit audit;
+
+    public TransactionDto toDto() {
+        return new TransactionDto(
+                id,
+                transactionDate,
+                postDate,
+                description,
+                merchant.toDto(),
+                amount,
+                type,
+                category.toDto(),
+                account.toDto()
+        );
+    }
 
     /**
      * Calculates the net change this transaction applies to an account balance.

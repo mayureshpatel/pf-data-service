@@ -68,8 +68,8 @@ public class TransactionService {
                     if (t1.getType() != t2.getType()) {
                         if (!t1.getAccount().getId().equals(t2.getAccount().getId())) {
                             suggestions.add(new TransferSuggestionDto(
-                                    TransactionDto.mapToDto(t1),
-                                    TransactionDto.mapToDto(t2),
+                                    t1.toDto(),
+                                    t2.toDto(),
                                     0.9 - (daysDiff * 0.1)
                             ));
 
@@ -117,7 +117,7 @@ public class TransactionService {
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionFilter filter, Pageable pageable) {
         return transactionRepository.findAll(TransactionSpecification.withFilter(userId, filter), pageable)
-                .map(TransactionDto::mapToDto);
+                .map(Transaction::toDto);
     }
 
     @Transactional
@@ -198,7 +198,7 @@ public class TransactionService {
 
         account.applyTransaction(transaction);
 
-        return TransactionDto.mapToDto(transactionRepository.save(transaction));
+        return transactionRepository.save(transaction).toDto();
     }
 
     @Transactional
@@ -274,7 +274,7 @@ public class TransactionService {
 
         account.applyTransaction(transaction);
 
-        return TransactionDto.mapToDto(transactionRepository.save(transaction));
+        return transactionRepository.save(transaction).toDto();
     }
 
     @Transactional
@@ -315,7 +315,7 @@ public class TransactionService {
     public List<MerchantDto> getMerchantsWithTransactions(Long userId) {
         return transactionRepository.getMerchantsWithTransactions(userId)
                 .stream()
-                .map(MerchantDto::mapToDto)
+                .map(Merchant::toDto)
                 .toList();
     }
 }

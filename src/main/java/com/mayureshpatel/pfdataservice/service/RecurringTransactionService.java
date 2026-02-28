@@ -157,18 +157,19 @@ public class RecurringTransactionService {
             merchant.setOriginalName(dto.merchant().originalName());
         }
 
-        RecurringTransaction recurring = RecurringTransaction.builder()
-                .user(user)
-                .account(account)
-                .merchant(merchant)
-                .amount(dto.amount())
-                .frequency(dto.frequency())
-                .lastDate(dto.lastDate())
-                .nextDate(dto.nextDate())
-                .active(true)
-                .build();
+        RecurringTransactionDto recurring = new RecurringTransactionDto(
+                null,
+                user.getId(),
+                account.toDto(),
+                merchant.toDto(),
+                dto.amount(),
+                dto.frequency(),
+                dto.lastDate(),
+                dto.nextDate(),
+                true
+        );
 
-        return mapToDto(recurringRepository.save(recurring));
+        return recurringRepository.save(recurring);
     }
 
     @Transactional
@@ -224,7 +225,7 @@ public class RecurringTransactionService {
                 .id(r.getId())
                 .userId(r.getUser().getId())
                 .account(r.getAccount() != null ? r.getAccount().toDto() : null)
-                .merchant(r.getMerchant() != null ? MerchantDto.mapToDto(r.getMerchant()) : null)
+                .merchant(r.getMerchant() != null ? r.getMerchant().toDto() : null)
                 .amount(r.getAmount())
                 .frequency(r.getFrequency())
                 .lastDate(r.getLastDate())
