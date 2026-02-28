@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.dto.budget;
 
-import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import lombok.Builder;
 
@@ -25,21 +24,4 @@ public record BudgetDto(
         Integer month,
         Integer year
 ) {
-
-    /**
-     * Maps a {@link Budget} to a {@link BudgetDto}
-     *
-     * @param budget the budget to map
-     * @return the mapped {@link BudgetDto}
-     */
-    public static BudgetDto mapToDto(Budget budget) {
-        return BudgetDto.builder()
-                .id(budget.getId())
-                .userId(budget.getUser().getId())
-                .category(budget.getCategory().toDto())
-                .amount(budget.getAmount())
-                .month(budget.getMonth())
-                .year(budget.getYear())
-                .build();
-    }
 }
