@@ -30,7 +30,7 @@ public class BudgetStatusRowMapper implements RowMapper<BudgetStatusDto> {
         category.setParent(parentCategory);
 
         return new BudgetStatusDto(
-                category,
+                category.toDto(),
                 rs.getBigDecimal("budgeted_amount"),
                 rs.getBigDecimal("spending_amount"),
                 rs.getBigDecimal("remaining_amount"),

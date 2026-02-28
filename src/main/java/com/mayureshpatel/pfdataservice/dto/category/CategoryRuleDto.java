@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
 
 @Builder
@@ -24,7 +23,7 @@ public record CategoryRuleDto(
                 .id(rule.getId())
                 .userId(rule.getUser().getId())
                 .keyword(rule.getKeyword())
-                .category(CategoryDto.mapToDto(rule.getCategory()))
+                .category(rule.getCategory().toDto())
                 .priority(rule.getPriority())
                 .build();
     }

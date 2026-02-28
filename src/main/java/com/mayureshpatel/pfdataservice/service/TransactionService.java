@@ -173,7 +173,7 @@ public class TransactionService {
         transaction.setMerchant(merchant);
 
         if (dto.category() != null) {
-            Category category = categoryRepository.findById(dto.category().getId())
+            Category category = categoryRepository.findById(dto.category().id())
                     .orElse(null);
             if (category != null) {
                 if (category.getParent() == null) {
@@ -247,7 +247,7 @@ public class TransactionService {
         }
 
         if (dto.category() != null) {
-            Category category = categoryRepository.findById(dto.category().getId())
+            Category category = categoryRepository.findById(dto.category().id())
                     .orElse(null);
             if (category != null) {
                 if (category.getParent() == null) {
@@ -309,7 +309,7 @@ public class TransactionService {
 
     public List<CategoryDto> getCategoriesWithTransactions(Long userId) {
         List<Category> categories = transactionRepository.getCategoriesWithTransactions(userId);
-        return categories.stream().map(CategoryDto::mapToDto).toList();
+        return categories.stream().map(Category::toDto).toList();
     }
 
     public List<MerchantDto> getMerchantsWithTransactions(Long userId) {

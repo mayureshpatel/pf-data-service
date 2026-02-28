@@ -84,7 +84,7 @@ public class TransactionImportService {
                                 .description(t.getDescription())
                                 .amount(t.getAmount())
                                 .type(t.getType())
-                                .suggestedCategory(suggestedCategory)
+                                .suggestedCategory(suggestedCategory.toDto())
                                 .build();
                     })
                     .toList();

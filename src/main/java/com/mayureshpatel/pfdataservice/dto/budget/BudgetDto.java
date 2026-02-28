@@ -36,7 +36,7 @@ public record BudgetDto(
         return BudgetDto.builder()
                 .id(budget.getId())
                 .userId(budget.getUser().getId())
-                .category(CategoryDto.mapToDto(budget.getCategory()))
+                .category(budget.getCategory().toDto())
                 .amount(budget.getAmount())
                 .month(budget.getMonth())
                 .year(budget.getYear())

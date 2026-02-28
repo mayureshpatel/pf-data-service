@@ -23,4 +23,15 @@ public class Category {
 
     private Iconography iconography;
     private TableAudit audit;
+
+    public CategoryDto toDto() {
+        return new CategoryDto(
+                id,
+                user.getId(),
+                name,
+                type,
+                parent != null ? parent.toDto() : null,
+                iconography
+        );
+    }
 }

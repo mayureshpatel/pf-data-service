@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
-import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import lombok.Builder;
 
@@ -19,7 +19,7 @@ public record TransactionDto(
         MerchantDto merchant,
         BigDecimal amount,
         TransactionType type,
-        Category category,
+        CategoryDto category,
         AccountDto account
 ) {
 
@@ -38,7 +38,7 @@ public record TransactionDto(
                 MerchantDto.mapToDto(transaction.getMerchant()),
                 transaction.getAmount(),
                 transaction.getType(),
-                transaction.getCategory(),
+                transaction.getCategory().toDto(),
                 AccountDto.fromDomain(transaction.getAccount())
         );
     }

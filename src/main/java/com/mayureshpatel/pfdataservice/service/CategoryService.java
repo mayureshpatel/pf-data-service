@@ -25,7 +25,7 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesByUserId(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
-                .map(CategoryDto::mapToDto).toList();
+                .map(Category::toDto).toList();
     }
 
     @Transactional
@@ -50,7 +50,7 @@ public class CategoryService {
             category.setParent(parent);
         }
 
-        return CategoryDto.mapToDto(categoryRepository.save(category));
+        return categoryRepository.save(category).toDto();
     }
 
     @Transactional
@@ -81,7 +81,7 @@ public class CategoryService {
             category.setParent(parent);
         }
 
-        return CategoryDto.mapToDto(this.categoryRepository.save(category));
+        return this.categoryRepository.save(category).toDto();
     }
 
     @Transactional
@@ -110,7 +110,7 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesGrouped(Long userId) {
         return categoryRepository.findAllWIthParent(userId)
-                .stream().map(CategoryDto::mapToDto).toList();
+                .stream().map(Category::toDto).toList();
     }
 
     /**
@@ -122,6 +122,6 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryDto> getChildCategories(Long userId) {
         return this.categoryRepository.findAllSubCategories(userId).stream()
-                .map(CategoryDto::mapToDto).toList();
+                .map(Category::toDto).toList();
     }
 }
