@@ -223,7 +223,7 @@ public class RecurringTransactionService {
     private RecurringTransactionDto mapToDto(RecurringTransaction r) {
         return RecurringTransactionDto.builder()
                 .id(r.getId())
-                .user(r.getUser())
+                .userId(r.getUser().getId())
                 .account(r.getAccount() != null ? AccountDto.fromDomain(r.getAccount()) : null)
                 .merchant(r.getMerchant() != null ? MerchantDto.mapToDto(r.getMerchant()) : null)
                 .amount(r.getAmount())
