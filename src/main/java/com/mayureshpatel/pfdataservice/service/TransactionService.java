@@ -179,7 +179,7 @@ public class TransactionService {
             Category category = categoryRepository.findById(dto.category().id())
                     .orElse(null);
             if (category != null) {
-                if (category.getParent() == null) {
+                if (!category.isSubCategory()) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
                                     "Please select a specific subcategory under '" + category.getName() + "'.");
@@ -253,7 +253,7 @@ public class TransactionService {
             Category category = categoryRepository.findById(dto.category().id())
                     .orElse(null);
             if (category != null) {
-                if (category.getParent() == null) {
+                if (!category.isSubCategory()) {
                     throw new IllegalArgumentException(
                             "Only subcategories can be assigned to transactions. " +
                                     "Please select a specific subcategory under '" + category.getName() + "'.");

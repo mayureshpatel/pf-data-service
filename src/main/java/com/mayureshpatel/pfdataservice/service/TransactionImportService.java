@@ -114,11 +114,18 @@ public class TransactionImportService {
         int duplicateCount = 0;
 
         for (TransactionDto dto : approvedDtos) {
-            boolean exists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
+            boolean existsInDb = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
                     accountId, dto.date(), dto.amount(), dto.description(), dto.type()
             );
 
-            if (!exists) {
+            boolean existsInBatch = uniqueTransactions.stream().anyMatch(t -> 
+                    t.getTransactionDate().equals(dto.date()) && 
+                    t.getAmount().compareTo(dto.amount()) == 0 &&
+                    t.getDescription().equals(dto.description()) &&
+                    t.getType() == dto.type()
+            );
+
+            if (!existsInDb && !existsInBatch) {
                 Transaction t = mapToEntity(dto);
                 t.setAccount(account);
                 uniqueTransactions.add(t);

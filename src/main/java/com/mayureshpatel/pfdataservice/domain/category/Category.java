@@ -43,4 +43,8 @@ public class Category {
     public int hashCode() {
         return getClass().hashCode();
     }
+
+    public boolean isSubCategory() {
+        return parent == null;
+    }
 }
