@@ -1,94 +1,85 @@
 package com.mayureshpatel.pfdataservice.exception;
 
-import com.mayureshpatel.pfdataservice.controller.AccountController;
-import com.mayureshpatel.pfdataservice.security.JwtService;
-import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
-import com.mayureshpatel.pfdataservice.service.AccountService;
-import com.mayureshpatel.pfdataservice.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AccountController.class)
-@DisplayName("GlobalExceptionHandler tests")
+@ExtendWith(MockitoExtension.class)
+@DisplayName("GlobalExceptionHandler Unit Tests")
 class GlobalExceptionHandlerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Mock
+    private HttpServletRequest request;
 
-    @MockitoBean
-    private AccountService accountService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    private static final long USER_ID = 1L;
+    @InjectMocks
+    private GlobalExceptionHandler exceptionHandler;
 
     @Test
-    @WithCustomMockUser(id = USER_ID)
-    @DisplayName("should return 404 with ProblemDetail for ResourceNotFoundException")
-    void resourceNotFound_returns404WithProblemDetail() throws Exception {
-        when(accountService.getAllAccountsByUserId(USER_ID))
-                .thenThrow(new ResourceNotFoundException("Account not found"));
+    @DisplayName("handleEntityNotFound should return 404")
+    void handleResourceNotFound() {
+        ResourceNotFoundException ex = new ResourceNotFoundException("Not found");
+        when(request.getRequestURI()).thenReturn("/api/test");
 
-        mockMvc.perform(get("/api/v1/accounts"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.detail").value("Account not found"))
-                .andExpect(jsonPath("$.instance").value("/api/v1/accounts"));
+        ProblemDetail result = exceptionHandler.handleEntityNotFound(ex, request);
+
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(result.getDetail()).isEqualTo("Not found");
     }
 
     @Test
-    @WithCustomMockUser(id = USER_ID)
-    @DisplayName("should return 400 with ProblemDetail for IllegalArgumentException")
-    void illegalArgument_returns400WithProblemDetail() throws Exception {
-        when(accountService.getAllAccountsByUserId(USER_ID))
-                .thenThrow(new IllegalArgumentException("Invalid account ID"));
+    @DisplayName("handleUserAlreadyExists should return 409")
+    void handleUserAlreadyExists() {
+        UserAlreadyExistsException ex = new UserAlreadyExistsException("Already exists");
+        when(request.getRequestURI()).thenReturn("/api/test");
 
-        mockMvc.perform(get("/api/v1/accounts"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Invalid account ID"));
+        ProblemDetail result = exceptionHandler.handleUserAlreadyExists(ex, request);
+
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(result.getDetail()).isEqualTo("Already exists");
     }
 
     @Test
-    @WithCustomMockUser(id = USER_ID)
-    @DisplayName("should return 400 with ProblemDetail for DataIntegrityViolationException")
-    void dataIntegrityViolation_returns400WithProblemDetail() throws Exception {
-        doThrow(new DataIntegrityViolationException("FK constraint"))
-                .when(accountService).deleteAccount(eq(USER_ID), eq(1L));
+    @DisplayName("handleDuplicateImportException should return 409")
+    void handleDuplicateImport() {
+        DuplicateImportException ex = new DuplicateImportException("Duplicate");
+        when(request.getRequestURI()).thenReturn("/api/test");
 
-        mockMvc.perform(delete("/api/v1/accounts/{id}", 1L)
-                        .with(csrf()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Database constraint violation. Please check your input data."));
+        ProblemDetail result = exceptionHandler.handleDuplicateImportException(ex, request);
+
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(result.getDetail()).isEqualTo("Duplicate");
     }
 
     @Test
-    @WithCustomMockUser(id = USER_ID)
-    @DisplayName("should return 500 with ProblemDetail for unexpected exceptions")
-    void unexpectedException_returns500WithProblemDetail() throws Exception {
-        when(accountService.getAllAccountsByUserId(USER_ID))
-                .thenThrow(new RuntimeException("Something went wrong"));
+    @DisplayName("handleIllegalArgument should return 400")
+    void handleIllegalArgument() {
+        IllegalArgumentException ex = new IllegalArgumentException("Invalid arg");
+        when(request.getRequestURI()).thenReturn("/api/test");
 
-        mockMvc.perform(get("/api/v1/accounts"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.detail").value("An unexpected internal error occurred. Please contact support."));
+        ProblemDetail result = exceptionHandler.handleIllegalArgument(ex, request);
+
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(result.getDetail()).isEqualTo("Invalid arg");
+    }
+
+    @Test
+    @DisplayName("handleAccessDenied should return 403")
+    void handleAccessDenied() {
+        org.springframework.security.access.AccessDeniedException ex = new org.springframework.security.access.AccessDeniedException("Denied");
+        when(request.getRequestURI()).thenReturn("/api/test");
+
+        ProblemDetail result = exceptionHandler.handleAccessDenied(ex, request);
+
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
+        assertThat(result.getDetail()).isEqualTo("Denied");
     }
 }

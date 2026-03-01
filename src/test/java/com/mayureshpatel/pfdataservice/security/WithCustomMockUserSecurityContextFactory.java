@@ -12,7 +12,18 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+
 public class WithCustomMockUserSecurityContextFactory implements WithSecurityContextFactory<WithCustomMockUser> {
+    
+    public static RequestPostProcessor customMockUser(User user) {
+        CustomUserDetails principal = new CustomUserDetails(user);
+        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        Authentication auth = new UsernamePasswordAuthenticationToken(principal, principal.getPassword(), authorities);
+        return authentication(auth);
+    }
+
     @Override
     public SecurityContext createSecurityContext(WithCustomMockUser annotation) {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
