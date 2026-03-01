@@ -37,6 +37,10 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
+
 /**
  * A helper factory for creating test data.
  * Useful for Integration Tests to quickly seed the database with valid, related entities.
@@ -55,6 +59,7 @@ public class TestDataFactory {
     @Autowired private CategoryRuleRepository categoryRuleRepository;
     @Autowired private FileImportHistoryRepository fileImportHistoryRepository;
     @Autowired private AccountSnapshotRepository accountSnapshotRepository;
+    @Autowired private RecurringTransactionRepository recurringTransactionRepository;
 
     public User createUser(String username) {
         User user = new User();
@@ -170,5 +175,18 @@ public class TestDataFactory {
         snapshot.setBalance(balance);
         snapshot.setAudit(new CreatedAtAudit());
         return accountSnapshotRepository.save(snapshot);
+    }
+
+    public RecurringTransaction createRecurringTransaction(User user, Account account, Merchant merchant, BigDecimal amount, Frequency frequency, LocalDate nextDate) {
+        RecurringTransaction rt = new RecurringTransaction();
+        rt.setUser(user);
+        rt.setAccount(account);
+        rt.setMerchant(merchant);
+        rt.setAmount(amount);
+        rt.setFrequency(frequency);
+        rt.setNextDate(nextDate);
+        rt.setActive(true);
+        rt.setAudit(new SoftDeleteAudit());
+        return recurringTransactionRepository.save(rt);
     }
 }

@@ -35,10 +35,19 @@ public class UserService implements UserDetailsService {
     }
 
     public Optional<User> findByEmail(String email) {
-        return this.repository.findByEmail(email);
+        return repository.findByEmail(email);
+    }
+
+    public Optional<User> findById(Long id) {
+        return repository.findById(id);
+    }
+
+    public boolean existsById(Long id) {
+        return repository.existsById(id);
     }
 
     public List<User> findAll() {
+
         return this.repository.findAll();
     }
 

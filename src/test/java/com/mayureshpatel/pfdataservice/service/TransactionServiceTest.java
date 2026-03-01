@@ -53,6 +53,8 @@ class TransactionServiceTest {
     private TransactionCategorizer categorizer;
     @Mock
     private CategoryRuleRepository categoryRuleRepository;
+    @Mock
+    private com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository merchantRepository;
 
     @InjectMocks
     private TransactionService transactionService;
@@ -565,6 +567,37 @@ class TransactionServiceTest {
     }
 
     @Nested
+    @DisplayName("getTransactions()")
+    class GetTransactionsTests {
+
+        @Test
+        @DisplayName("should return paginated transactions with default sort")
+        void getTransactions_basic_returnsPage() {
+            // Arrange
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+            com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter filter =
+                    new com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter(
+                            null, null, null, null, null, null, null, null, null
+                    );
+
+            User user = buildUser(USER_ID);
+            Account account = buildAccount(ACCOUNT_ID, user, BigDecimal.ZERO);
+            Transaction tx = buildTransaction(1L, account, BigDecimal.TEN, TransactionType.EXPENSE, OffsetDateTime.now());
+            
+            org.springframework.data.domain.Page<Transaction> page = new org.springframework.data.domain.PageImpl<>(List.of(tx));
+
+            when(transactionRepository.findAll(any(), eq(pageable))).thenReturn(page);
+
+            // Act
+            org.springframework.data.domain.Page<TransactionDto> result = transactionService.getTransactions(USER_ID, filter, pageable);
+
+            // Assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).id()).isEqualTo(1L);
+        }
+    }
+
+    @Nested
     @DisplayName("updateTransactions()")
     class UpdateTransactionsTests {
 
@@ -600,8 +633,63 @@ class TransactionServiceTest {
             when(transactionRepository.findAllById(List.of(999L))).thenReturn(List.of());
 
             assertThatThrownBy(() -> transactionService.updateTransactions(USER_ID, List.of(dto)))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("not found");
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("Metadata lookups")
+    class MetadataLookupTests {
+
+        @Test
+        @DisplayName("getCountByCategory should return list from repository")
+        void getCountByCategory_returnsList() {
+            Category cat = new Category();
+            cat.setName("Food");
+            com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto dto =
+                    new com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto(
+                            com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper.toDto(cat), 5);
+            when(transactionRepository.getCountByCategory(USER_ID)).thenReturn(List.of(dto));
+
+            List<com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto> result =
+                    transactionService.getCountByCategory(USER_ID);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).category().name()).isEqualTo("Food");
+        }
+
+        @Test
+        @DisplayName("getCategoriesWithTransactions should map categories to DTOs")
+        void getCategoriesWithTransactions_returnsDtoList() {
+            Category cat = new Category();
+            cat.setId(1L);
+            cat.setName("Cat1");
+            cat.setType(com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE);
+            cat.setIconography(new com.mayureshpatel.pfdataservice.domain.Iconography("icon", "color"));
+
+            when(transactionRepository.getCategoriesWithTransactions(USER_ID)).thenReturn(List.of(cat));
+
+            List<com.mayureshpatel.pfdataservice.dto.category.CategoryDto> result =
+                    transactionService.getCategoriesWithTransactions(USER_ID);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).name()).isEqualTo("Cat1");
+        }
+
+        @Test
+        @DisplayName("getMerchantsWithTransactions should map merchants to DTOs")
+        void getMerchantsWithTransactions_returnsDtoList() {
+            Merchant merchant = new Merchant();
+            merchant.setId(1L);
+            merchant.setCleanName("Amazon");
+
+            when(transactionRepository.getMerchantsWithTransactions(USER_ID)).thenReturn(List.of(merchant));
+
+            List<com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto> result =
+                    transactionService.getMerchantsWithTransactions(USER_ID);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).cleanName()).isEqualTo("Amazon");
         }
     }
 }

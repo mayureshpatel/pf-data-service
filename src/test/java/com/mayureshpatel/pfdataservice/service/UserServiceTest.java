@@ -105,6 +105,53 @@ class UserServiceTest {
     }
 
     @Nested
+    @DisplayName("findById()")
+    class FindByIdTests {
+
+        @Test
+        @DisplayName("should return Optional containing user when id is found")
+        void findById_found_returnsOptionalWithUser() {
+            User user = buildUser(1L, USERNAME, EMAIL);
+            when(repository.findById(1L)).thenReturn(Optional.of(user));
+
+            Optional<User> result = userService.findById(1L);
+
+            assertThat(result).contains(user);
+        }
+
+        @Test
+        @DisplayName("should return empty Optional when id is not found")
+        void findById_notFound_returnsEmpty() {
+            when(repository.findById(99L)).thenReturn(Optional.empty());
+
+            Optional<User> result = userService.findById(99L);
+
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("existsById()")
+    class ExistsByIdTests {
+
+        @Test
+        @DisplayName("should return true when id exists in repository")
+        void existsById_exists_returnsTrue() {
+            when(repository.existsById(1L)).thenReturn(true);
+
+            assertThat(userService.existsById(1L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when id does not exist in repository")
+        void existsById_notExists_returnsFalse() {
+            when(repository.existsById(1L)).thenReturn(false);
+
+            assertThat(userService.existsById(1L)).isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("findByUsername()")
     class FindByUsernameTests {
 

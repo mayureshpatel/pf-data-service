@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.util.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
@@ -21,7 +22,8 @@ class CategoryDtoMapperTest {
     @Test
     @DisplayName("should map all fields correctly for top-level category")
     void toDto_topLevelCategory_mapsAllFields() {
-        Category category = TestFixtures.aCategory();
+        User user = TestFixtures.aUser();
+        Category category = TestFixtures.aCategory(user);
 
         CategoryDto dto = CategoryDtoMapper.toDto(category);
 
@@ -37,8 +39,14 @@ class CategoryDtoMapperTest {
     @Test
     @DisplayName("should recursively map parent category")
     void toDto_categoryWithParent_mapsParentRecursively() {
-        Category parent = TestFixtures.aCategory(99L, TestFixtures.aUser(), "Food", CategoryType.EXPENSE);
-        Category child = TestFixtures.aCategory();
+        User user = TestFixtures.aUser();
+        Category parent = new Category();
+        parent.setId(99L);
+        parent.setUser(user);
+        parent.setName("Food");
+        parent.setType(CategoryType.EXPENSE);
+        
+        Category child = TestFixtures.aCategory(user);
         child.setParent(parent);
 
         CategoryDto dto = CategoryDtoMapper.toDto(child);

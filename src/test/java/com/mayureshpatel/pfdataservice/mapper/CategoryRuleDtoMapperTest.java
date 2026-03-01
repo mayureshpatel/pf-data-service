@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.util.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +21,8 @@ class CategoryRuleDtoMapperTest {
     @Test
     @DisplayName("should map all fields correctly")
     void toDto_fullRule_mapsAllFields() {
-        CategoryRule rule = TestFixtures.aCategoryRule(TestFixtures.aUser(), TestFixtures.aCategory());
+        User user = TestFixtures.aUser();
+        CategoryRule rule = TestFixtures.aCategoryRule(user, TestFixtures.aCategory(user));
 
         CategoryRuleDto dto = CategoryRuleDtoMapper.toDto(rule);
 

@@ -85,20 +85,38 @@ class AccountTest {
     }
 
     @Test
-    @DisplayName("applyTransaction — should initialize null balance to zero")
-    void applyTransaction_nullBalance_initializesToZeroThenApplies() {
+    @DisplayName("toDto — should map all fields correctly")
+    void toDto_mapsAllFields() {
         // Arrange
-        Account account = new Account();
-        account.setCurrentBalance(null);
+        com.mayureshpatel.pfdataservice.domain.user.User user = new com.mayureshpatel.pfdataservice.domain.user.User();
+        user.setId(1L);
         
-        Transaction income = new Transaction();
-        income.setAmount(new BigDecimal("50.00"));
-        income.setType(TransactionType.INCOME);
+        Account account = new Account();
+        account.setId(10L);
+        account.setUser(user);
+        account.setName("Checking");
+        account.setCurrentBalance(new BigDecimal("123.45"));
+        
+        AccountType type = new AccountType();
+        type.setCode("CH");
+        type.setLabel("Checking");
+        account.setType(type);
+        
+        com.mayureshpatel.pfdataservice.domain.currency.Currency currency = new com.mayureshpatel.pfdataservice.domain.currency.Currency();
+        currency.setCode("USD");
+        currency.setSymbol("$");
+        account.setCurrency(currency);
 
         // Act
-        account.applyTransaction(income);
+        com.mayureshpatel.pfdataservice.dto.account.AccountDto dto = com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper.toDto(account);
 
         // Assert
-        assertThat(account.getCurrentBalance()).isEqualByComparingTo("50.00");
+        assertThat(dto.id()).isEqualTo(10L);
+        assertThat(dto.userId()).isEqualTo(1L);
+        assertThat(dto.name()).isEqualTo("Checking");
+        assertThat(dto.accountTypeCode()).isEqualTo("CH");
+        assertThat(dto.currentBalance()).isEqualByComparingTo("123.45");
+        assertThat(dto.currencyCode()).isEqualTo("USD");
+        assertThat(dto.currencySymbol()).isEqualTo("$");
     }
 }

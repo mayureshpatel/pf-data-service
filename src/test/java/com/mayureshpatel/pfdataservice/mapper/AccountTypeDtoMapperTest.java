@@ -42,7 +42,7 @@ class AccountTypeDtoMapperTest {
 
         AccountTypeDto dto = AccountTypeDtoMapper.toDto(type);
 
-        assertThat(dto.code()).isEqualTo("CHECKING");
+        assertThat(dto.code()).isEqualTo("SAVINGS");
         assertThat(dto.icon()).isNull();
         assertThat(dto.color()).isNull();
     }

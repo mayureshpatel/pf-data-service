@@ -151,10 +151,17 @@ public class UniversalCsvParser implements TransactionParser {
     private Transaction parseRecord(CSVRecord record, ColumnMapping mapping) {
         try {
             // parse date
-            OffsetDateTime date = OffsetDateTime.from(parseDate(record.get(mapping.dateCol)));
-            OffsetDateTime postDate = mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)
-                    ? OffsetDateTime.from(parseDate(record.get(mapping.postDateCol)))
-                    : null;
+            LocalDate localDate = parseDate(record.get(mapping.dateCol));
+            if (localDate == null) return null;
+            OffsetDateTime date = localDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
+            
+            OffsetDateTime postDate = null;
+            if (mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)) {
+                LocalDate localPostDate = parseDate(record.get(mapping.postDateCol));
+                if (localPostDate != null) {
+                    postDate = localPostDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
+                }
+            }
 
             // parse description
             String description = record.get(mapping.descCol);
@@ -205,7 +212,10 @@ public class UniversalCsvParser implements TransactionParser {
             t.setDescription(description);
             t.setAmount(amount);
             t.setType(type);
-            t.getMerchant().setOriginalName(description);
+            
+            com.mayureshpatel.pfdataservice.domain.merchant.Merchant merchant = new com.mayureshpatel.pfdataservice.domain.merchant.Merchant();
+            merchant.setOriginalName(description);
+            t.setMerchant(merchant);
 
             return t;
 

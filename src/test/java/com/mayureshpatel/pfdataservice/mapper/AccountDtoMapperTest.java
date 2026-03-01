@@ -21,7 +21,7 @@ class AccountDtoMapperTest {
     @Test
     @DisplayName("should map all fields correctly")
     void toDto_fullAccount_mapsAllFields() {
-        Account account = TestFixtures.anAccount();
+        Account account = TestFixtures.anAccount(TestFixtures.aUser());
         account.setBankName(BankName.DISCOVER);
 
         AccountDto dto = AccountDtoMapper.toDto(account);

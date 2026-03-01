@@ -20,7 +20,7 @@ class MerchantDtoMapperTest {
     @Test
     @DisplayName("should map all fields correctly")
     void toDto_fullMerchant_mapsAllFields() {
-        Merchant merchant = TestFixtures.aMerchant();
+        Merchant merchant = TestFixtures.aMerchant(TestFixtures.aUser());
 
         MerchantDto dto = MerchantDtoMapper.toDto(merchant);
 
