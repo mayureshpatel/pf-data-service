@@ -61,9 +61,10 @@ class TransactionControllerTest extends BaseControllerTest {
     @DisplayName("POST /api/v1/accounts/{accountId}/transactions should save transactions and return success message")
     void saveTransactions_shouldReturnSuccessMessage() throws Exception {
         // Arrange
-        TransactionDto tx = TransactionDto.builder().id(1L).description("Test").build();
+        com.mayureshpatel.pfdataservice.dto.account.AccountDto account = new com.mayureshpatel.pfdataservice.dto.account.AccountDto(1L, 1L, "Checking", "C", "Checking", java.math.BigDecimal.ZERO, "USD", "$", "Bank");
+        TransactionDto tx = TransactionDto.builder().id(1L).date(java.time.OffsetDateTime.now()).amount(java.math.BigDecimal.TEN).type(com.mayureshpatel.pfdataservice.domain.transaction.TransactionType.EXPENSE).account(account).description("Test").build();
         SaveTransactionRequest request = new SaveTransactionRequest(List.of(tx), "test.csv", "hash123");
-        
+
         when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
         when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq("test.csv"), eq("hash123")))
                 .thenReturn(5);
@@ -76,7 +77,6 @@ class TransactionControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Successfully saved 5 transactions."));
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("POST /api/v1/accounts/{accountId}/upload should return 403 when not owner")

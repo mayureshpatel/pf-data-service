@@ -28,7 +28,11 @@ class SaveTransactionRequestValidationTest {
     void validate_nonEmptyList_noViolations() {
         TransactionDto tx = TransactionDto.builder()
                 .id(1L)
+                .date(java.time.OffsetDateTime.now())
                 .description("Test")
+                .amount(java.math.BigDecimal.TEN)
+                .type(com.mayureshpatel.pfdataservice.domain.transaction.TransactionType.EXPENSE)
+                .account(new com.mayureshpatel.pfdataservice.dto.account.AccountDto(1L, 1L, "Checking", "C", "Checking", java.math.BigDecimal.ZERO, "USD", "$", "Bank"))
                 .build();
         SaveTransactionRequest request = new SaveTransactionRequest(List.of(tx), "file.csv", "hash123");
 

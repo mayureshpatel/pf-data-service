@@ -86,17 +86,22 @@ class TransactionCrudControllerTest extends BaseControllerTest {
     @DisplayName("POST /api/v1/transactions should create transaction")
     void createTransaction_shouldCreateTransaction() throws Exception {
         // Arrange
+        com.mayureshpatel.pfdataservice.dto.account.AccountDto account = new com.mayureshpatel.pfdataservice.dto.account.AccountDto(1L, 1L, "Checking", "C", "Checking", java.math.BigDecimal.ZERO, "USD", "$", "Bank");
         TransactionDto requestDto = TransactionDto.builder()
                 .description("New Transaction")
                 .amount(new BigDecimal("50.00"))
                 .type(TransactionType.EXPENSE)
+                .date(java.time.OffsetDateTime.now())
+                .account(account)
                 .build();
-        
+
         TransactionDto responseDto = TransactionDto.builder()
                 .id(100L)
                 .description("New Transaction")
                 .amount(new BigDecimal("50.00"))
                 .type(TransactionType.EXPENSE)
+                .date(java.time.OffsetDateTime.now())
+                .account(account)
                 .build();
 
         when(transactionService.createTransaction(eq(USER_ID), any(TransactionDto.class))).thenReturn(responseDto);
@@ -112,17 +117,19 @@ class TransactionCrudControllerTest extends BaseControllerTest {
 
         verify(transactionService).createTransaction(eq(USER_ID), any(TransactionDto.class));
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("PUT /api/v1/transactions/{id} should update transaction")
     void updateTransaction_shouldUpdateTransaction() throws Exception {
         // Arrange
         Long transactionId = 100L;
+        com.mayureshpatel.pfdataservice.dto.account.AccountDto account = new com.mayureshpatel.pfdataservice.dto.account.AccountDto(1L, 1L, "Checking", "C", "Checking", java.math.BigDecimal.ZERO, "USD", "$", "Bank");
         TransactionDto requestDto = TransactionDto.builder()
                 .description("Updated Transaction")
                 .amount(new BigDecimal("75.00"))
                 .type(TransactionType.EXPENSE)
+                .date(java.time.OffsetDateTime.now())
+                .account(account)
                 .build();
 
         TransactionDto responseDto = TransactionDto.builder()
@@ -130,6 +137,8 @@ class TransactionCrudControllerTest extends BaseControllerTest {
                 .description("Updated Transaction")
                 .amount(new BigDecimal("75.00"))
                 .type(TransactionType.EXPENSE)
+                .date(java.time.OffsetDateTime.now())
+                .account(account)
                 .build();
 
         when(securityService.isTransactionOwner(eq(transactionId), any())).thenReturn(true);
@@ -181,12 +190,17 @@ class TransactionCrudControllerTest extends BaseControllerTest {
     @DisplayName("PATCH /api/v1/transactions/bulk should update transactions")
     void updateTransactionsBulk_shouldUpdateTransactions() throws Exception {
         // Arrange
+        com.mayureshpatel.pfdataservice.dto.account.AccountDto account = new com.mayureshpatel.pfdataservice.dto.account.AccountDto(1L, 1L, "Checking", "C", "Checking", java.math.BigDecimal.ZERO, "USD", "$", "Bank");
         TransactionDto dto = TransactionDto.builder()
                 .id(1L)
                 .description("Bulk Update")
+                .amount(new BigDecimal("75.00"))
+                .type(TransactionType.EXPENSE)
+                .date(java.time.OffsetDateTime.now())
+                .account(account)
                 .build();
         List<TransactionDto> request = List.of(dto);
-        
+
         when(transactionService.updateTransactions(eq(USER_ID), any())).thenReturn(request);
 
         // Act & Assert
@@ -199,7 +213,6 @@ class TransactionCrudControllerTest extends BaseControllerTest {
 
         verify(transactionService).updateTransactions(eq(USER_ID), any());
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("DELETE /api/v1/transactions/bulk should delete transactions")

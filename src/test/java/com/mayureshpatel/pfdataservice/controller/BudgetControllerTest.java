@@ -119,20 +119,18 @@ class BudgetControllerTest extends BaseControllerTest {
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("POST /api/v1/budgets should save budget")
     void setBudget_shouldSaveBudget() throws Exception {
-        // Arrange
-        BudgetDto requestDto = new BudgetDto(null, null, null, new BigDecimal("600.00"), 2, 2025);
-        BudgetDto responseDto = new BudgetDto(BUDGET_ID, null, null, new BigDecimal("600.00"), 2, 2025);
-        
+        BudgetDto requestDto = new BudgetDto(null, null, new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(1L, null, "Groceries", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, "icon", "color"), new BigDecimal("600.00"), 2, 2025);
+        BudgetDto responseDto = new BudgetDto(BUDGET_ID, null, new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(1L, null, "Groceries", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, "icon", "color"), new BigDecimal("600.00"), 2, 2025);
+
         when(budgetService.save(eq(USER_ID), any(BudgetDto.class))).thenReturn(responseDto);
 
-        // Act & Assert
         mockMvc.perform(post("/api/v1/budgets")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(BUDGET_ID))
-                .andExpect(jsonPath("$.amount").value(600.00));
+                .andExpect(jsonPath("$.amount").value("600.0"));
 
         verify(budgetService).save(eq(USER_ID), any(BudgetDto.class));
     }

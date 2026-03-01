@@ -1,5 +1,10 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 import java.math.BigDecimal;
 
 /**
@@ -18,12 +23,26 @@ import java.math.BigDecimal;
 public record AccountDto(
         Long id,
         Long userId,
+        
+        @NotBlank(message = "Account name is required")
+        @Size(max = 100, message = "Account name must be less than 100 characters")
         String name,
+        
+        @NotBlank(message = "Account type is required")
         String accountTypeCode,
+        
         String accountTypeLabel,
+        
+        @NotNull(message = "Initial balance is required")
         BigDecimal currentBalance,
+        
+        @NotBlank(message = "Currency code is required")
+        @Pattern(regexp = "^[A-Z]{3}$", message = "Currency code must be a 3-letter ISO code")
         String currencyCode,
+        
         String currencySymbol,
+        
+        @Size(max = 100, message = "Bank name must be less than 100 characters")
         String bankName
 ) {
 }

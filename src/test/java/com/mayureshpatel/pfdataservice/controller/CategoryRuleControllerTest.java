@@ -53,9 +53,10 @@ class CategoryRuleControllerTest extends BaseControllerTest {
     @DisplayName("POST /api/v1/category-rules should create rule")
     void createRule_shouldCreateRule() throws Exception {
         // Arrange
-        CategoryRuleDto requestDto = new CategoryRuleDto(null, null, "amazon", 2, null);
-        CategoryRuleDto responseDto = new CategoryRuleDto(RULE_ID, null, "amazon", 2, null);
-        
+        com.mayureshpatel.pfdataservice.dto.category.CategoryDto category = new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(1L, null, "Category", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, null, null);
+        CategoryRuleDto requestDto = new CategoryRuleDto(null, null, "amazon", 2, category);
+        CategoryRuleDto responseDto = new CategoryRuleDto(RULE_ID, null, "amazon", 2, category);
+
         when(categoryRuleService.createRule(eq(USER_ID), any(CategoryRuleDto.class))).thenReturn(responseDto);
 
         // Act & Assert
@@ -69,7 +70,6 @@ class CategoryRuleControllerTest extends BaseControllerTest {
 
         verify(categoryRuleService).createRule(eq(USER_ID), any(CategoryRuleDto.class));
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("GET /api/v1/category-rules/preview should return preview of changes")

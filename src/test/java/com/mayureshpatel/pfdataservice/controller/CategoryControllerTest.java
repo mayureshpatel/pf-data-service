@@ -96,9 +96,9 @@ class CategoryControllerTest extends BaseControllerTest {
     @DisplayName("POST /api/v1/categories should create category")
     void createCategory_shouldCreateCategory() throws Exception {
         // Arrange
-        CategoryDto requestDto = new CategoryDto(null, null, "New Category", null, null, "icon", "color");
-        CategoryDto responseDto = new CategoryDto(CATEGORY_ID, null, "New Category", null, null, "icon", "color");
-        
+        CategoryDto requestDto = new CategoryDto(null, null, "New Category", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, "icon", "color");
+        CategoryDto responseDto = new CategoryDto(CATEGORY_ID, null, "New Category", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, "icon", "color");
+
         when(categoryService.createCategory(eq(USER_ID), any(CategoryDto.class))).thenReturn(responseDto);
 
         // Act & Assert
@@ -113,14 +113,13 @@ class CategoryControllerTest extends BaseControllerTest {
 
         verify(categoryService).createCategory(eq(USER_ID), any(CategoryDto.class));
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("PUT /api/v1/categories/{id} should update category")
     void updateCategory_shouldUpdateCategory() throws Exception {
         // Arrange
-        CategoryDto requestDto = new CategoryDto(CATEGORY_ID, null, "Updated Name", null, null, "icon", "color");
-        
+        CategoryDto requestDto = new CategoryDto(CATEGORY_ID, null, "Updated Name", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, "icon", "color");
+
         when(categoryService.updateCategory(eq(USER_ID), eq(CATEGORY_ID), any(CategoryDto.class))).thenReturn(requestDto);
 
         // Act & Assert
@@ -133,7 +132,6 @@ class CategoryControllerTest extends BaseControllerTest {
 
         verify(categoryService).updateCategory(eq(USER_ID), eq(CATEGORY_ID), any(CategoryDto.class));
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("DELETE /api/v1/categories/{id} should delete category")

@@ -73,9 +73,10 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
     @DisplayName("POST /api/v1/recurring should create recurring transaction")
     void createRecurringTransaction_shouldCreate() throws Exception {
         // Arrange
-        RecurringTransactionDto requestDto = new RecurringTransactionDto(null, null, null, null, new BigDecimal("50.00"), Frequency.WEEKLY, null, null, true);
-        RecurringTransactionDto responseDto = new RecurringTransactionDto(RECURRING_ID, null, null, null, new BigDecimal("50.00"), Frequency.WEEKLY, null, null, true);
-        
+        com.mayureshpatel.pfdataservice.dto.account.AccountDto account = new com.mayureshpatel.pfdataservice.dto.account.AccountDto(1L, 1L, "Checking", "C", "Checking", java.math.BigDecimal.ZERO, "USD", "$", "Bank");
+        RecurringTransactionDto requestDto = new RecurringTransactionDto(null, null, account, null, new BigDecimal("50.00"), Frequency.WEEKLY, null, null, true);
+        RecurringTransactionDto responseDto = new RecurringTransactionDto(RECURRING_ID, null, account, null, new BigDecimal("50.00"), Frequency.WEEKLY, null, null, true);
+
         when(recurringTransactionService.createRecurringTransaction(eq(USER_ID), any(RecurringTransactionDto.class))).thenReturn(responseDto);
 
         // Act & Assert
@@ -89,14 +90,14 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
 
         verify(recurringTransactionService).createRecurringTransaction(eq(USER_ID), any(RecurringTransactionDto.class));
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("PUT /api/v1/recurring/{id} should update recurring transaction")
     void updateRecurringTransaction_shouldUpdate() throws Exception {
         // Arrange
-        RecurringTransactionDto requestDto = new RecurringTransactionDto(RECURRING_ID, null, null, null, new BigDecimal("120.00"), Frequency.MONTHLY, null, null, true);
-        
+        com.mayureshpatel.pfdataservice.dto.account.AccountDto account = new com.mayureshpatel.pfdataservice.dto.account.AccountDto(1L, 1L, "Checking", "C", "Checking", java.math.BigDecimal.ZERO, "USD", "$", "Bank");
+        RecurringTransactionDto requestDto = new RecurringTransactionDto(RECURRING_ID, null, account, null, new BigDecimal("120.00"), Frequency.MONTHLY, null, null, true);
+
         when(recurringTransactionService.updateRecurringTransaction(eq(USER_ID), eq(RECURRING_ID), any(RecurringTransactionDto.class))).thenReturn(requestDto);
 
         // Act & Assert
@@ -109,7 +110,6 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
 
         verify(recurringTransactionService).updateRecurringTransaction(eq(USER_ID), eq(RECURRING_ID), any(RecurringTransactionDto.class));
     }
-
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("DELETE /api/v1/recurring/{id} should delete recurring transaction")
