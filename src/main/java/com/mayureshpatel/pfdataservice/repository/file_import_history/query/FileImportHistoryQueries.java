@@ -36,8 +36,9 @@ public final class FileImportHistoryQueries {
 
     // language=SQL
     public static final String INSERT = """
-            insert into file_import_history (id, account_id, file_hash, file_name, transaction_count, imported_at)
-            values (:id, :accountId, :fileHash, :fileName, :transactionCount, current_timestamp)
+            insert into file_import_history (account_id, file_hash, file_name, transaction_count, imported_at)
+            values (:accountId, :fileHash, :fileName, :transactionCount, current_timestamp)
+            returning id
             """;
 
     // language=SQL

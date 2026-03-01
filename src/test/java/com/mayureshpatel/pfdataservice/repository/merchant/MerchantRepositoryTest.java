@@ -112,12 +112,13 @@ class MerchantRepositoryTest extends BaseIntegrationTest {
         Merchant m2 = factory.createMerchant(testUser, "Gas Station");
         Category category = factory.createCategory(testUser, "General", CategoryType.EXPENSE);
 
-        factory.createTransaction(account, m1, category, new BigDecimal("50.00"), OffsetDateTime.now(), TransactionType.EXPENSE);
-        factory.createTransaction(account, m1, category, new BigDecimal("30.00"), OffsetDateTime.now(), TransactionType.EXPENSE);
-        factory.createTransaction(account, m2, category, new BigDecimal("40.00"), OffsetDateTime.now(), TransactionType.EXPENSE);
+        factory.createTransaction(account, m1, category, new BigDecimal("50.00"), OffsetDateTime.now(ZoneOffset.UTC), TransactionType.EXPENSE);
+        factory.createTransaction(account, m1, category, new BigDecimal("30.00"), OffsetDateTime.now(ZoneOffset.UTC), TransactionType.EXPENSE);
+        factory.createTransaction(account, m2, category, new BigDecimal("40.00"), OffsetDateTime.now(ZoneOffset.UTC), TransactionType.EXPENSE);
 
-        OffsetDateTime start = LocalDate.now().minusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime end = LocalDate.now().plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime start = now.minusDays(2);
+        OffsetDateTime end = now.plusDays(2);
 
         // Act
         List<MerchantBreakdownDto> totals = merchantRepository.findMerchantTotals(testUser.getId(), start, end);

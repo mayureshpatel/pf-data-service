@@ -52,8 +52,13 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
     @Override
     public AccountSnapshot insert(AccountSnapshot entity) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
+        Long accId = entity.getAccountId();
+        if (accId == null && entity.getAccount() != null) {
+            accId = entity.getAccount().getId();
+        }
+        
         jdbcClient.sql(AccountSnapshotQueries.INSERT)
-                .param("accountId", entity.getAccountId())
+                .param("accountId", accId)
                 .param("snapshotDate", entity.getSnapshotDate())
                 .param("balance", entity.getBalance())
                 .update(keyHolder);

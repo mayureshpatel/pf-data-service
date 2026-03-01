@@ -209,7 +209,7 @@ class RecurringTransactionServiceTest {
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
+            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.createRecurringTransaction(USER_ID, dto);
@@ -219,14 +219,14 @@ class RecurringTransactionServiceTest {
             assertThat(result.id()).isEqualTo(RECURRING_ID);
             assertThat(result.active()).isTrue();
 
-            ArgumentCaptor<RecurringTransactionDto> captor = ArgumentCaptor.forClass(RecurringTransactionDto.class);
+            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
             verify(recurringRepository).save(captor.capture());
-            RecurringTransactionDto captured = captor.getValue();
-            assertThat(captured.userId()).isEqualTo(USER_ID);
-            assertThat(captured.account().id()).isEqualTo(ACCOUNT_ID);
-            assertThat(captured.amount()).isEqualByComparingTo(new BigDecimal("15.99"));
-            assertThat(captured.frequency()).isEqualTo(Frequency.MONTHLY);
-            assertThat(captured.active()).isTrue();
+            RecurringTransaction captured = captor.getValue();
+            assertThat(captured.getUser().getId()).isEqualTo(USER_ID);
+            assertThat(captured.getAccount().getId()).isEqualTo(ACCOUNT_ID);
+            assertThat(captured.getAmount()).isEqualByComparingTo(new BigDecimal("15.99"));
+            assertThat(captured.getFrequency()).isEqualTo(Frequency.MONTHLY);
+            assertThat(captured.isActive()).isTrue();
         }
 
         @Test
@@ -253,7 +253,7 @@ class RecurringTransactionServiceTest {
             );
 
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
+            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.createRecurringTransaction(USER_ID, dto);
@@ -278,7 +278,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
-            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
+            verify(recurringRepository, never()).save(any(RecurringTransaction.class));
         }
 
         @Test
@@ -298,7 +298,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Account not found");
 
-            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
+            verify(recurringRepository, never()).save(any(RecurringTransaction.class));
         }
 
         @Test
@@ -319,7 +319,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied to account");
 
-            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
+            verify(recurringRepository, never()).save(any(RecurringTransaction.class));
         }
     }
 
@@ -343,7 +343,7 @@ class RecurringTransactionServiceTest {
 
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(existing));
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
+            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.updateRecurringTransaction(USER_ID, RECURRING_ID, dto);
@@ -353,12 +353,12 @@ class RecurringTransactionServiceTest {
             assertThat(result.amount()).isEqualByComparingTo(new BigDecimal("9.99"));
             assertThat(result.active()).isFalse();
 
-            ArgumentCaptor<RecurringTransactionDto> captor = ArgumentCaptor.forClass(RecurringTransactionDto.class);
+            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
             verify(recurringRepository).save(captor.capture());
-            RecurringTransactionDto captured = captor.getValue();
-            assertThat(captured.amount()).isEqualByComparingTo(new BigDecimal("9.99"));
-            assertThat(captured.frequency()).isEqualTo(Frequency.MONTHLY);
-            assertThat(captured.active()).isFalse();
+            RecurringTransaction captured = captor.getValue();
+            assertThat(captured.getAmount()).isEqualByComparingTo(new BigDecimal("9.99"));
+            assertThat(captured.getFrequency()).isEqualTo(Frequency.MONTHLY);
+            assertThat(captured.isActive()).isFalse();
         }
 
         @Test
@@ -374,7 +374,7 @@ class RecurringTransactionServiceTest {
             saved.setAccount(null);
 
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(existing));
-            when(recurringRepository.save(any(RecurringTransactionDto.class))).thenReturn(com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper.toDto(saved));
+            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
 
             // Act
             RecurringTransactionDto result = recurringTransactionService.updateRecurringTransaction(USER_ID, RECURRING_ID, dto);
@@ -382,9 +382,9 @@ class RecurringTransactionServiceTest {
             // Assert
             assertThat(result.account()).isNull();
 
-            ArgumentCaptor<RecurringTransactionDto> captor = ArgumentCaptor.forClass(RecurringTransactionDto.class);
+            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
             verify(recurringRepository).save(captor.capture());
-            assertThat(captor.getValue().account()).isNull();
+            assertThat(captor.getValue().getAccount()).isNull();
             verify(accountRepository, never()).findById(any());
         }
 
@@ -402,7 +402,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Recurring transaction not found");
 
-            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
+            verify(recurringRepository, never()).save(any(RecurringTransaction.class));
         }
 
         @Test
@@ -420,7 +420,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied");
 
-            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
+            verify(recurringRepository, never()).save(any(RecurringTransaction.class));
         }
 
         @Test
@@ -440,7 +440,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Account not found");
 
-            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
+            verify(recurringRepository, never()).save(any(RecurringTransaction.class));
         }
 
         @Test
@@ -461,7 +461,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(AccessDeniedException.class)
                     .hasMessageContaining("Access denied to account");
 
-            verify(recurringRepository, never()).save(any(RecurringTransactionDto.class));
+            verify(recurringRepository, never()).save(any(RecurringTransaction.class));
         }
     }
 

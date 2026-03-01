@@ -22,7 +22,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
 
     @Override
     public Optional<Category> findById(Long id) {
-        return jdbcClient.sql(CategoryQueries.FIND_BY_ID)
+        return jdbcClient.sql("SELECT * FROM categories WHERE id = :id")
                 .param("id", id)
                 .query(rowMapper)
                 .optional();
@@ -81,6 +81,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .param("type", category.getType().name())
                 .param("parentId", category.getParent() != null ? category.getParent().getId() : null)
                 .param("id", category.getId())
+                .param("userId", category.getUser().getId())
                 .update();
 
         return category;
@@ -98,20 +99,21 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
     @Override
     public void delete(Category category) {
         if (category.getId() != null) {
-            deleteById(category.getId());
+            jdbcClient.sql(CategoryQueries.DELETE)
+                    .param("id", category.getId())
+                    .param("userId", category.getUser().getId())
+                    .update();
         }
     }
 
     @Override
     public void deleteById(Long id) {
-        jdbcClient.sql(CategoryQueries.DELETE)
-                .param("id", id)
-                .update();
+        throw new UnsupportedOperationException("Use delete(Category category) to ensure userId is provided");
     }
 
-    @Override
-    public long count() {
+    public long count(Long userId) {
         return jdbcClient.sql(CategoryQueries.COUNT)
+                .param("userId", userId)
                 .query(Long.class)
                 .single();
     }

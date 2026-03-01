@@ -52,15 +52,20 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
     }
 
     public FileImportHistory insert(FileImportHistory fileImportHistory) {
+        org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
         jdbcClient.sql(FileImportHistoryQueries.INSERT)
-                .param("id", fileImportHistory.getId())
                 .param("accountId", fileImportHistory.getAccount().getId())
                 .param("fileHash", fileImportHistory.getFileHash())
                 .param("fileName", fileImportHistory.getFileName())
                 .param("transactionCount", fileImportHistory.getTransactionCount())
-                .update();
+                .update(keyHolder);
 
+        fileImportHistory.setId(keyHolder.getKeyAs(Long.class));
         return fileImportHistory;
+    }
+
+    public FileImportHistory update(FileImportHistory fileImportHistory) {
+        throw new UnsupportedOperationException("Update not supported for file import history");
     }
 
     public void deleteById(Long id) {

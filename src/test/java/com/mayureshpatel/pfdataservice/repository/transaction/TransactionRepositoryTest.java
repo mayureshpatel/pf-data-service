@@ -128,7 +128,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         tx.setAccount(account);
         tx.setMerchant(merchant);
         tx.setAmount(new BigDecimal("50.00"));
-        tx.setTransactionDate(OffsetDateTime.now());
+        tx.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         tx.setDescription("Groceries");
         tx.setType(TransactionType.EXPENSE);
 
@@ -155,7 +155,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t1.setCategory(cat1);
         t1.setMerchant(merchant);
         t1.setAmount(new BigDecimal("100.00"));
-        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t1.setType(TransactionType.EXPENSE);
         transactionRepository.save(t1);
 
@@ -164,7 +164,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t2.setCategory(cat1);
         t2.setMerchant(merchant);
         t2.setAmount(new BigDecimal("50.00"));
-        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t2.setType(TransactionType.EXPENSE);
         transactionRepository.save(t2);
 
@@ -173,12 +173,13 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t3.setCategory(cat2);
         t3.setMerchant(merchant);
         t3.setAmount(new BigDecimal("20.00"));
-        t3.setTransactionDate(OffsetDateTime.now());
+        t3.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t3.setType(TransactionType.EXPENSE);
         transactionRepository.save(t3);
 
-        OffsetDateTime start = LocalDate.now().minusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime end = LocalDate.now().plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime start = now.minusDays(2);
+        OffsetDateTime end = now.plusDays(2);
 
         // Act
         List<CategoryBreakdownDto> result = transactionRepository.findCategoryTotals(user.getId(), start, end);
@@ -202,7 +203,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t1.setAccount(account);
         t1.setMerchant(merchant);
         t1.setAmount(new BigDecimal("1000.00"));
-        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t1.setType(TransactionType.INCOME);
         transactionRepository.save(t1);
 
@@ -211,7 +212,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t2.setAccount(account);
         t2.setMerchant(merchant);
         t2.setAmount(new BigDecimal("200.00")); 
-        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t2.setType(TransactionType.EXPENSE);
         transactionRepository.save(t2);
 
@@ -236,7 +237,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         tx.setAccount(account);
         tx.setMerchant(merchant);
         tx.setAmount(new BigDecimal("25.00"));
-        tx.setTransactionDate(OffsetDateTime.now());
+        tx.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         tx.setDescription("Find me");
         tx.setType(TransactionType.EXPENSE);
         Transaction saved = transactionRepository.save(tx);
@@ -273,7 +274,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
             tx.setCategory(food);
             tx.setMerchant(merchant);
             tx.setAmount(new BigDecimal("10.00"));
-            tx.setTransactionDate(OffsetDateTime.now());
+            tx.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
             tx.setType(TransactionType.EXPENSE);
             transactionRepository.save(tx);
         }
@@ -284,7 +285,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         tx3.setCategory(transport);
         tx3.setMerchant(merchant);
         tx3.setAmount(new BigDecimal("30.00"));
-        tx3.setTransactionDate(OffsetDateTime.now());
+        tx3.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         tx3.setType(TransactionType.EXPENSE);
         transactionRepository.save(tx3);
 
@@ -311,7 +312,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t1.setAccount(account);
         t1.setMerchant(merchant);
         t1.setAmount(new BigDecimal("500.00"));
-        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t1.setType(TransactionType.INCOME);
         transactionRepository.save(t1);
 
@@ -319,12 +320,13 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t2.setAccount(account);
         t2.setMerchant(merchant);
         t2.setAmount(new BigDecimal("300.00"));
-        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t2.setType(TransactionType.INCOME);
         transactionRepository.save(t2);
 
-        OffsetDateTime start = LocalDate.now().minusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime end = LocalDate.now().plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime start = now.minusDays(2);
+        OffsetDateTime end = now.plusDays(2);
 
         // Act
         BigDecimal sum = transactionRepository.getSumByDateRange(user.getId(), start, end, TransactionType.INCOME);
@@ -348,7 +350,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         tx1.setAccount(acc1);
         tx1.setMerchant(m1);
         tx1.setAmount(new BigDecimal("100.00"));
-        tx1.setTransactionDate(OffsetDateTime.now());
+        tx1.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         tx1.setType(TransactionType.EXPENSE);
         transactionRepository.save(tx1);
 
@@ -356,7 +358,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         tx2.setAccount(acc2);
         tx2.setMerchant(m2);
         tx2.setAmount(new BigDecimal("200.00"));
-        tx2.setTransactionDate(OffsetDateTime.now());
+        tx2.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         tx2.setType(TransactionType.EXPENSE);
         transactionRepository.save(tx2);
 
@@ -384,7 +386,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t1.setAccount(account);
         t1.setMerchant(merchant);
         t1.setAmount(new BigDecimal("50.00"));
-        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t1.setType(TransactionType.EXPENSE);
         t1.setCategory(null);
         transactionRepository.save(t1);
@@ -396,7 +398,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t2.setMerchant(merchant);
         t2.setCategory(cat);
         t2.setAmount(new BigDecimal("30.00"));
-        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t2.setType(TransactionType.EXPENSE);
         transactionRepository.save(t2);
 
@@ -419,7 +421,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         tx.setAccount(account);
         tx.setMerchant(merchant);
         tx.setAmount(new BigDecimal("10.00"));
-        tx.setTransactionDate(OffsetDateTime.now());
+        tx.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         tx.setType(TransactionType.EXPENSE);
         Transaction saved = transactionRepository.save(tx);
 
@@ -444,7 +446,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
             tx.setAccount(account);
             tx.setMerchant(merchant);
             tx.setAmount(new BigDecimal("10.00").multiply(new BigDecimal(i + 1)));
-            tx.setTransactionDate(OffsetDateTime.now().minusDays(i));
+            tx.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC).minusDays(i));
             tx.setType(TransactionType.EXPENSE);
             transactionRepository.save(tx);
         }
@@ -474,7 +476,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         User user = createUser("existsuser");
         Account account = createAccount(user, "Exists Account");
         Merchant merchant = createMerchant(user, "Exists Merchant");
-        OffsetDateTime date = OffsetDateTime.now();
+        OffsetDateTime date = OffsetDateTime.now(ZoneOffset.UTC);
 
         Transaction tx = new Transaction();
         tx.setAccount(account);
@@ -506,14 +508,14 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t1.setAccount(account);
         t1.setMerchant(merchant);
         t1.setAmount(new BigDecimal("1.00"));
-        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t1.setType(TransactionType.EXPENSE);
 
         Transaction t2 = new Transaction();
         t2.setAccount(account);
         t2.setMerchant(merchant);
         t2.setAmount(new BigDecimal("2.00"));
-        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t2.setType(TransactionType.EXPENSE);
 
         // Act - Save
