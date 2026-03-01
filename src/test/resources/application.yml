@@ -1,4 +1,7 @@
 spring:
+  main:
+    background-preinitializer:
+      enabled: true
   application:
     name: pf-data-service-test
 

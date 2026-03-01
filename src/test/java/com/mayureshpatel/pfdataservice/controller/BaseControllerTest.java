@@ -26,56 +26,25 @@ public abstract class BaseControllerTest {
     protected ObjectMapper objectMapper;
 
     // --- Shared Mocks ---
-    // Note: All services mocked across ANY controller are defined here
-    // to ensure the ApplicationContext is identical across all controller tests.
+    // Centralizing all mocks here ensures the ApplicationContext is identical across all controller tests.
+    // This allows Spring to reuse the context and avoids expensive context reloads.
 
-    @MockitoBean
-    protected AccountService accountService;
-
-    @MockitoBean
-    protected AccountTypeRepository accountTypeRepository;
-
-    @MockitoBean
-    protected AuthenticationService authenticationService;
-
-    @MockitoBean
-    protected RegistrationService registrationService;
-
-    @MockitoBean
-    protected BudgetService budgetService;
-
-    @MockitoBean
-    protected CategoryService categoryService;
-
-    @MockitoBean
-    protected CategoryRuleService categoryRuleService;
-
-    @MockitoBean
-    protected DashboardService dashboardService;
-
-    @MockitoBean
-    protected RecurringTransactionService recurringTransactionService;
-
-    @MockitoBean
-    protected TransactionService transactionService;
-
-    @MockitoBean
-    protected TransactionImportService transactionImportService;
-
-    @MockitoBean
-    protected UserService userService;
-
-    @MockitoBean
-    protected JwtService jwtService;
-
-    @MockitoBean(name = "ss")
-    protected SecurityService securityService;
-
-    @MockitoBean
-    protected SnapshotService snapshotService;
-
-    @MockitoBean
-    protected CurrencyService currencyService;
+    @MockitoBean protected AccountService accountService;
+    @MockitoBean protected AccountTypeRepository accountTypeRepository;
+    @MockitoBean protected AuthenticationService authenticationService;
+    @MockitoBean protected RegistrationService registrationService;
+    @MockitoBean protected BudgetService budgetService;
+    @MockitoBean protected CategoryService categoryService;
+    @MockitoBean protected CategoryRuleService categoryRuleService;
+    @MockitoBean protected DashboardService dashboardService;
+    @MockitoBean protected RecurringTransactionService recurringTransactionService;
+    @MockitoBean protected TransactionService transactionService;
+    @MockitoBean protected TransactionImportService transactionImportService;
+    @MockitoBean protected UserService userService;
+    @MockitoBean protected JwtService jwtService;
+    @MockitoBean(name = "ss") protected SecurityService securityService;
+    @MockitoBean protected SnapshotService snapshotService;
+    @MockitoBean protected CurrencyService currencyService;
 
     // User ID constant for convenience
     protected static final long USER_ID = 1L;

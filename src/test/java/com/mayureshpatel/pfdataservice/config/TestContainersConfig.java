@@ -14,13 +14,19 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @TestConfiguration(proxyBeanMethods = false)
 public class TestContainersConfig {
 
+    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+            .withDatabaseName("personal_finance_test")
+            .withUsername("test")
+            .withPassword("test")
+            .withTmpFs(java.util.Collections.singletonMap("/var/lib/postgresql/data", "rw"));
+
+    static {
+        postgres.start();
+    }
+
     @Bean
     @ServiceConnection
     public PostgreSQLContainer<?> postgresContainer() {
-        return new PostgreSQLContainer<>("postgres:16-alpine")
-                .withDatabaseName("personal_finance_test")
-                .withUsername("test")
-                .withPassword("test")
-                .withTmpFs(java.util.Collections.singletonMap("/var/lib/postgresql/data", "rw"));
+        return postgres;
     }
 }
