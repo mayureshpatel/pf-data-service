@@ -1,20 +1,13 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
-import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
-import com.mayureshpatel.pfdataservice.service.BudgetService;
-import com.mayureshpatel.pfdataservice.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,24 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(BudgetController.class)
 @DisplayName("BudgetController Unit Tests")
-class BudgetControllerTest {
+class BudgetControllerTest extends BaseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private BudgetService budgetService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    private static final long USER_ID = 1L;
     private static final long BUDGET_ID = 10L;
 
     @Test

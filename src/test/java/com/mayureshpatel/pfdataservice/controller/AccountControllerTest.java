@@ -1,20 +1,13 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
-import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
-import com.mayureshpatel.pfdataservice.service.AccountService;
-import com.mayureshpatel.pfdataservice.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,24 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(AccountController.class)
 @DisplayName("AccountController Unit Tests")
-class AccountControllerTest {
+class AccountControllerTest extends BaseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private AccountService accountService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    private static final long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 101L;
 
     @Test

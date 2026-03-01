@@ -20,6 +20,7 @@ public class TestContainersConfig {
         return new PostgreSQLContainer<>("postgres:16-alpine")
                 .withDatabaseName("personal_finance_test")
                 .withUsername("test")
-                .withPassword("test");
+                .withPassword("test")
+                .withTmpFs(java.util.Collections.singletonMap("/var/lib/postgresql/data", "rw"));
     }
 }
