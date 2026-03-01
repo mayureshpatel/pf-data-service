@@ -15,6 +15,7 @@ import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
+import com.mayureshpatel.pfdataservice.service.transfer.TransferMatcher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,8 @@ class TransactionServiceTest {
     private CategoryRuleRepository categoryRuleRepository;
     @Mock
     private com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository merchantRepository;
+    @Mock
+    private TransferMatcher transferMatcher;
 
     @InjectMocks
     private TransactionService transactionService;
@@ -93,112 +96,15 @@ class TransactionServiceTest {
     class FindPotentialTransfersTests {
 
         @Test
-        @DisplayName("should return empty list when no transactions exist")
-        void findPotentialTransfers_noTransactions_returnsEmptyList() {
+        @DisplayName("should delegate to transferMatcher")
+        void findPotentialTransfers_delegatesToMatcher() {
             when(transactionRepository.findRecentNonTransferTransactions(eq(USER_ID), any(LocalDate.class)))
                     .thenReturn(List.of());
+            when(transferMatcher.findMatches(anyList())).thenReturn(List.of());
 
-            List<TransferSuggestionDto> result = transactionService.findPotentialTransfers(USER_ID);
+            transactionService.findPotentialTransfers(USER_ID);
 
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        @DisplayName("should detect a transfer pair when amounts match, types differ, accounts differ, and within 3 days")
-        void findPotentialTransfers_matchingPair_returnsSuggestion() {
-            User user = buildUser(USER_ID);
-            Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-            Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-            OffsetDateTime now = OffsetDateTime.now();
-
-            Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("100"), TransactionType.INCOME, now);
-            Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("100"), TransactionType.EXPENSE,
-                    now.plusDays(1));
-
-            when(transactionRepository.findRecentNonTransferTransactions(eq(USER_ID), any(LocalDate.class)))
-                    .thenReturn(List.of(t1, t2));
-
-            List<TransferSuggestionDto> result = transactionService.findPotentialTransfers(USER_ID);
-
-            assertThat(result).hasSize(1);
-            // confidence = 0.9 - (daysDiff * 0.1) = 0.9 - (1 * 0.1) = 0.8
-            assertThat(result.get(0).confidenceScore()).isCloseTo(0.8, org.assertj.core.data.Offset.offset(1e-9));
-        }
-
-        @Test
-        @DisplayName("should not suggest transfer when transactions are in the same account")
-        void findPotentialTransfers_sameAccount_noSuggestion() {
-            User user = buildUser(USER_ID);
-            Account account = buildAccount(1L, user, BigDecimal.ZERO);
-            OffsetDateTime now = OffsetDateTime.now();
-
-            Transaction t1 = buildTransaction(1L, account, new BigDecimal("100"), TransactionType.INCOME, now);
-            Transaction t2 = buildTransaction(2L, account, new BigDecimal("100"), TransactionType.EXPENSE, now);
-
-            when(transactionRepository.findRecentNonTransferTransactions(eq(USER_ID), any(LocalDate.class)))
-                    .thenReturn(List.of(t1, t2));
-
-            List<TransferSuggestionDto> result = transactionService.findPotentialTransfers(USER_ID);
-
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        @DisplayName("should not suggest transfer when transaction types are the same")
-        void findPotentialTransfers_sameType_noSuggestion() {
-            User user = buildUser(USER_ID);
-            Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-            Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-            OffsetDateTime now = OffsetDateTime.now();
-
-            Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("100"), TransactionType.EXPENSE, now);
-            Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("100"), TransactionType.EXPENSE, now);
-
-            when(transactionRepository.findRecentNonTransferTransactions(eq(USER_ID), any(LocalDate.class)))
-                    .thenReturn(List.of(t1, t2));
-
-            List<TransferSuggestionDto> result = transactionService.findPotentialTransfers(USER_ID);
-
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        @DisplayName("should not suggest transfer when amounts differ")
-        void findPotentialTransfers_differentAmounts_noSuggestion() {
-            User user = buildUser(USER_ID);
-            Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-            Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-            OffsetDateTime now = OffsetDateTime.now();
-
-            Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("100"), TransactionType.INCOME, now);
-            Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("200"), TransactionType.EXPENSE, now);
-
-            when(transactionRepository.findRecentNonTransferTransactions(eq(USER_ID), any(LocalDate.class)))
-                    .thenReturn(List.of(t1, t2));
-
-            List<TransferSuggestionDto> result = transactionService.findPotentialTransfers(USER_ID);
-
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        @DisplayName("should use confidence score of 0.9 when transactions occur on the same day")
-        void findPotentialTransfers_sameDayTransactions_confidenceIsMax() {
-            User user = buildUser(USER_ID);
-            Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-            Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-            OffsetDateTime now = OffsetDateTime.now();
-
-            Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("50"), TransactionType.INCOME, now);
-            Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("50"), TransactionType.EXPENSE, now);
-
-            when(transactionRepository.findRecentNonTransferTransactions(eq(USER_ID), any(LocalDate.class)))
-                    .thenReturn(List.of(t1, t2));
-
-            List<TransferSuggestionDto> result = transactionService.findPotentialTransfers(USER_ID);
-
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).confidenceScore()).isEqualTo(0.9); // 0.9 - 0 * 0.1
+            verify(transferMatcher).findMatches(anyList());
         }
     }
 
@@ -455,7 +361,7 @@ class TransactionServiceTest {
                     .build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(categoryRepository.findById(1L)).thenReturn(Optional.of(parentCategory));
+            when(categoryRepository.findById(any())).thenReturn(Optional.of(parentCategory));
 
             assertThatThrownBy(() -> transactionService.createTransaction(USER_ID, dto))
                     .isInstanceOf(IllegalArgumentException.class)

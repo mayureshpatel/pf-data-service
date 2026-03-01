@@ -45,6 +45,6 @@ public class Category {
     }
 
     public boolean isSubCategory() {
-        return parent == null;
+        return parent != null;
     }
 }

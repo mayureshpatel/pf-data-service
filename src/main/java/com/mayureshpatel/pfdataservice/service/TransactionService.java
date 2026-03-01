@@ -22,6 +22,7 @@ import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReposit
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
+import com.mayureshpatel.pfdataservice.service.transfer.TransferMatcher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,11 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -45,46 +42,13 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
+    private final TransferMatcher transferMatcher;
 
     public List<TransferSuggestionDto> findPotentialTransfers(Long userId) {
         LocalDate startDate = LocalDate.now().minusYears(5);
         List<Transaction> transactions = transactionRepository.findRecentNonTransferTransactions(userId, startDate);
 
-        List<TransferSuggestionDto> suggestions = new ArrayList<>();
-        Set<Long> matchedIds = new HashSet<>();
-
-        for (int i = 0; i < transactions.size(); i++) {
-            Transaction t1 = transactions.get(i);
-            if (matchedIds.contains(t1.getId())) continue;
-
-            for (int j = i + 1; j < transactions.size(); j++) {
-                Transaction t2 = transactions.get(j);
-                if (matchedIds.contains(t2.getId())) continue;
-
-                long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getTransactionDate(), t2.getTransactionDate()));
-
-                if (daysDiff > 3) {
-                    break;
-                }
-
-                if (t1.getAmount().compareTo(t2.getAmount()) == 0) {
-                    if (t1.getType() != t2.getType()) {
-                        if (!t1.getAccount().getId().equals(t2.getAccount().getId())) {
-                            suggestions.add(new TransferSuggestionDto(
-                                    TransactionDtoMapper.toDto(t1),
-                                    TransactionDtoMapper.toDto(t2),
-                                    0.9 - (daysDiff * 0.1)
-                            ));
-
-                            matchedIds.add(t1.getId());
-                            matchedIds.add(t2.getId());
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        return suggestions;
+        return transferMatcher.findMatches(transactions);
     }
 
     @Transactional
