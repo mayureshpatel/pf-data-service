@@ -63,6 +63,9 @@ class RecurringTransactionServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository merchantRepository;
+
     @InjectMocks
     private RecurringTransactionService recurringTransactionService;
 
@@ -230,6 +233,65 @@ class RecurringTransactionServiceTest {
         }
 
         @Test
+        @DisplayName("should create recurring transaction with existing merchant by id")
+        void createRecurringTransaction_withExistingMerchant_savesCorrectly() {
+            User user = buildUser(USER_ID);
+            OffsetDateTime now = OffsetDateTime.now();
+            
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+                    new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(500L, null, "Existing", "Existing");
+            
+            RecurringTransactionDto dto = RecurringTransactionDto.builder()
+                    .merchant(merchantDto)
+                    .amount(new BigDecimal("15.99"))
+                    .frequency(Frequency.MONTHLY)
+                    .lastDate(now.toLocalDate())
+                    .nextDate(now.toLocalDate())
+                    .active(true)
+                    .build();
+
+            Merchant existingMerchant = new Merchant();
+            existingMerchant.setId(500L);
+            existingMerchant.setCleanName("Existing");
+
+            RecurringTransaction saved = new RecurringTransaction();
+            saved.setMerchant(existingMerchant);
+
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(merchantRepository.findById(500L)).thenReturn(Optional.of(existingMerchant));
+            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
+
+            RecurringTransactionDto result = recurringTransactionService.createRecurringTransaction(USER_ID, dto);
+
+            assertThat(result).isNotNull();
+            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
+            verify(recurringRepository).save(captor.capture());
+            assertThat(captor.getValue().getMerchant().getId()).isEqualTo(500L);
+        }
+
+        @Test
+        @DisplayName("should throw exception when creating with non-existent merchant id")
+        void createRecurringTransaction_withNonExistentMerchantId_throwsException() {
+            User user = buildUser(USER_ID);
+            OffsetDateTime now = OffsetDateTime.now();
+            
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+                    new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(999L, null, "Unknown", "Unknown");
+            
+            RecurringTransactionDto dto = RecurringTransactionDto.builder()
+                    .merchant(merchantDto)
+                    .amount(new BigDecimal("15.99"))
+                    .frequency(Frequency.MONTHLY)
+                    .build();
+
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(merchantRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> recurringTransactionService.createRecurringTransaction(USER_ID, dto))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Merchant not found");
+        }
+        @Test
         @DisplayName("should save with null account when account dto is null")
         void createRecurringTransaction_withoutAccount_savesWithNullAccount() {
             // Arrange
@@ -361,6 +423,64 @@ class RecurringTransactionServiceTest {
             assertThat(captured.isActive()).isFalse();
         }
 
+        @Test
+        @DisplayName("should update recurring transaction with existing merchant by id")
+        void updateRecurringTransaction_withExistingMerchant_updatesCorrectly() {
+            RecurringTransaction existing = buildRecurring(RECURRING_ID, USER_ID);
+            OffsetDateTime now = OffsetDateTime.now();
+            
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+                    new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(500L, null, "Existing", "Existing");
+            
+            RecurringTransactionDto dto = RecurringTransactionDto.builder()
+                    .merchant(merchantDto)
+                    .amount(new BigDecimal("15.99"))
+                    .frequency(Frequency.MONTHLY)
+                    .lastDate(now.toLocalDate())
+                    .nextDate(now.toLocalDate())
+                    .active(true)
+                    .build();
+
+            Merchant existingMerchant = new Merchant();
+            existingMerchant.setId(500L);
+            existingMerchant.setCleanName("Existing");
+
+            RecurringTransaction saved = buildRecurring(RECURRING_ID, USER_ID);
+            saved.setMerchant(existingMerchant);
+
+            when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(existing));
+            when(merchantRepository.findById(500L)).thenReturn(Optional.of(existingMerchant));
+            when(recurringRepository.save(any(RecurringTransaction.class))).thenReturn(saved);
+
+            RecurringTransactionDto result = recurringTransactionService.updateRecurringTransaction(USER_ID, RECURRING_ID, dto);
+
+            assertThat(result).isNotNull();
+            ArgumentCaptor<RecurringTransaction> captor = ArgumentCaptor.forClass(RecurringTransaction.class);
+            verify(recurringRepository).save(captor.capture());
+            assertThat(captor.getValue().getMerchant().getId()).isEqualTo(500L);
+        }
+
+        @Test
+        @DisplayName("should throw exception when updating with non-existent merchant id")
+        void updateRecurringTransaction_withNonExistentMerchantId_throwsException() {
+            RecurringTransaction existing = buildRecurring(RECURRING_ID, USER_ID);
+            
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+                    new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(999L, null, "Unknown", "Unknown");
+            
+            RecurringTransactionDto dto = RecurringTransactionDto.builder()
+                    .merchant(merchantDto)
+                    .amount(new BigDecimal("15.99"))
+                    .frequency(Frequency.MONTHLY)
+                    .build();
+
+            when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(existing));
+            when(merchantRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> recurringTransactionService.updateRecurringTransaction(USER_ID, RECURRING_ID, dto))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Merchant not found");
+        }
         @Test
         @DisplayName("should set account to null when dto account is null")
         void updateRecurringTransaction_dtoAccountIsNull_clearsAccount() {

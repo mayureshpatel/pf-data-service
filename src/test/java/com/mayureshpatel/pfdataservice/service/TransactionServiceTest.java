@@ -470,6 +470,126 @@ class TransactionServiceTest {
             assertThat(t.getDescription()).isEqualTo("Updated description");
             verify(transactionRepository).save(t);
         }
+
+        @Test
+        @DisplayName("should update transaction merchant fields correctly")
+        void updateTransaction_withMerchant_updatesMerchant() {
+            User user = buildUser(USER_ID);
+            Account account = buildAccount(1L, user, new BigDecimal("400"));
+            Transaction t = buildTransaction(1L, account, new BigDecimal("100"), TransactionType.EXPENSE,
+                    OffsetDateTime.now());
+            t.setMerchant(null);
+
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+                    new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(null, null, "AMZN Target", "Target");
+
+            TransactionDto dto = TransactionDto.builder()
+                    .date(OffsetDateTime.now())
+                    .description("Updated description")
+                    .amount(new BigDecimal("80"))
+                    .type(TransactionType.EXPENSE)
+                    .merchant(merchantDto)
+                    .build();
+
+            when(transactionRepository.findById(1L)).thenReturn(Optional.of(t));
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categorizer.guessCategory(any(), any(), any())).thenReturn(-1L);
+            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            TransactionDto result = transactionService.updateTransaction(USER_ID, 1L, dto);
+
+            assertThat(result).isNotNull();
+            assertThat(t.getMerchant().getCleanName()).isEqualTo("Target");
+            assertThat(t.getMerchant().getOriginalName()).isEqualTo("AMZN Target");
+        }
+
+        @Test
+        @DisplayName("should assign subcategory if provided in DTO")
+        void updateTransaction_withSubCategory_updatesCategory() {
+            User user = buildUser(USER_ID);
+            Account account = buildAccount(1L, user, new BigDecimal("400"));
+            Transaction t = buildTransaction(1L, account, new BigDecimal("100"), TransactionType.EXPENSE,
+                    OffsetDateTime.now());
+
+            Category parentCat = Category.builder().id(10L).name("Food").build();
+            Category subCat = Category.builder().id(11L).name("Groceries").parent(parentCat).build();
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto catDto = 
+                    new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(11L, USER_ID, "Groceries", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, null, null);
+
+            TransactionDto dto = TransactionDto.builder()
+                    .date(OffsetDateTime.now())
+                    .description("Updated description")
+                    .amount(new BigDecimal("80"))
+                    .type(TransactionType.EXPENSE)
+                    .category(catDto)
+                    .build();
+
+            when(transactionRepository.findById(1L)).thenReturn(Optional.of(t));
+            when(categoryRepository.findById(11L)).thenReturn(Optional.of(subCat));
+            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            TransactionDto result = transactionService.updateTransaction(USER_ID, 1L, dto);
+
+            assertThat(result).isNotNull();
+            assertThat(t.getCategory().getId()).isEqualTo(11L);
+        }
+
+        @Test
+        @DisplayName("should throw IllegalArgumentException when assigning parent category via DTO")
+        void updateTransaction_withParentCategory_throwsIllegalArgumentException() {
+            User user = buildUser(USER_ID);
+            Account account = buildAccount(1L, user, new BigDecimal("400"));
+            Transaction t = buildTransaction(1L, account, new BigDecimal("100"), TransactionType.EXPENSE,
+                    OffsetDateTime.now());
+
+            Category parentCat = Category.builder().id(10L).name("Food").build();
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto catDto = 
+                    new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(10L, USER_ID, "Food", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, null, null);
+
+            TransactionDto dto = TransactionDto.builder()
+                    .date(OffsetDateTime.now())
+                    .description("Updated description")
+                    .amount(new BigDecimal("80"))
+                    .type(TransactionType.EXPENSE)
+                    .category(catDto)
+                    .build();
+
+            when(transactionRepository.findById(1L)).thenReturn(Optional.of(t));
+            when(categoryRepository.findById(10L)).thenReturn(Optional.of(parentCat));
+
+            assertThatThrownBy(() -> transactionService.updateTransaction(USER_ID, 1L, dto))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("should guess category and assign if valid during update")
+        void updateTransaction_noCategoryInDto_guessesAndAssignsCategory() {
+            User user = buildUser(USER_ID);
+            Account account = buildAccount(1L, user, new BigDecimal("400"));
+            Transaction t = buildTransaction(1L, account, new BigDecimal("100"), TransactionType.EXPENSE,
+                    OffsetDateTime.now());
+
+            TransactionDto dto = TransactionDto.builder()
+                    .date(OffsetDateTime.now())
+                    .description("Updated description")
+                    .amount(new BigDecimal("80"))
+                    .type(TransactionType.EXPENSE)
+                    .build();
+
+            Category guessedCat = Category.builder().id(55L).name("Guessed").build();
+
+            when(transactionRepository.findById(1L)).thenReturn(Optional.of(t));
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(guessedCat));
+            when(categorizer.guessCategory(any(), any(), any())).thenReturn(55L);
+            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            TransactionDto result = transactionService.updateTransaction(USER_ID, 1L, dto);
+
+            assertThat(result).isNotNull();
+            assertThat(t.getCategory().getId()).isEqualTo(55L);
+        }
     }
 
     @Nested
@@ -540,6 +660,63 @@ class TransactionServiceTest {
 
             assertThatThrownBy(() -> transactionService.updateTransactions(USER_ID, List.of(dto)))
                     .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException when user does not own some transactions in list")
+        void updateTransactions_notOwned_throwsAccessDeniedException() {
+            User anotherUser = buildUser(99L);
+            Account account = buildAccount(1L, anotherUser, BigDecimal.ZERO);
+            Transaction t = buildTransaction(999L, account, BigDecimal.TEN, TransactionType.EXPENSE, OffsetDateTime.now());
+
+            TransactionDto dto = TransactionDto.builder()
+                    .id(999L)
+                    .date(OffsetDateTime.now())
+                    .description("Test")
+                    .amount(BigDecimal.TEN)
+                    .type(TransactionType.EXPENSE)
+                    .build();
+
+            when(transactionRepository.findAllById(List.of(999L))).thenReturn(List.of(t));
+
+            assertThatThrownBy(() -> transactionService.updateTransactions(USER_ID, List.of(dto)))
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("should correctly update multiple transactions")
+        void updateTransactions_validInput_updatesAndReturnsDtos() {
+            User user = buildUser(USER_ID);
+            Account account = buildAccount(1L, user, new BigDecimal("400"));
+            Transaction t1 = buildTransaction(1L, account, new BigDecimal("100"), TransactionType.EXPENSE, OffsetDateTime.now());
+            Transaction t2 = buildTransaction(2L, account, new BigDecimal("50"), TransactionType.INCOME, OffsetDateTime.now());
+
+            TransactionDto dto1 = TransactionDto.builder()
+                    .id(1L)
+                    .date(OffsetDateTime.now())
+                    .description("Updated 1")
+                    .amount(new BigDecimal("100"))
+                    .type(TransactionType.EXPENSE)
+                    .build();
+            TransactionDto dto2 = TransactionDto.builder()
+                    .id(2L)
+                    .date(OffsetDateTime.now())
+                    .description("Updated 2")
+                    .amount(new BigDecimal("50"))
+                    .type(TransactionType.INCOME)
+                    .build();
+
+            when(transactionRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(t1, t2));
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categorizer.guessCategory(any(), any(), any())).thenReturn(-1L);
+            when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            List<TransactionDto> result = transactionService.updateTransactions(USER_ID, List.of(dto1, dto2));
+
+            assertThat(result).hasSize(2);
+            assertThat(t1.getDescription()).isEqualTo("Updated 1");
+            assertThat(t2.getDescription()).isEqualTo("Updated 2");
         }
     }
 
