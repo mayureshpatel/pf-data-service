@@ -20,21 +20,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AccountTypeController.class)
 @DisplayName("AccountTypeController Unit Tests")
-class AccountTypeControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockitoBean
-    private AccountTypeRepository accountTypeRepository;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
+class AccountTypeControllerTest extends BaseControllerTest {
 
     @Test
     @WithMockUser

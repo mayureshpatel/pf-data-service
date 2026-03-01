@@ -16,7 +16,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthenticationController.class)
 @AutoConfigureMockMvc(addFilters = false) // Bypass security filters for auth endpoints to simplify testing logic
 @DisplayName("AuthenticationController Unit Tests")
 class AuthenticationControllerTest extends BaseControllerTest {

@@ -29,26 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Unit tests for {@link CategoryController}.
  */
-@WebMvcTest(CategoryController.class)
 @DisplayName("CategoryController Unit Tests")
-class CategoryControllerTest {
+class CategoryControllerTest extends BaseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private CategoryService categoryService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    private static final long USER_ID = 1L;
     private static final long CATEGORY_ID = 50L;
 
     @Test

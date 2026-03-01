@@ -25,7 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Unit tests for {@link TransactionController}.
  */
-@WebMvcTest(TransactionController.class)
 @EnableMethodSecurity
 @DisplayName("TransactionController Unit Tests")
 class TransactionControllerTest extends BaseControllerTest {

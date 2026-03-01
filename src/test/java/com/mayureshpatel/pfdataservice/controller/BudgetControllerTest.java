@@ -24,7 +24,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Unit tests for {@link BudgetController}.
  */
-@WebMvcTest(BudgetController.class)
 @DisplayName("BudgetController Unit Tests")
 class BudgetControllerTest extends BaseControllerTest {
 

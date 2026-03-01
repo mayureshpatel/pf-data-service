@@ -25,26 +25,9 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(CategoryRuleController.class)
 @DisplayName("CategoryRuleController Unit Tests")
-class CategoryRuleControllerTest {
+class CategoryRuleControllerTest extends BaseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private CategoryRuleService categoryRuleService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    private static final long USER_ID = 1L;
     private static final long RULE_ID = 100L;
 
     @Test

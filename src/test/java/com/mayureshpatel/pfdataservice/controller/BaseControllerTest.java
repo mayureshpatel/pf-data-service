@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Base class for all Controller tests to ensure ApplicationContext reuse.
  * By defining all shared mocks here, Spring caches the context for the entire suite.
  */
+@WebMvcTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public abstract class BaseControllerTest {

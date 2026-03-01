@@ -40,30 +40,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(TransactionCrudController.class)
 @DisplayName("TransactionCrudController Unit Tests")
 @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
-class TransactionCrudControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private TransactionService transactionService;
-
-    @MockitoBean(name = "ss")
-    private SecurityService securityService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    private static final long USER_ID = 1L;
+class TransactionCrudControllerTest extends BaseControllerTest {
 
     @Test
     @WithCustomMockUser(id = USER_ID)
