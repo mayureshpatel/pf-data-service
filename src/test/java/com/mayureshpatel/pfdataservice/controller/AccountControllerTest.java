@@ -90,7 +90,7 @@ class AccountControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(ACCOUNT_ID))
                 .andExpect(jsonPath("$.name").value("New Account"));
 

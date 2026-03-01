@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.account;
 
 import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
@@ -57,15 +56,12 @@ class AccountRepositoryTest extends BaseIntegrationTest {
         testCurrency.setActive(true);
         currencyRepository.save(testCurrency);
 
-        // AccountType is likely seeded by Flyway, let's try to find one or create if needed
         List<AccountType> types = accountTypeRepository.findByIsActiveTrueOrderBySortOrder();
         if (types.isEmpty()) {
             testAccountType = new AccountType();
             testAccountType.setCode("CHECKING");
             testAccountType.setLabel("Checking");
             testAccountType.setActive(true);
-            // Since AccountTypeRepository doesn't have a full insert, we might need to rely on seeded data
-            // or use JdbcClient to insert. For now let's assume it's seeded as per V13__seed_initial_data.sql
         } else {
             testAccountType = types.get(0);
         }
@@ -74,7 +70,6 @@ class AccountRepositoryTest extends BaseIntegrationTest {
     @Test
     @DisplayName("should insert and find account by id")
     void insertAndFindById() {
-        // Arrange
         Account account = new Account();
         account.setName("Test Account");
         account.setType(testAccountType);
@@ -85,11 +80,9 @@ class AccountRepositoryTest extends BaseIntegrationTest {
         account.setAudit(new TableAudit());
         account.getAudit().setCreatedBy(testUser);
 
-        // Act
         Account saved = accountRepository.save(account);
         Optional<Account> found = accountRepository.findById(saved.getId());
 
-        // Assert
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo("Test Account");
         assertThat(found.get().getUser().getId()).isEqualTo(testUser.getId());
@@ -99,16 +92,13 @@ class AccountRepositoryTest extends BaseIntegrationTest {
     @Test
     @DisplayName("should find all accounts by user id")
     void findByUserId() {
-        // Arrange
         Account acc1 = createAccount("Acc 1");
         Account acc2 = createAccount("Acc 2");
         accountRepository.save(acc1);
         accountRepository.save(acc2);
 
-        // Act
         List<Account> accounts = accountRepository.findByUserId(testUser.getId());
 
-        // Assert
         assertThat(accounts).hasSize(2);
         assertThat(accounts).extracting(Account::getName).containsExactlyInAnyOrder("Acc 1", "Acc 2");
     }
@@ -116,16 +106,13 @@ class AccountRepositoryTest extends BaseIntegrationTest {
     @Test
     @DisplayName("should update account name and balance")
     void updateAccount() {
-        // Arrange
         Account account = createAccount("Old Name");
         Account saved = accountRepository.save(account);
 
-        // Act
         saved.setName("New Name");
         saved.setCurrentBalance(new BigDecimal("2000.00"));
         accountRepository.save(saved);
 
-        // Assert
         Account updated = accountRepository.findById(saved.getId()).get();
         assertThat(updated.getName()).isEqualTo("New Name");
         assertThat(updated.getCurrentBalance()).isEqualByComparingTo("2000.00");
@@ -135,15 +122,12 @@ class AccountRepositoryTest extends BaseIntegrationTest {
     @Test
     @DisplayName("should soft delete account")
     void deleteAccount() {
-        // Arrange
         Account account = createAccount("To Delete");
         Account saved = accountRepository.save(account);
         long initialCount = accountRepository.count();
 
-        // Act
         accountRepository.delete(saved);
 
-        // Assert
         assertThat(accountRepository.findById(saved.getId())).isEmpty();
         assertThat(accountRepository.count()).isEqualTo(initialCount - 1);
     }
@@ -151,14 +135,11 @@ class AccountRepositoryTest extends BaseIntegrationTest {
     @Test
     @DisplayName("should find account by accountId and userId")
     void findByAccountIdAndUserId() {
-        // Arrange
         Account account = createAccount("Owned Account");
         Account saved = accountRepository.save(account);
 
-        // Act
         Optional<Account> found = accountRepository.findByAccountIdAndUserId(saved.getId(), testUser.getId());
 
-        // Assert
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo("Owned Account");
     }
@@ -166,7 +147,6 @@ class AccountRepositoryTest extends BaseIntegrationTest {
     @Test
     @DisplayName("should return empty when accountId exists but userId does not match")
     void findByAccountIdAndUserId_wrongUser() {
-        // Arrange
         Account account = createAccount("Other Account");
         Account saved = accountRepository.save(account);
 
@@ -176,17 +156,14 @@ class AccountRepositoryTest extends BaseIntegrationTest {
         otherUser.setPasswordHash("hash");
         userRepository.save(otherUser);
 
-        // Act
         Optional<Account> found = accountRepository.findByAccountIdAndUserId(saved.getId(), otherUser.getId());
 
-        // Assert
         assertThat(found).isEmpty();
     }
 
     @Test
     @DisplayName("should isolate accounts between users")
     void dataIsolation_userCannotSeeOtherUsersAccounts() {
-        // Arrange
         Account acc1 = createAccount("User1 Account");
         accountRepository.save(acc1);
 
@@ -206,11 +183,9 @@ class AccountRepositoryTest extends BaseIntegrationTest {
         acc2.getAudit().setCreatedBy(otherUser);
         accountRepository.save(acc2);
 
-        // Act
         List<Account> user1Accounts = accountRepository.findByUserId(testUser.getId());
         List<Account> user2Accounts = accountRepository.findByUserId(otherUser.getId());
 
-        // Assert
         assertThat(user1Accounts).extracting(Account::getName).containsExactly("User1 Account");
         assertThat(user2Accounts).extracting(Account::getName).containsExactly("User2 Account");
     }

@@ -28,7 +28,7 @@ public class AccountController {
     public ResponseEntity<AccountDto> createAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid AccountDto accountDto) {
-        return ResponseEntity.ok(accountService.createAccount(userDetails.getId(), accountDto));
+        return ResponseEntity.status(201).body(accountService.createAccount(userDetails.getId(), accountDto));
     }
 
     @PutMapping("/{id}")
