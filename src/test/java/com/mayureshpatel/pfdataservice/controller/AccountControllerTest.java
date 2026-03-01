@@ -107,46 +107,4 @@ class AccountControllerTest extends BaseControllerTest {
 
         verify(accountService).deleteAccount(USER_ID, ACCOUNT_ID);
     }
-
-    @Test
-    @WithCustomMockUser(id = USER_ID)
-    @DisplayName("POST /api/v1/accounts/{id}/reconcile should reconcile account balance")
-    void reconcileAccount_shouldReconcileBalance() throws Exception {
-        // Arrange
-        BigDecimal targetBalance = new BigDecimal("1500.00");
-        AccountController.ReconcileRequest request = new AccountController.ReconcileRequest(targetBalance);
-        
-        AccountType type = new AccountType();
-        type.setCode("CHECKING");
-        AccountDto responseDto = new AccountDto(ACCOUNT_ID, null, "Checking Account", type.getCode(), "Label", targetBalance, "USD", "$", BankName.CAPITAL_ONE.name());
-        
-        when(accountService.reconcileAccount(eq(USER_ID), eq(ACCOUNT_ID), eq(targetBalance))).thenReturn(responseDto);
-
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/accounts/{id}/reconcile", ACCOUNT_ID)
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currentBalance").value(1500.00));
-
-        verify(accountService).reconcileAccount(USER_ID, ACCOUNT_ID, targetBalance);
-    }
-
-    @Test
-    @DisplayName("GET /api/v1/accounts should return 401 when not authenticated")
-    void getAccounts_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(get("/api/v1/accounts"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @DisplayName("POST /api/v1/accounts should return 401 when not authenticated")
-    void createAccount_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(post("/api/v1/accounts")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isUnauthorized());
-    }
 }

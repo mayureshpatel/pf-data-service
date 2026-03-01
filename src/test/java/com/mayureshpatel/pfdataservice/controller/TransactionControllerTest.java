@@ -1,22 +1,14 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
-import com.mayureshpatel.pfdataservice.security.JwtService;
-import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
-import com.mayureshpatel.pfdataservice.service.TransactionImportService;
-import com.mayureshpatel.pfdataservice.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import java.io.InputStream;
@@ -36,27 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(TransactionController.class)
 @EnableMethodSecurity
 @DisplayName("TransactionController Unit Tests")
-class TransactionControllerTest {
+class TransactionControllerTest extends BaseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private TransactionImportService transactionImportService;
-
-    @MockitoBean(name = "ss")
-    private SecurityService securityService;
-
-    @MockitoBean
-    private UserService userService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    private static final long USER_ID = 1L;
     private static final long ACCOUNT_ID = 101L;
 
     @Test

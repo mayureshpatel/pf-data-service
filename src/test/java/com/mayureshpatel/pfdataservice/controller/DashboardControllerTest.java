@@ -32,87 +32,100 @@ class DashboardControllerTest extends BaseControllerTest {
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("GET /api/v1/dashboard/pulse should return dashboard pulse")
     void getPulse_shouldReturnDashboardPulse() throws Exception {
-        DashboardPulseDto pulseDto = new DashboardPulseDto(new BigDecimal("5000.00"), new BigDecimal("1200.00"), new BigDecimal("45.5"), new BigDecimal("150.00"), List.of());
-        when(dashboardService.getPulse(USER_ID)).thenReturn(pulseDto);
+        DashboardPulseDto pulseDto = new DashboardPulseDto(
+                new BigDecimal("5000.00"), new BigDecimal("4800.00"),
+                new BigDecimal("1200.00"), new BigDecimal("1100.00"),
+                new BigDecimal("76.0"), new BigDecimal("77.0")
+        );
+        when(dashboardService.getPulse(eq(USER_ID), anyInt(), anyInt())).thenReturn(pulseDto);
 
-        mockMvc.perform(get("/api/v1/dashboard/pulse"))
+        mockMvc.perform(get("/api/v1/dashboard/pulse")
+                        .param("month", "1")
+                        .param("year", "2025"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.netWorth").value(5000.00))
-                .andExpect(jsonPath("$.monthlySpending").value(1200.00));
+                .andExpect(jsonPath("$.currentIncome").value(5000.00))
+                .andExpect(jsonPath("$.currentExpense").value(1200.00));
 
-        verify(dashboardService).getPulse(USER_ID);
+        verify(dashboardService).getPulse(eq(USER_ID), eq(1), eq(2025));
     }
 
     @Test
     @WithCustomMockUser(id = USER_ID)
-    @DisplayName("GET /api/v1/dashboard/cash-flow should return cash flow trend")
+    @DisplayName("GET /api/v1/dashboard/trend/cashflow should return cash flow trend")
     void getCashFlow_shouldReturnCashFlowTrend() throws Exception {
-        CashFlowTrendDto trendDto = new CashFlowTrendDto(List.of("Jan", "Feb"), List.of(new BigDecimal("1000.00")), List.of(new BigDecimal("800.00")));
-        when(dashboardService.getCashFlowTrend(eq(USER_ID), anyInt())).thenReturn(trendDto);
+        CashFlowTrendDto trendDto = new CashFlowTrendDto(1, 2025, new BigDecimal("1000.00"), new BigDecimal("800.00"));
+        when(dashboardService.getCashFlowTrend(USER_ID)).thenReturn(List.of(trendDto));
 
-        mockMvc.perform(get("/api/v1/dashboard/cash-flow").param("months", "6"))
+        mockMvc.perform(get("/api/v1/dashboard/trend/cashflow"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.labels[0]").value("Jan"));
+                .andExpect(jsonPath("$[0].month").value(1))
+                .andExpect(jsonPath("$[0].year").value(2025));
 
-        verify(dashboardService).getCashFlowTrend(eq(USER_ID), eq(6));
+        verify(dashboardService).getCashFlowTrend(USER_ID);
     }
 
     @Test
     @WithCustomMockUser(id = USER_ID)
-    @DisplayName("GET /api/v1/dashboard/spending/category should return category breakdown")
+    @DisplayName("GET /api/v1/dashboard/categories should return category breakdown")
     void getSpendingByCategory_shouldReturnCategoryBreakdown() throws Exception {
-        CategoryDto catDto = new CategoryDto(1L, null, "Food", "EXPENSE", "icon", "color", null);
-        CategoryBreakdownDto breakdown = new CategoryBreakdownDto(catDto, new BigDecimal("450.00"), 35.0);
-        when(dashboardService.getSpendingByCategory(eq(USER_ID), anyInt())).thenReturn(List.of(breakdown));
+        CategoryDto catDto = new CategoryDto(1L, null, "Food", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, "icon", "color");
+        CategoryBreakdownDto breakdown = new CategoryBreakdownDto(catDto, new BigDecimal("450.00"));
+        when(dashboardService.getCategoryBreakdown(eq(USER_ID), anyInt(), anyInt())).thenReturn(List.of(breakdown));
 
-        mockMvc.perform(get("/api/v1/dashboard/spending/category"))
+        mockMvc.perform(get("/api/v1/dashboard/categories")
+                        .param("month", "1")
+                        .param("year", "2025"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].category.name").value("Food"))
-                .andExpect(jsonPath("$[0].amount").value(450.00));
+                .andExpect(jsonPath("$[0].total").value(450.00));
 
-        verify(dashboardService).getSpendingByCategory(eq(USER_ID), eq(1));
+        verify(dashboardService).getCategoryBreakdown(eq(USER_ID), eq(1), eq(2025));
     }
 
     @Test
     @WithCustomMockUser(id = USER_ID)
-    @DisplayName("GET /api/v1/dashboard/spending/merchant should return merchant breakdown")
+    @DisplayName("GET /api/v1/dashboard/vendors should return merchant breakdown")
     void getSpendingByMerchant_shouldReturnMerchantBreakdown() throws Exception {
         MerchantDto merchDto = new MerchantDto(1L, null, "Amazon", "Amazon");
-        MerchantBreakdownDto breakdown = new MerchantBreakdownDto(merchDto, new BigDecimal("300.00"), 20.0);
-        when(dashboardService.getSpendingByMerchant(eq(USER_ID), anyInt())).thenReturn(List.of(breakdown));
+        MerchantBreakdownDto breakdown = new MerchantBreakdownDto(merchDto, new BigDecimal("300.00"));
+        when(dashboardService.getMerchantBreakdown(eq(USER_ID), anyInt(), anyInt())).thenReturn(List.of(breakdown));
 
-        mockMvc.perform(get("/api/v1/dashboard/spending/merchant"))
+        mockMvc.perform(get("/api/v1/dashboard/vendors")
+                        .param("month", "1")
+                        .param("year", "2025"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].merchant.cleanName").value("Amazon"));
+                .andExpect(jsonPath("$[0].merchant.cleanName").value("Amazon"))
+                .andExpect(jsonPath("$[0].total").value(300.00));
 
-        verify(dashboardService).getSpendingByMerchant(eq(USER_ID), eq(1));
+        verify(dashboardService).getMerchantBreakdown(eq(USER_ID), eq(1), eq(2025));
     }
 
     @Test
     @WithCustomMockUser(id = USER_ID)
-    @DisplayName("GET /api/v1/dashboard/action-items should return list of action items")
+    @DisplayName("GET /api/v1/dashboard/actions should return list of action items")
     void getActionItems_shouldReturnActionItems() throws Exception {
-        ActionItemDto item = new ActionItemDto("High Spending", "Warning", "You spent more on dining this month", "warning");
+        ActionItemDto item = new ActionItemDto(ActionItemDto.ActionType.UNCATEGORIZED, 5L, "Uncategorized expenses found", "/transactions?category=null");
         when(dashboardService.getActionItems(USER_ID)).thenReturn(List.of(item));
 
-        mockMvc.perform(get("/api/v1/dashboard/action-items"))
+        mockMvc.perform(get("/api/v1/dashboard/actions"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("High Spending"));
+                .andExpect(jsonPath("$[0].message").value("Uncategorized expenses found"));
 
         verify(dashboardService).getActionItems(USER_ID);
     }
 
     @Test
     @WithCustomMockUser(id = USER_ID)
-    @DisplayName("GET /api/v1/dashboard/ytd-summary should return YTD summary")
+    @DisplayName("GET /api/v1/dashboard/ytd should return YTD summary")
     void getYtdSummary_shouldReturnYtdSummary() throws Exception {
-        YtdSummaryDto summary = new YtdSummaryDto(new BigDecimal("12000.00"), new BigDecimal("10000.00"), new BigDecimal("2000.00"), 16.6);
-        when(dashboardService.getYtdSummary(USER_ID)).thenReturn(summary);
+        YtdSummaryDto summary = new YtdSummaryDto(2025, new BigDecimal("12000.00"), new BigDecimal("10000.00"), new BigDecimal("2000.00"), new BigDecimal("16.6"));
+        when(dashboardService.getYtdSummary(eq(USER_ID), anyInt())).thenReturn(summary);
 
-        mockMvc.perform(get("/api/v1/dashboard/ytd-summary"))
+        mockMvc.perform(get("/api/v1/dashboard/ytd")
+                        .param("year", "2025"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIncome").value(12000.00));
 
-        verify(dashboardService).getYtdSummary(USER_ID);
+        verify(dashboardService).getYtdSummary(eq(USER_ID), eq(2025));
     }
 }
