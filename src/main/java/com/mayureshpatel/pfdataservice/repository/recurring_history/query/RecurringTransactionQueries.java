@@ -28,7 +28,6 @@ public final class RecurringTransactionQueries {
             select *
             from recurring_transactions
             where user_id = :userId
-                and active = true
                 and deleted_at is null
             order by merchant_id
             """;
@@ -36,7 +35,6 @@ public final class RecurringTransactionQueries {
     // language=SQL
     public static final String INSERT = """
             insert into recurring_transactions (
-                                                id,
                                                 user_id,
                                                 account_id,
                                                 merchant_id,
@@ -47,16 +45,16 @@ public final class RecurringTransactionQueries {
                                                 active,
                                                 created_at, updated_at)
             values (
-                    :id,
                     :userId,
                     :accountId,
-                    :merchantName,
+                    :merchantId,
                     :amount,
                     :frequency,
                     :lastDate,
                     :nextDate,
                     :active,
                     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            returning id
             """;
 
     // language=SQL
@@ -76,8 +74,10 @@ public final class RecurringTransactionQueries {
 
     // language=SQL
     public static final String DELETE = """
-            delete from recurring_transactions
+            update recurring_transactions
+            set deleted_at = CURRENT_TIMESTAMP
             where id = :id
                 and user_id = :userId
+                and deleted_at is null
             """;
 }

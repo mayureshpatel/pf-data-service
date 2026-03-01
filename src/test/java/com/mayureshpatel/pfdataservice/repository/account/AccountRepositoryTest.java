@@ -148,6 +148,73 @@ class AccountRepositoryTest extends BaseIntegrationTest {
         assertThat(accountRepository.count()).isEqualTo(initialCount - 1);
     }
 
+    @Test
+    @DisplayName("should find account by accountId and userId")
+    void findByAccountIdAndUserId() {
+        // Arrange
+        Account account = createAccount("Owned Account");
+        Account saved = accountRepository.save(account);
+
+        // Act
+        Optional<Account> found = accountRepository.findByAccountIdAndUserId(saved.getId(), testUser.getId());
+
+        // Assert
+        assertThat(found).isPresent();
+        assertThat(found.get().getName()).isEqualTo("Owned Account");
+    }
+
+    @Test
+    @DisplayName("should return empty when accountId exists but userId does not match")
+    void findByAccountIdAndUserId_wrongUser() {
+        // Arrange
+        Account account = createAccount("Other Account");
+        Account saved = accountRepository.save(account);
+
+        User otherUser = new User();
+        otherUser.setUsername("otheruser_" + System.currentTimeMillis());
+        otherUser.setEmail("other" + System.currentTimeMillis() + "@example.com");
+        otherUser.setPasswordHash("hash");
+        userRepository.save(otherUser);
+
+        // Act
+        Optional<Account> found = accountRepository.findByAccountIdAndUserId(saved.getId(), otherUser.getId());
+
+        // Assert
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("should isolate accounts between users")
+    void dataIsolation_userCannotSeeOtherUsersAccounts() {
+        // Arrange
+        Account acc1 = createAccount("User1 Account");
+        accountRepository.save(acc1);
+
+        User otherUser = new User();
+        otherUser.setUsername("isolated_" + System.currentTimeMillis());
+        otherUser.setEmail("isolated" + System.currentTimeMillis() + "@example.com");
+        otherUser.setPasswordHash("hash");
+        userRepository.save(otherUser);
+
+        Account acc2 = new Account();
+        acc2.setName("User2 Account");
+        acc2.setType(testAccountType);
+        acc2.setCurrentBalance(new BigDecimal("500.00"));
+        acc2.setCurrency(testCurrency);
+        acc2.setUser(otherUser);
+        acc2.setAudit(new TableAudit());
+        acc2.getAudit().setCreatedBy(otherUser);
+        accountRepository.save(acc2);
+
+        // Act
+        List<Account> user1Accounts = accountRepository.findByUserId(testUser.getId());
+        List<Account> user2Accounts = accountRepository.findByUserId(otherUser.getId());
+
+        // Assert
+        assertThat(user1Accounts).extracting(Account::getName).containsExactly("User1 Account");
+        assertThat(user2Accounts).extracting(Account::getName).containsExactly("User2 Account");
+    }
+
     private Account createAccount(String name) {
         Account account = new Account();
         account.setName(name);

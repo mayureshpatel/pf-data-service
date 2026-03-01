@@ -20,11 +20,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
+import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
+import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,7 +56,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
     private MerchantRepository merchantRepository;
 
     @Autowired
-    private com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository currencyRepository;
+    private CurrencyRepository currencyRepository;
 
     private User createUser(String username) {
         User user = new User();
@@ -217,5 +222,307 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         // Net flow = Income - Expense
         // 1000 - 200 = 800
         assertThat(flow).isEqualByComparingTo("800.00");
+    }
+
+    @Test
+    @DisplayName("findById() should return transaction when exists")
+    void findById_shouldReturnTransaction() {
+        // Arrange
+        User user = createUser("finduser");
+        Account account = createAccount(user, "Find Account");
+        Merchant merchant = createMerchant(user, "FindMerchant");
+
+        Transaction tx = new Transaction();
+        tx.setAccount(account);
+        tx.setMerchant(merchant);
+        tx.setAmount(new BigDecimal("25.00"));
+        tx.setTransactionDate(OffsetDateTime.now());
+        tx.setDescription("Find me");
+        tx.setType(TransactionType.EXPENSE);
+        Transaction saved = transactionRepository.save(tx);
+
+        // Act
+        Optional<Transaction> found = transactionRepository.findById(saved.getId());
+
+        // Assert
+        assertThat(found).isPresent();
+        assertThat(found.get().getDescription()).isEqualTo("Find me");
+        assertThat(found.get().getAmount()).isEqualByComparingTo("25.00");
+    }
+
+    @Test
+    @DisplayName("findById() should return empty when not exists")
+    void findById_shouldReturnEmpty() {
+        assertThat(transactionRepository.findById(99999L)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getCountByCategory() should return category transaction counts")
+    void getCountByCategory_shouldReturnCounts() {
+        // Arrange
+        User user = createUser("countuser");
+        Account account = createAccount(user, "Count Account");
+        Category food = createCategory(user, "Food Count");
+        Category transport = createCategory(user, "Transport Count");
+        Merchant merchant = createMerchant(user, "CountMerchant");
+
+        // 2 food transactions
+        for (int i = 0; i < 2; i++) {
+            Transaction tx = new Transaction();
+            tx.setAccount(account);
+            tx.setCategory(food);
+            tx.setMerchant(merchant);
+            tx.setAmount(new BigDecimal("10.00"));
+            tx.setTransactionDate(OffsetDateTime.now());
+            tx.setType(TransactionType.EXPENSE);
+            transactionRepository.save(tx);
+        }
+
+        // 1 transport transaction
+        Transaction tx3 = new Transaction();
+        tx3.setAccount(account);
+        tx3.setCategory(transport);
+        tx3.setMerchant(merchant);
+        tx3.setAmount(new BigDecimal("30.00"));
+        tx3.setTransactionDate(OffsetDateTime.now());
+        tx3.setType(TransactionType.EXPENSE);
+        transactionRepository.save(tx3);
+
+        // Act
+        List<CategoryTransactionsDto> counts = transactionRepository.getCountByCategory(user.getId());
+
+        // Assert
+        assertThat(counts).hasSizeGreaterThanOrEqualTo(2);
+        CategoryTransactionsDto foodCount = counts.stream()
+                .filter(c -> c.category().name().equals("Food Count"))
+                .findFirst().orElseThrow();
+        assertThat(foodCount.transactionCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("getSumByDateRange() should sum amounts by type within range")
+    void getSumByDateRange_shouldSumByType() {
+        // Arrange
+        User user = createUser("sumuser");
+        Account account = createAccount(user, "Sum Account");
+        Merchant merchant = createMerchant(user, "SumMerchant");
+
+        Transaction t1 = new Transaction();
+        t1.setAccount(account);
+        t1.setMerchant(merchant);
+        t1.setAmount(new BigDecimal("500.00"));
+        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setType(TransactionType.INCOME);
+        transactionRepository.save(t1);
+
+        Transaction t2 = new Transaction();
+        t2.setAccount(account);
+        t2.setMerchant(merchant);
+        t2.setAmount(new BigDecimal("300.00"));
+        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setType(TransactionType.INCOME);
+        transactionRepository.save(t2);
+
+        OffsetDateTime start = LocalDate.now().minusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        OffsetDateTime end = LocalDate.now().plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+
+        // Act
+        BigDecimal sum = transactionRepository.getSumByDateRange(user.getId(), start, end, TransactionType.INCOME);
+
+        // Assert
+        assertThat(sum).isEqualByComparingTo("800.00");
+    }
+
+    @Test
+    @DisplayName("data isolation - user cannot see other user's transactions")
+    void dataIsolation_userCannotSeeOtherTransactions() {
+        // Arrange
+        User user1 = createUser("txiso1");
+        User user2 = createUser("txiso2");
+        Account acc1 = createAccount(user1, "Iso1 Account");
+        Account acc2 = createAccount(user2, "Iso2 Account");
+        Merchant m1 = createMerchant(user1, "IsoMerchant1");
+        Merchant m2 = createMerchant(user2, "IsoMerchant2");
+
+        Transaction tx1 = new Transaction();
+        tx1.setAccount(acc1);
+        tx1.setMerchant(m1);
+        tx1.setAmount(new BigDecimal("100.00"));
+        tx1.setTransactionDate(OffsetDateTime.now());
+        tx1.setType(TransactionType.EXPENSE);
+        transactionRepository.save(tx1);
+
+        Transaction tx2 = new Transaction();
+        tx2.setAccount(acc2);
+        tx2.setMerchant(m2);
+        tx2.setAmount(new BigDecimal("200.00"));
+        tx2.setTransactionDate(OffsetDateTime.now());
+        tx2.setType(TransactionType.EXPENSE);
+        transactionRepository.save(tx2);
+
+        // Act
+        List<Transaction> user1Txs = transactionRepository.findByUserId(user1.getId());
+        List<Transaction> user2Txs = transactionRepository.findByUserId(user2.getId());
+
+        // Assert
+        assertThat(user1Txs).hasSize(1);
+        assertThat(user1Txs.get(0).getAmount()).isEqualByComparingTo("100.00");
+        assertThat(user2Txs).hasSize(1);
+        assertThat(user2Txs.get(0).getAmount()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    @DisplayName("getUncategorizedExpenseTotals() should return sum of expenses without category")
+    void getUncategorizedExpenseTotals_shouldReturnSum() {
+        // Arrange
+        User user = createUser("uncatuser");
+        Account account = createAccount(user, "Uncat Account");
+        Merchant merchant = createMerchant(user, "Uncat Merchant");
+
+        // Uncategorized expense
+        Transaction t1 = new Transaction();
+        t1.setAccount(account);
+        t1.setMerchant(merchant);
+        t1.setAmount(new BigDecimal("50.00"));
+        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setType(TransactionType.EXPENSE);
+        t1.setCategory(null);
+        transactionRepository.save(t1);
+
+        // Categorized expense
+        Category cat = createCategory(user, "Categorized");
+        Transaction t2 = new Transaction();
+        t2.setAccount(account);
+        t2.setMerchant(merchant);
+        t2.setCategory(cat);
+        t2.setAmount(new BigDecimal("30.00"));
+        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setType(TransactionType.EXPENSE);
+        transactionRepository.save(t2);
+
+        // Act
+        BigDecimal uncatTotal = transactionRepository.getUncategorizedExpenseTotals(user.getId());
+
+        // Assert
+        assertThat(uncatTotal).isEqualByComparingTo("50.00");
+    }
+
+    @Test
+    @DisplayName("deleteById() should perform soft delete")
+    void deleteById_shouldSoftDelete() {
+        // Arrange
+        User user = createUser("softdeluser");
+        Account account = createAccount(user, "SoftDel Account");
+        Merchant merchant = createMerchant(user, "SoftDel Merchant");
+
+        Transaction tx = new Transaction();
+        tx.setAccount(account);
+        tx.setMerchant(merchant);
+        tx.setAmount(new BigDecimal("10.00"));
+        tx.setTransactionDate(OffsetDateTime.now());
+        tx.setType(TransactionType.EXPENSE);
+        Transaction saved = transactionRepository.save(tx);
+
+        // Act
+        transactionRepository.deleteById(saved.getId());
+
+        // Assert
+        assertThat(transactionRepository.findById(saved.getId())).isEmpty();
+        assertThat(transactionRepository.findByUserId(user.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findAll() with Pageable and filter should return results")
+    void findAll_withPageable_shouldReturnResults() {
+        // Arrange
+        User user = createUser("pageuser");
+        Account account = createAccount(user, "Page Account");
+        Merchant merchant = createMerchant(user, "Page Merchant");
+
+        for (int i = 0; i < 5; i++) {
+            Transaction tx = new Transaction();
+            tx.setAccount(account);
+            tx.setMerchant(merchant);
+            tx.setAmount(new BigDecimal("10.00").multiply(new BigDecimal(i + 1)));
+            tx.setTransactionDate(OffsetDateTime.now().minusDays(i));
+            tx.setType(TransactionType.EXPENSE);
+            transactionRepository.save(tx);
+        }
+
+        com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter filter =
+                new com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter(
+                        account.getId(), null, null, null, null, null, null, null, null
+                );
+        com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.FilterResult filterResult =
+                com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.withFilter(user.getId(), filter);
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 3);
+
+        // Act
+        org.springframework.data.domain.Page<Transaction> page = transactionRepository.findAll(filterResult, pageable);
+
+        // Assert
+        assertThat(page.getContent()).hasSize(3);
+        assertThat(page.getTotalElements()).isEqualTo(5);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("existsByAccountIdAndDateAndAmountAndDescriptionAndType() should return true when exists")
+    void exists_shouldReturnTrue() {
+        // Arrange
+        User user = createUser("existsuser");
+        Account account = createAccount(user, "Exists Account");
+        Merchant merchant = createMerchant(user, "Exists Merchant");
+        OffsetDateTime date = OffsetDateTime.now();
+
+        Transaction tx = new Transaction();
+        tx.setAccount(account);
+        tx.setMerchant(merchant);
+        tx.setAmount(new BigDecimal("123.45"));
+        tx.setTransactionDate(date);
+        tx.setDescription("Unique Tx");
+        tx.setType(TransactionType.EXPENSE);
+        transactionRepository.save(tx);
+
+        // Act
+        boolean exists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
+                account.getId(), date, new BigDecimal("123.45"), "Unique Tx", TransactionType.EXPENSE
+        );
+
+        // Assert
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("saveAll() and deleteAll() should handle multiple transactions")
+    void saveAllAnddeleteAll_shouldWork() {
+        // Arrange
+        User user = createUser("bulkuser");
+        Account account = createAccount(user, "Bulk Account");
+        Merchant merchant = createMerchant(user, "Bulk Merchant");
+
+        Transaction t1 = new Transaction();
+        t1.setAccount(account);
+        t1.setMerchant(merchant);
+        t1.setAmount(new BigDecimal("1.00"));
+        t1.setTransactionDate(OffsetDateTime.now());
+        t1.setType(TransactionType.EXPENSE);
+
+        Transaction t2 = new Transaction();
+        t2.setAccount(account);
+        t2.setMerchant(merchant);
+        t2.setAmount(new BigDecimal("2.00"));
+        t2.setTransactionDate(OffsetDateTime.now());
+        t2.setType(TransactionType.EXPENSE);
+
+        // Act - Save
+        List<Transaction> saved = transactionRepository.saveAll(List.of(t1, t2));
+        assertThat(saved).hasSize(2);
+        assertThat(transactionRepository.findByUserId(user.getId())).hasSize(2);
+
+        // Act - Delete
+        transactionRepository.deleteAll(saved);
+        assertThat(transactionRepository.findByUserId(user.getId())).isEmpty();
     }
 }

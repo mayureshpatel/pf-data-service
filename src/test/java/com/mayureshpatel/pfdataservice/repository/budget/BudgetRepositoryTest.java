@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -166,5 +167,97 @@ class BudgetRepositoryTest extends BaseIntegrationTest {
                 .findFirst().orElseThrow();
         assertThat(rentStatus.budgetedAmount()).isEqualByComparingTo("0.00");
         assertThat(rentStatus.spentAmount()).isEqualByComparingTo("1000.00");
+    }
+
+    @Test
+    @DisplayName("save() should persist new budget")
+    void save_shouldPersistNewBudget() {
+        // Arrange
+        User user = createUser("savebudget");
+        Category category = createCategory(user, "SaveCat");
+
+        Budget budget = new Budget();
+        budget.setUser(user);
+        budget.setCategory(category);
+        budget.setAmount(new BigDecimal("300.00"));
+        budget.setMonth(3);
+        budget.setYear(2025);
+        budget.setAudit(new com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit());
+
+        // Act
+        Budget saved = budgetRepository.save(budget);
+
+        // Assert
+        assertThat(saved.getId()).isNotNull();
+        Optional<Budget> found = budgetRepository.findById(saved.getId());
+        assertThat(found).isPresent();
+        assertThat(found.get().getAmount()).isEqualByComparingTo("300.00");
+    }
+
+    @Test
+    @DisplayName("findByUserIdAndMonthAndYearAndDeletedAtIsNull() should return budgets for specific month/year")
+    void findByUserIdAndMonthAndYear_shouldReturnBudgets() {
+        // Arrange
+        User user = createUser("monthyear");
+        Category cat1 = createCategory(user, "MYCat1");
+        Category cat2 = createCategory(user, "MYCat2");
+
+        Budget b1 = new Budget();
+        b1.setUser(user);
+        b1.setCategory(cat1);
+        b1.setAmount(new BigDecimal("200.00"));
+        b1.setMonth(6);
+        b1.setYear(2025);
+        b1.setAudit(new com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit());
+        budgetRepository.save(b1);
+
+        Budget b2 = new Budget();
+        b2.setUser(user);
+        b2.setCategory(cat2);
+        b2.setAmount(new BigDecimal("400.00"));
+        b2.setMonth(6);
+        b2.setYear(2025);
+        b2.setAudit(new com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit());
+        budgetRepository.save(b2);
+
+        // Different month
+        Budget b3 = new Budget();
+        b3.setUser(user);
+        b3.setCategory(cat1);
+        b3.setAmount(new BigDecimal("100.00"));
+        b3.setMonth(7);
+        b3.setYear(2025);
+        b3.setAudit(new com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit());
+        budgetRepository.save(b3);
+
+        // Act
+        List<Budget> juneResults = budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(user.getId(), 6, 2025);
+
+        // Assert
+        assertThat(juneResults).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("delete() should soft-delete budget")
+    void delete_shouldSoftDeleteBudget() {
+        // Arrange
+        User user = createUser("delbudget");
+        Category category = createCategory(user, "DelCat");
+
+        Budget budget = new Budget();
+        budget.setUser(user);
+        budget.setCategory(category);
+        budget.setAmount(new BigDecimal("250.00"));
+        budget.setMonth(8);
+        budget.setYear(2025);
+        budget.setAudit(new com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit());
+        Budget saved = budgetRepository.save(budget);
+
+        // Act
+        budgetRepository.delete(saved);
+
+        // Assert
+        Optional<Budget> found = budgetRepository.findById(saved.getId());
+        assertThat(found).isEmpty();
     }
 }

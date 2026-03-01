@@ -53,6 +53,7 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
 
     public FileImportHistory insert(FileImportHistory fileImportHistory) {
         jdbcClient.sql(FileImportHistoryQueries.INSERT)
+                .param("id", fileImportHistory.getId())
                 .param("accountId", fileImportHistory.getAccount().getId())
                 .param("fileHash", fileImportHistory.getFileHash())
                 .param("fileName", fileImportHistory.getFileName())

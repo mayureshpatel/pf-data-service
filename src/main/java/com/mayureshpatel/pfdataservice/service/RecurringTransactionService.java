@@ -10,10 +10,10 @@ import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
-import com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper;
 import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
@@ -37,6 +37,7 @@ public class RecurringTransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final MerchantRepository merchantRepository;
 
     public List<RecurringTransactionDto> getRecurringTransactions(Long userId) {
         return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
@@ -152,25 +153,27 @@ public class RecurringTransactionService {
             }
         }
 
-        Merchant merchant = new Merchant();
-        if (dto.merchant() != null) {
-            merchant.setCleanName(dto.merchant().cleanName());
-            merchant.setOriginalName(dto.merchant().originalName());
+        Merchant merchant = null;
+        if (dto.merchant() != null && dto.merchant().id() != null) {
+            merchant = merchantRepository.findById(dto.merchant().id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
+        } else if (dto.merchant() != null) {
+            // Find or create merchant if needed, but for now let's just use ID if provided
+            // In a real app we might want to resolve merchant by name here.
         }
 
-        RecurringTransactionDto recurring = new RecurringTransactionDto(
-                null,
-                user.getId(),
-                AccountDtoMapper.toDto(account),
-                MerchantDtoMapper.toDto(merchant),
-                dto.amount(),
-                dto.frequency(),
-                dto.lastDate(),
-                dto.nextDate(),
-                true
-        );
+        RecurringTransaction recurring = new RecurringTransaction();
+        recurring.setUser(user);
+        recurring.setAccount(account);
+        recurring.setMerchant(merchant);
+        recurring.setAmount(dto.amount());
+        recurring.setFrequency(dto.frequency());
+        recurring.setLastDate(dto.lastDate());
+        recurring.setNextDate(dto.nextDate());
+        recurring.setActive(true);
 
-        return recurringRepository.save(recurring);
+        RecurringTransaction saved = recurringRepository.save(recurring);
+        return RecurringTransactionDtoMapper.toDto(saved);
     }
 
     @Transactional
@@ -193,10 +196,9 @@ public class RecurringTransactionService {
             recurring.setAccount(null);
         }
 
-        if (dto.merchant() != null) {
-            Merchant merchant = recurring.getMerchant() != null ? recurring.getMerchant() : new Merchant();
-            merchant.setCleanName(dto.merchant().cleanName());
-            merchant.setOriginalName(dto.merchant().originalName());
+        if (dto.merchant() != null && dto.merchant().id() != null) {
+            Merchant merchant = merchantRepository.findById(dto.merchant().id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
             recurring.setMerchant(merchant);
         }
 
@@ -206,7 +208,8 @@ public class RecurringTransactionService {
         recurring.setNextDate(dto.nextDate());
         recurring.setActive(dto.active());
 
-        return recurringRepository.save(RecurringTransactionDtoMapper.toDto(recurring));
+        RecurringTransaction saved = recurringRepository.save(recurring);
+        return RecurringTransactionDtoMapper.toDto(saved);
     }
 
     @Transactional

@@ -18,6 +18,7 @@ import java.time.LocalDate;
 public class AccountSnapshot {
 
     private Long id;
+    private Long accountId;
     @ToString.Exclude
     private Account account;
     private LocalDate snapshotDate;

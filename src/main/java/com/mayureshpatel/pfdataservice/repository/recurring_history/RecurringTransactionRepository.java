@@ -1,12 +1,13 @@
 package com.mayureshpatel.pfdataservice.repository.recurring_history;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
-import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.mapper.RecurringTransactionRowMapper;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.query.RecurringTransactionQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,6 +19,13 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
 
     private final JdbcClient jdbcClient;
     private final RecurringTransactionRowMapper rowMapper;
+
+    @Override
+    public List<RecurringTransaction> findAll() {
+        return jdbcClient.sql("SELECT * FROM recurring_transactions WHERE deleted_at IS NULL")
+                .query(rowMapper)
+                .list();
+    }
 
     public List<RecurringTransaction> findAllByUserId(Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.FIND_ALL_BY_USER_ID)
@@ -41,42 +49,59 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .optional();
     }
 
-    public RecurringTransactionDto save(RecurringTransactionDto entity) {
-        if (entity.id() == null) {
+    @Override
+    public RecurringTransaction save(RecurringTransaction entity) {
+        if (entity.getId() == null) {
             return insert(entity);
         } else {
             return update(entity);
         }
     }
 
-    public RecurringTransactionDto insert(RecurringTransactionDto recurringTransaction) {
+    @Override
+    public RecurringTransaction insert(RecurringTransaction recurringTransaction) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
         jdbcClient.sql(RecurringTransactionQueries.INSERT)
-                .param("userId", recurringTransaction.userId())
-                .param("accountId", recurringTransaction.account() != null ? recurringTransaction.account().id() : null)
-                .param("merchantName", recurringTransaction.merchant() != null ? recurringTransaction.merchant().originalName() : null)
-                .param("amount", recurringTransaction.amount())
-                .param("frequency", recurringTransaction.frequency().name())
-                .param("lastDate", recurringTransaction.lastDate())
-                .param("nextDate", recurringTransaction.nextDate())
-                .param("active", recurringTransaction.active())
+                .param("userId", recurringTransaction.getUser().getId())
+                .param("accountId", recurringTransaction.getAccount() != null ? recurringTransaction.getAccount().getId() : null)
+                .param("merchantId", recurringTransaction.getMerchant() != null ? recurringTransaction.getMerchant().getId() : null)
+                .param("amount", recurringTransaction.getAmount())
+                .param("frequency", recurringTransaction.getFrequency().name())
+                .param("lastDate", recurringTransaction.getLastDate())
+                .param("nextDate", recurringTransaction.getNextDate())
+                .param("active", recurringTransaction.isActive())
+                .update(keyHolder);
+
+        recurringTransaction.setId(keyHolder.getKeyAs(Long.class));
+
+        return recurringTransaction;
+    }
+
+    @Override
+    public RecurringTransaction update(RecurringTransaction recurringTransaction) {
+        jdbcClient.sql(RecurringTransactionQueries.UPDATE)
+                .param("accountId", recurringTransaction.getAccount() != null ? recurringTransaction.getAccount().getId() : null)
+                .param("merchantId", recurringTransaction.getMerchant() != null ? recurringTransaction.getMerchant().getId() : null)
+                .param("amount", recurringTransaction.getAmount())
+                .param("frequency", recurringTransaction.getFrequency().name())
+                .param("lastDate", recurringTransaction.getLastDate())
+                .param("nextDate", recurringTransaction.getNextDate())
+                .param("active", recurringTransaction.isActive())
+                .param("id", recurringTransaction.getId())
+                .param("userId", recurringTransaction.getUser().getId())
                 .update();
 
         return recurringTransaction;
     }
 
-    public RecurringTransactionDto update(RecurringTransactionDto recurringTransaction) {
-        jdbcClient.sql(RecurringTransactionQueries.UPDATE)
-                .param("accountId", recurringTransaction.account() != null ? recurringTransaction.account().id() : null)
-                .param("merchantId", recurringTransaction.merchant() != null ? recurringTransaction.merchant().id() : null)
-                .param("amount", recurringTransaction.amount())
-                .param("frequency", recurringTransaction.frequency().name())
-                .param("lastDate", recurringTransaction.lastDate())
-                .param("nextDate", recurringTransaction.nextDate())
-                .param("active", recurringTransaction.active())
-                .param("id", recurringTransaction.id())
-                .update();
-
-        return recurringTransaction;
+    @Override
+    public void deleteById(Long id) {
+        // This is a default delete by ID, we need userId for security in our queries usually, 
+        // but for repository level we might just use ID if it's unique enough.
+        // However, RecurringTransactionQueries.DELETE uses both.
+        // I'll add a simplified version or just use the one with userId if I have it.
+        throw new UnsupportedOperationException("Use delete(Long id, Long userId)");
     }
 
     public void delete(Long id, Long userId) {

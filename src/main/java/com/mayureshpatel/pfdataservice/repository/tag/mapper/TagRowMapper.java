@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.tag.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
@@ -26,8 +27,10 @@ public class TagRowMapper extends JdbcMapperUtils implements RowMapper<Tag> {
             tag.setUser(user);
         }
 
-        tag.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
-        tag.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
+        TimestampAudit audit = new TimestampAudit();
+        audit.setCreatedAt(getOffsetDateTime(rs, "created_at"));
+        audit.setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
+        tag.setAudit(audit);
 
         return tag;
     }

@@ -5,6 +5,8 @@ import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.account.query.AccountSnapshotQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -24,8 +26,16 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
      */
     public Optional<AccountSnapshot> findByAccountIdAndSnapshotDate(Long accountId, LocalDate snapshotDate) {
         return jdbcClient.sql(AccountSnapshotQueries.FIND_BY_ACCOUNT_ID_AND_SNAPSHOT_DATE)
-                .param("id", accountId)
+                .param("accountId", accountId)
                 .param("snapshotDate", snapshotDate)
+                .query(AccountSnapshot.class)
+                .optional();
+    }
+
+    @Override
+    public Optional<AccountSnapshot> findById(Long id) {
+        return jdbcClient.sql(AccountSnapshotQueries.FIND_BY_ID)
+                .param("id", id)
                 .query(AccountSnapshot.class)
                 .optional();
     }
@@ -40,9 +50,37 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
     }
 
     @Override
+    public AccountSnapshot insert(AccountSnapshot entity) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcClient.sql(AccountSnapshotQueries.INSERT)
+                .param("accountId", entity.getAccountId())
+                .param("snapshotDate", entity.getSnapshotDate())
+                .param("balance", entity.getBalance())
+                .update(keyHolder);
+        entity.setId(keyHolder.getKeyAs(Long.class));
+        return entity;
+    }
+
+    @Override
+    public AccountSnapshot update(AccountSnapshot entity) {
+        jdbcClient.sql(AccountSnapshotQueries.UPDATE)
+                .param("balance", entity.getBalance())
+                .param("id", entity.getId())
+                .update();
+        return entity;
+    }
+
+    @Override
     public void delete(AccountSnapshot entity) {
         if (entity.getId() != null) {
             deleteById(entity.getId());
         }
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        jdbcClient.sql(AccountSnapshotQueries.DELETE_BY_ID)
+                .param("id", id)
+                .update();
     }
 }
