@@ -527,4 +527,200 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         transactionRepository.deleteAll(saved);
         assertThat(transactionRepository.findByUserId(user.getId())).isEmpty();
     }
+
+    private Transaction createTestTransaction(BigDecimal amount, TransactionType type) {
+        User testUser = createUser("testuser_" + System.currentTimeMillis());
+        Account account = createAccount(testUser, "Test Account");
+        Merchant merchant = createMerchant(testUser, "Test Merchant");
+        
+        Transaction tx = new Transaction();
+        tx.setAccount(account);
+        tx.setMerchant(merchant);
+        tx.setAmount(amount);
+        tx.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
+        tx.setType(type);
+        return tx;
+    }
+
+    @Test
+    @DisplayName("findAll should return all transactions")
+    void findAll_returnsAllTransactions() {
+        Transaction t1 = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        Transaction t2 = createTestTransaction(new BigDecimal("20.00"), TransactionType.INCOME);
+        transactionRepository.saveAll(List.of(t1, t2));
+
+        List<Transaction> result = transactionRepository.findAll();
+
+        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("existsByAccountIdAndDateAndAmountAndDescriptionAndType should find matching transaction")
+    void findByExactMatch_findsTransaction() {
+        Transaction t = createTestTransaction(new BigDecimal("15.55"), TransactionType.EXPENSE);
+        t.setDescription("Test Match");
+        Transaction saved = transactionRepository.save(t);
+
+        boolean exists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
+                saved.getAccount().getId(),
+                saved.getTransactionDate(),
+                saved.getAmount(),
+                saved.getDescription(),
+                saved.getType()
+        );
+
+        assertThat(exists).isTrue();
+
+        boolean notExists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
+                saved.getAccount().getId(),
+                saved.getTransactionDate(),
+                new BigDecimal("999.99"),
+                saved.getDescription(),
+                saved.getType()
+        );
+
+        assertThat(notExists).isFalse();
+    }
+
+    @Test
+    @DisplayName("count methods should return correct totals")
+    void countMethods_returnCorrectTotals() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        Category c = createCategory(t.getAccount().getUser(), "Test count category");
+        t.setCategory(c);
+        Transaction saved = transactionRepository.save(t);
+
+        long accTotal = transactionRepository.countByAccountId(saved.getAccount().getId());
+        assertThat(accTotal).isEqualTo(1);
+
+        long catTotal = transactionRepository.countByCategoryId(saved.getCategory().getId());
+        assertThat(catTotal).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("getCategoriesWithTransactions should return categories")
+    void getCategoriesWithTransactions_returnsCategories() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        Category parent = createCategory(t.getAccount().getUser(), "Parent Cat");
+        
+        Category child = new Category();
+        child.setUser(t.getAccount().getUser());
+        child.setName("Child Cat");
+        child.setType(CategoryType.EXPENSE);
+        child.setIconography(new com.mayureshpatel.pfdataservice.domain.Iconography("icon", "color"));
+        child.setParent(parent);
+        categoryRepository.save(child);
+        
+        t.setCategory(child);
+        transactionRepository.save(t);
+
+        List<Category> result = transactionRepository.getCategoriesWithTransactions(t.getAccount().getUser().getId());
+
+        assertThat(result).isNotEmpty();
+        assertThat(result.stream().map(Category::getName)).contains("Child Cat");
+    }
+
+    @Test
+    @DisplayName("getMerchantsWithTransactions should return merchants")
+    void getMerchantsWithTransactions_returnsMerchants() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        t.getMerchant().setCleanName("Test Merchant");
+        transactionRepository.save(t);
+
+        List<Merchant> result = transactionRepository.getMerchantsWithTransactions(t.getAccount().getUser().getId());
+
+        assertThat(result).isNotEmpty();
+        assertThat(result).extracting(Merchant::getCleanName).contains("Test Merchant");
+    }
+
+    @Test
+    @DisplayName("findMonthlySums should return data")
+    void findMonthlySums_returnsData() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        transactionRepository.save(t);
+
+        List<Object[]> result = transactionRepository.findMonthlySums(t.getAccount().getUser().getId(), LocalDate.now().minusMonths(1));
+
+        assertThat(result).isNotEmpty();
+        Object[] row = result.get(0);
+        assertThat(row).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("findRecentNonTransferTransactions should return data")
+    void findRecentNonTransferTransactions_returnsData() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        transactionRepository.save(t);
+
+        List<Transaction> result = transactionRepository.findRecentNonTransferTransactions(t.getAccount().getUser().getId(), LocalDate.now().minusDays(1));
+
+        assertThat(result).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("findAllById should return data or empty list correctly")
+    void findAllById_returnsData() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        Transaction saved = transactionRepository.save(t);
+
+        List<Transaction> result = transactionRepository.findAllById(List.of(saved.getId()));
+        assertThat(result).hasSize(1);
+
+        assertThat(transactionRepository.findAllById(null)).isEmpty();
+        assertThat(transactionRepository.findAllById(List.of())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findAllByIdWithAccountAndUser should return data correctly")
+    void findAllByIdWithAccountAndUser_returnsData() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        Transaction saved = transactionRepository.save(t);
+
+        List<Transaction> result = transactionRepository.findAllByIdWithAccountAndUser(List.of(saved.getId()));
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("countByIdInAndAccount_User_Id should count correctly")
+    void countByIdInAndAccount_User_Id_countsCorrectly() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        Transaction saved = transactionRepository.save(t);
+
+        long count = transactionRepository.countByIdInAndAccount_User_Id(List.of(saved.getId()), t.getAccount().getUser().getId());
+        assertThat(count).isEqualTo(1);
+
+        assertThat(transactionRepository.countByIdInAndAccount_User_Id(null, t.getAccount().getUser().getId())).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("findExpensesSince should return data")
+    void findExpensesSince_returnsData() {
+        Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        transactionRepository.save(t);
+
+        List<Transaction> result = transactionRepository.findExpensesSince(t.getAccount().getUser().getId(), LocalDate.now().minusDays(1));
+
+        assertThat(result).isNotEmpty();
+        assertThat(result.get(0).getType()).isEqualTo(TransactionType.EXPENSE);
+    }
+
+    @Test
+    @DisplayName("search should handle sorting")
+    void search_handlesSorting() {
+        Transaction t1 = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
+        t1.setDescription("A");
+        Transaction t2 = createTestTransaction(new BigDecimal("20.00"), TransactionType.EXPENSE);
+        t2.setDescription("B");
+        transactionRepository.saveAll(List.of(t1, t2));
+
+        com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter filter = 
+            new com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter(
+                t1.getAccount().getId(), null, null, null, null, null, null, null, null);
+        com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.FilterResult filterResult =
+            com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.withFilter(t1.getAccount().getUser().getId(), filter);
+
+        org.springframework.data.domain.Page<Transaction> descSort = transactionRepository.findAll(filterResult, org.springframework.data.domain.PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "description")));
+        
+        assertThat(descSort.getContent()).isNotEmpty();
+    }
 }
