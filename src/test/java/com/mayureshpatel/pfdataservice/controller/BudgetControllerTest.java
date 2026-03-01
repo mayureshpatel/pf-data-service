@@ -154,7 +154,7 @@ class BudgetControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(BUDGET_ID))
                 .andExpect(jsonPath("$.amount").value(600.00));
 

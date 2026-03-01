@@ -35,7 +35,7 @@ public class RecurringTransactionController {
     public ResponseEntity<RecurringTransactionDto> createRecurringTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid RecurringTransactionDto dto) {
-        return ResponseEntity.ok(recurringService.createRecurringTransaction(userDetails.getId(), dto));
+        return ResponseEntity.status(201).body(recurringService.createRecurringTransaction(userDetails.getId(), dto));
     }
 
     @PutMapping("/{id}")

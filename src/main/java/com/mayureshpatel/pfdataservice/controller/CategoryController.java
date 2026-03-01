@@ -40,7 +40,7 @@ public class CategoryController {
     public ResponseEntity<CategoryDto> createCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryDto categoryDto) {
-        return ResponseEntity.ok(categoryService.createCategory(userDetails.getId(), categoryDto));
+        return ResponseEntity.status(201).body(categoryService.createCategory(userDetails.getId(), categoryDto));
     }
 
     @PutMapping("/{id}")

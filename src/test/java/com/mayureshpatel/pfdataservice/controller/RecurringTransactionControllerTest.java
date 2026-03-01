@@ -100,7 +100,7 @@ class RecurringTransactionControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(RECURRING_ID))
                 .andExpect(jsonPath("$.amount").value(50.00));
 

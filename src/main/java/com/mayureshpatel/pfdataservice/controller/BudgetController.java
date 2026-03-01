@@ -54,7 +54,7 @@ public class BudgetController {
     public ResponseEntity<BudgetDto> setBudget(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid BudgetDto dto) {
-        return ResponseEntity.ok(budgetService.save(userDetails.getId(), dto));
+        return ResponseEntity.status(201).body(budgetService.save(userDetails.getId(), dto));
     }
 
     @DeleteMapping("/{id}")

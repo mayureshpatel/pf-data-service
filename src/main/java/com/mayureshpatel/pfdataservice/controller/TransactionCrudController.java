@@ -93,7 +93,7 @@ public class TransactionCrudController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid TransactionDto dto) {
 
-        return ResponseEntity.ok(transactionService.createTransaction(userDetails.getId(), dto));
+        return ResponseEntity.status(201).body(transactionService.createTransaction(userDetails.getId(), dto));
     }
 
     @PatchMapping("/bulk")
