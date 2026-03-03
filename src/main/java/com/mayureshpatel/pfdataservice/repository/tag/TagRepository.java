@@ -36,7 +36,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
     }
 
     @Override
-    public Tag insert(Tag tag) {
+    public int insert(Tag tag) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(TagQueries.INSERT)
                 .param("name", tag.getName())

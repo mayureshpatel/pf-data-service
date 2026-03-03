@@ -50,7 +50,7 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
     }
 
     @Override
-    public AccountSnapshot insert(AccountSnapshot entity) {
+    public int insert(AccountSnapshot entity) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         Long accId = entity.getAccountId();
         if (accId == null && entity.getAccount() != null) {

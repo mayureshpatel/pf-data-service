@@ -18,7 +18,7 @@ public interface JdbcRepository<T, ID> {
      * @param entity The entity to insert
      * @return The inserted entity
      */
-    default T insert(T entity) {
+    default int insert(T entity) {
         throw new UnsupportedOperationException();
     }
 
@@ -28,7 +28,7 @@ public interface JdbcRepository<T, ID> {
      * @param entity The entity to update
      * @return The updated entity
      */
-    default T update(T entity) {
+    default int update(T entity) {
         throw new UnsupportedOperationException();
     }
 
@@ -40,7 +40,7 @@ public interface JdbcRepository<T, ID> {
      * @param entity The entity to save
      * @return The saved entity
      */
-    default T save(T entity) {
+    default int save(T entity) {
         throw new UnsupportedOperationException();
     }
 
@@ -70,7 +70,7 @@ public interface JdbcRepository<T, ID> {
      *
      * @param entity The entity to delete
      */
-    default void delete(T entity) {
+    default int delete(T entity) {
         throw new UnsupportedOperationException();
     }
 
@@ -79,7 +79,7 @@ public interface JdbcRepository<T, ID> {
      *
      * @param id The ID of the entity to delete
      */
-    default void deleteById(ID id) {
+    default int deleteById(ID id) {
         throw new UnsupportedOperationException();
     }
 
@@ -87,10 +87,11 @@ public interface JdbcRepository<T, ID> {
      * Delete an entity by ID.
      * Used for tables that support soft-deletion.
      *
-     * @param id The ID of the entity to delete
+     * @param id        The ID of the entity to delete
      * @param deletedBy The ID of the user who deleted the entity
+     * @return
      */
-    default void deleteById(ID id, Long deletedBy) {
+    default int deleteById(ID id, Long deletedBy) {
         throw new UnsupportedOperationException();
     }
 

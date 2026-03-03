@@ -57,7 +57,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
     }
 
     @Override
-    public Category insert(Category category) {
+    public int insert(Category category) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(CategoryQueries.INSERT)
                 .param("name", category.getName())

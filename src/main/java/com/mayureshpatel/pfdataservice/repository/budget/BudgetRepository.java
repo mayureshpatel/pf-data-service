@@ -33,7 +33,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
     }
 
     @Override
-    public Budget insert(Budget budget) {
+    public int insert(Budget budget) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(BudgetQueries.INSERT)
                 .param("userId", budget.getUser().getId())

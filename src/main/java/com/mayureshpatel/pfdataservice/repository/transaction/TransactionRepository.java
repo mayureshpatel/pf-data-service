@@ -94,7 +94,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     @Override
-    public Transaction insert(Transaction transaction) {
+    public int insert(Transaction transaction) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcClient.sql(TransactionQueries.INSERT)

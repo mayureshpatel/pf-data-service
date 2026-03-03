@@ -79,7 +79,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
     }
 
     @Override
-    public User insert(User user) {
+    public int insert(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null) 
                 ? user.getAudit().getUpdatedBy().getUsername() 

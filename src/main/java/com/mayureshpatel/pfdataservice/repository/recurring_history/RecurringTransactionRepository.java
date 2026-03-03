@@ -59,7 +59,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
     }
 
     @Override
-    public RecurringTransaction insert(RecurringTransaction recurringTransaction) {
+    public int insert(RecurringTransaction recurringTransaction) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcClient.sql(RecurringTransactionQueries.INSERT)

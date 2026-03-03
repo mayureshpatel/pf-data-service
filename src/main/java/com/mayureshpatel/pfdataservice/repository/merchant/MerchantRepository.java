@@ -12,9 +12,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -74,7 +72,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
     }
 
     @Override
-    public Merchant insert(Merchant merchant) {
+    public int insert(Merchant merchant) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(MerchantQueries.INSERT)
                 .param("userId", merchant.getUser().getId())
