@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.budget;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
@@ -25,5 +26,5 @@ public class Budget {
     private Integer year;
 
     @ToString.Exclude
-    private SoftDeleteAudit audit;
+    private TableAudit audit;
 }

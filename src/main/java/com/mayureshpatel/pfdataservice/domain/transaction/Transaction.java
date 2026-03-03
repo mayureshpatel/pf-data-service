@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
@@ -29,7 +30,7 @@ public class Transaction {
     private TransactionType type;
 
     @ToString.Exclude
-    private SoftDeleteAudit audit;
+    private TableAudit audit;
 
     /**
      * Calculates the net change this transaction applies to an account balance.

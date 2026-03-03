@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.currency;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -22,5 +23,5 @@ public class Currency {
     private boolean active;
 
     @ToString.Exclude
-    private CreatedAtAudit audit;
+    private TableAudit audit;
 }

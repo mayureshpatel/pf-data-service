@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.category;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -20,5 +21,5 @@ public class CategoryRule {
     private Category category;
 
     @ToString.Exclude
-    private TimestampAudit audit;
+    private TableAudit audit;
 }

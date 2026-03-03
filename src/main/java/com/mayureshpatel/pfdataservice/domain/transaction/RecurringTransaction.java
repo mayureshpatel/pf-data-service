@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -24,5 +25,5 @@ public class RecurringTransaction extends Transaction {
     private boolean active;
 
     @ToString.Exclude
-    private SoftDeleteAudit audit;
+    private TableAudit audit;
 }

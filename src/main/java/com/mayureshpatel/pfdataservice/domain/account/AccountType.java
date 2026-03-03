@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.account;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -25,5 +26,5 @@ public class AccountType {
     private boolean active;
 
     @ToString.Exclude
-    private TimestampAudit audit;
+    private TableAudit audit;
 }

@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.category;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -19,11 +20,10 @@ public class Category {
     private String name;
     private CategoryType type;
     private Category parent;
+    private Iconography iconography;
 
     @ToString.Exclude
-    private Iconography iconography;
-    @ToString.Exclude
-    private TimestampAudit audit;
+    private TableAudit audit;
 
     /**
      * Returns true if this category is a subcategory.

@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.merchant;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -19,5 +20,5 @@ public class Merchant {
     private String cleanName;
 
     @ToString.Exclude
-    private TimestampAudit audit;
+    private TableAudit audit;
 }

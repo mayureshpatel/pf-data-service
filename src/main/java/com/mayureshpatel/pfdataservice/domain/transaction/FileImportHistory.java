@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -20,5 +21,5 @@ public class FileImportHistory {
     private int transactionCount;
 
     @ToString.Exclude
-    private CreatedAtAudit audit;
+    private TableAudit audit;
 }

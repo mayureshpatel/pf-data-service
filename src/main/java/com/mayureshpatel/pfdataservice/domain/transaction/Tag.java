@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -19,5 +20,5 @@ public class Tag {
     private String color;
 
     @ToString.Exclude
-    private TimestampAudit audit;
+    private TableAudit audit;
 }
