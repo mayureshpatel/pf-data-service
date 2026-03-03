@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.user.User;

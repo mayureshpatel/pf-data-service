@@ -1,8 +1,10 @@
 package com.mayureshpatel.pfdataservice.domain.account;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
-import lombok.*;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 
 /**
  * Lookup table for account types with metadata (icons, colors, labels).
@@ -12,7 +14,6 @@ import lombok.*;
 @Builder(toBuilder = true)
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Data
 public class AccountType {
     @EqualsAndHashCode.Include
     private String code;

@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.repository.tag.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;

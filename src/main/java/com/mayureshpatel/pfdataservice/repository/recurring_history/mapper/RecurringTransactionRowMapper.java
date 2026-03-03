@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.repository.recurring_history.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
@@ -14,7 +13,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.ZoneId;
-import java.time.OffsetDateTime;
 
 @Component
 public class RecurringTransactionRowMapper implements RowMapper<RecurringTransaction> {

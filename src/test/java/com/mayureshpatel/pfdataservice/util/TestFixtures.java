@@ -15,8 +15,6 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
-import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

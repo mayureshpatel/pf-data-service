@@ -2,7 +2,10 @@ package com.mayureshpatel.pfdataservice.domain.account;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import lombok.*;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 
@@ -10,7 +13,6 @@ import java.math.BigDecimal;
 @Builder(toBuilder = true)
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Data
 public class Account {
 
     @EqualsAndHashCode.Include

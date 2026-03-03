@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.repository.merchant.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
@@ -8,7 +7,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 @Component

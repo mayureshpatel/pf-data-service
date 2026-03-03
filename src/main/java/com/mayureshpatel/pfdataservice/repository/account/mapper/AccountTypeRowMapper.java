@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;

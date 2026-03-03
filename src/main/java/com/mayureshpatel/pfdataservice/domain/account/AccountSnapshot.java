@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.domain.account;
 
-import com.mayureshpatel.pfdataservice.domain.CreatedAtAudit;
-import lombok.*;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,7 +12,6 @@ import java.time.LocalDate;
 @Builder(toBuilder = true)
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Data
 public class AccountSnapshot {
 
     @EqualsAndHashCode.Include

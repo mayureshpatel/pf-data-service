@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.repository.file_import_history.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.CreatedAtAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import org.springframework.jdbc.core.RowMapper;

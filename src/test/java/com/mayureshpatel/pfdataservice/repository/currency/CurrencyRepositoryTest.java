@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.currency;
 
 import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
-import com.mayureshpatel.pfdataservice.domain.CreatedAtAudit;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

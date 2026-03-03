@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.category;
 
 import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;

@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.tag;
 
 import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.util.TestDataFactory;

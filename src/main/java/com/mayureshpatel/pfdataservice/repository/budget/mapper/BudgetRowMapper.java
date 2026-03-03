@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.repository.budget.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.user.User;

@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.SoftDeleteAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
