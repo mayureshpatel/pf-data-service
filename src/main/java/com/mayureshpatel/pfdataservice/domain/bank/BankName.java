@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.domain.bank;
 import lombok.Getter;
 
 // todo: create lookup table for this
+// todo: remove this as it does not provide any value
 @Getter
 public enum BankName {
     CAPITAL_ONE("Capital One"),
