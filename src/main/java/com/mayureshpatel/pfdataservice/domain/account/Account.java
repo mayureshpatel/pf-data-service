@@ -2,29 +2,29 @@ package com.mayureshpatel.pfdataservice.domain.account;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
 @Getter
 @Builder(toBuilder = true)
-@ToString(exclude = "currentBalance")
+@ToString
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@Data
 public class Account {
 
+    @EqualsAndHashCode.Include
     private final Long id;
     private final Long userId;
     private final String name;
     private final String typeCode;
-
     @Builder.Default
     private final BigDecimal currentBalance = BigDecimal.ZERO;
+    @ToString.Exclude
     private final String currencyCode;
     private final Long version;
     private final String bankCode;
-
+    @ToString.Exclude
     private final TableAudit audit;
 
     public Account applyTransaction(Transaction transaction) {
@@ -39,24 +39,5 @@ public class Account {
         return this.toBuilder()
                 .currentBalance(balance.subtract(transaction.getNetChange()))
                 .build();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        Account account = (Account) o;
-        return id != null && id.equals(account.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(id);
     }
 }
