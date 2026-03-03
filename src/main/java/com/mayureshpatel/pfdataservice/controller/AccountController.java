@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
+import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.AccountService;
 import jakarta.validation.Valid;
@@ -25,22 +27,21 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<AccountDto> createAccount(
+    public ResponseEntity<Integer> createAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid AccountDto accountDto) {
-        return ResponseEntity.status(201).body(accountService.createAccount(userDetails.getId(), accountDto));
+            @RequestBody @Valid AccountCreateRequest request) {
+        return ResponseEntity.status(201).body(accountService.createAccount(userDetails.getId(), request));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<AccountDto> updateAccount(
+    @PutMapping()
+    public ResponseEntity<Integer> updateAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long id,
-            @RequestBody @Valid AccountDto accountDto) {
-        return ResponseEntity.ok(accountService.updateAccount(userDetails.getId(), id, accountDto));
+            @RequestBody @Valid AccountUpdateRequest request) {
+        return ResponseEntity.ok(accountService.updateAccount(userDetails.getId(), request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAccount(
+    public ResponseEntity<Integer> deleteAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
         accountService.deleteAccount(userDetails.getId(), id);
@@ -48,13 +49,10 @@ public class AccountController {
     }
 
     @PostMapping("/{id}/reconcile")
-    public ResponseEntity<AccountDto> reconcileAccount(
+    public ResponseEntity<Integer> reconcileAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
-            @RequestBody ReconcileRequest request) {
-        return ResponseEntity.ok(accountService.reconcileAccount(userDetails.getId(), id, request.targetBalance()));
-    }
-
-    public record ReconcileRequest(BigDecimal targetBalance) {
+            @RequestBody BigDecimal newBalance) {
+        return ResponseEntity.ok(accountService.reconcileAccount(userDetails.getId(), id, newBalance));
     }
 }

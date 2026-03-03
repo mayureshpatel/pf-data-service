@@ -96,13 +96,13 @@ class AccountRepositoryTest {
 
     @Test
     @DisplayName("should find all accounts by user id")
-    void findByUserId() {
+    void findAllByUserId() {
         Account acc1 = createAccount("Acc 1");
         Account acc2 = createAccount("Acc 2");
         accountRepository.save(acc1);
         accountRepository.save(acc2);
 
-        List<Account> accounts = accountRepository.findByUserId(testUser.getId());
+        List<Account> accounts = accountRepository.findAllByUserId(testUser.getId());
 
         assertThat(accounts).hasSize(2);
         assertThat(accounts).extracting(Account::getName).containsExactlyInAnyOrder("Acc 1", "Acc 2");
@@ -139,11 +139,11 @@ class AccountRepositoryTest {
 
     @Test
     @DisplayName("should find account by accountId and userId")
-    void findByAccountIdAndUserId() {
+    void findByIdAndUserId() {
         Account account = createAccount("Owned Account");
         Account saved = accountRepository.save(account);
 
-        Optional<Account> found = accountRepository.findByAccountIdAndUserId(saved.getId(), testUser.getId());
+        Optional<Account> found = accountRepository.findByIdAndUserId(saved.getId(), testUser.getId());
 
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo("Owned Account");

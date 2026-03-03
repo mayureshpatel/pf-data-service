@@ -4,8 +4,9 @@ import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
-import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
+import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
@@ -36,7 +37,7 @@ public class AccountService {
      */
     @Transactional(readOnly = true)
     public List<AccountDto> getAllAccountsByUserId(Long userId) {
-        return accountRepository.findByUserId(userId).stream()
+        return accountRepository.findAllByUserId(userId).stream()
                 .map(AccountDtoMapper::toDto)
                 .toList();
     }
@@ -44,43 +45,38 @@ public class AccountService {
     /**
      * Creates a new account for a user.
      *
-     * @param userId     the user id
-     * @param accountDto the account dto
+     * @param userId  the user id
+     * @param request the create account request
      * @return the created account dto
      */
     @Transactional
-    public AccountDto createAccount(Long userId, AccountDto accountDto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    public int createAccount(Long userId, AccountCreateRequest request) {
+        this.userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        Account account = new Account();
-        account.setName(accountDto.name());
-        account.setCurrentBalance(accountDto.currentBalance());
-        account.setUser(user);
-
-        return AccountDtoMapper.toDto(accountRepository.save(account));
+        return accountRepository.insert(request.toDomain());
     }
 
     /**
      * Updates an account owned by the user.
      *
-     * @param userId    the user id
-     * @param accountId the account id
-     * @param dto       the account dto
+     * @param userId  the user id
+     * @param request the account update request
      * @return the updated account dto
      */
     @Transactional
-    public AccountDto updateAccount(Long userId, Long accountId, AccountDto dto) {
-        Account account = accountRepository.findByAccountIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+    public int updateAccount(Long userId, AccountUpdateRequest request) {
+        this.userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        if (!account.getUser().getId().equals(userId)) {
+        Account account = accountRepository.findByIdAndUserId(request.getId(), userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        if (!account.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
-        account.setName(dto.name());
-
-        return AccountDtoMapper.toDto(accountRepository.save(account));
+        return accountRepository.save(request.toDomain());
     }
 
     /**
@@ -92,8 +88,8 @@ public class AccountService {
      * @return the updated account
      */
     @Transactional
-    public AccountDto reconcileAccount(Long userId, Long accountId, BigDecimal targetBalance) {
-        Account account = accountRepository.findByAccountIdAndUserId(accountId, userId)
+    public int reconcileAccount(Long userId, Long accountId, BigDecimal targetBalance) {
+        Account account = accountRepository.findByIdAndUserId(accountId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         // calculate the difference between current and target balance
@@ -101,7 +97,7 @@ public class AccountService {
         BigDecimal diff = targetBalance.subtract(currentBalance);
 
         if (diff.compareTo(BigDecimal.ZERO) == 0) {
-            return AccountDtoMapper.toDto(account);
+            return 0;
         }
 
         // create an adjustment transaction
@@ -109,7 +105,7 @@ public class AccountService {
 
         // update account balance
         account.applyTransaction(adjustment);
-        return AccountDtoMapper.toDto(accountRepository.save(account));
+        return accountRepository.reconcile(userId, accountId, targetBalance);
     }
 
     /**
@@ -145,11 +141,14 @@ public class AccountService {
      * @throws IllegalStateException if the account has any transactions
      */
     @Transactional
-    public void deleteAccount(Long userId, Long accountId) throws AccessDeniedException, IllegalStateException {
+    public int deleteAccount(Long userId, Long accountId) throws AccessDeniedException, IllegalStateException {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
-        if (!account.getUser().getId().equals(userId)) {
+        if (!account.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
@@ -162,6 +161,6 @@ public class AccountService {
             );
         }
 
-        accountRepository.delete(account);
+        return accountRepository.deleteById(accountId);
     }
 }

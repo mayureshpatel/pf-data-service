@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.repository.account;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
@@ -11,6 +13,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,14 +39,14 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .optional();
     }
 
-    public List<Account> findByUserId(Long userId) {
+    public List<Account> findAllByUserId(Long userId) {
         return jdbcClient.sql(AccountQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
     }
 
-    public Optional<Account> findByAccountIdAndUserId(Long accountId, Long userId) {
+    public Optional<Account> findByIdAndUserId(Long accountId, Long userId) {
         return jdbcClient.sql(AccountQueries.FIND_BY_ACCOUNT_ID_AND_USER_ID)
                 .param("accountId", accountId)
                 .param("userId", userId)
@@ -51,75 +54,46 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .optional();
     }
 
-    @Override
-    public Account insert(Account account) {
+    public int insert(Long userId, AccountCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcClient.sql(AccountQueries.INSERT)
-                .param("name", account.getName())
-                .param("type", account.getType().getCode())
-                .param("currentBalance", account.getCurrentBalance())
-                .param("currencyCode", account.getCurrency().getCode())
-                .param("bankName", account.getBankName() != null ? account.getBankName().name() : null)
-                .param("userId", account.getUser().getId())
-                .param("createdBy", account.getAudit().getCreatedBy() != null ? account.getAudit().getCreatedBy().getId() : null)
-                .param("updatedBy", account.getAudit().getUpdatedBy() != null ? account.getAudit().getUpdatedBy().getId() : null)
+
+        return jdbcClient.sql(AccountQueries.INSERT)
+                .param("name", request.getName())
+                .param("type", request.getType())
+                .param("currentBalance", request.getStartingBalance())
+                .param("currencyCode", request.getCurrencyCode())
+                .param("bankName", request.getBankName())
+                .param("userId", userId)
+                .param("createdBy", userId)
+                .param("updatedBy", userId)
                 .update(keyHolder);
-
-        account.setId(keyHolder.getKeyAs(Long.class));
-        account.setVersion(1L);
-        return account;
     }
 
-    @Override
-    public Account update(Account account) {
-        int updated = jdbcClient.sql(AccountQueries.UPDATE)
-                .param("name", account.getName())
-                .param("type", account.getType().getCode())
-                .param("currentBalance", account.getCurrentBalance())
-                .param("currencyCode", account.getCurrency().getCode())
-                .param("bankName", account.getBankName() != null ? account.getBankName().name() : null)
-                .param("updatedBy", account.getAudit().getUpdatedBy() != null ? account.getAudit().getUpdatedBy().getId() : null)
-                .param("id", account.getId())
-                .param("version", account.getVersion())
+    public int update(Long userId, AccountUpdateRequest request) {
+        return jdbcClient.sql(AccountQueries.UPDATE)
+                .param("name", request.getName())
+                .param("type", request.getType())
+                .param("currencyCode", request.getCurrencyCode())
+                .param("bankName", request.getBankName())
+                .param("updatedBy", userId)
+                .param("id", request.getId())
+                .param("version", request.getVersion())
                 .update();
+    }
 
-        if (updated == 0) {
-            throw new RuntimeException("Update failed for Account ID: " + account.getId() + ". Version mismatch or already deleted.");
-        }
-
-        account.setVersion(account.getVersion() + 1);
-        return account;
+    public int reconcile(Long userId, Long accountId, BigDecimal targetBalance) {
+        return jdbcClient.sql(AccountQueries.RECONCILE)
+                .param("accountId", accountId)
+                .param("userId", userId)
+                .param("targetBalance", targetBalance)
+                .update();
     }
 
     @Override
-    public Account save(Account account) {
-        if (account.getId() == null) {
-            return insert(account);
-        } else {
-            return update(account);
-        }
-    }
-
-    @Override
-    public void delete(Account account) {
-        if (account.getId() != null) {
-            Long deletedBy = (account.getAudit() != null && account.getAudit().getDeletedBy() != null)
-                    ? account.getAudit().getDeletedBy().getId()
-                    : null;
-            // Fallback to updatedBy or createdBy if deletedBy is not set yet (soft delete happens now)
-            // Ideally, the caller sets deletedBy before calling delete()
-            if (deletedBy == null && account.getAudit() != null && account.getAudit().getUpdatedBy() != null) {
-                 deletedBy = account.getAudit().getUpdatedBy().getId();
-            }
-            
-            deleteById(account.getId(), deletedBy);
-        }
-    }
-
-    public void deleteById(Long id, Long deletedBy) {
-        jdbcClient.sql(AccountQueries.DELETE_BY_ID)
+    public int deleteById(Long id, Long userId) {
+        return jdbcClient.sql(AccountQueries.DELETE_BY_ID)
                 .param("id", id)
-                .param("deletedBy", deletedBy)
+                .param("deletedBy", userId)
                 .update();
     }
 

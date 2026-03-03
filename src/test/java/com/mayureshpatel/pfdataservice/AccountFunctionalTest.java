@@ -1,9 +1,7 @@
 package com.mayureshpatel.pfdataservice;
 
 import com.mayureshpatel.pfdataservice.config.TestContainersConfig;
-import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.util.TestDataFactory;

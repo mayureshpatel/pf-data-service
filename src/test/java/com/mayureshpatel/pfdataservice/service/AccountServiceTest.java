@@ -1,13 +1,11 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.TimestampAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -105,7 +103,7 @@ class AccountServiceTest {
             Account account2 = buildAccount(11L, USER_ID);
             account2.setName("Savings");
 
-            when(accountRepository.findByUserId(USER_ID)).thenReturn(List.of(account1, account2));
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account1, account2));
 
             // Act
             List<AccountDto> result = accountService.getAllAccountsByUserId(USER_ID);
@@ -115,14 +113,14 @@ class AccountServiceTest {
             assertThat(result).extracting(AccountDto::name)
                     .containsExactly("Checking", "Savings");
 
-            verify(accountRepository).findByUserId(USER_ID);
+            verify(accountRepository).findAllByUserId(USER_ID);
         }
 
         @Test
         @DisplayName("should return empty list when no accounts exist for the user")
         void getAllAccountsByUserId_noAccounts_returnsEmptyList() {
             // Arrange
-            when(accountRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of());
 
             // Act
             List<AccountDto> result = accountService.getAllAccountsByUserId(USER_ID);
@@ -194,7 +192,7 @@ class AccountServiceTest {
             Account savedAccount = buildAccount(ACCOUNT_ID, USER_ID);
             savedAccount.setName("New Name");
 
-            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(existing));
             when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
 
             // Act
@@ -214,7 +212,7 @@ class AccountServiceTest {
         void updateAccount_accountNotFound_throwsResourceNotFoundException() {
             // Arrange
             AccountDto updateDto = buildAccountDto("New Name", "SAVINGS", new BigDecimal("999.00"));
-            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() -> accountService.updateAccount(USER_ID, ACCOUNT_ID, updateDto))
@@ -246,7 +244,7 @@ class AccountServiceTest {
             Account savedAccount = buildAccount(ACCOUNT_ID, USER_ID);
             savedAccount.setCurrentBalance(targetBalance);
 
-            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
                 Transaction tx = inv.getArgument(0);
                 tx.setId(txId);
@@ -282,7 +280,7 @@ class AccountServiceTest {
             Account account = buildAccount(ACCOUNT_ID, USER_ID);
             account.setCurrentBalance(balance);
 
-            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
 
             // Act
             AccountDto result = accountService.reconcileAccount(USER_ID, ACCOUNT_ID, balance);
@@ -298,7 +296,7 @@ class AccountServiceTest {
         @DisplayName("should throw ResourceNotFoundException when account not found")
         void reconcileAccount_accountNotFound_throwsResourceNotFoundException() {
             // Arrange
-            when(accountRepository.findByAccountIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() -> accountService.reconcileAccount(USER_ID, ACCOUNT_ID, new BigDecimal("500.00")))

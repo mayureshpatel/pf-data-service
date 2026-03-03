@@ -126,16 +126,26 @@ public final class AccountQueries {
 
     // language=SQL
     public static final String UPDATE = """
+                    update accounts
+                    set name = :name,
+                        type = :type,
+                        currency_code = :currencyCode,
+                        bank_name = :bankName,
+                        version = version + 1,
+                        updated_at = CURRENT_TIMESTAMP, updated_by = :updatedBy
+                    where id = :id
+                      and version = :version
+                      and deleted_at is null
+            """;
+
+    // language=SQL
+    public static final String RECONCILE = """
             update accounts
-            set name = :name,
-                type = :type,
-                current_balance = :currentBalance,
-                currency_code = :currencyCode,
-                bank_name = :bankName,
+            set current_balance = :targetBalance
                 version = version + 1,
-                updated_at = CURRENT_TIMESTAMP, updated_by = :updatedBy
-            where id = :id
-              and version = :version
-              and deleted_at is null
-    """;
+                updated_at = CURRENT_TIMESTAMP, updated_by = :userId
+            where id = :accountId
+                and version = :version
+                and deleted_at is null
+            """;
 }
