@@ -11,7 +11,7 @@ public final class MerchantDtoMapper {
         if (merchant == null) return null;
         return new MerchantDto(
                 merchant.getId(),
-                merchant.getUser() != null ? merchant.getUser().getId() : null,
+                merchant.getUserId() != null ? merchant.getUserId() : null,
                 merchant.getOriginalName(),
                 merchant.getCleanName()
         );

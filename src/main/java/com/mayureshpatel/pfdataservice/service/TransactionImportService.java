@@ -3,9 +3,9 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 @Service
@@ -110,7 +111,7 @@ public class TransactionImportService {
             throw new DuplicateImportException("This file has already been imported.");
         }
 
-        List<Transaction> uniqueTransactions = new ArrayList<>();
+        List<TransactionCreateRequest> uniqueTransactions = new ArrayList<>();
         int duplicateCount = 0;
 
         for (TransactionDto dto : approvedDtos) {
@@ -118,16 +119,18 @@ public class TransactionImportService {
                     accountId, dto.date(), dto.amount(), dto.description(), dto.type()
             );
 
-            boolean existsInBatch = uniqueTransactions.stream().anyMatch(t -> 
-                    t.getTransactionDate().equals(dto.date()) && 
-                    t.getAmount().compareTo(dto.amount()) == 0 &&
-                    t.getDescription().equals(dto.description()) &&
-                    t.getType() == dto.type()
+            boolean existsInBatch = uniqueTransactions.stream().anyMatch(t ->
+                    t.getTransactionDate().equals(dto.date()) &&
+                            t.getAmount().compareTo(dto.amount()) == 0 &&
+                            t.getDescription().equals(dto.description()) &&
+                            Objects.equals(t.getType(), dto.type().name())
             );
 
             if (!existsInDb && !existsInBatch) {
-                Transaction t = mapToEntity(dto);
-                t.setAccount(account);
+                TransactionCreateRequest t = mapToEntity(dto)
+                        .toBuilder()
+                        .accountId(account.getId())
+                        .build();
                 uniqueTransactions.add(t);
             } else {
                 duplicateCount++;
@@ -138,15 +141,16 @@ public class TransactionImportService {
         }
 
         if (!uniqueTransactions.isEmpty()) {
-            transactionRepository.saveAll(uniqueTransactions);
+            transactionRepository.insertAll(uniqueTransactions);
             updateAccountBalance(account, uniqueTransactions);
 
             if (fileName != null && fileHash != null) {
-                FileImportHistory history = new FileImportHistory();
-                history.setAccount(account);
-                history.setFileName(fileName);
-                history.setFileHash(fileHash);
-                history.setTransactionCount(uniqueTransactions.size());
+                FileImportHistory history = FileImportHistory.builder()
+                        .accountId(account.getId())
+                        .fileName(fileName)
+                        .fileHash(fileHash)
+                        .transactionCount(uniqueTransactions.size())
+                        .build();
                 fileImportHistoryRepository.save(history);
             }
             log.info("Successfully saved {} new transactions. Skipped {} duplicates.", uniqueTransactions.size(), duplicateCount);
@@ -157,32 +161,24 @@ public class TransactionImportService {
         return uniqueTransactions.size();
     }
 
-    private Transaction mapToEntity(TransactionDto dto) {
-        Transaction transaction = new Transaction();
-
-        transaction.setTransactionDate(dto.date());
-        transaction.setPostDate(dto.postDate());
-        transaction.setDescription(dto.description());
-        transaction.setAmount(dto.amount());
-        transaction.setType(dto.type());
-        Merchant merchant = new Merchant();
-        if (dto.merchant() != null) {
-            merchant.setCleanName(dto.merchant().cleanName());
-            merchant.setOriginalName(dto.merchant().originalName());
-        }
-        transaction.setMerchant(merchant);
-
-        return transaction;
+    private TransactionCreateRequest mapToEntity(TransactionDto dto) {
+        return TransactionCreateRequest.builder()
+                .transactionDate(dto.date())
+                .postDate(dto.postDate())
+                .description(dto.description())
+                .amount(dto.amount())
+                .type(dto.type().name())
+                .build();
     }
 
-    private void updateAccountBalance(Account account, List<Transaction> newTransactions) {
+    private void updateAccountBalance(Account account, List<TransactionCreateRequest> newTransactions) {
         BigDecimal oldBalance = account.getCurrentBalance();
 
-        for (Transaction t : newTransactions) {
+        for (TransactionCreateRequest t : newTransactions) {
             account.applyTransaction(t);
         }
 
-        accountRepository.save(account);
+        accountRepository.update(account);
 
         log.info("Updated Account ID: {} balance. Old: {}, New: {}", account.getId(), oldBalance, account.getCurrentBalance());
     }

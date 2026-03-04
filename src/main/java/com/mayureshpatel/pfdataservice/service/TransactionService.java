@@ -56,25 +56,24 @@ public class TransactionService {
         List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
 
         for (Transaction t : transactions) {
-            if (!t.getAccount().getUser().getId().equals(userId)) {
+            if (!t.getAccount().getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
             }
 
             t.getAccount().undoTransaction(t);
 
             if (t.getType() == TransactionType.INCOME) {
-                t.setType(TransactionType.TRANSFER_IN);
+                t.toBuilder().type(TransactionType.TRANSFER_IN);
             } else if (t.getType() == TransactionType.EXPENSE) {
-                t.setType(TransactionType.TRANSFER_OUT);
+                t.toBuilder().type(TransactionType.TRANSFER_OUT);
             } else {
-                t.setType(TransactionType.TRANSFER_OUT);
+                t.toBuilder().type(TransactionType.TRANSFER_OUT);
             }
 
-            t.setCategory(null);
             t.getAccount().applyTransaction(t);
         }
 
-        transactionRepository.saveAll(transactions);
+        transactionRepository.updateAllT(transactions);
     }
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
@@ -95,8 +94,8 @@ public class TransactionService {
 
         long ownedCount = transactions.stream()
                 .filter(t -> t.getAccount() != null
-                        && t.getAccount().getUser() != null
-                        && userId.equals(t.getAccount().getUser().getId()))
+                        && t.getAccount().getUserId() != null
+                        && userId.equals(t.getAccount().getUserId()))
                 .count();
 
         if (ownedCount != transactionIds.size()) {
@@ -111,33 +110,30 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDto createTransaction(Long userId, TransactionDto dto) {
+    public int createTransaction(Long userId, TransactionDto dto) {
         if (dto.account() == null) {
             throw new ResourceNotFoundException("Account not found");
         }
         Account account = accountRepository.findById(dto.account().id())
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
-        if (!account.getUser().getId().equals(userId)) {
+        if (!account.getUserId().equals(userId)) {
             throw new AccessDeniedException("You do not own this account");
         }
 
-        Transaction transaction = new Transaction();
-        transaction.setAccount(account);
-        transaction.setTransactionDate(dto.date());
-        transaction.setAmount(dto.amount());
-        transaction.setDescription(dto.description());
-        transaction.setType(dto.type());
+        Transaction transaction = Transaction.builder()
+                .account(account)
+                .transactionDate(dto.date())
+                .amount(dto.amount())
+                .description(dto.description())
+                .type(dto.type())
+                .build();
 
-        Merchant merchant = new Merchant();
-        if (dto.merchant() != null && dto.merchant().cleanName() != null) {
-            merchant.setCleanName(dto.merchant().cleanName());
-            merchant.setOriginalName(dto.merchant().originalName());
-        } else {
-            merchant.setCleanName(dto.description());
-            merchant.setOriginalName(dto.description());
-        }
-        transaction.setMerchant(merchant);
+        Merchant merchant = Merchant.builder()
+                .cleanName(dto.merchant() != null && dto.merchant().cleanName() != null ? dto.merchant().cleanName() : dto.description())
+                .originalName(dto.merchant() != null && dto.merchant().originalName() != null ? dto.merchant().originalName() : dto.description())
+                .build();
+        transaction.toBuilder().merchant(merchant);
 
         if (dto.category() != null) {
             Category category = categoryRepository.findById(dto.category().id())
@@ -148,7 +144,7 @@ public class TransactionService {
                             "Only subcategories can be assigned to transactions. " +
                                     "Please select a specific subcategory under '" + category.getName() + "'.");
                 }
-                transaction.setCategory(category);
+                transaction.toBuilder().category(category);
             }
         } else {
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
@@ -159,18 +155,18 @@ public class TransactionService {
                 userCategories.stream()
                         .filter(c -> c.getId().equals(categoryId))
                         .findFirst()
-                        .ifPresent(transaction::setCategory);
+                        .ifPresent(transaction.toBuilder()::category);
             }
         }
 
         account.applyTransaction(transaction);
 
-        return TransactionDtoMapper.toDto(transactionRepository.save(transaction));
+        return transactionRepository.insert(transaction);
     }
 
     @Transactional
-    public List<TransactionDto> updateTransactions(Long userId, List<TransactionDto> dtos) {
-        if (dtos == null || dtos.isEmpty()) return List.of();
+    public Integer updateTransactions(Long userId, List<TransactionDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) return 0;
 
         List<Long> ids = dtos.stream().map(TransactionDto::id).toList();
         List<Transaction> transactions = transactionRepository.findAllById(ids);
@@ -185,32 +181,33 @@ public class TransactionService {
                     .findFirst()
                     .orElseThrow();
 
-            if (!transaction.getAccount().getUser().getId().equals(userId)) {
+            if (!transaction.getAccount().getUserId().equals(userId)) {
                 throw new AccessDeniedException("You do not own transaction ID: " + transaction.getId());
             }
 
             return updateTransactionFromDto(userId, transaction, dto);
-        }).toList();
+        }).toList().stream().mapToInt(Integer::intValue).sum();
     }
 
-    private TransactionDto updateTransactionFromDto(Long userId, Transaction transaction, TransactionDto dto) {
+    private int updateTransactionFromDto(Long userId, Transaction transaction, TransactionDto dto) {
         Account account = transaction.getAccount();
         account.undoTransaction(transaction);
 
-        transaction.setAmount(dto.amount());
-        transaction.setTransactionDate(dto.date());
-        transaction.setDescription(dto.description());
-        transaction.setType(dto.type());
+        transaction.toBuilder()
+                .amount(dto.amount())
+                .transactionDate(dto.date())
+                .description(dto.description())
+                .type(dto.type());
 
         if (dto.merchant() != null) {
-            Merchant merchant = transaction.getMerchant() != null ? transaction.getMerchant() : new Merchant();
+            Merchant merchant = transaction.getMerchant() != null ? transaction.getMerchant() : Merchant.builder().build();
             if (dto.merchant().cleanName() != null) {
-                merchant.setCleanName(dto.merchant().cleanName());
+                merchant.toBuilder().cleanName(dto.merchant().cleanName()).build();
             }
             if (dto.merchant().originalName() != null) {
-                merchant.setOriginalName(dto.merchant().originalName());
+                merchant.toBuilder().originalName(dto.merchant().originalName()).build();
             }
-            transaction.setMerchant(merchant);
+            transaction.toBuilder().merchant(merchant);
         }
 
         if (dto.category() != null) {
@@ -222,7 +219,7 @@ public class TransactionService {
                             "Only subcategories can be assigned to transactions. " +
                                     "Please select a specific subcategory under '" + category.getName() + "'.");
                 }
-                transaction.setCategory(category);
+                transaction.toBuilder().category(category);
             }
         } else {
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
@@ -233,23 +230,23 @@ public class TransactionService {
                 userCategories.stream()
                         .filter(c -> c.getId().equals(categoryId))
                         .findFirst()
-                        .ifPresent(transaction::setCategory);
+                        .ifPresent(transaction.toBuilder()::category);
             } else {
-                transaction.setCategory(null);
+                transaction.toBuilder().category(null);
             }
         }
 
         account.applyTransaction(transaction);
 
-        return TransactionDtoMapper.toDto(transactionRepository.save(transaction));
+        return transactionRepository.update(transaction);
     }
 
     @Transactional
-    public TransactionDto updateTransaction(Long userId, Long transactionId, TransactionDto dto) {
+    public int updateTransaction(Long userId, Long transactionId, TransactionDto dto) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
-        if (!transaction.getAccount().getUser().getId().equals(userId)) {
+        if (!transaction.getAccount().getUserId().equals(userId)) {
             throw new AccessDeniedException("You do not own this transaction");
         }
 
@@ -261,7 +258,7 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
-        if (!transaction.getAccount().getUser().getId().equals(userId)) {
+        if (!transaction.getAccount().getUserId().equals(userId)) {
             throw new AccessDeniedException("You do not own this transaction");
         }
 

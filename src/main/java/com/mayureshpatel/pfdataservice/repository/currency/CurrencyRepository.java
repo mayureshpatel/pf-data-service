@@ -39,20 +39,18 @@ public class CurrencyRepository implements JdbcRepository<Currency, String> {
                 .list();
     }
 
-    public Currency save(Currency currency) {
-        jdbcClient.sql(CurrencyQueries.SAVE)
+    public int save(Currency currency) {
+        return jdbcClient.sql(CurrencyQueries.SAVE)
                 .param("code", currency.getCode())
                 .param("name", currency.getName())
                 .param("symbol", currency.getSymbol())
                 .param("isActive", currency.isActive())
                 .update();
-
-        return currency;
     }
 
     @Override
-    public void deleteById(String code) {
-        jdbcClient.sql(CurrencyQueries.DELETE)
+    public int deleteById(String code) {
+        return jdbcClient.sql(CurrencyQueries.DELETE)
                 .param("code", code)
                 .update();
     }

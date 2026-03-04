@@ -25,7 +25,7 @@ public class CategoryRuleController {
     }
 
     @PostMapping
-    public ResponseEntity<CategoryRuleDto> createRule(
+    public ResponseEntity<Integer> createRule(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryRuleDto dto) {
         return ResponseEntity.ok(categoryRuleService.createRule(userDetails.getId(), dto));

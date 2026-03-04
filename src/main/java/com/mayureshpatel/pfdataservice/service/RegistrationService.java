@@ -25,23 +25,24 @@ public class RegistrationService {
     @Transactional
     public AuthenticationResponse register(RegistrationRequest request) {
         // Check if username already exists
-        if (userService.isUserExistsByUsername(request.username())) {
+        if (userService.isUserExistsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Username already exists");
         }
 
         // Check if email already exists
-        if (userService.isUserExistsByEmail(request.email())) {
+        if (userService.isUserExistsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already exists");
         }
 
         // Create new user
-        User user = new User();
-        user.setUsername(request.username());
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        User user = User.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .build();
 
         // Save user to database
-        user = userService.save(user);
+        userService.insert(user);
 
         // Generate JWT token with userId and email claims
         CustomUserDetails userDetails = new CustomUserDetails(user);

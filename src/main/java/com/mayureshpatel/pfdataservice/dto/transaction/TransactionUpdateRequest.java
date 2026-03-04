@@ -8,6 +8,7 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Getter
 @Builder(toBuilder = true)
@@ -53,5 +54,11 @@ public class TransactionUpdateRequest {
                 .postDate(transaction.getPostDate())
                 .merchantId(transaction.getMerchant().getId())
                 .build();
+    }
+
+    public static List<TransactionUpdateRequest> fromDomain(List<Transaction> transactions) {
+        return transactions.stream()
+                .map(TransactionUpdateRequest::fromDomain)
+                .toList();
     }
 }

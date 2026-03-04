@@ -11,14 +11,14 @@ public final class TransactionDtoMapper {
         if (transaction == null) return null;
         return new TransactionDto(
                 transaction.getId(),
-                transaction.getTransactionDate(),
-                transaction.getPostDate(),
-                transaction.getDescription(),
-                MerchantDtoMapper.toDto(transaction.getMerchant()),
-                transaction.getAmount(),
-                transaction.getType(),
+                AccountDtoMapper.toDto(transaction.getAccount()),
                 CategoryDtoMapper.toDto(transaction.getCategory()),
-                AccountDtoMapper.toDto(transaction.getAccount())
+                transaction.getAmount(),
+                transaction.getTransactionDate(),
+                transaction.getDescription(),
+                transaction.getType(),
+                transaction.getPostDate(),
+                MerchantDtoMapper.toDto(transaction.getMerchant())
         );
     }
 }

@@ -89,7 +89,7 @@ public class TransactionCrudController {
     }
 
     @PostMapping
-    public ResponseEntity<TransactionDto> createTransaction(
+    public ResponseEntity<Integer> createTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid TransactionDto dto) {
 
@@ -97,7 +97,7 @@ public class TransactionCrudController {
     }
 
     @PatchMapping("/bulk")
-    public ResponseEntity<List<TransactionDto>> updateTransactionsBulk(
+    public ResponseEntity<Integer> updateTransactionsBulk(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid List<TransactionDto> dtos) {
         return ResponseEntity.ok(transactionService.updateTransactions(userDetails.getId(), dtos));
@@ -113,7 +113,7 @@ public class TransactionCrudController {
 
     @PutMapping("/{id}")
     @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
-    public ResponseEntity<TransactionDto> updateTransaction(
+    public ResponseEntity<Integer> updateTransaction(
             @PathVariable Long id,
             @RequestBody @Valid TransactionDto dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

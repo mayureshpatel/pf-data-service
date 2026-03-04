@@ -164,7 +164,7 @@ public class RecurringTransactionService {
         RecurringTransaction recurring = recurringRepository.findById(request.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
 
-        if (!recurring.getUser().getId().equals(userId)) {
+        if (!recurring.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
@@ -190,7 +190,7 @@ public class RecurringTransactionService {
         RecurringTransaction recurring = recurringRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
 
-        if (!recurring.getUser().getId().equals(userId)) {
+        if (!recurring.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 

@@ -135,6 +135,12 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .mapToInt(Integer::intValue).sum();
     }
 
+    public Integer updateAllT(List<Transaction> requestList) {
+        return requestList.stream()
+                .map(this::update)
+                .mapToInt(Integer::intValue).sum();
+    }
+
     @Override
     public int deleteById(Long id) {
         return jdbcClient.sql(TransactionQueries.DELETE_BY_ID)

@@ -53,14 +53,14 @@ public class BudgetController {
     }
 
     @PostMapping
-    public ResponseEntity<BudgetDto> createBudget (
+    public ResponseEntity<Integer> createBudget (
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid BudgetCreateRequest request) {
         return ResponseEntity.status(201).body(budgetService.create(userDetails.getId(), request));
     }
 
     @PutMapping
-    public ResponseEntity<BudgetDto> updateBudget(
+    public ResponseEntity<Integer> updateBudget(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid BudgetUpdateRequest request
     ) {

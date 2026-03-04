@@ -26,8 +26,12 @@ public class UserService implements UserDetailsService {
         return this.repository.existsByEmail(email);
     }
 
-    public User save(User user) {
-        return this.repository.save(user);
+    public int insert(User user) {
+        return this.repository.insert(user);
+    }
+
+    public int update(User user) {
+        return this.repository.update(user);
     }
 
     public Optional<User> findByUsername(String username) {

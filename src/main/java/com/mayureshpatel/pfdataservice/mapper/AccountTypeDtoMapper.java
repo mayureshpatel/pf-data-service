@@ -18,8 +18,8 @@ public final class AccountTypeDtoMapper {
                 accountType.isAsset(),
                 accountType.getSortOrder(),
                 accountType.isActive(),
-                accountType.getIconography() != null ? accountType.getIconography().getIcon() : null,
-                accountType.getIconography() != null ? accountType.getIconography().getColor() : null
+                accountType.getIcon() != null ? accountType.getIcon() : null,
+                accountType.getColor() != null ? accountType.getColor() : null
         );
     }
 

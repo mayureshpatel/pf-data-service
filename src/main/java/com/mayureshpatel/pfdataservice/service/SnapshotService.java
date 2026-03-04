@@ -52,10 +52,12 @@ public class SnapshotService {
 
         Optional<AccountSnapshot> existing = snapshotRepository.findByAccountIdAndSnapshotDate(accountId, endOfMonth);
 
-        AccountSnapshot snapshot = existing.orElse(new AccountSnapshot());
-        snapshot.setAccount(account);
-        snapshot.setSnapshotDate(endOfMonth);
-        snapshot.setBalance(historicBalance);
+        AccountSnapshot snapshot = existing.orElse(AccountSnapshot.builder().build());
+        snapshot.toBuilder()
+                .account(account)
+                .snapshotDate(endOfMonth)
+                .balance(historicBalance)
+                .build();
 
         snapshotRepository.save(snapshot);
         log.info("Saved snapshot for Account {} on {}: {}", accountId, endOfMonth, historicBalance);

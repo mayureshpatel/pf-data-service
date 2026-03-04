@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
 
@@ -11,11 +12,11 @@ public final class RecurringTransactionDtoMapper {
         if (recurring == null) return null;
         return new RecurringTransactionDto(
                 recurring.getId(),
-                recurring.getUser() != null ? recurring.getUser().getId() : null,
+                recurring.getUserId() != null ? recurring.getUserId() : null,
                 AccountDtoMapper.toDto(recurring.getAccount()),
                 MerchantDtoMapper.toDto(recurring.getMerchant()),
                 recurring.getAmount(),
-                recurring.getFrequency(),
+                Frequency.fromCode(recurring.getFrequency()),
                 recurring.getLastDate(),
                 recurring.getNextDate(),
                 recurring.isActive()

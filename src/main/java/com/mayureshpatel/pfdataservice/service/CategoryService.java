@@ -40,7 +40,7 @@ public class CategoryService {
             Category parent = categoryRepository.findById(request.getParentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
-            if (!parent.getUser().getId().equals(userId)) {
+            if (!parent.getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
         }
@@ -53,7 +53,7 @@ public class CategoryService {
         Category category = categoryRepository.findById(request.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
-        if (!category.getUser().getId().equals(userId)) {
+        if (!category.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
@@ -69,7 +69,7 @@ public class CategoryService {
             Category parent = categoryRepository.findById(request.getParentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
-            if (!parent.getUser().getId().equals(userId)) {
+            if (!parent.getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
         }
@@ -82,7 +82,7 @@ public class CategoryService {
         Category category = this.categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
-        if (!category.getUser().getId().equals(userId)) {
+        if (!category.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
