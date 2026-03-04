@@ -1,12 +1,11 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
@@ -54,7 +53,7 @@ public class AccountService {
         this.userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        return accountRepository.insert(request);
+        return accountRepository.insert(userId, request);
     }
 
     /**
@@ -101,10 +100,11 @@ public class AccountService {
         }
 
         // create an adjustment transaction
-        Transaction adjustment = createAdjustmentTransaction(account, diff);
+        TransactionCreateRequest adjustmentTransaction = createAdjustmentTransaction(account, diff);
+        this.transactionRepository.insert(adjustmentTransaction);
 
         // update account balance
-        account.applyTransaction(adjustment);
+        account.applyTransaction(adjustmentTransaction);
         return accountRepository.reconcile(userId, accountId, targetBalance);
     }
 
@@ -115,19 +115,14 @@ public class AccountService {
      * @param diff    the difference between current and target balance
      * @return the created adjustment transaction
      */
-    private Transaction createAdjustmentTransaction(Account account, BigDecimal diff) {
-        Transaction adjustment = new Transaction();
-
-        adjustment.setAccount(account);
-        adjustment.setAmount(diff);
-        adjustment.setTransactionDate(OffsetDateTime.now());
-        adjustment.setType(TransactionType.ADJUSTMENT);
-        adjustment.setDescription("Balance Reconciliation");
-
-        adjustment.setMerchant(new Merchant());
-        adjustment.getMerchant().setOriginalName("Balance Reconciliation");
-
-        return transactionRepository.save(adjustment);
+    private TransactionCreateRequest createAdjustmentTransaction(Account account, BigDecimal diff) {
+        return TransactionCreateRequest.builder()
+                .accountId(account.getId())
+                .amount(diff)
+                .transactionDate(OffsetDateTime.now())
+                .description("Balance Reconciliation")
+                .type(TransactionType.ADJUSTMENT.name())
+                .build();
     }
 
     /**

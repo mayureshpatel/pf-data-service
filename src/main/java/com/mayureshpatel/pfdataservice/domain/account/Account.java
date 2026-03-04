@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.domain.account;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -36,10 +37,24 @@ public class Account {
                 .build();
     }
 
+    public Account applyTransaction(TransactionCreateRequest transaction) {
+        BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
+        return this.toBuilder()
+                .currentBalance(balance.add(transaction.getAmount()))
+                .build();
+    }
+
     public Account undoTransaction(Transaction transaction) {
         BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
         return this.toBuilder()
                 .currentBalance(balance.subtract(transaction.getNetChange()))
+                .build();
+    }
+
+    public Account undoTransaction(TransactionCreateRequest transaction) {
+        BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
+        return this.toBuilder()
+                .currentBalance(balance.subtract(transaction.getAmount()))
                 .build();
     }
 }
