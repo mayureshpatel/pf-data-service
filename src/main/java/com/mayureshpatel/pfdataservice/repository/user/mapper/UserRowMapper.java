@@ -22,6 +22,11 @@ public class UserRowMapper implements RowMapper<User> {
         user.setEmail(rs.getString("email"));
         user.setPasswordHash(rs.getString("password_hash"));
 
+        // create audit table data
+        TableAudit tableAudit = TableAudit.builder()
+                .updatedBy
+                .build();
+
         String lastUpdatedBy = rs.getString("last_updated_by");
         if (lastUpdatedBy != null) {
             if (user.getAudit().getUpdatedBy() == null) {

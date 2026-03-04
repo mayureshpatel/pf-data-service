@@ -1,12 +1,11 @@
 package com.mayureshpatel.pfdataservice.repository;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.user.User;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -14,6 +13,80 @@ import java.time.ZoneOffset;
 
 @Component
 public class JdbcMapperUtils {
+
+    /**
+     * Hydrates audit columns from ResultSet.
+     *
+     * @param rs the result set
+     * @return the audit columns
+     * @throws SQLException if an error occurs
+     */
+    public static TableAudit getAuditColumns(ResultSet rs) throws SQLException {
+        OffsetDateTime createdAt = null;
+        OffsetDateTime updatedAt = null;
+        OffsetDateTime deletedAt = null;
+
+        User createdBy = null;
+        User updatedBy = null;
+        User deletedBy = null;
+
+        if (isColumnExists(rs, "created_at")) {
+            createdAt = getOffsetDateTime(rs, "created_at");
+        }
+
+        if (isColumnExists(rs, "updated_at")) {
+            updatedAt = getOffsetDateTime(rs, "updated_at");
+        }
+
+        if (isColumnExists(rs, "deleted_at")) {
+            deletedAt = getOffsetDateTime(rs, "deleted_at");
+        }
+
+        if (isColumnExists(rs, "created_by")) {
+            createdBy = User.builder()
+                    .id(rs.getLong("created_by"))
+                    .build();
+        }
+
+        if (isColumnExists(rs, "updated_by")) {
+            updatedBy = User.builder()
+                    .id(rs.getLong("updated_by"))
+                    .build();
+        }
+
+        if (isColumnExists(rs, "deleted_by")) {
+            deletedBy = User.builder()
+                    .id(rs.getLong("deleted_by"))
+                    .build();
+        }
+
+        return TableAudit.builder()
+                .createdAt(createdAt)
+                .updatedAt(updatedAt)
+                .deletedAt(deletedAt)
+                .createdBy(createdBy)
+                .updatedBy(updatedBy)
+                .deletedBy(deletedBy)
+                .build();
+    }
+
+    /**
+     * Safely check if column exists in ResultSet.
+     *
+     * @param rs         the result set
+     * @param columnName the column name to check
+     * @return true if column exists, false otherwise
+     * @throws SQLException if an error occurs
+     */
+    public static boolean isColumnExists(ResultSet rs, String columnName) throws SQLException {
+        ResultSetMetaData metaData = rs.getMetaData();
+        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+            if (columnName.equalsIgnoreCase(metaData.getColumnName(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Safely get {@link OffsetDateTime} from {@link ResultSet}
