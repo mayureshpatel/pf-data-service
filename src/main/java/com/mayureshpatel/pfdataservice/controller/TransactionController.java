@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;
 import jakarta.validation.Valid;
@@ -25,7 +25,7 @@ public class TransactionController {
 
     @PostMapping("/upload")
     @PreAuthorize("@ss.isAccountOwner(#accountId, principal)")
-    public ResponseEntity<List<TransactionPreview>> uploadTransactions(
+    public ResponseEntity<List<TransactionPreviewDto>> uploadTransactions(
             @PathVariable Long accountId,
             @RequestParam("file") MultipartFile file,
             @RequestParam("bankName") String bankName,
@@ -37,7 +37,7 @@ public class TransactionController {
 
         try (InputStream inputStream = file.getInputStream()) {
             String fileName = file.getOriginalFilename();
-            List<TransactionPreview> preview = transactionImportService.previewTransactions(
+            List<TransactionPreviewDto> preview = transactionImportService.previewTransactions(
                     userDetails.getId(), accountId, bankName, inputStream, fileName);
             return ResponseEntity.ok(preview);
         }

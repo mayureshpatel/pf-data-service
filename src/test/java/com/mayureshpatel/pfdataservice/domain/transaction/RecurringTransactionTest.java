@@ -3,7 +3,7 @@ package com.mayureshpatel.pfdataservice.domain.transaction;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

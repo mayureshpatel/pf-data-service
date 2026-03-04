@@ -6,7 +6,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
@@ -119,7 +119,7 @@ class TransactionImportServiceTest {
             when(mockParser.parse(eq(ACCOUNT_ID), any())).thenReturn(Stream.of(t));
             when(categorizer.guessCategory(any(Transaction.class), any(), any())).thenReturn(-1L);
 
-            List<TransactionPreview> result = service.previewTransactions(
+            List<TransactionPreviewDto> result = service.previewTransactions(
                     USER_ID, ACCOUNT_ID, BANK_NAME, emptyStream(), FILE_NAME);
 
             assertThat(result).hasSize(1);
@@ -143,7 +143,7 @@ class TransactionImportServiceTest {
             when(mockParser.parse(eq(ACCOUNT_ID), any())).thenReturn(Stream.of(t));
             when(categorizer.guessCategory(any(Transaction.class), any(), any())).thenReturn(5L);
 
-            List<TransactionPreview> result = service.previewTransactions(
+            List<TransactionPreviewDto> result = service.previewTransactions(
                     USER_ID, ACCOUNT_ID, BANK_NAME, emptyStream(), FILE_NAME);
 
             assertThat(result).hasSize(1);
@@ -159,7 +159,7 @@ class TransactionImportServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(mockParser.parse(eq(ACCOUNT_ID), any())).thenReturn(Stream.empty());
 
-            List<TransactionPreview> result = service.previewTransactions(
+            List<TransactionPreviewDto> result = service.previewTransactions(
                     USER_ID, ACCOUNT_ID, BANK_NAME, emptyStream(), FILE_NAME);
 
             assertThat(result).isEmpty();

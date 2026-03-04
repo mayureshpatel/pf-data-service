@@ -1,4 +1,4 @@
-package com.mayureshpatel.pfdataservice.dto.transaction;
+package com.mayureshpatel.pfdataservice.dto.transaction.tags;
 
 public record TagDto(
         Long id,

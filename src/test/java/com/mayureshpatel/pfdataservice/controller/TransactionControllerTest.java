@@ -1,11 +1,10 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -37,7 +36,7 @@ class TransactionControllerTest extends BaseControllerTest {
     void uploadTransactions_shouldReturnPreviews() throws Exception {
         // Arrange
         MockMultipartFile file = new MockMultipartFile("file", "test.csv", "text/csv", "date,amount,description\n2023-01-01,10.00,Test".getBytes());
-        TransactionPreview preview = TransactionPreview.builder()
+        TransactionPreviewDto preview = TransactionPreviewDto.builder()
                 .description("Test")
                 .amount(new BigDecimal("10.00"))
                 .build();

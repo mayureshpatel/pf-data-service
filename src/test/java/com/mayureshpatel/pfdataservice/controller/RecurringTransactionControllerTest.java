@@ -1,23 +1,14 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
-import com.mayureshpatel.pfdataservice.dto.transaction.RecurringSuggestionDto;
-import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
-import com.mayureshpatel.pfdataservice.security.JwtService;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
-import com.mayureshpatel.pfdataservice.service.RecurringTransactionService;
-import com.mayureshpatel.pfdataservice.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.time.LocalDate;
 import java.util.List;
 

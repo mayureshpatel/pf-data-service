@@ -1,6 +1,7 @@
-package com.mayureshpatel.pfdataservice.dto.transaction;
+package com.mayureshpatel.pfdataservice.dto.transaction.recurring;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
+import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;

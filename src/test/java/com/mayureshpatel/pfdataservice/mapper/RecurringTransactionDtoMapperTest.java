@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
-import com.mayureshpatel.pfdataservice.dto.transaction.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.util.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Builder
-public record TransactionPreview(
+public record TransactionPreviewDto(
         OffsetDateTime date,
         OffsetDateTime postDate,
         String description,

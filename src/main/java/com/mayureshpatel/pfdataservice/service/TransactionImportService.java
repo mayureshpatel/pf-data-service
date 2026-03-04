@@ -7,7 +7,7 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreview;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
@@ -62,7 +62,7 @@ public class TransactionImportService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionPreview> previewTransactions(Long userId, Long accountId, String bankName, InputStream fileContent, String fileName) {
+    public List<TransactionPreviewDto> previewTransactions(Long userId, Long accountId, String bankName, InputStream fileContent, String fileName) {
         log.info("Starting transaction preview for User: {}, Account ID: {}, Bank: {}, File: {}", userId, accountId, bankName, fileName);
 
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
@@ -70,7 +70,7 @@ public class TransactionImportService {
         List<Category> userCategories = categoryRepository.findByUserId(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
-            List<TransactionPreview> previews = rawTransactionStream
+            List<TransactionPreviewDto> previews = rawTransactionStream
                     .map(t -> {
                         Long categoryId = categorizer.guessCategory(t, userRules, userCategories);
                         Category suggestedCategory = categoryId > 0
@@ -79,7 +79,7 @@ public class TransactionImportService {
                                 .findFirst()
                                 .orElse(null)
                                 : null;
-                        return TransactionPreview.builder()
+                        return TransactionPreviewDto.builder()
                                 .date(t.getTransactionDate())
                                 .postDate(t.getPostDate())
                                 .description(t.getDescription())
