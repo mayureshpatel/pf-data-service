@@ -3,9 +3,12 @@ package com.mayureshpatel.pfdataservice.mapper;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 
+import java.util.List;
+
 public final class AccountTypeDtoMapper {
 
-    private AccountTypeDtoMapper() {}
+    private AccountTypeDtoMapper() {
+    }
 
     public static AccountTypeDto toDto(AccountType accountType) {
         if (accountType == null) return null;
@@ -18,5 +21,9 @@ public final class AccountTypeDtoMapper {
                 accountType.getIconography() != null ? accountType.getIconography().getIcon() : null,
                 accountType.getIconography() != null ? accountType.getIconography().getColor() : null
         );
+    }
+
+    public static List<AccountTypeDto> toDto(List<AccountType> accountTypes) {
+        return accountTypes.stream().map(AccountTypeDtoMapper::toDto).toList();
     }
 }

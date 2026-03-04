@@ -81,14 +81,6 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .update();
     }
 
-    public int reconcile(Long userId, Long accountId, BigDecimal targetBalance) {
-        return jdbcClient.sql(AccountQueries.RECONCILE)
-                .param("accountId", accountId)
-                .param("userId", userId)
-                .param("targetBalance", targetBalance)
-                .update();
-    }
-
     @Override
     public int deleteById(Long id, Long userId) {
         return jdbcClient.sql(AccountQueries.DELETE_BY_ID)
@@ -102,5 +94,13 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
         return jdbcClient.sql(AccountQueries.COUNT_ACTIVE)
                 .query(Long.class)
                 .single();
+    }
+
+    public int reconcile(Long userId, Long accountId, BigDecimal targetBalance) {
+        return jdbcClient.sql(AccountQueries.RECONCILE)
+                .param("accountId", accountId)
+                .param("userId", userId)
+                .param("targetBalance", targetBalance)
+                .update();
     }
 }

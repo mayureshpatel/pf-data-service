@@ -1,12 +1,12 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.account.AccountTypeCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
+import com.mayureshpatel.pfdataservice.mapper.AccountTypeDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -15,11 +15,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountTypeController {
 
-    private final AccountTypeRepository accountTypeLookupRepository;
+    private final AccountTypeRepository accountTypeRepository;
 
     @GetMapping
     public ResponseEntity<List<AccountTypeDto>> getAccountTypes() {
-        List<AccountTypeDto> types = accountTypeLookupRepository.findByIsActiveTrueOrderBySortOrder();
+        List<AccountTypeDto> types = AccountTypeDtoMapper.toDto(accountTypeRepository.findByIsActiveTrueOrderBySortOrder());
         return ResponseEntity.ok(types);
     }
+
+    @PostMapping
+    public ResponseEntity<Integer> createAccountType(
+            @RequestBody AccountTypeCreateRequest request) {
+        return ResponseEntity.ok(accountTypeRepository.insert(request));
+    }
+
+    @DeleteMapping("/{code}")
+    public ResponseEntity<Integer> deleteAccountType(@PathVariable String code) {
+        return ResponseEntity.ok(accountTypeRepository.deleteByCode(code));
+    }
+
 }
