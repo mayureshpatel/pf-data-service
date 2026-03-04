@@ -15,14 +15,14 @@ public class SecurityService {
     public boolean isAccountOwner(Long accountId, CustomUserDetails userDetails) {
         if (accountId == null || userDetails == null) return false;
         return accountRepository.findById(accountId)
-                .map(account -> account.getUser().getId().equals(userDetails.getId()))
+                .map(account -> account.getUserId().equals(userDetails.getId()))
                 .orElse(false);
     }
 
     public boolean isTransactionOwner(Long transactionId, CustomUserDetails userDetails) {
         if (transactionId == null || userDetails == null) return false;
         return transactionRepository.findById(transactionId)
-                .map(t -> t.getAccount().getUser().getId().equals(userDetails.getId()))
+                .map(t -> t.getAccount().getUserId().equals(userDetails.getId()))
                 .orElse(false);
     }
 }
