@@ -154,7 +154,7 @@ public class UniversalCsvParser implements TransactionParser {
             LocalDate localDate = parseDate(record.get(mapping.dateCol));
             if (localDate == null) return null;
             OffsetDateTime date = localDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
-            
+
             OffsetDateTime postDate = null;
             if (mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)) {
                 LocalDate localPostDate = parseDate(record.get(mapping.postDateCol));
@@ -206,18 +206,16 @@ public class UniversalCsvParser implements TransactionParser {
                 return null;
             }
 
-            Transaction t = new Transaction();
-            t.setTransactionDate(date);
-            t.setPostDate(postDate);
-            t.setDescription(description);
-            t.setAmount(amount);
-            t.setType(type);
-            
-            com.mayureshpatel.pfdataservice.domain.merchant.Merchant merchant = new com.mayureshpatel.pfdataservice.domain.merchant.Merchant();
-            merchant.setOriginalName(description);
-            t.setMerchant(merchant);
-
-            return t;
+            return Transaction.builder()
+                    .transactionDate(date)
+                    .postDate(postDate)
+                    .description(description)
+                    .amount(amount)
+                    .type(type)
+                    .merchant(com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
+                            .originalName(description)
+                            .build())
+                    .build();
 
         } catch (Exception e) {
             log.warn("Skipping invalid row in CSV: {} - Error: {}", record, e.getMessage());

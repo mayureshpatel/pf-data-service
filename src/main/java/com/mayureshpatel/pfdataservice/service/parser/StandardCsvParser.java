@@ -29,16 +29,20 @@ public class StandardCsvParser implements TransactionParser {
             CSVParser csvParser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get().parse(reader);
             return csvParser.stream()
                     .map(csvRecord -> {
-                        Transaction t = new Transaction();
+                        Transaction t = Transaction.builder()
+                                .description(csvRecord.get("description"))
+                                .build();
 
-                        String description = csvRecord.get("description");
                         String amountStr = csvRecord.get("amount").replace("$", "").replace(",", "");
                         BigDecimal amount = new BigDecimal(amountStr);
+
                         TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
-                        t.setDescription(description);
-                        t.setAmount(amount.abs());
-                        t.setTransactionDate(OffsetDateTime.parse(csvRecord.get("date")));
-                        t.setType(type);
+
+                        t.toBuilder()
+                                .amount(amount.abs())
+                                .transactionDate(OffsetDateTime.parse(csvRecord.get("date")))
+                                .type(type)
+                                .build();
 
                         return t;
                     })
@@ -53,7 +57,8 @@ public class StandardCsvParser implements TransactionParser {
         } catch (Exception e) {
             try {
                 reader.close();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             throw new RuntimeException("Failed to parse Standard CSV", e);
         }
     }

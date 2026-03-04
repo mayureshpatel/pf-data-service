@@ -80,13 +80,13 @@ public class SynovusCsvParser implements TransactionParser {
      */
     private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
         try {
-            Transaction transaction = new Transaction();
+            Transaction transaction = Transaction.builder()
+                    .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_TIME_FORMATTER))
+                    .description(csvRecord.get(HEADER_DESCRIPTION))
+                    .build();
 
-            transaction.setTransactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_TIME_FORMATTER));
-            transaction.setDescription(csvRecord.get(HEADER_DESCRIPTION));
             BigDecimal netAmount = calculateNetAmount(csvRecord);
             configureTransactionTypeAndAmount(transaction, netAmount);
-            transaction.setCategory(null);
 
             return Optional.of(transaction);
         } catch (Exception e) {

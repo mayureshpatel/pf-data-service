@@ -35,10 +35,8 @@ public class TransactionCategorizer {
      */
     public Long guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {
         CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
-                .userId(transaction.getAccount() != null
-                        ? transaction.getAccount().getUser() != null
-                        ? transaction.getAccount().getUser().getId()
-                        : null
+                .userId(transaction.getAccount() != null && transaction.getAccount().getUserId() != null
+                        ? transaction.getAccount().getUserId()
                         : null)
                 .rules(rules)
                 .categories(categories)

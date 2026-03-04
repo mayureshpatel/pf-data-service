@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
@@ -81,15 +80,13 @@ public class DiscoverCsvParser implements TransactionParser {
      */
     private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
         try {
-            Transaction transaction = new Transaction();
+            Transaction transaction = Transaction.builder()
+                    .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_FORMATTER))
+                    .description(csvRecord.get(HEADER_DESC))
+                    .build();
 
-            transaction.setTransactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_FORMATTER));
-            transaction.setDescription(csvRecord.get(HEADER_DESC));
-            transaction.setMerchant(new Merchant());
-            transaction.getMerchant().setOriginalName(csvRecord.get(HEADER_DESC));
             BigDecimal rawAmount = parseAmount(csvRecord, HEADER_AMOUNT);
             configureTransactionTypeAndAmount(transaction, rawAmount);
-            transaction.setCategory(null);
 
             return Optional.of(transaction);
         } catch (Exception e) {

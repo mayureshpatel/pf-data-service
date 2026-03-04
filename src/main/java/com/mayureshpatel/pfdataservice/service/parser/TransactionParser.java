@@ -48,11 +48,15 @@ public interface TransactionParser {
      */
     default void configureTransactionTypeAndAmount(Transaction transaction, BigDecimal netAmount) {
         if (netAmount.compareTo(BigDecimal.ZERO) >= 0) {
-            transaction.setType(TransactionType.INCOME);
-            transaction.setAmount(netAmount);
+            transaction.toBuilder()
+                    .type(TransactionType.INCOME)
+                    .amount(netAmount)
+                    .build();
         } else {
-            transaction.setType(TransactionType.EXPENSE);
-            transaction.setAmount(netAmount.abs());
+            transaction.toBuilder()
+                    .type(TransactionType.EXPENSE)
+                    .amount(netAmount.abs())
+                    .build();
         }
     }
 
