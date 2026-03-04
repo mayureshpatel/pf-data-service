@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.Iconography;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 

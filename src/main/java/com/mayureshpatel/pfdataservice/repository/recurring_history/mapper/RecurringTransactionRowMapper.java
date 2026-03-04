@@ -1,10 +1,10 @@
 package com.mayureshpatel.pfdataservice.repository.recurring_history.mapper;
 
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.domain.account.Account;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
