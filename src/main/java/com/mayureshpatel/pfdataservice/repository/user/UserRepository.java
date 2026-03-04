@@ -70,59 +70,47 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
     }
 
     @Override
-    public User save(User user) {
-        if (user.getId() == null) {
-            return insert(user);
-        } else {
-            return update(user);
-        }
-    }
-
-    @Override
     public int insert(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null) 
                 ? user.getAudit().getUpdatedBy().getUsername() 
                 : "system";
 
-        this.jdbcClient.sql(UserQueries.INSERT)
+        return this.jdbcClient.sql(UserQueries.INSERT)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash",  user.getPasswordHash())
                 .param("lastUpdatedBy", lastUpdatedBy)
                 .update(keyHolder);
-
-        user.setId(keyHolder.getKeyAs(Long.class));
-        return user;
     }
 
     @Override
-    public User update(User user) {
+    public int update(User user) {
         String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null) 
                 ? user.getAudit().getUpdatedBy().getUsername() 
                 : "system";
                 
-        this.jdbcClient.sql(UserQueries.UPDATE)
+        return this.jdbcClient.sql(UserQueries.UPDATE)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash",  user.getPasswordHash())
                 .param("lastUpdatedBy", lastUpdatedBy)
                 .param("id", user.getId())
                 .update();
-
-        return user;
     }
 
     @Override
-    public void delete(User user) {
+    public int delete(User user) {
         if (user.getId() != null) {
-            deleteById(user.getId());
+            return deleteById(user.getId());
         }
+
+        return 0;
     }
 
     @Override
-    public void deleteById(Long id) {
-        this.jdbcClient.sql(UserQueries.DELETE_BY_ID)
+    public int deleteById(Long id) {
+        return this.jdbcClient.sql(UserQueries.DELETE_BY_ID)
                 .param("id", id)
                 .update();
     }
