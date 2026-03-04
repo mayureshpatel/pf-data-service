@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,4 +41,17 @@ public class TransactionUpdateRequest {
 
     @Positive(message = "Merchant ID must be a positive number.")
     private final Long merchantId;
+
+    public static TransactionUpdateRequest fromDomain(Transaction transaction) {
+        return TransactionUpdateRequest.builder()
+                .id(transaction.getId())
+                .categoryId(transaction.getCategory().getId())
+                .amount(transaction.getAmount())
+                .transactionDate(transaction.getTransactionDate())
+                .description(transaction.getDescription())
+                .type(transaction.getType().name())
+                .postDate(transaction.getPostDate())
+                .merchantId(transaction.getMerchant().getId())
+                .build();
+    }
 }

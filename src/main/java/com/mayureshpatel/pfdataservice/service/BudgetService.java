@@ -78,7 +78,7 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         // ensure user has access to the category
-        if (!category.getUser().getId().equals(userId)) {
+        if (!category.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied to category");
         }
 

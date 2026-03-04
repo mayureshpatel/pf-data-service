@@ -1,11 +1,13 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryRuleDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
@@ -18,7 +20,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,27 +56,24 @@ public class CategoryRuleService {
      * @return the created {@link CategoryRuleDto}
      */
     @Transactional
-    public CategoryRuleDto createRule(Long userId, CategoryRuleDto dto) {
+    public int createRule(Long userId, CategoryRuleDto dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Category category = new Category();
-        category.setId(dto.category().id());
+        CategoryRule rule = CategoryRule.builder()
+                .user(user)
+                .keyword(dto.keyword())
+                .priority(dto.priority() != null ? dto.priority() : 0)
+                .category(
+                        Category.builder()
+                                .id(dto.category().id())
+                                .name(dto.category().name())
+                                .build()
+                )
+                .audit(TableAudit.insertAudit(user))
+                .build();
 
-        TimestampAudit audit = new TimestampAudit();
-        audit.setCreatedAt(OffsetDateTime.now());
-        audit.setUpdatedAt(OffsetDateTime.now());
-
-        CategoryRule rule = new CategoryRule(
-                null,
-                user,
-                dto.keyword(),
-                dto.priority() != null ? dto.priority() : 0,
-                category,
-                audit
-        );
-
-        return CategoryRuleDtoMapper.toDto(categoryRuleRepository.save(rule));
+        return categoryRuleRepository.insert(rule);
     }
 
     /**
@@ -86,7 +84,7 @@ public class CategoryRuleService {
      * @return the updated {@link CategoryRuleDto}
      */
     @Transactional
-    public CategoryRuleDto updateRule(Long userId, Long ruleId, CategoryRuleDto dto) {
+    public int updateRule(Long userId, Long ruleId, CategoryRuleDto dto) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
 
@@ -94,15 +92,18 @@ public class CategoryRuleService {
             throw new AccessDeniedException("You do not own this rule");
         }
 
-        Category category = new Category();
-        category.setId(dto.category().id());
+        Category category = Category.builder()
+                .id(dto.category().id())
+                .name(dto.category().name())
+                .build();
 
-        rule.setKeyword(dto.keyword());
-        rule.setCategory(category);
-        rule.setPriority(dto.priority());
-        rule.getAudit().setUpdatedAt(OffsetDateTime.now());
+        rule.toBuilder()
+                .keyword(dto.keyword())
+                .category(category)
+                .priority(dto.priority())
+                .audit(TableAudit.updateAudit(rule.getUser()));
 
-        return CategoryRuleDtoMapper.toDto(categoryRuleRepository.save(rule));
+        return categoryRuleRepository.save(rule);
     }
 
     /**
@@ -164,21 +165,24 @@ public class CategoryRuleService {
     public int applyRules(Long userId) {
         List<CategoryRule> rules = this.categoryRuleRepository.findByUserId(userId);
         List<Category> categories = this.categoryRepository.findByUserId(userId);
-        List<Transaction> transactions = this.transactionRepository.findByUserId(userId);
+        List<TransactionUpdateRequest> transactions = this.transactionRepository.findByUserId(userId)
+                .stream()
+                .map(TransactionUpdateRequest::fromDomain)
+                .toList();
 
         Map<Long, Category> categoryMap = categories.stream()
                 .collect(Collectors.toMap(
                         Category::getId,
                         category -> category, (categoryA, categoryB) -> categoryA));
 
-        List<Transaction> toUpdate = new ArrayList<>();
+        List<TransactionUpdateRequest> toUpdate = new ArrayList<>();
 
-        for (Transaction t : transactions) {
-            if (t.getCategory() != null) {
+        for (TransactionUpdateRequest t : transactions) {
+            if (t.getCategoryId() != null) {
                 continue;
             }
 
-            Long guessedCategory = this.categorizer.guessCategory(t, rules, categories);
+            Long guessedCategory = this.categorizer.guessCategory(userId, t, rules, categories);
             if (null == guessedCategory) {
                 continue;
             }
@@ -188,12 +192,14 @@ public class CategoryRuleService {
                 continue;
             }
 
-            t.setCategory(matchedCategory);
+            t.toBuilder()
+                    .categoryId(matchedCategory.getId())
+                    .build();
             toUpdate.add(t);
         }
 
         if (!toUpdate.isEmpty()) {
-            this.transactionRepository.saveAll(toUpdate);
+            this.transactionRepository.updateAll(toUpdate);
         }
 
         return toUpdate.size();

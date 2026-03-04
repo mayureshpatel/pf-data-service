@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.service.categorization;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,22 @@ public class TransactionCategorizer {
                 .userId(transaction.getAccount() != null && transaction.getAccount().getUserId() != null
                         ? transaction.getAccount().getUserId()
                         : null)
+                .rules(rules)
+                .categories(categories)
+                .build();
+
+        return this.strategies.stream()
+                .sorted(Comparator.comparingInt(CategorizationStrategy::getOrder))
+                .map(s -> s.categorize(transaction, context))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst()
+                .orElse(-1L);
+    }
+
+    public Long guessCategory(Long userId, TransactionUpdateRequest transaction, List<CategoryRule> rules, List<Category> categories) {
+        CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                .userId(userId)
                 .rules(rules)
                 .categories(categories)
                 .build();

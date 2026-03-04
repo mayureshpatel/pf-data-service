@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.service.categorization;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -24,6 +25,8 @@ public interface CategorizationStrategy {
      * @return Optional containing the category id if matched, or empty if not matched.
      */
     Optional<Long> categorize(Transaction transaction, CategorizationContext context);
+
+    Optional<Long> categorize(TransactionUpdateRequest transaction, CategorizationContext context);
 
     /**
      * Determines the order in which strategies are applied. Lower values run first.
