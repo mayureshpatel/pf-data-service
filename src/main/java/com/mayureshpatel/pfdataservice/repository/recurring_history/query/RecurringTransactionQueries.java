@@ -64,7 +64,6 @@ public final class RecurringTransactionQueries {
                 merchant_id = :merchantId,
                 amount = :amount,
                 frequency = :frequency,
-                last_date = :lastDate,
                 next_date = :nextDate,
                 active = :active,
                 updated_at = CURRENT_TIMESTAMP

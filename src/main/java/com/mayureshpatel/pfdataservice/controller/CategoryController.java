@@ -44,7 +44,7 @@ public class CategoryController {
         return ResponseEntity.status(201).body(categoryService.createCategory(userDetails.getId(), request));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping
     public ResponseEntity<Integer> updateCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryUpdateRequest request) {

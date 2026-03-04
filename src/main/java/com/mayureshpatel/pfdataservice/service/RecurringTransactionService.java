@@ -1,14 +1,14 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
@@ -139,44 +139,54 @@ public class RecurringTransactionService {
     }
 
     @Transactional
-    public RecurringTransactionDto createRecurringTransaction(Long userId, RecurringTransactionDto dto) {
-        User user = userRepository.findById(userId)
+    public int createRecurringTransaction(Long userId, RecurringTransactionCreateRequest request) {
+        userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Account account = null;
-        if (dto.account() != null) {
-            account = accountRepository.findById(dto.account().id())
+        if (request.getAccountId() != null) {
+            accountRepository.findById(request.getAccountId())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-            if (!account.getUser().getId().equals(userId)) {
+            if (!request.getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to account");
             }
         }
 
-        Merchant merchant = null;
-        if (dto.merchant() != null && dto.merchant().id() != null) {
-            merchant = merchantRepository.findById(dto.merchant().id())
+        if (request.getMerchantId() != null && request.getMerchantId() > 0) {
+            merchantRepository.findById(request.getMerchantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
-        } else if (dto.merchant() != null) {
-            // Find or create merchant if needed, but for now let's just use ID if provided
-            // In a real app we might want to resolve merchant by name here.
         }
 
-        RecurringTransaction recurring = new RecurringTransaction();
-        recurring.setUser(user);
-        recurring.setAccount(account);
-        recurring.setMerchant(merchant);
-        recurring.setAmount(dto.amount());
-        recurring.setFrequency(dto.frequency());
-        recurring.setLastDate(dto.lastDate());
-        recurring.setNextDate(dto.nextDate());
-        recurring.setActive(true);
-
-        RecurringTransaction saved = recurringRepository.save(recurring);
-        return RecurringTransactionDtoMapper.toDto(saved);
+        return recurringRepository.insert(request, userId);
     }
 
     @Transactional
-    public RecurringTransactionDto updateRecurringTransaction(Long userId, Long id, RecurringTransactionDto dto) {
+    public int updateRecurringTransaction(Long userId, RecurringTransactionUpdateRequest request) {
+        RecurringTransaction recurring = recurringRepository.findById(request.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
+
+        if (!recurring.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Access denied");
+        }
+
+        if (request.getAccountId() != null) {
+            Account account = accountRepository.findById(request.getAccountId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+            if (!account.getUserId().equals(userId)) {
+                throw new AccessDeniedException("Access denied to account");
+            }
+        }
+
+        if (request.getMerchantId() != null && request.getMerchantId() > 0) {
+            merchantRepository.findById(request.getMerchantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
+        }
+
+        return recurringRepository.update(request, userId);
+    }
+
+    @Transactional
+    public int deleteRecurringTransaction(Long userId, Long id) {
         RecurringTransaction recurring = recurringRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
 
@@ -184,42 +194,6 @@ public class RecurringTransactionService {
             throw new AccessDeniedException("Access denied");
         }
 
-        if (dto.account() != null) {
-            Account account = accountRepository.findById(dto.account().id())
-                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-            if (!account.getUser().getId().equals(userId)) {
-                throw new AccessDeniedException("Access denied to account");
-            }
-            recurring.setAccount(account);
-        } else {
-            recurring.setAccount(null);
-        }
-
-        if (dto.merchant() != null && dto.merchant().id() != null) {
-            Merchant merchant = merchantRepository.findById(dto.merchant().id())
-                    .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
-            recurring.setMerchant(merchant);
-        }
-
-        recurring.setAmount(dto.amount());
-        recurring.setFrequency(dto.frequency());
-        recurring.setLastDate(dto.lastDate());
-        recurring.setNextDate(dto.nextDate());
-        recurring.setActive(dto.active());
-
-        RecurringTransaction saved = recurringRepository.save(recurring);
-        return RecurringTransactionDtoMapper.toDto(saved);
-    }
-
-    @Transactional
-    public void deleteRecurringTransaction(Long userId, Long id) {
-        RecurringTransaction recurring = recurringRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
-
-        if (!recurring.getUser().getId().equals(userId)) {
-            throw new AccessDeniedException("Access denied");
-        }
-
-        recurringRepository.delete(id, userId);
+        return recurringRepository.delete(id, userId);
     }
 }

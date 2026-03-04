@@ -14,6 +14,10 @@ import java.time.LocalDate;
 @ToString
 public class RecurringTransactionUpdateRequest {
 
+    @NotNull(message = "Recurring transaction ID cannot be null.")
+    @Positive(message = "Recurring transaction ID must be a positive number.")
+    private final Long id;
+
     @NotNull(message = "Account ID cannot be null.")
     @Positive(message = "Account ID must be a positive number.")
     private final Long accountId;

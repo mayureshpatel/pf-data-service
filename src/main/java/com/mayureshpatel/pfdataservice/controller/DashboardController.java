@@ -1,22 +1,24 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardPulseDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.YtdSummaryDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @RestController
@@ -33,7 +35,7 @@ public class DashboardController {
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate) {
-        
+
         if (startDate != null && endDate != null) {
             ZoneId eastern = ZoneId.of("America/New_York");
             OffsetDateTime start = startDate.atStartOfDay(eastern).toOffsetDateTime();
@@ -42,14 +44,14 @@ public class DashboardController {
         }
 
         LocalDate now = LocalDate.now();
-        int m = month != null ? month : now.getMonthValue();
-        int y = year != null ? year : now.getYear();
+        int montValue = month != null ? month : now.getMonthValue();
+        int yearValue = year != null ? year : now.getYear();
 
-        return ResponseEntity.ok(dashboardService.getCategoryBreakdown(userDetails.getId(), m, y));
+        return ResponseEntity.ok(dashboardService.getCategoryBreakdown(userDetails.getId(), montValue, yearValue));
     }
 
-    @GetMapping("/vendors")
-    public ResponseEntity<List<MerchantBreakdownDto>> getVendorBreakdown(
+    @GetMapping("/merchants")
+    public ResponseEntity<List<MerchantBreakdownDto>> getMerchantBreakdown(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year,
@@ -64,10 +66,10 @@ public class DashboardController {
         }
 
         LocalDate now = LocalDate.now();
-        int m = month != null ? month : now.getMonthValue();
-        int y = year != null ? year : now.getYear();
+        int monthValue = month != null ? month : now.getMonthValue();
+        int yearValue = year != null ? year : now.getYear();
 
-        return ResponseEntity.ok(dashboardService.getMerchantBreakdown(userDetails.getId(), m, y));
+        return ResponseEntity.ok(dashboardService.getMerchantBreakdown(userDetails.getId(), monthValue, yearValue));
     }
 
     @GetMapping("/pulse")
@@ -86,10 +88,10 @@ public class DashboardController {
         }
 
         LocalDate now = LocalDate.now();
-        int m = month != null ? month : now.getMonthValue();
-        int y = year != null ? year : now.getYear();
+        int monthValue = month != null ? month : now.getMonthValue();
+        int yearValue = year != null ? year : now.getYear();
 
-        return ResponseEntity.ok(dashboardService.getPulse(userDetails.getId(), m, y));
+        return ResponseEntity.ok(dashboardService.getPulse(userDetails.getId(), monthValue, yearValue));
     }
 
     @GetMapping("/trend/cashflow")

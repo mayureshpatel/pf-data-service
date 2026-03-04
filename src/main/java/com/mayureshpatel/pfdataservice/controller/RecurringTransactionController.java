@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.RecurringTransactionService;
 import jakarta.validation.Valid;
@@ -32,22 +34,21 @@ public class RecurringTransactionController {
     }
 
     @PostMapping
-    public ResponseEntity<RecurringTransactionDto> createRecurringTransaction(
+    public ResponseEntity<Integer> createRecurringTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid RecurringTransactionDto dto) {
-        return ResponseEntity.status(201).body(recurringService.createRecurringTransaction(userDetails.getId(), dto));
+            @RequestBody @Valid RecurringTransactionCreateRequest request) {
+        return ResponseEntity.status(201).body(recurringService.createRecurringTransaction(userDetails.getId(), request));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<RecurringTransactionDto> updateRecurringTransaction(
+    @PutMapping
+    public ResponseEntity<Integer> updateRecurringTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long id,
-            @RequestBody @Valid RecurringTransactionDto dto) {
-        return ResponseEntity.ok(recurringService.updateRecurringTransaction(userDetails.getId(), id, dto));
+            @RequestBody @Valid RecurringTransactionUpdateRequest request) {
+        return ResponseEntity.ok(recurringService.updateRecurringTransaction(userDetails.getId(), request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRecurringTransaction(
+    public ResponseEntity<Integer> deleteRecurringTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
         recurringService.deleteRecurringTransaction(userDetails.getId(), id);
