@@ -54,7 +54,7 @@ public class AccountService {
         this.userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        return accountRepository.insert(request.toDomain());
+        return accountRepository.insert(request);
     }
 
     /**
