@@ -19,8 +19,8 @@ public class AccountType {
     @EqualsAndHashCode.Include
     private String code;
     private String label;
-    @ToString.Exclude
-    private Iconography iconography;
+    private String color;
+    private String icon;
     private boolean asset;
     private Integer sortOrder;
     private boolean active;
