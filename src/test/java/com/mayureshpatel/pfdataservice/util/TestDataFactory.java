@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.util;
 
+import com.mayureshpatel.pfdataservice.domain.Iconography;
+import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountSnapshot;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
@@ -9,12 +11,8 @@ import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
-import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.domain.transaction.*;
 import com.mayureshpatel.pfdataservice.domain.user.User;
-import com.mayureshpatel.pfdataservice.domain.Iconography;
-import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.account.AccountSnapshotRepository;
 import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
@@ -24,6 +22,7 @@ import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepositor
 import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
 import com.mayureshpatel.pfdataservice.repository.file_import_history.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,10 +32,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
-
-import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
-import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
-import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 
 /**
  * A helper factory for creating test data.

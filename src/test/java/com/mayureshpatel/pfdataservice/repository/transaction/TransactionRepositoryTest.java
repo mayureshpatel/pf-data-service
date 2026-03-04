@@ -10,19 +10,17 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
+import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.mayureshpatel.pfdataservice.domain.currency.Currency;
-import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
-import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

@@ -2,11 +2,7 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
-import com.mayureshpatel.pfdataservice.dto.dashboard.ActionItemDto;
-import com.mayureshpatel.pfdataservice.dto.dashboard.CashFlowTrendDto;
-import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardData;
-import com.mayureshpatel.pfdataservice.dto.dashboard.DashboardPulseDto;
-import com.mayureshpatel.pfdataservice.dto.dashboard.YtdSummaryDto;
+import com.mayureshpatel.pfdataservice.dto.dashboard.*;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
@@ -29,9 +25,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DashboardService unit tests")
