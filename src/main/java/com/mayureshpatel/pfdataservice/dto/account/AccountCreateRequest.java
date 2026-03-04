@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
-import com.mayureshpatel.pfdataservice.domain.account.Account;
 import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,6 +25,7 @@ public class AccountCreateRequest {
     private final String type;
 
     @ToString.Exclude
+    @NotNull(message = "Starting balance cannot be null.")
     @DecimalMin(value = "-9999999999.99", message = "Starting balance must be greater than or equal to -9999999999.99")
     @DecimalMax(value = "9999999999.99", message = "Starting balance must be less than or equal to 9999999999.99")
     private BigDecimal startingBalance;
@@ -36,20 +36,4 @@ public class AccountCreateRequest {
 
     @Size(max = 50, message = "Bank name must be less than 50 characters.")
     private final String bankName;
-
-    /**
-     * Returns the domain object representation of this request.
-     *
-     * @return the domain object representation of this request.
-     */
-    public Account toDomain() {
-        return Account.builder()
-                .userId(userId)
-                .name(name)
-                .typeCode(type)
-                .currentBalance(startingBalance)
-                .currencyCode(currencyCode)
-                .bankCode(bankName)
-                .build();
-    }
 }
