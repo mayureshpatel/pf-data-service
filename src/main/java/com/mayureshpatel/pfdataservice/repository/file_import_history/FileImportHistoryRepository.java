@@ -1,11 +1,14 @@
 package com.mayureshpatel.pfdataservice.repository.file_import_history;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
+import com.mayureshpatel.pfdataservice.dto.transaction.fileimport.FileImportCreateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.file_import_history.mapper.FileImportHistoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.file_import_history.query.FileImportHistoryQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -48,42 +51,19 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
                 .optional();
     }
 
-    public int insert(FileImportHistory fileImportHistory) {
-        org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
-        jdbcClient.sql(FileImportHistoryQueries.INSERT)
-                .param("accountId", fileImportHistory.getAccount().getId())
-                .param("fileHash", fileImportHistory.getFileHash())
-                .param("fileName", fileImportHistory.getFileName())
-                .param("transactionCount", fileImportHistory.getTransactionCount())
+    public int insert(FileImportCreateRequest request) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        return jdbcClient.sql(FileImportHistoryQueries.INSERT)
+                .param("accountId", request.getAccountId())
+                .param("fileHash", request.getFileHash())
+                .param("fileName", request.getFileName())
+                .param("transactionCount", 0)
                 .update(keyHolder);
-
-        fileImportHistory.setId(keyHolder.getKeyAs(Long.class));
-        return fileImportHistory;
     }
 
-    public FileImportHistory update(FileImportHistory fileImportHistory) {
-        throw new UnsupportedOperationException("Update not supported for file import history");
-    }
-
-    public void deleteById(Long id) {
-        jdbcClient.sql(FileImportHistoryQueries.DELETE)
+    public int deleteById(Long id) {
+        return jdbcClient.sql(FileImportHistoryQueries.DELETE)
                 .param("id", id)
                 .update();
-    }
-
-    @Override
-    public FileImportHistory save(FileImportHistory entity) {
-        if (entity.getId() == null) {
-            return insert(entity);
-        } else {
-            return update(entity);
-        }
-    }
-
-    @Override
-    public void delete(FileImportHistory entity) {
-        if (entity.getId() != null) {
-            deleteById(entity.getId());
-        }
     }
 }

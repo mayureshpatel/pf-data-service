@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.account.Account;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -15,7 +14,7 @@ public class FileImportHistory {
 
     @EqualsAndHashCode.Include
     private Long id;
-    private Account account;
+    private Long accountId;
     private String fileName;
     private String fileHash;
     private int transactionCount;
