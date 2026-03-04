@@ -13,6 +13,10 @@ import java.time.OffsetDateTime;
 @ToString
 public class TransactionUpdateRequest {
 
+    @NotNull(message = "Transaction ID cannot be null.")
+    @Positive(message = "Transaction ID must be a positive number.")
+    private final Long id;
+
     @Positive(message = "Category ID must be a positive number.")
     private final Long categoryId;
 

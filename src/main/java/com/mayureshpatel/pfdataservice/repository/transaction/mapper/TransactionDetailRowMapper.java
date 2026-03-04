@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
@@ -29,136 +28,104 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
 
     @Override
     public Transaction mapRow(ResultSet rs, int rowNum) throws SQLException {
-        Transaction transaction = new Transaction();
-        transaction.setId(rs.getLong("id"));
-        transaction.setAmount(getBigDecimal(rs, "amount"));
-        transaction.setTransactionDate(getOffsetDateTime(rs, "date"));
-        transaction.setPostDate(getOffsetDateTime(rs, "post_date"));
-        transaction.setDescription(rs.getString("description"));
+        return Transaction.builder()
+                .id(rs.getLong("id"))
+                .account(mapAccount(rs))
+                .category(mapCategory(rs))
+                .amount(getBigDecimal(rs, "amount"))
+                .transactionDate(getOffsetDateTime(rs, "date"))
+                .postDate(getOffsetDateTime(rs, "post_date"))
+                .description(rs.getString("description"))
+                .merchant(mapMerchant(rs))
+                .type(mapType(rs))
+                .audit(getAuditColumns(rs))
+                .build();
+    }
 
-        String type = rs.getString("type");
-        if (type != null) {
-            transaction.setType(TransactionType.valueOf(type));
-        }
-
-        transaction.setAudit(new SoftDeleteAudit());
-        transaction.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
-        transaction.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
-        transaction.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));
-
-        transaction.setAccount(mapAccount(rs));
-        transaction.setCategory(mapCategory(rs));
-        transaction.setMerchant(mapMerchant(rs));
-
-        return transaction;
+    private TransactionType mapType(ResultSet rs) throws SQLException {
+        return TransactionType.valueOf(rs.getString("type"));
     }
 
     private Account mapAccount(ResultSet rs) throws SQLException {
         Long accountId = getLongOrNull(rs, "account_id");
         if (accountId == null) return null;
 
-        Account account = new Account();
-        account.setId(accountId);
-        account.setName(rs.getString("acc_name"));
-        account.setCurrentBalance(getBigDecimal(rs, "acc_balance"));
-        account.setVersion(getLongOrNull(rs, "acc_version"));
+        Long userId = mapUser(rs) != null ? mapUser(rs).getId() : null;
+        String typeCode = mapAccountType(rs) != null ? mapAccountType(rs).getCode() : null;
+        String currencyCode = mapCurrency(rs) != null ? mapCurrency(rs).getCode() : null;
+        String bankName = mapBankName(rs) != null ? mapBankName(rs).name() : null;
 
+        return Account.builder()
+                .id(accountId)
+                .userId(userId)
+                .name(rs.getString("acc_name"))
+                .typeCode(typeCode)
+                .currentBalance(rs.getBigDecimal("acc_balance"))
+                .currencyCode(currencyCode)
+                .version(rs.getLong("acc_version"))
+                .bankCode(bankName)
+                .audit(getAuditColumns(rs))
+                .build();
+    }
+
+    private User mapUser(ResultSet rs) throws SQLException {
         Long userId = getLongOrNull(rs, "acc_user_id");
-        if (userId != null) {
-            User user = new User();
-            user.setId(userId);
-            account.setUser(user);
-        }
+        if (userId == null) return null;
 
-        String currencyCode = rs.getString("acc_currency_code");
-        if (currencyCode != null) {
-            Currency currency = new Currency();
-            currency.setCode(currencyCode);
-            account.setCurrency(currency);
-        }
+        return User.builder()
+                .id(userId)
+                .build();
+    }
 
+    private BankName mapBankName(ResultSet rs) throws SQLException {
         String bankNameStr = rs.getString("acc_bank_name");
-        if (bankNameStr != null) {
-            account.setBankName(BankName.valueOf(bankNameStr));
-        }
+        if (bankNameStr == null) return null;
 
+        return BankName.valueOf(bankNameStr);
+    }
+
+    private Currency mapCurrency(ResultSet rs) throws SQLException {
+        String currencyCode = rs.getString("acc_currency_code");
+        if (currencyCode == null) return null;
+
+        return Currency.builder()
+                .code(currencyCode)
+                .build();
+    }
+
+    private AccountType mapAccountType(ResultSet rs) throws SQLException {
         String accTypeCode = rs.getString("acc_type_code");
-        if (accTypeCode != null) {
-            AccountType accountType = new AccountType();
-            accountType.setCode(accTypeCode);
-            accountType.setLabel(rs.getString("acc_type_label"));
-            accountType.setAsset(rs.getBoolean("acc_type_is_asset"));
-            accountType.setSortOrder(rs.getInt("acc_type_sort_order"));
-            accountType.setActive(rs.getBoolean("acc_type_is_active"));
-            accountType.setIconography(new Iconography(
-                    rs.getString("acc_type_icon"),
-                    rs.getString("acc_type_color")
-            ));
-            account.setType(accountType);
-        }
+        if (accTypeCode == null) return null;
 
-        return account;
+        return AccountType.builder()
+                .code(accTypeCode)
+                .label(rs.getString("acc_type_label"))
+                .asset(rs.getBoolean("acc_type_is_asset"))
+                .sortOrder(rs.getInt("acc_type_sort_order"))
+                .active(rs.getBoolean("acc_type_is_active"))
+                .color(rs.getString("acc_type_color"))
+                .icon(rs.getString("acc_type_icon"))
+                .build();
     }
 
     private Category mapCategory(ResultSet rs) throws SQLException {
-        Long categoryId = getLongOrNull(rs, "category_id");
-        if (categoryId == null) return null;
-
-        Category category = new Category();
-        category.setId(categoryId);
-        category.setName(rs.getString("cat_name"));
-        category.setIconography(new Iconography(
-                rs.getString("cat_icon"),
-                rs.getString("cat_color")
-        ));
-
-        String catType = rs.getString("cat_type");
-        if (catType != null) {
-            category.setType(CategoryType.valueOf(catType));
-        }
-
-        Long catUserId = getLongOrNull(rs, "cat_user_id");
-        if (catUserId != null) {
-            User catUser = new User();
-            catUser.setId(catUserId);
-            category.setUser(catUser);
-        }
-
-        Long parentId = getLongOrNull(rs, "pcat_id");
-        if (parentId != null) {
-            Category parent = new Category();
-            parent.setId(parentId);
-            parent.setName(rs.getString("pcat_name"));
-            parent.setIconography(new Iconography(
-                    rs.getString("pcat_icon"),
-                    rs.getString("pcat_color")
-            ));
-            String pcatType = rs.getString("pcat_type");
-            if (pcatType != null) {
-                parent.setType(CategoryType.valueOf(pcatType));
-            }
-            category.setParent(parent);
-        }
-
-        return category;
+        return Category.builder()
+                .id(rs.getLong("category_id"))
+                .userId(rs.getLong("cat_user_id"))
+                .name(rs.getString("cat_name"))
+                .type(CategoryType.valueOf(rs.getString("cat_type")).name())
+                .parentId(rs.getLong("pcat_id"))
+                .color(rs.getString("cat_color"))
+                .icon(rs.getString("cat_icon"))
+                .build();
     }
 
     private Merchant mapMerchant(ResultSet rs) throws SQLException {
-        Long merchantId = getLongOrNull(rs, "merchant_id");
-        if (merchantId == null) return null;
-
-        Merchant merchant = new Merchant();
-        merchant.setId(merchantId);
-        merchant.setOriginalName(rs.getString("merch_original_name"));
-        merchant.setCleanName(rs.getString("merch_clean_name"));
-
-        Long merchUserId = getLongOrNull(rs, "merch_user_id");
-        if (merchUserId != null) {
-            User merchUser = new User();
-            merchUser.setId(merchUserId);
-            merchant.setUser(merchUser);
-        }
-
-        return merchant;
+        return Merchant.builder()
+                .id(rs.getLong("merchant_id"))
+                .userId(rs.getLong("merch_user_id"))
+                .originalName(rs.getString("merch_original_name"))
+                .cleanName(rs.getString("merch_clean_name"))
+                .build();
     }
 }

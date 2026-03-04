@@ -17,41 +17,41 @@ public class TransactionRowMapper extends JdbcMapperUtils implements RowMapper<T
 
     @Override
     public Transaction mapRow(ResultSet rs, int rowNum) throws SQLException {
-        Merchant merchant = new Merchant();
-        merchant.setId(rs.getLong("merchant_id"));
+        Merchant merchant = Merchant.builder()
+                .id(rs.getLong("merchant_id"))
+                .build();
 
-        Transaction transaction = new Transaction();
-        transaction.setId(rs.getLong("id"));
-        transaction.setAmount(getBigDecimal(rs, "amount"));
-        transaction.setTransactionDate(getOffsetDateTime(rs, "date"));
-        transaction.setPostDate(getOffsetDateTime(rs, "post_date"));
-        transaction.setDescription(rs.getString("description"));
-        transaction.setMerchant(merchant);
+        Transaction transaction = Transaction.builder()
+                .id(rs.getLong("id"))
+                .amount(getBigDecimal(rs, "amount"))
+                .transactionDate(getOffsetDateTime(rs, "date"))
+                .postDate(getOffsetDateTime(rs, "post_date"))
+                .description(rs.getString("description"))
+                .merchant(merchant)
+                .build();
 
         String type = rs.getString("type");
         if (type != null) {
-            transaction.setType(TransactionType.valueOf(type));
+            transaction.toBuilder().type(TransactionType.valueOf(type));
         }
 
         Long accountId = getLongOrNull(rs, "account_id");
         if (accountId != null) {
-            Account account = new Account();
-            account.setId(accountId);
-            transaction.setAccount(account);
+            Account account = Account.builder()
+                    .id(accountId)
+                    .build();
+            transaction.toBuilder().account(account);
         }
 
         Long categoryId = getLongOrNull(rs, "category_id");
         if (categoryId != null) {
-            Category category = new Category();
-            category.setId(categoryId);
-            transaction.setCategory(category);
+            Category category = Category.builder()
+                    .id(categoryId)
+                    .build();
+            transaction.toBuilder().category(category);
         }
 
-        transaction.setAudit(new SoftDeleteAudit());
-        transaction.getAudit().setCreatedAt(getOffsetDateTime(rs, "created_at"));
-        transaction.getAudit().setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
-        transaction.getAudit().setDeletedAt(getOffsetDateTime(rs, "deleted_at"));
-
+        transaction.toBuilder().audit(getAuditColumns(rs));
         return transaction;
     }
 }

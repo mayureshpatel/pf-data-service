@@ -6,6 +6,8 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
@@ -31,7 +33,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository("jdbcTransactionRepository")
 @RequiredArgsConstructor
@@ -93,68 +94,49 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .optional().isPresent();
     }
 
-    @Override
-    public int insert(Transaction transaction) {
+    public int insert(TransactionCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        jdbcClient.sql(TransactionQueries.INSERT)
-                .param("amount", transaction.getAmount())
-                .param("date", transaction.getTransactionDate())
-                .param("postDate", transaction.getPostDate())
-                .param("description", transaction.getDescription())
-                .param("merchantId", transaction.getMerchant().getId())
-                .param("type", transaction.getType().name())
-                .param("accountId", transaction.getAccount().getId())
-                .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
+        return jdbcClient.sql(TransactionQueries.INSERT)
+                .param("accountId", request.getAccountId())
+                .param("categoryId", request.getCategoryId())
+                .param("amount", request.getAmount())
+                .param("date", request.getTransactionDate())
+                .param("postDate", request.getPostDate())
+                .param("description", request.getDescription())
+                .param("type", request.getType())
+                .param("merchantId", request.getMerchantId())
                 .update(keyHolder);
-
-        transaction.setId(keyHolder.getKeyAs(Long.class));
-
-        return transaction;
     }
 
-    @Override
-    public Transaction update(Transaction transaction) {
-        jdbcClient.sql(TransactionQueries.UPDATE)
-                .param("amount", transaction.getAmount())
-                .param("date", transaction.getTransactionDate())
-                .param("postDate", transaction.getPostDate())
-                .param("description", transaction.getDescription())
-                .param("merchantId", transaction.getMerchant().getId())
-                .param("type", transaction.getType().name())
-                .param("accountId", transaction.getAccount().getId())
-                .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
-                .param("id", transaction.getId())
+    public int update(TransactionUpdateRequest request) {
+        return jdbcClient.sql(TransactionQueries.UPDATE)
+                .param("id", request.getId())
+                .param("categoryId", request.getCategoryId())
+                .param("amount", request.getAmount())
+                .param("date", request.getTransactionDate())
+                .param("postDate", request.getPostDate())
+                .param("description", request.getDescription())
+                .param("type", request.getType())
+                .param("merchantId", request.getMerchantId())
                 .update();
+    }
 
-        return transaction;
+    public Integer insertAll(List<TransactionCreateRequest> requestList) {
+        return requestList.stream()
+                .map(this::insert)
+                .mapToInt(Integer::intValue).sum();
+    }
+
+    public Integer updateAll(List<TransactionUpdateRequest> requestList) {
+        return requestList.stream()
+                .map(this::update)
+                .mapToInt(Integer::intValue).sum();
     }
 
     @Override
-    public Transaction save(Transaction transaction) {
-        if (transaction.getId() == null) {
-            return insert(transaction);
-        } else {
-            return update(transaction);
-        }
-    }
-
-    public List<Transaction> saveAll(List<Transaction> transactions) {
-        return transactions.stream()
-                .map(this::save)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public void delete(Transaction transaction) {
-        if (transaction.getId() != null) {
-            deleteById(transaction.getId());
-        }
-    }
-
-    @Override
-    public void deleteById(Long id) {
-        jdbcClient.sql(TransactionQueries.DELETE_BY_ID)
+    public int deleteById(Long id) {
+        return jdbcClient.sql(TransactionQueries.DELETE_BY_ID)
                 .param("id", id)
                 .update();
     }
@@ -252,8 +234,8 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         if (ids == null || ids.isEmpty()) return 0;
         return findAllById(ids).stream()
                 .filter(t -> t.getAccount() != null
-                        && t.getAccount().getUser() != null
-                        && userId.equals(t.getAccount().getUser().getId()))
+                        && t.getAccount().getUserId() != null
+                        && userId.equals(t.getAccount().getUserId()))
                 .count();
     }
 
