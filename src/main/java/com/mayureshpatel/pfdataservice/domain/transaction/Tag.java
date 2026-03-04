@@ -15,7 +15,7 @@ public class Tag {
 
     private Long id;
     @ToString.Exclude
-    private User user;
+    private Long userId;
     private String name;
     private String color;
 

@@ -38,46 +38,25 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
     @Override
     public int insert(Tag tag) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcClient.sql(TagQueries.INSERT)
+        return jdbcClient.sql(TagQueries.INSERT)
                 .param("name", tag.getName())
                 .param("color", tag.getColor())
-                .param("userId", tag.getUser().getId())
+                .param("userId", tag.getUserId())
                 .update(keyHolder);
-
-        tag.setId(keyHolder.getKeyAs(Long.class));
-        return tag;
     }
 
     @Override
-    public Tag update(Tag tag) {
-        jdbcClient.sql(TagQueries.UPDATE)
+    public int update(Tag tag) {
+        return jdbcClient.sql(TagQueries.UPDATE)
                 .param("name", tag.getName())
                 .param("color", tag.getColor())
                 .param("id", tag.getId())
                 .update();
-
-        return tag;
     }
 
     @Override
-    public Tag save(Tag tag) {
-        if (tag.getId() == null) {
-            return insert(tag);
-        } else {
-            return update(tag);
-        }
-    }
-
-    @Override
-    public void delete(Tag tag) {
-        if (tag.getId() != null) {
-            deleteById(tag.getId());
-        }
-    }
-
-    @Override
-    public void deleteById(Long id) {
-        jdbcClient.sql(TagQueries.DELETE)
+    public int deleteById(Long id) {
+        return jdbcClient.sql(TagQueries.DELETE)
                 .param("id", id)
                 .update();
     }

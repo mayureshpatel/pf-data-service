@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.tag.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -14,23 +13,12 @@ public class TagRowMapper extends JdbcMapperUtils implements RowMapper<Tag> {
 
     @Override
     public Tag mapRow(ResultSet rs, int rowNum) throws SQLException {
-        Tag tag = new Tag();
-        tag.setId(rs.getLong("id"));
-        tag.setName(rs.getString("name"));
-        tag.setColor(rs.getString("color"));
-
-        Long userId = getLongOrNull(rs, "user_id");
-        if (userId != null) {
-            User user = new User();
-            user.setId(userId);
-            tag.setUser(user);
-        }
-
-        TimestampAudit audit = new TimestampAudit();
-        audit.setCreatedAt(getOffsetDateTime(rs, "created_at"));
-        audit.setUpdatedAt(getOffsetDateTime(rs, "updated_at"));
-        tag.setAudit(audit);
-
-        return tag;
+        return Tag.builder()
+                .id(rs.getLong("id"))
+                .userId(rs.getLong("user_id"))
+                .name(rs.getString("name"))
+                .color(rs.getString("color"))
+                .audit(getAuditColumns(rs))
+                .build();
     }
 }
