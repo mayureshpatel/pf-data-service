@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.account;
 
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
+import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountTypeRowMapper;
 import com.mayureshpatel.pfdataservice.repository.account.query.AccountTypeQueries;
@@ -17,7 +18,7 @@ public class AccountTypeRepository implements JdbcRepository<AccountType, String
     private final JdbcClient jdbcClient;
     private final AccountTypeRowMapper rowMapper;
 
-    public List<AccountType> findByIsActiveTrueOrderBySortOrder() {
+    public List<AccountTypeDto> findByIsActiveTrueOrderBySortOrder() {
         return this.jdbcClient.sql(AccountTypeQueries.FIND_ALL_ORDERED)
                 .query(rowMapper)
                 .list();
