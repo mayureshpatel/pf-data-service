@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.repository.category;
 
 import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.category.query.CategoryQueries;
@@ -56,58 +58,43 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .list();
     }
 
-    @Override
-    public int insert(Category category) {
+    public int insert(CategoryCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcClient.sql(CategoryQueries.INSERT)
-                .param("name", category.getName())
-                .param("color", category.getIconography().getColor())
-                .param("icon", category.getIconography().getIcon())
-                .param("type", category.getType().name())
-                .param("userId", category.getUser().getId())
-                .param("parentId", category.getParent() != null ? category.getParent().getId() : null)
+        return jdbcClient.sql(CategoryQueries.INSERT)
+                .param("name", request.getName())
+                .param("color", request.getColor())
+                .param("icon", request.getIcon())
+                .param("type", request.getType())
+                .param("userId", request.getUserId())
+                .param("parentId", request.getParentId() != null ? request.getParentId() : null)
                 .update(keyHolder);
-
-        category.setId(keyHolder.getKeyAs(Long.class));
-        return category;
     }
 
-    @Override
-    public Category update(Category category) {
-        jdbcClient.sql(CategoryQueries.UPDATE)
-                .param("name", category.getName())
-                .param("color", category.getIconography().getColor())
-                .param("icon", category.getIconography().getIcon())
-                .param("type", category.getType().name())
-                .param("parentId", category.getParent() != null ? category.getParent().getId() : null)
-                .param("id", category.getId())
-                .param("userId", category.getUser().getId())
+    public int update(CategoryUpdateRequest request) {
+        return jdbcClient.sql(CategoryQueries.UPDATE)
+                .param("name", request.getName())
+                .param("color", request.getColor())
+                .param("icon", request.getIcon())
+                .param("type", request.getType())
+                .param("parentId", request.getParentId() != null ? request.getParentId() : null)
+                .param("id", request.getId())
+                .param("userId", request.getUserId())
                 .update();
-
-        return category;
     }
 
     @Override
-    public Category save(Category category) {
-        if (category.getId() == null) {
-            return insert(category);
-        } else {
-            return update(category);
-        }
-    }
-
-    @Override
-    public void delete(Category category) {
+    public int delete(Category category) {
         if (category.getId() != null) {
-            jdbcClient.sql(CategoryQueries.DELETE)
+            return jdbcClient.sql(CategoryQueries.DELETE)
                     .param("id", category.getId())
                     .param("userId", category.getUser().getId())
                     .update();
         }
+        return 0;
     }
 
     @Override
-    public void deleteById(Long id) {
+    public int deleteById(Long id) {
         throw new UnsupportedOperationException("Use delete(Category category) to ensure userId is provided");
     }
 

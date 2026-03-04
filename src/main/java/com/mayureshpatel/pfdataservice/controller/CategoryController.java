@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.category.CategoryCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.CategoryService;
 import jakarta.validation.Valid;
@@ -10,7 +12,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/v1/categories", "/api/categories"})
@@ -37,25 +38,23 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ResponseEntity<CategoryDto> createCategory(
+    public ResponseEntity<Integer> createCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid CategoryDto categoryDto) {
-        return ResponseEntity.status(201).body(categoryService.createCategory(userDetails.getId(), categoryDto));
+            @RequestBody @Valid CategoryCreateRequest request) {
+        return ResponseEntity.status(201).body(categoryService.createCategory(userDetails.getId(), request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryDto> updateCategory(
+    public ResponseEntity<Integer> updateCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long id,
-            @RequestBody @Valid CategoryDto categoryDto) {
-        return ResponseEntity.ok(categoryService.updateCategory(userDetails.getId(), id, categoryDto));
+            @RequestBody @Valid CategoryUpdateRequest request) {
+        return ResponseEntity.ok(categoryService.updateCategory(userDetails.getId(), request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(
+    public ResponseEntity<Integer> deleteCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
-        categoryService.deleteCategory(userDetails.getId(), id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(categoryService.deleteCategory(userDetails.getId(), id));
     }
 }

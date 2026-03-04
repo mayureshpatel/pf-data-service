@@ -1,9 +1,9 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
-import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
@@ -31,63 +31,54 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryDto createCategory(Long userId, CategoryDto categoryDto) {
-        User user = userRepository.findById(userId)
+    public int createCategory(Long userId, CategoryCreateRequest request) {
+        userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Category category = new Category();
-        category.setName(categoryDto.name());
-        category.setIconography(new Iconography(categoryDto.icon(), categoryDto.color()));
-        category.setType(categoryDto.categoryType());
-        category.setUser(user);
-
-        if (categoryDto.parent() != null) {
-            Category parent = categoryRepository.findById(categoryDto.parent().id())
+        // if has parent category, check if it exists and belongs to the user
+        if (request.getParentId() != null && request.getParentId() != 0) {
+            Category parent = categoryRepository.findById(request.getParentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
-
-            category.setParent(parent);
         }
 
-        return CategoryDtoMapper.toDto(categoryRepository.save(category));
+        return categoryRepository.insert(request);
     }
 
     @Transactional
-    public CategoryDto updateCategory(Long userId, Long categoryId, CategoryDto dto) {
-        Category category = categoryRepository.findById(categoryId)
+    public int updateCategory(Long userId, CategoryUpdateRequest request) {
+        Category category = categoryRepository.findById(request.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
-        category.setName(dto.name());
-        category.setIconography(new Iconography(dto.icon(), dto.color()));
-        category.setType(dto.categoryType());
+        if (request.getParentId() != null) {
+            if (request.getParentId() == 0) {
+                throw new IllegalArgumentException("Parent category ID cannot be zero.");
+            }
 
-        if (dto.parent() != null) {
-            if (dto.parent().id().equals(categoryId)) {
+            if (request.getParentId().equals(request.getId())) {
                 throw new IllegalArgumentException("Category cannot be its own parent");
             }
 
-            Category parent = categoryRepository.findById(dto.parent().id())
+            Category parent = categoryRepository.findById(request.getParentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
 
             if (!parent.getUser().getId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to parent category");
             }
-
-            category.setParent(parent);
         }
 
-        return CategoryDtoMapper.toDto(this.categoryRepository.save(category));
+        return this.categoryRepository.update(request);
     }
 
     @Transactional
-    public void deleteCategory(Long userId, Long categoryId) {
+    public int deleteCategory(Long userId, Long categoryId) {
         Category category = this.categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
@@ -100,7 +91,7 @@ public class CategoryService {
             throw new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first.");
         }
 
-        categoryRepository.delete(category);
+        return categoryRepository.delete(category);
     }
 
     /**
