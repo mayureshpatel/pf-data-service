@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
@@ -17,7 +16,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -70,9 +68,9 @@ public class BudgetService {
     }
 
     @Transactional
-    public BudgetDto create(Long userId, BudgetCreateRequest request) {
+    public int create(Long userId, BudgetCreateRequest request) {
         // get the user; throw exception if not found
-        User user = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // get the category; throw exception if not found
@@ -88,38 +86,21 @@ public class BudgetService {
         budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(
                 userId, request.getCategoryId(), request.getMonth(), request.getYear());
 
-        // create or update budget
-        Budget budget = Budget.builder()
-                .user(user)
-                .category(category)
-                .amount(request.getAmount())
-                .month(request.getMonth())
-                .year(request.getYear())
-                .build();
-
-        return BudgetDtoMapper.toDto(budgetRepository.save(budget));
+        return budgetRepository.insert(request);
     }
 
     @Transactional
-    public BudgetDto update(Long userId, BudgetUpdateRequest request) {
+    public int update(Long userId, BudgetUpdateRequest request) {
         // check if the budget exists
         Budget existingBudget = budgetRepository.findById(request.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Budget not found"));
 
         // ensure user has access to the budget
-        if (!existingBudget.getUser().getId().equals(userId)) {
+        if (!existingBudget.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
-        // update budget
-        Budget budget = Budget.builder()
-                .id(existingBudget.getId())
-                .user(existingBudget.getUser())
-                .category(existingBudget.getCategory())
-                .amount(request.getAmount())
-                .build();
-
-        return BudgetDtoMapper.toDto(budgetRepository.save(budget));
+        return budgetRepository.update(request);
     }
 
     @Transactional
@@ -128,13 +109,9 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("Budget not found"));
 
         // ensure user has access to the budget
-        if (!budget.getUser().getId().equals(userId)) {
+        if (!budget.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
-
-        budget.getAudit().toBuilder()
-                .deletedAt(OffsetDateTime.now())
-                .build();
-        budgetRepository.save(budget);
+        budgetRepository.deleteById(budgetId);
     }
 }

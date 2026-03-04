@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.repository.budget;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetRowMapper;
@@ -32,50 +34,36 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .optional();
     }
 
-    @Override
-    public int insert(Budget budget) {
+    public int insert(BudgetCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcClient.sql(BudgetQueries.INSERT)
-                .param("userId", budget.getUser().getId())
-                .param("categoryId", budget.getCategory().getId())
-                .param("amount", budget.getAmount())
-                .param("month", budget.getMonth())
-                .param("year", budget.getYear())
+        return jdbcClient.sql(BudgetQueries.INSERT)
+                .param("userId", request.getUserId())
+                .param("categoryId", request.getCategoryId())
+                .param("amount", request.getAmount())
+                .param("month", request.getMonth())
+                .param("year", request.getYear())
                 .update(keyHolder);
-
-        budget.setId(keyHolder.getKeyAs(Long.class));
-        return budget;
     }
 
-    @Override
-    public Budget update(Budget budget) {
-        jdbcClient.sql(BudgetQueries.UPDATE)
-                .param("amount", budget.getAmount())
-                .param("id", budget.getId())
+    public int update(BudgetUpdateRequest request) {
+        return jdbcClient.sql(BudgetQueries.UPDATE)
+                .param("amount", request.getAmount())
+                .param("id", request.getId())
                 .update();
-
-        return budget;
     }
 
     @Override
-    public Budget save(Budget budget) {
-        if (budget.getId() == null) {
-            return insert(budget);
-        } else {
-            return update(budget);
-        }
-    }
-
-    @Override
-    public void delete(Budget budget) {
+    public int delete(Budget budget) {
         if (budget.getId() != null) {
-            deleteById(budget.getId());
+            return deleteById(budget.getId());
         }
+
+        return 0;
     }
 
     @Override
-    public void deleteById(Long id) {
-        jdbcClient.sql(BudgetQueries.DELETE)
+    public int deleteById(Long id) {
+        return jdbcClient.sql(BudgetQueries.DELETE)
                 .param("id", id)
                 .update();
     }

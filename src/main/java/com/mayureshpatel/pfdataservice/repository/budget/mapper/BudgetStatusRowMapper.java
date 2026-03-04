@@ -16,19 +16,23 @@ public class BudgetStatusRowMapper implements RowMapper<BudgetStatusDto> {
 
     @Override
     public BudgetStatusDto mapRow(ResultSet rs, int rowNum) throws SQLException {
-        User user = new User();
-        user.setId(rs.getLong("category_user_id"));
+        User user = User.builder()
+                .id(rs.getLong("category_user_id"))
+                .build();
 
-        Category parentCategory = new Category();
-        parentCategory.setId(rs.getLong("parent_category_id"));
-        parentCategory.setName(rs.getString("parent_category_name"));
+        Category parentCategory = Category.builder()
+                .id(rs.getLong("parent_category_id"))
+                .user(user)
+                .name(rs.getString("parent_category_name"))
+                .build();
 
-        Category category = new Category();
-        category.setId(rs.getLong("category_id"));
-        category.setUser(user);
-        category.setName(rs.getString("category_name"));
-        category.setType(CategoryType.valueOf(rs.getString("category_type")));
-        category.setParent(parentCategory);
+        Category category = Category.builder()
+                .id(rs.getLong("category_id"))
+                .user(user)
+                .name(rs.getString("category_name"))
+                .type(CategoryType.valueOf(rs.getString("category_type")))
+                .parent(parentCategory)
+                .build();
 
         return new BudgetStatusDto(
                 CategoryDtoMapper.toDto(category),
