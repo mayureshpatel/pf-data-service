@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -17,8 +16,8 @@ public class RecurringTransaction extends Transaction {
 
     @EqualsAndHashCode.Include
     private Long id;
-    private User user;
-    private Frequency frequency;
+    private Long userId;
+    private String frequency;
 
     private LocalDate lastDate;
     private LocalDate nextDate;

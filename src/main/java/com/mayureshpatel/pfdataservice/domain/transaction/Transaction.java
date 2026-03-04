@@ -20,14 +20,14 @@ public class Transaction {
 
     @EqualsAndHashCode.Include
     private Long id;
-    private Account account;
-    private Category category;
+    private Long accountId;
+    private Long categoryId;
     private BigDecimal amount;
     private OffsetDateTime transactionDate;
     private OffsetDateTime postDate;
     private String description;
-    private Merchant merchant;
-    private TransactionType type;
+    private Long merchantId;
+    private String type;
 
     @ToString.Exclude
     private TableAudit audit;
