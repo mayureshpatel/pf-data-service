@@ -5,7 +5,8 @@
 -- ====================================================================================
 -- 1. ADD merchant_id COLUMN (nullable during migration)
 -- ====================================================================================
-ALTER TABLE recurring_transactions ADD COLUMN merchant_id BIGINT;
+ALTER TABLE recurring_transactions
+    ADD COLUMN merchant_id BIGINT;
 
 -- ====================================================================================
 -- 2. SEED MERCHANTS FROM EXISTING merchant_name DATA
@@ -15,11 +16,10 @@ INSERT INTO merchants (original_name, clean_name)
 SELECT DISTINCT merchant_name, merchant_name
 FROM recurring_transactions
 WHERE merchant_name IS NOT NULL
-  AND NOT EXISTS (
-      SELECT 1 FROM merchants m
-      WHERE m.original_name = recurring_transactions.merchant_name
-        AND m.user_id IS NULL
-  );
+  AND NOT EXISTS (SELECT 1
+                  FROM merchants m
+                  WHERE m.original_name = recurring_transactions.merchant_name
+                    AND m.user_id IS NULL);
 
 -- ====================================================================================
 -- 3. LINK RECURRING TRANSACTIONS TO MERCHANTS
@@ -35,9 +35,9 @@ WHERE rt.merchant_name = m.original_name
 -- ====================================================================================
 ALTER TABLE recurring_transactions
     ADD CONSTRAINT fk_recurring_transactions_merchant
-    FOREIGN KEY (merchant_id) REFERENCES merchants(id) ON DELETE SET NULL;
+        FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE SET NULL;
 
-CREATE INDEX idx_recurring_transactions_merchant_id ON recurring_transactions(merchant_id);
+CREATE INDEX idx_recurring_transactions_merchant_id ON recurring_transactions (merchant_id);
 
 -- ====================================================================================
 -- 5. ENFORCE NOT NULL (merchant_name was NOT NULL; merchant_id should be too)
@@ -48,4 +48,5 @@ ALTER TABLE recurring_transactions
 -- ====================================================================================
 -- 6. DROP merchant_name (replaced by merchant_id)
 -- ====================================================================================
-ALTER TABLE recurring_transactions DROP COLUMN merchant_name;
+ALTER TABLE recurring_transactions
+    DROP COLUMN merchant_name;

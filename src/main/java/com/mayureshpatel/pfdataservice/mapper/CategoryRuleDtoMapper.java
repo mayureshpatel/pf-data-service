@@ -5,7 +5,8 @@ import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 
 public final class CategoryRuleDtoMapper {
 
-    private CategoryRuleDtoMapper() {}
+    private CategoryRuleDtoMapper() {
+    }
 
     public static CategoryRuleDto toDto(CategoryRule rule) {
         if (rule == null) return null;

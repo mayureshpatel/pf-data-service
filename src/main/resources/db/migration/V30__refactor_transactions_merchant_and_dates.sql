@@ -8,7 +8,8 @@
 -- ====================================================================================
 -- 1. ADD merchant_id COLUMN
 -- ====================================================================================
-ALTER TABLE transactions ADD COLUMN merchant_id BIGINT;
+ALTER TABLE transactions
+    ADD COLUMN merchant_id BIGINT;
 
 -- ====================================================================================
 -- 2. SEED MERCHANTS FROM EXISTING TRANSACTION vendor_name DATA
@@ -20,11 +21,10 @@ INSERT INTO merchants (original_name, clean_name)
 SELECT DISTINCT vendor_name, vendor_name
 FROM transactions
 WHERE vendor_name IS NOT NULL
-  AND NOT EXISTS (
-      SELECT 1 FROM merchants m
-      WHERE m.original_name = transactions.vendor_name
-        AND m.user_id IS NULL
-  );
+  AND NOT EXISTS (SELECT 1
+                  FROM merchants m
+                  WHERE m.original_name = transactions.vendor_name
+                    AND m.user_id IS NULL);
 
 -- ====================================================================================
 -- 3. LINK TRANSACTIONS TO MERCHANTS
@@ -40,19 +40,21 @@ WHERE t.vendor_name = m.original_name
 -- ====================================================================================
 ALTER TABLE transactions
     ADD CONSTRAINT fk_transactions_merchant
-    FOREIGN KEY (merchant_id) REFERENCES merchants(id) ON DELETE SET NULL;
+        FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE SET NULL;
 
-CREATE INDEX idx_transactions_merchant_id ON transactions(merchant_id);
+CREATE INDEX idx_transactions_merchant_id ON transactions (merchant_id);
 
 -- ====================================================================================
 -- 5. DROP vendor_name (replaced by merchant_id)
 -- ====================================================================================
-ALTER TABLE transactions DROP COLUMN vendor_name;
+ALTER TABLE transactions
+    DROP COLUMN vendor_name;
 
 -- ====================================================================================
 -- 6. DROP original_vendor_name (original_name now lives on merchants table)
 -- ====================================================================================
-ALTER TABLE transactions DROP COLUMN original_vendor_name;
+ALTER TABLE transactions
+    DROP COLUMN original_vendor_name;
 
 -- ====================================================================================
 -- 7. CONVERT date FROM DATE → TIMESTAMPTZ
@@ -60,7 +62,7 @@ ALTER TABLE transactions DROP COLUMN original_vendor_name;
 -- ====================================================================================
 ALTER TABLE transactions
     ALTER COLUMN date TYPE TIMESTAMPTZ
-    USING date::TIMESTAMP AT TIME ZONE 'UTC';
+        USING date::TIMESTAMP AT TIME ZONE 'UTC';
 
 -- ====================================================================================
 -- 8. CONVERT post_date FROM DATE → TIMESTAMPTZ
@@ -68,4 +70,4 @@ ALTER TABLE transactions
 -- ====================================================================================
 ALTER TABLE transactions
     ALTER COLUMN post_date TYPE TIMESTAMPTZ
-    USING post_date::TIMESTAMP AT TIME ZONE 'UTC';
+        USING post_date::TIMESTAMP AT TIME ZONE 'UTC';

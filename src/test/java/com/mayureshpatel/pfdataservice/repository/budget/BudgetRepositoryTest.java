@@ -78,15 +78,17 @@ class BudgetRepositoryTest extends BaseIntegrationTest {
     private Account createAccount(User user, String name) {
         try {
             accountTypeRepository.save(new AccountType("CHECKING", "Checking", null, true, 1, true, null));
-        } catch (Exception e) { }
-        
+        } catch (Exception e) {
+        }
+
         com.mayureshpatel.pfdataservice.domain.currency.Currency currency = new com.mayureshpatel.pfdataservice.domain.currency.Currency();
         currency.setCode("USD");
         currency.setSymbol("$");
         currency.setName("US Dollar");
         try {
             currencyRepository.save(currency);
-        } catch (Exception e) { }
+        } catch (Exception e) {
+        }
 
         Account account = new Account();
         account.setUser(user);

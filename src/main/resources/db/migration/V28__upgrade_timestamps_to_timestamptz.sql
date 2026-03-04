@@ -16,18 +16,19 @@ ALTER TABLE accounts
     ALTER COLUMN updated_at SET DEFAULT NOW();
 
 COMMENT ON COLUMN accounts.created_at IS
-'Timestamp when account was created (stored in UTC, displayed in user timezone)';
+    'Timestamp when account was created (stored in UTC, displayed in user timezone)';
 COMMENT ON COLUMN accounts.updated_at IS
-'Timestamp when account was last updated (stored in UTC, auto-updated by trigger)';
+    'Timestamp when account was last updated (stored in UTC, auto-updated by trigger)';
 COMMENT ON COLUMN accounts.deleted_at IS
-'Timestamp when account was soft-deleted (stored in UTC)';
+    'Timestamp when account was soft-deleted (stored in UTC)';
 
 -- ====================================================================================
 -- 2. CREATE TRIGGER FOR AUTO-UPDATE TIMESTAMP
 -- ====================================================================================
 -- Create function to auto-update updated_at
 CREATE OR REPLACE FUNCTION update_accounts_updated_at()
-RETURNS TRIGGER AS $$
+    RETURNS TRIGGER AS
+$$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
@@ -36,12 +37,13 @@ $$ LANGUAGE plpgsql;
 
 -- Create trigger
 CREATE TRIGGER trg_accounts_updated_at
-    BEFORE UPDATE ON accounts
+    BEFORE UPDATE
+    ON accounts
     FOR EACH ROW
-    EXECUTE FUNCTION update_accounts_updated_at();
+EXECUTE FUNCTION update_accounts_updated_at();
 
 COMMENT ON FUNCTION update_accounts_updated_at() IS
-'Automatically updates the updated_at column to current timestamp on every UPDATE';
+    'Automatically updates the updated_at column to current timestamp on every UPDATE';
 
 -- ====================================================================================
 -- 3. UPGRADE LOOKUP TABLE TIMESTAMPS
@@ -57,9 +59,10 @@ ALTER TABLE account_types
 
 -- Create trigger for account_types
 CREATE TRIGGER trg_account_types_updated_at
-    BEFORE UPDATE ON account_types
+    BEFORE UPDATE
+    ON account_types
     FOR EACH ROW
-    EXECUTE FUNCTION update_accounts_updated_at();
+EXECUTE FUNCTION update_accounts_updated_at();
 
 -- Upgrade currencies table
 ALTER TABLE currencies

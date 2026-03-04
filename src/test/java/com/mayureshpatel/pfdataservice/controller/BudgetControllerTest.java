@@ -36,7 +36,7 @@ class BudgetControllerTest extends BaseControllerTest {
         int month = LocalDate.now().getMonthValue();
         int year = LocalDate.now().getYear();
         BudgetDto budgetDto = new BudgetDto(BUDGET_ID, null, null, new BigDecimal("500.00"), month, year);
-        
+
         when(budgetService.getBudgets(USER_ID, month, year)).thenReturn(List.of(budgetDto));
 
         // Act & Assert
@@ -57,7 +57,7 @@ class BudgetControllerTest extends BaseControllerTest {
         int month = 1;
         int year = 2025;
         BudgetDto budgetDto = new BudgetDto(BUDGET_ID, null, null, new BigDecimal("500.00"), month, year);
-        
+
         when(budgetService.getBudgets(USER_ID, month, year)).thenReturn(List.of(budgetDto));
 
         // Act & Assert
@@ -78,13 +78,13 @@ class BudgetControllerTest extends BaseControllerTest {
         // Arrange
         int month = LocalDate.now().getMonthValue();
         int year = LocalDate.now().getYear();
-        
+
         Category category = new Category();
         category.setId(100L);
         category.setName("Groceries");
-        
+
         BudgetStatusDto statusDto = new BudgetStatusDto(com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper.toDto(category), new BigDecimal("500.00"), new BigDecimal("200.00"), new BigDecimal("300.00"), 60.0);
-        
+
         when(budgetService.getBudgetStatus(USER_ID, month, year)).thenReturn(List.of(statusDto));
 
         // Act & Assert
@@ -103,7 +103,7 @@ class BudgetControllerTest extends BaseControllerTest {
     void getAllBudgets_shouldReturnAllBudgets() throws Exception {
         // Arrange
         BudgetDto budgetDto = new BudgetDto(BUDGET_ID, null, null, new BigDecimal("500.00"), 1, 2025);
-        
+
         when(budgetService.getAllBudgets(USER_ID)).thenReturn(List.of(budgetDto));
 
         // Act & Assert

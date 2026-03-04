@@ -5,7 +5,8 @@ import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 
 public final class TransactionDtoMapper {
 
-    private TransactionDtoMapper() {}
+    private TransactionDtoMapper() {
+    }
 
     public static TransactionDto toDto(Transaction transaction) {
         if (transaction == null) return null;

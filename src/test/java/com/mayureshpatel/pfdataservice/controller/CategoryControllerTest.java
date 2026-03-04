@@ -49,9 +49,9 @@ class CategoryControllerTest extends BaseControllerTest {
         // Arrange
         CategoryDto parentDto = new CategoryDto(CATEGORY_ID, null, "Food", null, null, "icon", "color");
         CategoryDto childDto = new CategoryDto(CATEGORY_ID + 1, null, "Groceries", null, parentDto, "icon", "color");
-        
+
         List<CategoryDto> grouped = List.of(parentDto, childDto);
-        
+
         when(categoryService.getCategoriesGrouped(USER_ID)).thenReturn(grouped);
 
         // Act & Assert
@@ -103,6 +103,7 @@ class CategoryControllerTest extends BaseControllerTest {
 
         verify(categoryService).createCategory(eq(USER_ID), any(CategoryDto.class));
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("PUT /api/v1/categories/{id} should update category")
@@ -122,6 +123,7 @@ class CategoryControllerTest extends BaseControllerTest {
 
         verify(categoryService).updateCategory(eq(USER_ID), eq(CATEGORY_ID), any(CategoryDto.class));
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("DELETE /api/v1/categories/{id} should delete category")

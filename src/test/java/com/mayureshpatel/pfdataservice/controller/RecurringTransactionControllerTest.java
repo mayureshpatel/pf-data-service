@@ -81,6 +81,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
 
         verify(recurringTransactionService).createRecurringTransaction(eq(USER_ID), any(RecurringTransactionDto.class));
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("PUT /api/v1/recurring/{id} should update recurring transaction")
@@ -101,6 +102,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
 
         verify(recurringTransactionService).updateRecurringTransaction(eq(USER_ID), eq(RECURRING_ID), any(RecurringTransactionDto.class));
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("DELETE /api/v1/recurring/{id} should delete recurring transaction")

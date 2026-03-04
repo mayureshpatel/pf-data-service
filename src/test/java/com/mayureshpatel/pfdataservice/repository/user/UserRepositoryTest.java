@@ -33,7 +33,7 @@ class UserRepositoryTest extends BaseIntegrationTest {
         // Assert
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getUsername()).isEqualTo("newuser");
-        
+
         Optional<User> found = userRepository.findById(saved.getId());
         assertThat(found).isPresent();
         assertThat(found.get().getEmail()).isEqualTo("new@example.com");

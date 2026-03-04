@@ -41,11 +41,11 @@ class AccountFunctionalTest {
         // Arrange
         User user = factory.createUser("functional_user");
         factory.createAccount(user, "Savings");
-        
+
         // Generate real JWT for the functional test
         CustomUserDetails userDetails = new CustomUserDetails(user);
         String token = jwtService.generateToken(Map.of(), userDetails);
-        
+
         // Act & Assert
         webTestClient.get()
                 .uri("/api/v1/accounts")

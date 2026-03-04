@@ -66,13 +66,13 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
 
     private Account createAccount(User user, String name) {
         AccountType type = new AccountType();
-        type.setCode("CHECKING"); 
+        type.setCode("CHECKING");
         try {
             accountTypeRepository.save(new AccountType("CHECKING", "Checking", null, true, 1, true, null));
         } catch (Exception e) {
             // Ignore if exists
         }
-        
+
         com.mayureshpatel.pfdataservice.domain.currency.Currency currency = new com.mayureshpatel.pfdataservice.domain.currency.Currency();
         currency.setCode("USD");
         currency.setSymbol("$");
@@ -86,11 +86,11 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         Account account = new Account();
         account.setUser(user);
         account.setName(name);
-        
+
         AccountType t = new AccountType();
         t.setCode("CHECKING");
         account.setType(t);
-        
+
         account.setCurrentBalance(BigDecimal.ZERO);
         account.setCurrency(currency);
         account.setAudit(new com.mayureshpatel.pfdataservice.domain.TableAudit());
@@ -105,7 +105,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         category.setIconography(new com.mayureshpatel.pfdataservice.domain.Iconography("icon", "color"));
         return categoryRepository.save(category);
     }
-    
+
     private Merchant createMerchant(User user, String name) {
         Merchant merchant = new Merchant();
         merchant.setUser(user);
@@ -209,7 +209,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         Transaction t2 = new Transaction();
         t2.setAccount(account);
         t2.setMerchant(merchant);
-        t2.setAmount(new BigDecimal("200.00")); 
+        t2.setAmount(new BigDecimal("200.00"));
         t2.setTransactionDate(OffsetDateTime.now(ZoneOffset.UTC));
         t2.setType(TransactionType.EXPENSE);
         transactionRepository.save(t2);
@@ -530,7 +530,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         User testUser = createUser("testuser_" + System.currentTimeMillis());
         Account account = createAccount(testUser, "Test Account");
         Merchant merchant = createMerchant(testUser, "Test Merchant");
-        
+
         Transaction tx = new Transaction();
         tx.setAccount(account);
         tx.setMerchant(merchant);
@@ -600,7 +600,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
     void getCategoriesWithTransactions_returnsCategories() {
         Transaction t = createTestTransaction(new BigDecimal("10.00"), TransactionType.EXPENSE);
         Category parent = createCategory(t.getAccount().getUser(), "Parent Cat");
-        
+
         Category child = new Category();
         child.setUser(t.getAccount().getUser());
         child.setName("Child Cat");
@@ -608,7 +608,7 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         child.setIconography(new com.mayureshpatel.pfdataservice.domain.Iconography("icon", "color"));
         child.setParent(parent);
         categoryRepository.save(child);
-        
+
         t.setCategory(child);
         transactionRepository.save(t);
 
@@ -711,14 +711,14 @@ class TransactionRepositoryTest extends BaseIntegrationTest {
         t2.setDescription("B");
         transactionRepository.saveAll(List.of(t1, t2));
 
-        com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter filter = 
-            new com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter(
-                t1.getAccount().getId(), null, null, null, null, null, null, null, null);
+        com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter filter =
+                new com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter(
+                        t1.getAccount().getId(), null, null, null, null, null, null, null, null);
         com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.FilterResult filterResult =
-            com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.withFilter(t1.getAccount().getUser().getId(), filter);
+                com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.withFilter(t1.getAccount().getUser().getId(), filter);
 
         org.springframework.data.domain.Page<Transaction> descSort = transactionRepository.findAll(filterResult, org.springframework.data.domain.PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "description")));
-        
+
         assertThat(descSort.getContent()).isNotEmpty();
     }
 }

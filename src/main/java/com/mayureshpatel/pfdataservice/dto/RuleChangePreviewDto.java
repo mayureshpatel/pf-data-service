@@ -4,4 +4,5 @@ public record RuleChangePreviewDto(
         String description,
         String oldValue,
         String newValue
-) {}
+) {
+}

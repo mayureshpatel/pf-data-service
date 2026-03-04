@@ -85,7 +85,8 @@ public class TransactionSpecification {
         return new FilterResult(whereClause, parameters);
     }
 
-    public record FilterResult(String whereClause, Map<String, Object> parameters) {}
+    public record FilterResult(String whereClause, Map<String, Object> parameters) {
+    }
 
     public record TransactionFilter(
             Long accountId,
@@ -97,5 +98,6 @@ public class TransactionSpecification {
             BigDecimal maxAmount,
             LocalDate startDate,
             LocalDate endDate
-    ) {}
+    ) {
+    }
 }

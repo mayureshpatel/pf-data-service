@@ -9,7 +9,8 @@ import com.mayureshpatel.pfdataservice.dto.user.UserDto;
 
 public final class AccountDtoMapper {
 
-    private AccountDtoMapper() {}
+    private AccountDtoMapper() {
+    }
 
     public static AccountDto toDto(Account account) {
         if (account == null) {

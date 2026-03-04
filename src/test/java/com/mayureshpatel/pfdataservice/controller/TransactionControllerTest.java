@@ -40,7 +40,7 @@ class TransactionControllerTest extends BaseControllerTest {
                 .description("Test")
                 .amount(new BigDecimal("10.00"))
                 .build();
-        
+
         when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
         when(transactionImportService.previewTransactions(eq(USER_ID), eq(ACCOUNT_ID), eq("CAPITAL_ONE"), any(InputStream.class), eq("test.csv")))
                 .thenReturn(List.of(preview));
@@ -76,6 +76,7 @@ class TransactionControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Successfully saved 5 transactions."));
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("POST /api/v1/accounts/{accountId}/upload should return 403 when not owner")

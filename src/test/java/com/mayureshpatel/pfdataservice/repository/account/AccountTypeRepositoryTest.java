@@ -36,14 +36,14 @@ class AccountTypeRepositoryTest extends BaseIntegrationTest {
         AccountType type = new AccountType();
         type.setCode(null);
         type.setLabel("Test");
-        
+
         try {
             accountTypeRepository.save(type);
         } catch (Exception e) {
             assertThat(e).isNotNull(); // Expected to throw due to DB constraints
         }
     }
-    
+
     @Test
     @DisplayName("save should update when entity code exists")
     void save_withExistingCode_updatesEntity() {
@@ -70,7 +70,7 @@ class AccountTypeRepositoryTest extends BaseIntegrationTest {
         accountTypeRepository.delete(type);
         // Should not throw
     }
-    
+
     @Test
     @DisplayName("delete should throw unsupported when trying to delete by code")
     void delete_withCode_throwsUnsupported() {

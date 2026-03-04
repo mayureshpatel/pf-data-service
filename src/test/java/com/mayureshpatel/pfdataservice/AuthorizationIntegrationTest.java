@@ -35,7 +35,7 @@ class AuthorizationIntegrationTest extends BaseIntegrationTest {
     void deleteTransaction_shouldAllowWhenOwner() throws Exception {
         // Arrange
         User user = factory.createUser("owner");
-        
+
         Account account = factory.createAccount(user, "Owner Account");
         Merchant merchant = factory.createMerchant(user, "Merchant");
         Transaction tx = factory.createTransaction(account, merchant, null, new BigDecimal("10.00"), OffsetDateTime.now(ZoneOffset.UTC), TransactionType.EXPENSE);

@@ -36,25 +36,25 @@ public final class CategoryQueries {
 
     //language=SQL
     public static final String FIND_ALL_WITH_PARENT = """
-          SELECT
-              c.id,
-              c.name,
-              c.type,
-              c.user_id,
-              c.parent_id,
-              c.color,
-              c.icon,
-              c.created_at,
-              c.updated_at,
-              p.name  AS parent_name,
-              p.type  AS parent_type,
-              p.color AS parent_color,
-              p.icon  AS parent_icon
-          FROM categories c
-          LEFT JOIN categories p ON c.parent_id = p.id
-          WHERE c.user_id = :userId
-          ORDER BY p.id NULLS FIRST, c.name
-          """;
+            SELECT
+                c.id,
+                c.name,
+                c.type,
+                c.user_id,
+                c.parent_id,
+                c.color,
+                c.icon,
+                c.created_at,
+                c.updated_at,
+                p.name  AS parent_name,
+                p.type  AS parent_type,
+                p.color AS parent_color,
+                p.icon  AS parent_icon
+            FROM categories c
+            LEFT JOIN categories p ON c.parent_id = p.id
+            WHERE c.user_id = :userId
+            ORDER BY p.id NULLS FIRST, c.name
+            """;
 
     // language=SQL
     public static final String FIND_ALL_PARENT_CATEGORIES = """

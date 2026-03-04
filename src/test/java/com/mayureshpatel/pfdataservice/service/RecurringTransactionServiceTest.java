@@ -136,8 +136,8 @@ class RecurringTransactionServiceTest {
      * by the given intervalDays. The list has 'count' transactions starting from baseDate.
      */
     private List<Transaction> buildTransactionGroup(String merchantName, BigDecimal amount,
-                                                     OffsetDateTime baseDate, int intervalDays,
-                                                     int count) {
+                                                    OffsetDateTime baseDate, int intervalDays,
+                                                    int count) {
         List<Transaction> list = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             Merchant merchant = buildMerchant(merchantName);
@@ -233,10 +233,10 @@ class RecurringTransactionServiceTest {
         void createRecurringTransaction_withExistingMerchant_savesCorrectly() {
             User user = buildUser(USER_ID);
             OffsetDateTime now = OffsetDateTime.now();
-            
-            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto =
                     new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(500L, null, "Existing", "Existing");
-            
+
             RecurringTransactionDto dto = RecurringTransactionDto.builder()
                     .merchant(merchantDto)
                     .amount(new BigDecimal("15.99"))
@@ -270,10 +270,10 @@ class RecurringTransactionServiceTest {
         void createRecurringTransaction_withNonExistentMerchantId_throwsException() {
             User user = buildUser(USER_ID);
             OffsetDateTime now = OffsetDateTime.now();
-            
-            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto =
                     new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(999L, null, "Unknown", "Unknown");
-            
+
             RecurringTransactionDto dto = RecurringTransactionDto.builder()
                     .merchant(merchantDto)
                     .amount(new BigDecimal("15.99"))
@@ -287,6 +287,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Merchant not found");
         }
+
         @Test
         @DisplayName("should save with null account when account dto is null")
         void createRecurringTransaction_withoutAccount_savesWithNullAccount() {
@@ -424,10 +425,10 @@ class RecurringTransactionServiceTest {
         void updateRecurringTransaction_withExistingMerchant_updatesCorrectly() {
             RecurringTransaction existing = buildRecurring(RECURRING_ID, USER_ID);
             OffsetDateTime now = OffsetDateTime.now();
-            
-            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto =
                     new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(500L, null, "Existing", "Existing");
-            
+
             RecurringTransactionDto dto = RecurringTransactionDto.builder()
                     .merchant(merchantDto)
                     .amount(new BigDecimal("15.99"))
@@ -460,10 +461,10 @@ class RecurringTransactionServiceTest {
         @DisplayName("should throw exception when updating with non-existent merchant id")
         void updateRecurringTransaction_withNonExistentMerchantId_throwsException() {
             RecurringTransaction existing = buildRecurring(RECURRING_ID, USER_ID);
-            
-            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto =
                     new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(999L, null, "Unknown", "Unknown");
-            
+
             RecurringTransactionDto dto = RecurringTransactionDto.builder()
                     .merchant(merchantDto)
                     .amount(new BigDecimal("15.99"))
@@ -477,6 +478,7 @@ class RecurringTransactionServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Merchant not found");
         }
+
         @Test
         @DisplayName("should set account to null when dto account is null")
         void updateRecurringTransaction_dtoAccountIsNull_clearsAccount() {

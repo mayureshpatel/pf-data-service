@@ -62,6 +62,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
 
         verify(categoryRuleService).createRule(eq(USER_ID), any(CategoryRuleDto.class));
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("GET /api/v1/category-rules/preview should return preview of changes")

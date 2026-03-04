@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CategorizationStrategy {
-    
+
     @Getter
     @Builder
     class CategorizationContext {
@@ -22,6 +22,7 @@ public interface CategorizationStrategy {
 
     /**
      * Attempts to categorize the transaction.
+     *
      * @return Optional containing the category id if matched, or empty if not matched.
      */
     Optional<Long> categorize(Transaction transaction, CategorizationContext context);

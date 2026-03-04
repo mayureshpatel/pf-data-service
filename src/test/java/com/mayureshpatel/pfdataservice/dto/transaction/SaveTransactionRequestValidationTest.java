@@ -50,7 +50,7 @@ class SaveTransactionRequestValidationTest {
 
         assertThat(violations).anyMatch(v ->
                 v.getPropertyPath().toString().equals("transactions") &&
-                v.getMessage().contains("must not be empty"));
+                        v.getMessage().contains("must not be empty"));
     }
 
     @Test

@@ -45,7 +45,7 @@ class CategoryDtoMapperTest {
         parent.setUser(user);
         parent.setName("Food");
         parent.setType(CategoryType.EXPENSE);
-        
+
         Category child = TestFixtures.aCategory(user);
         child.setParent(parent);
 

@@ -40,18 +40,30 @@ import java.util.UUID;
 @Component
 public class TestDataFactory {
 
-    @Autowired private UserRepository userRepository;
-    @Autowired private AccountRepository accountRepository;
-    @Autowired private AccountTypeRepository accountTypeRepository;
-    @Autowired private CurrencyRepository currencyRepository;
-    @Autowired private CategoryRepository categoryRepository;
-    @Autowired private MerchantRepository merchantRepository;
-    @Autowired private TransactionRepository transactionRepository;
-    @Autowired private BudgetRepository budgetRepository;
-    @Autowired private CategoryRuleRepository categoryRuleRepository;
-    @Autowired private FileImportHistoryRepository fileImportHistoryRepository;
-    @Autowired private AccountSnapshotRepository accountSnapshotRepository;
-    @Autowired private RecurringTransactionRepository recurringTransactionRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private AccountRepository accountRepository;
+    @Autowired
+    private AccountTypeRepository accountTypeRepository;
+    @Autowired
+    private CurrencyRepository currencyRepository;
+    @Autowired
+    private CategoryRepository categoryRepository;
+    @Autowired
+    private MerchantRepository merchantRepository;
+    @Autowired
+    private TransactionRepository transactionRepository;
+    @Autowired
+    private BudgetRepository budgetRepository;
+    @Autowired
+    private CategoryRuleRepository categoryRuleRepository;
+    @Autowired
+    private FileImportHistoryRepository fileImportHistoryRepository;
+    @Autowired
+    private AccountSnapshotRepository accountSnapshotRepository;
+    @Autowired
+    private RecurringTransactionRepository recurringTransactionRepository;
 
     public User createUser(String username) {
         User user = new User();
@@ -91,7 +103,7 @@ public class TestDataFactory {
         account.setCurrency(currency);
         account.setCurrentBalance(BigDecimal.ZERO);
         account.setAudit(new TableAudit());
-        
+
         return accountRepository.save(account);
     }
 

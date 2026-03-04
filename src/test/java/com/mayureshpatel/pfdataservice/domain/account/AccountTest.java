@@ -18,7 +18,7 @@ class AccountTest {
         // Arrange
         Account account = new Account();
         account.setCurrentBalance(new BigDecimal("100.00"));
-        
+
         Transaction income = new Transaction();
         income.setAmount(new BigDecimal("50.00"));
         income.setType(TransactionType.INCOME);
@@ -36,7 +36,7 @@ class AccountTest {
         // Arrange
         Account account = new Account();
         account.setCurrentBalance(new BigDecimal("100.00"));
-        
+
         Transaction expense = new Transaction();
         expense.setAmount(new BigDecimal("50.00"));
         expense.setType(TransactionType.EXPENSE);
@@ -54,7 +54,7 @@ class AccountTest {
         // Arrange
         Account account = new Account();
         account.setCurrentBalance(new BigDecimal("50.00"));
-        
+
         Transaction expense = new Transaction();
         expense.setAmount(new BigDecimal("50.00"));
         expense.setType(TransactionType.EXPENSE);
@@ -72,7 +72,7 @@ class AccountTest {
         // Arrange
         Account account = new Account();
         account.setCurrentBalance(new BigDecimal("100.00"));
-        
+
         Transaction adjustment = new Transaction();
         adjustment.setAmount(new BigDecimal("-10.00"));
         adjustment.setType(TransactionType.ADJUSTMENT);
@@ -90,18 +90,18 @@ class AccountTest {
         // Arrange
         com.mayureshpatel.pfdataservice.domain.user.User user = new com.mayureshpatel.pfdataservice.domain.user.User();
         user.setId(1L);
-        
+
         Account account = new Account();
         account.setId(10L);
         account.setUser(user);
         account.setName("Checking");
         account.setCurrentBalance(new BigDecimal("123.45"));
-        
+
         AccountType type = new AccountType();
         type.setCode("CH");
         type.setLabel("Checking");
         account.setType(type);
-        
+
         com.mayureshpatel.pfdataservice.domain.currency.Currency currency = new com.mayureshpatel.pfdataservice.domain.currency.Currency();
         currency.setCode("USD");
         currency.setSymbol("$");

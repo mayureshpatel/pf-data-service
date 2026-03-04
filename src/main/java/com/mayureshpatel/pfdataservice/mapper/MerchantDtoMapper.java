@@ -5,7 +5,8 @@ import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 
 public final class MerchantDtoMapper {
 
-    private MerchantDtoMapper() {}
+    private MerchantDtoMapper() {
+    }
 
     public static MerchantDto toDto(Merchant merchant) {
         if (merchant == null) return null;

@@ -6,7 +6,8 @@ import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransa
 
 public final class RecurringTransactionDtoMapper {
 
-    private RecurringTransactionDtoMapper() {}
+    private RecurringTransactionDtoMapper() {
+    }
 
     public static RecurringTransactionDto toDto(RecurringTransaction recurring) {
         if (recurring == null) return null;

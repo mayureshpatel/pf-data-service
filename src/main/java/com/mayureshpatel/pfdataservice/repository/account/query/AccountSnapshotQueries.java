@@ -2,7 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.account.query;
 
 import lombok.NoArgsConstructor;
 
-@NoArgsConstructor( access = lombok.AccessLevel.PRIVATE)
+@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class AccountSnapshotQueries {
 
     // language=SQL

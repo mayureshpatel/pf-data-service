@@ -72,28 +72,28 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
     @Override
     public int insert(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null) 
-                ? user.getAudit().getUpdatedBy().getUsername() 
+        String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null)
+                ? user.getAudit().getUpdatedBy().getUsername()
                 : "system";
 
         return this.jdbcClient.sql(UserQueries.INSERT)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
-                .param("passwordHash",  user.getPasswordHash())
+                .param("passwordHash", user.getPasswordHash())
                 .param("lastUpdatedBy", lastUpdatedBy)
                 .update(keyHolder);
     }
 
     @Override
     public int update(User user) {
-        String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null) 
-                ? user.getAudit().getUpdatedBy().getUsername() 
+        String lastUpdatedBy = (user.getAudit() != null && user.getAudit().getUpdatedBy() != null)
+                ? user.getAudit().getUpdatedBy().getUsername()
                 : "system";
-                
+
         return this.jdbcClient.sql(UserQueries.UPDATE)
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
-                .param("passwordHash",  user.getPasswordHash())
+                .param("passwordHash", user.getPasswordHash())
                 .param("lastUpdatedBy", lastUpdatedBy)
                 .param("id", user.getId())
                 .update();

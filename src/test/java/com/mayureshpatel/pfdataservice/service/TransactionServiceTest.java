@@ -474,7 +474,7 @@ class TransactionServiceTest {
                     OffsetDateTime.now());
             t.setMerchant(null);
 
-            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto = 
+            com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto merchantDto =
                     new com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto(null, null, "AMZN Target", "Target");
 
             TransactionDto dto = TransactionDto.builder()
@@ -508,7 +508,7 @@ class TransactionServiceTest {
 
             Category parentCat = Category.builder().id(10L).name("Food").build();
             Category subCat = Category.builder().id(11L).name("Groceries").parent(parentCat).build();
-            com.mayureshpatel.pfdataservice.dto.category.CategoryDto catDto = 
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto catDto =
                     new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(11L, USER_ID, "Groceries", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, null, null);
 
             TransactionDto dto = TransactionDto.builder()
@@ -538,7 +538,7 @@ class TransactionServiceTest {
                     OffsetDateTime.now());
 
             Category parentCat = Category.builder().id(10L).name("Food").build();
-            com.mayureshpatel.pfdataservice.dto.category.CategoryDto catDto = 
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto catDto =
                     new com.mayureshpatel.pfdataservice.dto.category.CategoryDto(10L, USER_ID, "Food", com.mayureshpatel.pfdataservice.domain.category.CategoryType.EXPENSE, null, null, null);
 
             TransactionDto dto = TransactionDto.builder()
@@ -603,7 +603,7 @@ class TransactionServiceTest {
             User user = buildUser(USER_ID);
             Account account = buildAccount(ACCOUNT_ID, user, BigDecimal.ZERO);
             Transaction tx = buildTransaction(1L, account, BigDecimal.TEN, TransactionType.EXPENSE, OffsetDateTime.now());
-            
+
             org.springframework.data.domain.Page<Transaction> page = new org.springframework.data.domain.PageImpl<>(List.of(tx));
 
             when(transactionRepository.findAll(any(), eq(pageable))).thenReturn(page);

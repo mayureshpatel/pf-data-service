@@ -11,7 +11,8 @@
 -- ====================================================================================
 -- 1. ADD category_id COLUMN (nullable — global rules cannot resolve to a category row)
 -- ====================================================================================
-ALTER TABLE category_rules ADD COLUMN category_id BIGINT;
+ALTER TABLE category_rules
+    ADD COLUMN category_id BIGINT;
 
 -- ====================================================================================
 -- 2. BEST-EFFORT MATCH FOR USER-SPECIFIC RULES
@@ -29,11 +30,12 @@ WHERE cr.user_id IS NOT NULL
 -- ====================================================================================
 ALTER TABLE category_rules
     ADD CONSTRAINT fk_category_rules_category
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL;
+        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL;
 
-CREATE INDEX idx_category_rules_category_id ON category_rules(category_id);
+CREATE INDEX idx_category_rules_category_id ON category_rules (category_id);
 
 -- ====================================================================================
 -- 4. DROP category_name (replaced by category_id)
 -- ====================================================================================
-ALTER TABLE category_rules DROP COLUMN category_name;
+ALTER TABLE category_rules
+    DROP COLUMN category_name;

@@ -23,7 +23,8 @@ import java.time.ZoneOffset;
 
 public final class TestFixtures {
 
-    private TestFixtures() {}
+    private TestFixtures() {
+    }
 
     public static User aUser() {
         User user = new User();
@@ -44,17 +45,17 @@ public final class TestFixtures {
         account.setUser(user);
         account.setName("Test Account");
         account.setCurrentBalance(new BigDecimal("1000.00"));
-        
+
         AccountType type = new AccountType();
         type.setCode("CHECKING");
         type.setLabel("Checking Account");
         account.setType(type);
-        
+
         Currency currency = new Currency();
         currency.setCode("USD");
         currency.setSymbol("$");
         account.setCurrency(currency);
-        
+
         account.setAudit(new TableAudit());
         return account;
     }

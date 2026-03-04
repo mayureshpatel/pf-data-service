@@ -58,7 +58,7 @@ public class TransactionCrudController {
             @RequestParam(required = false) BigDecimal maxAmount,
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate
-            ) {
+    ) {
 
         TransactionFilter filter = new TransactionFilter(
                 accountId, type, description, categoryName, vendorName, minAmount, maxAmount, startDate, endDate

@@ -50,7 +50,7 @@ class AccountRepositoryTest {
         jdbcClient.sql("INSERT INTO users (id, username, email, password_hash, last_updated_by) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .params(userId, "testuser", "test@example.com", "hash", "system")
                 .update();
-        
+
         testUser = new User();
         testUser.setId(userId);
         testUser.setUsername("testuser");
@@ -59,7 +59,7 @@ class AccountRepositoryTest {
         jdbcClient.sql("INSERT INTO currencies (code, name, symbol, is_active) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .params("USD", "US Dollar", "$", true)
                 .update();
-        
+
         testCurrency = new Currency();
         testCurrency.setCode("USD");
 
@@ -67,7 +67,7 @@ class AccountRepositoryTest {
         jdbcClient.sql("INSERT INTO account_types (code, label, icon, color, is_asset, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .params("CHECKING", "Checking", "pi-wallet", "text-blue-600", true, 1, true)
                 .update();
-        
+
         testAccountType = new AccountType();
         testAccountType.setCode("CHECKING");
     }

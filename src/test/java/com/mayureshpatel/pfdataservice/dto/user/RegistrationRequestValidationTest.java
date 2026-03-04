@@ -85,7 +85,7 @@ class RegistrationRequestValidationTest {
 
             assertThat(violations).anyMatch(v ->
                     v.getPropertyPath().toString().equals("username") &&
-                    v.getMessage().contains("letters, numbers, and underscores"));
+                            v.getMessage().contains("letters, numbers, and underscores"));
         }
 
         @Test
@@ -119,7 +119,7 @@ class RegistrationRequestValidationTest {
 
             assertThat(violations).anyMatch(v ->
                     v.getPropertyPath().toString().equals("email") &&
-                    v.getMessage().contains("valid"));
+                            v.getMessage().contains("valid"));
         }
     }
 
@@ -153,7 +153,7 @@ class RegistrationRequestValidationTest {
 
             assertThat(violations).anyMatch(v ->
                     v.getPropertyPath().toString().equals("password") &&
-                    v.getMessage().contains("uppercase"));
+                            v.getMessage().contains("uppercase"));
         }
 
         @Test
@@ -164,7 +164,7 @@ class RegistrationRequestValidationTest {
 
             assertThat(violations).anyMatch(v ->
                     v.getPropertyPath().toString().equals("password") &&
-                    v.getMessage().contains("lowercase"));
+                            v.getMessage().contains("lowercase"));
         }
 
         @Test
@@ -175,7 +175,7 @@ class RegistrationRequestValidationTest {
 
             assertThat(violations).anyMatch(v ->
                     v.getPropertyPath().toString().equals("password") &&
-                    v.getMessage().contains("digit"));
+                            v.getMessage().contains("digit"));
         }
 
         @Test
@@ -186,7 +186,7 @@ class RegistrationRequestValidationTest {
 
             assertThat(violations).anyMatch(v ->
                     v.getPropertyPath().toString().equals("password") &&
-                    v.getMessage().contains("special character"));
+                            v.getMessage().contains("special character"));
         }
     }
 }

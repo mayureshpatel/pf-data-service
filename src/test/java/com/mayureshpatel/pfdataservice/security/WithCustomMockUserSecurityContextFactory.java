@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 public class WithCustomMockUserSecurityContextFactory implements WithSecurityContextFactory<WithCustomMockUser> {
-    
+
     public static RequestPostProcessor customMockUser(User user) {
         CustomUserDetails principal = new CustomUserDetails(user);
         List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));

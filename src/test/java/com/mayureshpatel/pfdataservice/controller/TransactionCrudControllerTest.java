@@ -41,7 +41,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         TransactionDto source = TransactionDto.builder().id(1L).amount(new BigDecimal("100.00")).build();
         TransactionDto target = TransactionDto.builder().id(2L).amount(new BigDecimal("100.00")).build();
         TransferSuggestionDto suggestion = new TransferSuggestionDto(source, target, 0.95);
-        
+
         when(transactionService.findPotentialTransfers(USER_ID)).thenReturn(List.of(suggestion));
 
         // Act & Assert
@@ -106,6 +106,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
 
         verify(transactionService).createTransaction(eq(USER_ID), any(TransactionDto.class));
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("PUT /api/v1/transactions/{id} should update transaction")
@@ -173,7 +174,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
                         .with(csrf()))
                 .andExpect(status().isForbidden());
     }
-    
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("PATCH /api/v1/transactions/bulk should update transactions")
@@ -202,6 +203,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
 
         verify(transactionService).updateTransactions(eq(USER_ID), any());
     }
+
     @Test
     @WithCustomMockUser(id = USER_ID)
     @DisplayName("DELETE /api/v1/transactions/bulk should delete transactions")

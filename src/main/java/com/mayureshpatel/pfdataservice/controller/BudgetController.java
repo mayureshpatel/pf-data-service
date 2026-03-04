@@ -27,10 +27,10 @@ public class BudgetController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year) {
-        
+
         int monthValue = (month != null) ? month : LocalDate.now().getMonthValue();
         int yearValue = (year != null) ? year : LocalDate.now().getYear();
-        
+
         return ResponseEntity.ok(budgetService.getBudgets(userDetails.getId(), monthValue, yearValue));
     }
 
@@ -39,10 +39,10 @@ public class BudgetController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year) {
-        
+
         int monthValue = (month != null) ? month : LocalDate.now().getMonthValue();
         int yearValue = (year != null) ? year : LocalDate.now().getYear();
-        
+
         return ResponseEntity.ok(budgetService.getBudgetStatus(userDetails.getId(), monthValue, yearValue));
     }
 
@@ -53,7 +53,7 @@ public class BudgetController {
     }
 
     @PostMapping
-    public ResponseEntity<Integer> createBudget (
+    public ResponseEntity<Integer> createBudget(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid BudgetCreateRequest request) {
         return ResponseEntity.status(201).body(budgetService.create(userDetails.getId(), request));

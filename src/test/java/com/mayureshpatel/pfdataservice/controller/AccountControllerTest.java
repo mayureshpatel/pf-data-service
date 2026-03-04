@@ -56,7 +56,7 @@ class AccountControllerTest extends BaseControllerTest {
         type.setCode("CHECKING");
         AccountDto requestDto = new AccountDto(null, null, "New Account", type.getCode(), "Label", new BigDecimal("500.00"), "USD", "$", BankName.DISCOVER.name());
         AccountDto responseDto = new AccountDto(ACCOUNT_ID, null, "New Account", type.getCode(), "Label", new BigDecimal("500.00"), "USD", "$", BankName.DISCOVER.name());
-        
+
         when(accountService.createAccount(eq(USER_ID), any(AccountDto.class))).thenReturn(responseDto);
 
         // Act & Assert
@@ -79,7 +79,7 @@ class AccountControllerTest extends BaseControllerTest {
         AccountType type = new AccountType();
         type.setCode("SAVINGS");
         AccountDto requestDto = new AccountDto(ACCOUNT_ID, null, "Updated Name", type.getCode(), "Label", new BigDecimal("1200.00"), "USD", "$", BankName.SYNOVUS.name());
-        
+
         when(accountService.updateAccount(eq(USER_ID), eq(ACCOUNT_ID), any(AccountDto.class))).thenReturn(requestDto);
 
         // Act & Assert

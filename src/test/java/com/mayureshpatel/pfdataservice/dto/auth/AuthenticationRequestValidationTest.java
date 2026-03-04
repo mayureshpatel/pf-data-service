@@ -99,6 +99,6 @@ class AuthenticationRequestValidationTest {
 
         assertThat(violations).anyMatch(v ->
                 v.getPropertyPath().toString().equals("username") &&
-                v.getMessage().contains("50"));
+                        v.getMessage().contains("50"));
     }
 }
