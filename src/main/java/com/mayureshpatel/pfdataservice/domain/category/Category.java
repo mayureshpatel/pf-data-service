@@ -1,8 +1,6 @@
 package com.mayureshpatel.pfdataservice.domain.category;
 
-import com.mayureshpatel.pfdataservice.domain.Iconography;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -16,11 +14,12 @@ public class Category {
 
     @EqualsAndHashCode.Include
     private Long id;
-    private User user;
+    private Long userId;
     private String name;
-    private CategoryType type;
-    private Category parent;
-    private Iconography iconography;
+    private String type;
+    private Long parentId;
+    private String color;
+    private String icon;
 
     @ToString.Exclude
     private TableAudit audit;
@@ -31,6 +30,6 @@ public class Category {
      * @return true if this category is a subcategory, false otherwise.
      */
     public boolean isSubCategory() {
-        return parent != null;
+        return parentId != null && parentId != 0;
     }
 }

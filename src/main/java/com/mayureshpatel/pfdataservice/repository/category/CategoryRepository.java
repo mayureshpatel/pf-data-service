@@ -87,7 +87,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
         if (category.getId() != null) {
             return jdbcClient.sql(CategoryQueries.DELETE)
                     .param("id", category.getId())
-                    .param("userId", category.getUser().getId())
+                    .param("userId", category.getUserId())
                     .update();
         }
         return 0;

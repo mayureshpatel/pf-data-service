@@ -30,31 +30,31 @@ public class JdbcMapperUtils {
         User updatedBy = null;
         User deletedBy = null;
 
-        if (isColumnExists(rs, "created_at")) {
+        if (hasColumn(rs, "created_at")) {
             createdAt = getOffsetDateTime(rs, "created_at");
         }
 
-        if (isColumnExists(rs, "updated_at")) {
+        if (hasColumn(rs, "updated_at")) {
             updatedAt = getOffsetDateTime(rs, "updated_at");
         }
 
-        if (isColumnExists(rs, "deleted_at")) {
+        if (hasColumn(rs, "deleted_at")) {
             deletedAt = getOffsetDateTime(rs, "deleted_at");
         }
 
-        if (isColumnExists(rs, "created_by")) {
+        if (hasColumn(rs, "created_by")) {
             createdBy = User.builder()
                     .id(rs.getLong("created_by"))
                     .build();
         }
 
-        if (isColumnExists(rs, "updated_by")) {
+        if (hasColumn(rs, "updated_by")) {
             updatedBy = User.builder()
                     .id(rs.getLong("updated_by"))
                     .build();
         }
 
-        if (isColumnExists(rs, "deleted_by")) {
+        if (hasColumn(rs, "deleted_by")) {
             deletedBy = User.builder()
                     .id(rs.getLong("deleted_by"))
                     .build();
@@ -78,7 +78,7 @@ public class JdbcMapperUtils {
      * @return true if column exists, false otherwise
      * @throws SQLException if an error occurs
      */
-    public static boolean isColumnExists(ResultSet rs, String columnName) throws SQLException {
+    public static boolean hasColumn(ResultSet rs, String columnName) throws SQLException {
         ResultSetMetaData metaData = rs.getMetaData();
         for (int i = 1; i <= metaData.getColumnCount(); i++) {
             if (columnName.equalsIgnoreCase(metaData.getColumnName(i))) {

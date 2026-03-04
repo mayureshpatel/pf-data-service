@@ -24,21 +24,19 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
                 .list();
     }
 
-    public CategoryRule save(CategoryRule categoryRule) {
-        this.jdbcClient.sql(CategoryRuleQueries.INSERT)
+    public int insert(CategoryRule categoryRule) {
+        return this.jdbcClient.sql(CategoryRuleQueries.INSERT)
                 .param("id", categoryRule.getId())
                 .param("keyword", categoryRule.getKeyword())
                 .param("categoryId", categoryRule.getCategory().getId())
                 .param("priority", categoryRule.getPriority())
                 .param("userId", categoryRule.getUser().getId())
                 .update();
-
-        return categoryRule;
     }
 
     @Override
-    public void deleteById(Long id) {
-        this.jdbcClient.sql(CategoryRuleQueries.DELETE)
+    public int deleteById(Long id) {
+        return this.jdbcClient.sql(CategoryRuleQueries.DELETE)
                 .param("id", id)
                 .update();
     }
