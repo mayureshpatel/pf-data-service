@@ -15,7 +15,7 @@ public class Merchant {
 
     @EqualsAndHashCode.Include
     private Long id;
-    private User user;
+    private Long userId;
     private String originalName;
     private String cleanName;
 

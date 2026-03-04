@@ -65,4 +65,10 @@ public final class MerchantQueries {
                 clean_name = :name
             where id = :id
             """;
+
+    // language=SQL
+    public static final String DELETE = """
+            delete from merchants
+            where id = :id
+            """;
 }

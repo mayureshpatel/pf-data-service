@@ -2,6 +2,8 @@ package com.mayureshpatel.pfdataservice.repository.merchant;
 
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantTotalRowMapper;
@@ -62,36 +64,26 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
-    @Override
-    public Merchant save(Merchant merchant) {
-        if (merchant.getId() == null) {
-            return insert(merchant);
-        } else {
-            return update(merchant);
-        }
-    }
-
-    @Override
-    public int insert(Merchant merchant) {
+    public int insert(MerchantCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcClient.sql(MerchantQueries.INSERT)
-                .param("userId", merchant.getUser().getId())
-                .param("originalName", merchant.getOriginalName())
-                .param("name", merchant.getCleanName())
+        return jdbcClient.sql(MerchantQueries.INSERT)
+                .param("userId", request.getUserId())
+                .param("originalName", request.getOriginalName())
+                .param("name", request.getCleanName())
                 .update(keyHolder);
-        
-        merchant.setId(keyHolder.getKeyAs(Long.class));
-        return merchant;
     }
 
-    @Override
-    public Merchant update(Merchant merchant) {
-        jdbcClient.sql(MerchantQueries.UPDATE)
-                .param("userId", merchant.getUser().getId())
-                .param("originalName", merchant.getOriginalName())
-                .param("name", merchant.getCleanName())
-                .param("id", merchant.getId())
+    public int update(MerchantUpdateRequest request, Long userId) {
+        return jdbcClient.sql(MerchantQueries.UPDATE)
+                .param("userId", userId)
+                .param("name", request.getCleanName())
+                .param("id", request.getId())
                 .update();
-        return merchant;
+    }
+
+    public int delete(Long id) {
+        return jdbcClient.sql(MerchantQueries.DELETE)
+                .param("id", id)
+                .update();
     }
 }
