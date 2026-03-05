@@ -18,18 +18,20 @@ class RuleBasedCategorizationStrategyTest {
     private final RuleBasedCategorizationStrategy strategy = new RuleBasedCategorizationStrategy();
 
     private Transaction buildTransaction(String description) {
-        Transaction t = new Transaction();
-        t.setDescription(description);
-        return t;
+        return Transaction.builder()
+                .description(description)
+                .build();
     }
 
     private CategoryRule buildRule(String keyword, Long categoryId) {
-        Category category = new Category();
-        category.setId(categoryId);
-        CategoryRule rule = new CategoryRule();
-        rule.setKeyword(keyword);
-        rule.setCategory(category);
-        return rule;
+        return CategoryRule.builder()
+                .keyword(keyword)
+                .category(
+                        Category.builder()
+                                .id(categoryId)
+                                .build()
+                )
+                .build();
     }
 
     private CategorizationStrategy.CategorizationContext buildContext(List<CategoryRule> rules) {
