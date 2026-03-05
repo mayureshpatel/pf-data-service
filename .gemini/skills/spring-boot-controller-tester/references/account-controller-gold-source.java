@@ -150,11 +150,11 @@ class AccountControllerTest extends BaseControllerTest {
     class UpdateAccountTests {
 
         @Test
-        @DisplayName("PUT should update the account and return 1")
+        @DisplayName("PUT should update the account and return 1 (ID is in the body, not path)")
         void updateAccount_shouldUpdateAccount() throws Exception {
             // Arrange
             AccountUpdateRequest request = AccountUpdateRequest.builder()
-                    .id(ACCOUNT_ID)
+                    .id(ACCOUNT_ID) // ID is part of the request object
                     .name("Updated Savings")
                     .type("SAVINGS")
                     .currencyCode("USD")
@@ -165,7 +165,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.updateAccount(eq(USER_ID), any(AccountUpdateRequest.class))).thenReturn(1);
 
             // Act & Assert
-            mockMvc.perform(put("/api/v1/accounts")
+            mockMvc.perform(put("/api/v1/accounts") // No ID in path
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
