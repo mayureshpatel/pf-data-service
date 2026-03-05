@@ -92,15 +92,40 @@ class TransactionImportServiceTest {
         }
 
         @Test
-        @DisplayName("should handle category guess <= 0")
+        @DisplayName("should handle category guess null or <= 0")
         void shouldHandleNoCategoryGuess() {
+            // Arrange
+            String bankName = "Standard";
+            TransactionParser parser = mock(TransactionParser.class);
+            Transaction t1 = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.TEN).build();
+            Transaction t2 = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.ONE).build();
+
+            when(parserFactory.getTransactionParser(bankName)).thenReturn(parser);
+            // Return a fresh stream for each call to avoid IllegalStateException
+            when(parser.parse(anyLong(), any())).thenReturn(Stream.of(t1), Stream.of(t2));
+
+            // Case 1: categoryId is null
+            when(categorizer.guessCategory(eq(t1), anyList(), anyList())).thenReturn(null);
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, new ByteArrayInputStream(new byte[0]), "test.csv");
+            assertNull(result.get(0).suggestedCategory());
+
+            // Case 2: categoryId is 0
+            when(categorizer.guessCategory(eq(t2), anyList(), anyList())).thenReturn(0L);
+            result = importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, new ByteArrayInputStream(new byte[0]), "test.csv");
+            assertNull(result.get(0).suggestedCategory());
+        }
+
+        @Test
+        @DisplayName("should handle category guessed ID not in list")
+        void shouldHandleGuessedCategoryNotFound() {
             // Arrange
             String bankName = "Standard";
             TransactionParser parser = mock(TransactionParser.class);
             Transaction t = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.TEN).build();
             when(parserFactory.getTransactionParser(bankName)).thenReturn(parser);
             when(parser.parse(anyLong(), any())).thenReturn(Stream.of(t));
-            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(0L);
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(Collections.emptyList());
+            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(99L);
 
             // Act
             List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, new ByteArrayInputStream(new byte[0]), "test.csv");
@@ -116,6 +141,7 @@ class TransactionImportServiceTest {
             String bankName = "Standard";
             TransactionParser parser = mock(TransactionParser.class);
             when(parserFactory.getTransactionParser(bankName)).thenReturn(parser);
+            // Throw inside the try block (during parse or stream processing)
             when(parser.parse(anyLong(), any())).thenThrow(new RuntimeException("Oops"));
 
             // Act & Assert
@@ -148,6 +174,26 @@ class TransactionImportServiceTest {
         }
 
         @Test
+        @DisplayName("should skip duplicates in database and batch")
+        void shouldDetectBatchDuplicates() {
+            // Arrange
+            Account account = Account.builder().id(ACCOUNT_ID).currentBalance(BigDecimal.ZERO).build();
+            OffsetDateTime now = OffsetDateTime.now();
+            TransactionDto dto1 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(now).type(TransactionType.INCOME).build();
+            TransactionDto dto2 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(now).type(TransactionType.INCOME).build();
+
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
+
+            // Act
+            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null);
+
+            // Assert
+            assertEquals(1, result);
+            verify(transactionRepository).insertAll(argThat(list -> list.size() == 1));
+        }
+
+        @Test
         @DisplayName("should throw DuplicateImportException if file hash exists")
         void shouldThrowOnDuplicateHash() {
             // Arrange
@@ -159,22 +205,22 @@ class TransactionImportServiceTest {
         }
 
         @Test
-        @DisplayName("should skip duplicate transactions within batch and database")
-        void shouldSkipDuplicates() {
+        @DisplayName("should handle null fileName or fileHash separately")
+        void shouldHandlePartialFileMetadata() {
             // Arrange
-            Account account = Account.builder().id(ACCOUNT_ID).currentBalance(BigDecimal.ZERO).build();
-            TransactionDto dto1 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
-            TransactionDto dto2 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(dto1.date()).type(TransactionType.INCOME).build();
+            Account account = Account.builder().id(ACCOUNT_ID).build();
+            TransactionDto dto = TransactionDto.builder().description("T").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
+            // fileName is null case
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(eq(ACCOUNT_ID), eq(dto1.date()), eq(BigDecimal.TEN), eq("D1"), eq(TransactionType.INCOME))).thenReturn(false);
+            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash");
+            verify(fileImportHistoryRepository, never()).save(any());
 
-            // Act
-            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null);
-
-            // Assert
-            assertEquals(1, result);
-            verify(transactionRepository).insertAll(argThat(list -> list.size() == 1));
+            // fileHash is null case
+            reset(fileImportHistoryRepository);
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), "file.csv", null);
+            verify(fileImportHistoryRepository, never()).save(any());
         }
 
         @Test
@@ -207,38 +253,6 @@ class TransactionImportServiceTest {
             // Assert
             assertEquals(0, result);
             verify(transactionRepository, never()).insertAll(any());
-        }
-
-        @Test
-        @DisplayName("should skip history if fileName is null")
-        void shouldSkipHistoryIfFileNameNull() {
-            // Arrange
-            Account account = Account.builder().id(ACCOUNT_ID).build();
-            TransactionDto dto = TransactionDto.builder().description("T").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
-
-            // Act
-            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash");
-
-            // Assert
-            verify(fileImportHistoryRepository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("should skip history if fileHash is null")
-        void shouldSkipHistoryIfFileHashNull() {
-            // Arrange
-            Account account = Account.builder().id(ACCOUNT_ID).build();
-            TransactionDto dto = TransactionDto.builder().description("T").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
-
-            // Act
-            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), "file.csv", null);
-
-            // Assert
-            verify(fileImportHistoryRepository, never()).save(any());
         }
 
         @Test

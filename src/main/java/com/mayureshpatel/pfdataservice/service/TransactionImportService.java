@@ -74,7 +74,7 @@ public class TransactionImportService {
             List<TransactionPreviewDto> previews = rawTransactionStream
                     .map(t -> {
                         Long categoryId = categorizer.guessCategory(t, userRules, userCategories);
-                        Category suggestedCategory = categoryId > 0
+                        Category suggestedCategory = (categoryId != null && categoryId > 0)
                                 ? userCategories.stream()
                                 .filter(c -> c.getId().equals(categoryId))
                                 .findFirst()
