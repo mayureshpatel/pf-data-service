@@ -4,6 +4,7 @@ Domain objects in this project map directly to the data model and often contain 
 
 ## 1. Core Principles
 - **Data Model Integrity**: Domain objects must strictly reflect the schema defined in `src/main/resources/db/migration/`. Always grep the migration scripts to confirm column types, nullability, and primary key structures.
+- **AAA Pattern**: Every test method MUST follow the Arrange-Act-Assert pattern, with explicit comments (`// Arrange`, `// Act`, `// Assert`) for each section.
 - **No Spring Context**: Domain unit tests should be "Plain Old Java Object" (POJO) tests. Do NOT use `@SpringBootTest` or `@WebMvcTest`. Use only JUnit 5 and AssertJ/JUnit assertions.
 - **Immutability Testing**: Verify that operations which "change" state actually return a NEW instance (using `toBuilder()`) rather than modifying the current one.
 - **Exhaustive Branch Coverage**: Domain logic often contains conditional branching based on enums (e.g., `TransactionType`) or null checks. Ensure every branch is tested.

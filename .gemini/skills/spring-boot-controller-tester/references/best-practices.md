@@ -5,6 +5,7 @@ Follow these patterns to ensure high-quality, maintainable, and robust controlle
 ## 1. Architectural Patterns
 - **Inherit from `BaseControllerTest`**: Always extend a shared base class that defines common `@MockitoBean` objects. This allows Spring to reuse the `ApplicationContext` and significantly speeds up the test suite.
 - **Use `@Nested` Classes**: Group tests by endpoint (e.g., `class GetAccountsTests`, `class CreateAccountTests`). This provides a clear structure and logical grouping.
+- **AAA Pattern**: Every test method MUST follow the Arrange-Act-Assert pattern, with explicit comments (`// Arrange`, `// Act`, `// Assert`) for each section.
 - **`@DisplayName`**: Use descriptive display names for all classes and test methods to ensure readable test reports.
 
 ## 2. Request/Response DTO Pattern

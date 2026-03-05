@@ -4,6 +4,7 @@ DTOs (Data Transfer Objects) define the API contract. Request DTOs handle input 
 
 ## 1. Core Principles
 - **Schema Alignment**: Request DTO constraints (e.g., `@Size`, `@NotNull`) MUST match the database column definitions found in `src/main/resources/db/migration/`.
+- **AAA Pattern**: Every test method MUST follow the Arrange-Act-Assert pattern, with explicit comments (`// Arrange`, `// Act`, `// Assert`) for each section.
 - **Validation Testing**: For Request DTOs, use `jakarta.validation.Validator` to verify that constraints correctly pass or fail.
 - **POJO Testing**: Keep DTO tests as pure JUnit 5 tests. Avoid loading the full Spring context.
 - **Completeness**: Test every field in the DTO, ensuring they are correctly populated via builders or constructors.
