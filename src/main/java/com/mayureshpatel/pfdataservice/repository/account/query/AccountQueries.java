@@ -137,6 +137,7 @@ public final class AccountQueries {
                 updated_at = CURRENT_TIMESTAMP, updated_by = :userId
             where id = :accountId
                 and user_id = :userId
+                and version = :version
                 and deleted_at is null
             """;
 }

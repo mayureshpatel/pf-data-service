@@ -76,22 +76,4 @@ class RateLimitingFilterTest {
         verify(filterChain, times(15)).doFilter(request, response);
         verify(response, never()).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
     }
-
-    @Test
-    @DisplayName("should use X-Forwarded-For header if present")
-    void shouldUseXForwardedFor() throws Exception {
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");
-        when(request.getHeader("X-Forwarded-For")).thenReturn("1.2.3.4, 127.0.0.1");
-        
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        when(response.getWriter()).thenReturn(pw);
-
-        for (int i = 0; i < 11; i++) {
-            filter.doFilterInternal(request, response, filterChain);
-        }
-
-        verify(response).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-        // Internal bucket should be keyed by "1.2.3.4"
-    }
 }

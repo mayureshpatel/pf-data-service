@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.service.CategoryRuleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,7 @@ public class CategoryRuleController {
     }
 
     @PutMapping
+    @PreAuthorize("@ss.isRuleOwner(#request.id, principal)")
     public ResponseEntity<Integer> updateRule(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryRuleUpdateRequest request) {
@@ -52,6 +54,7 @@ public class CategoryRuleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.isRuleOwner(#id, principal)")
     public ResponseEntity<Void> deleteRule(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {

@@ -147,10 +147,11 @@ class AccountServiceTest {
         void shouldReconcile() {
             // Arrange
             BigDecimal target = new BigDecimal("1000.00");
-            AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target);
-            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("900.00")).build();
+            Long version = 1L;
+            AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("900.00")).version(version).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.reconcile(USER_ID, ACCOUNT_ID, target)).thenReturn(1);
+            when(accountRepository.reconcile(USER_ID, ACCOUNT_ID, target, version)).thenReturn(1);
 
             // Act
             int result = accountService.reconcileAccount(USER_ID, request);
@@ -158,7 +159,7 @@ class AccountServiceTest {
             // Assert
             assertEquals(1, result);
             verify(transactionRepository).insert((TransactionCreateRequest) argThat(req -> ((TransactionCreateRequest) req).getAmount().compareTo(new BigDecimal("100.00")) == 0));
-            verify(accountRepository).reconcile(USER_ID, ACCOUNT_ID, target);
+            verify(accountRepository).reconcile(USER_ID, ACCOUNT_ID, target, version);
         }
 
         @Test
@@ -166,7 +167,7 @@ class AccountServiceTest {
         void shouldReturnZeroIfBalancesMatch() {
             // Arrange
             BigDecimal target = new BigDecimal("1000.00");
-            AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target);
+            AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, 1L);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(target).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
 
@@ -181,7 +182,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if account missing during reconcile")
         void shouldThrowOnAccountNotFound() {
-            AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, BigDecimal.TEN);
+            AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, BigDecimal.TEN, 1L);
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
             assertThrows(ResourceNotFoundException.class, () -> accountService.reconcileAccount(USER_ID, request));
         }

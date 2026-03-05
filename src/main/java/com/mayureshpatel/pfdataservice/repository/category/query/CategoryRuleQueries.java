@@ -18,6 +18,17 @@ public final class CategoryRuleQueries {
             """;
 
     // language=SQL
+    public static final String FIND_BY_ID = """
+                select cr.*,
+                       c.name as category_name,
+                       c.color as category_color,
+                       c.icon as category_icon
+                from category_rules cr
+                left join categories c on cr.category_id = c.id
+                where cr.id = :id
+            """;
+
+    // language=SQL
     public static final String INSERT = """
                 insert into category_rules (id, keyword, category_id, priority, user_id, created_at, updated_at)
                 values(:id, :keyword, :categoryId, :priority, :userId, current_timestamp, current_timestamp)

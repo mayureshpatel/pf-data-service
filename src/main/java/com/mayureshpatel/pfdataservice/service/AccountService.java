@@ -105,7 +105,7 @@ public class AccountService {
 
         // update account balance
         account.applyTransaction(adjustmentTransaction);
-        return accountRepository.reconcile(userId, request.getAccountId(), request.getNewBalance());
+        return accountRepository.reconcile(userId, request.getAccountId(), request.getNewBalance(), request.getVersion());
     }
 
     /**

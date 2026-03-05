@@ -1,9 +1,13 @@
 package com.mayureshpatel.pfdataservice.security;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,6 +32,12 @@ class SecurityServiceTest {
     @Mock
     private TransactionRepository transactionRepository;
 
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private CategoryRuleRepository categoryRuleRepository;
+
     @InjectMocks
     private SecurityService securityService;
 
@@ -35,6 +45,8 @@ class SecurityServiceTest {
     private static final Long ANOTHER_USER_ID = 2L;
     private static final Long ACCOUNT_ID = 10L;
     private static final Long TRANSACTION_ID = 100L;
+    private static final Long CATEGORY_ID = 200L;
+    private static final Long RULE_ID = 300L;
 
     private CustomUserDetails buildUserDetails(Long userId) {
         User user = User.builder()
@@ -58,6 +70,22 @@ class SecurityServiceTest {
         return Transaction.builder()
                 .id(TRANSACTION_ID)
                 .account(buildAccount(userId))
+                .build();
+    }
+
+    private Category buildCategory(Long userId) {
+        return Category.builder()
+                .id(CATEGORY_ID)
+                .userId(userId)
+                .name("Dining Out")
+                .build();
+    }
+
+    private CategoryRule buildRule(Long userId) {
+        return CategoryRule.builder()
+                .id(RULE_ID)
+                .user(User.builder().id(userId).build())
+                .keyword("Coffee")
                 .build();
     }
 
@@ -143,7 +171,7 @@ class SecurityServiceTest {
             // Arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             Transaction transaction = buildTransaction(USER_ID);
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(transaction));
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(transaction));
 
             // Act
             boolean result = securityService.isTransactionOwner(TRANSACTION_ID, userDetails);
@@ -153,26 +181,11 @@ class SecurityServiceTest {
         }
 
         @Test
-        @DisplayName("should return false when user does not own the transaction")
-        void isTransactionOwner_mismatchedId_returnsFalse() {
+        @DisplayName("should return false when transaction is not found or not owned")
+        void isTransactionOwner_notOwned_returnsFalse() {
             // Arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
-            Transaction transaction = buildTransaction(ANOTHER_USER_ID);
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(transaction));
-
-            // Act
-            boolean result = securityService.isTransactionOwner(TRANSACTION_ID, userDetails);
-
-            // Assert
-            assertThat(result).isFalse();
-        }
-
-        @Test
-        @DisplayName("should return false when transaction is not found")
-        void isTransactionOwner_recordNotFound_returnsFalse() {
-            // Arrange
-            CustomUserDetails userDetails = buildUserDetails(USER_ID);
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.empty());
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.empty());
 
             // Act
             boolean result = securityService.isTransactionOwner(TRANSACTION_ID, userDetails);
@@ -201,6 +214,62 @@ class SecurityServiceTest {
             boolean result = securityService.isTransactionOwner(TRANSACTION_ID, null);
 
             // Assert
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("isCategoryOwner")
+    class IsCategoryOwnerTest {
+        @Test
+        @DisplayName("should return true when user owns the category")
+        void isCategoryOwner_matchingId_returnsTrue() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Category category = buildCategory(USER_ID);
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+
+            boolean result = securityService.isCategoryOwner(CATEGORY_ID, userDetails);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when mismatched userId")
+        void isCategoryOwner_mismatchedId_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Category category = buildCategory(ANOTHER_USER_ID);
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+
+            boolean result = securityService.isCategoryOwner(CATEGORY_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("isRuleOwner")
+    class IsRuleOwnerTest {
+        @Test
+        @DisplayName("should return true when user owns the rule")
+        void isRuleOwner_matchingId_returnsTrue() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            CategoryRule rule = buildRule(USER_ID);
+            when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(rule));
+
+            boolean result = securityService.isRuleOwner(RULE_ID, userDetails);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when mismatched userId")
+        void isRuleOwner_mismatchedId_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            CategoryRule rule = buildRule(ANOTHER_USER_ID);
+            when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(rule));
+
+            boolean result = securityService.isRuleOwner(RULE_ID, userDetails);
+
             assertThat(result).isFalse();
         }
     }

@@ -18,4 +18,7 @@ public class AccountReconcileRequest {
     
     @NotNull(message = "New balance is required")
     private BigDecimal newBalance;
+
+    @NotNull(message = "Version is required")
+    private Long version;
 }

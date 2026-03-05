@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,6 +46,7 @@ public class CategoryController {
     }
 
     @PutMapping
+    @PreAuthorize("@ss.isCategoryOwner(#request.id, principal)")
     public ResponseEntity<Integer> updateCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryUpdateRequest request) {
@@ -52,6 +54,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.isCategoryOwner(#id, principal)")
     public ResponseEntity<Integer> deleteCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {

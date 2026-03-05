@@ -50,7 +50,6 @@ class TransactionControllerTest extends BaseControllerTest {
                     .amount(new BigDecimal("5.00"))
                     .build();
 
-            when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
             when(transactionImportService.previewTransactions(eq(USER_ID), eq(ACCOUNT_ID), eq(bankName), any(InputStream.class), eq("test.csv")))
                     .thenReturn(List.of(previewDto));
 
@@ -74,8 +73,6 @@ class TransactionControllerTest extends BaseControllerTest {
             MockMultipartFile file = new MockMultipartFile(
                     "file", "empty.csv", MediaType.TEXT_PLAIN_VALUE, new byte[0]);
             
-            when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
-
             // Act & Assert
             mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
                             .file(file)
@@ -87,6 +84,7 @@ class TransactionControllerTest extends BaseControllerTest {
 
         @Test
         @DisplayName("POST /upload should return 403 Forbidden when user is not account owner")
+        @WithCustomMockUser(id = 999L)
         void uploadTransactions_shouldReturn403WhenNotOwner() throws Exception {
             // Arrange
             MockMultipartFile file = new MockMultipartFile("file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
@@ -115,7 +113,6 @@ class TransactionControllerTest extends BaseControllerTest {
                     .build();
             SaveTransactionRequest request = new SaveTransactionRequest(List.of(transaction), "test.csv", "hash123");
 
-            when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
             when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq("test.csv"), eq("hash123")))
                     .thenReturn(1);
 
@@ -136,8 +133,6 @@ class TransactionControllerTest extends BaseControllerTest {
             // Arrange - empty transactions list
             SaveTransactionRequest request = new SaveTransactionRequest(Collections.emptyList(), "", "");
 
-            when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
-
             // Act & Assert
             mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", ACCOUNT_ID)
                             .with(csrf())
@@ -150,6 +145,7 @@ class TransactionControllerTest extends BaseControllerTest {
 
         @Test
         @DisplayName("POST /transactions should return 403 Forbidden when user is not account owner")
+        @WithCustomMockUser(id = 999L)
         void saveTransactions_shouldReturn403WhenNotOwner() throws Exception {
             // Arrange
             SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().build()), "test.csv", "hash");
@@ -173,7 +169,6 @@ class TransactionControllerTest extends BaseControllerTest {
         void uploadTransactions_shouldReturn500OnServiceError() throws Exception {
             // Arrange
             MockMultipartFile file = new MockMultipartFile("file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
-            when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(true);
             when(transactionImportService.previewTransactions(anyLong(), anyLong(), anyString(), any(InputStream.class), anyString()))
                     .thenThrow(new RuntimeException("Import failed"));
 

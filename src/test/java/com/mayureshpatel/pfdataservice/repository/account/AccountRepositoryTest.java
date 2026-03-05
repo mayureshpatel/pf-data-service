@@ -206,31 +206,36 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should reconcile balance")
+        @DisplayName("should reconcile balance with optimistic locking")
         void shouldReconcile() {
+            // Arrange
+            Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
+
             // Act
-            int rows = accountRepository.reconcile(USER_1, ACCOUNT_1, new BigDecimal("1234.56"));
+            int rows = accountRepository.reconcile(USER_1, ACCOUNT_1, new BigDecimal("1234.56"), account.getVersion());
 
             // Assert
             assertEquals(1, rows);
             Account updated = accountRepository.findById(ACCOUNT_1).orElseThrow();
             assertEquals(0, new BigDecimal("1234.56").compareTo(updated.getCurrentBalance()));
+            assertEquals(account.getVersion() + 1, updated.getVersion());
         }
 
         @Test
-        @DisplayName("should fail update balance if UserID mismatch")
-        void shouldFailUpdateBalanceOnUserMismatch() {
-            Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
+        @DisplayName("should fail reconcile if version mismatch")
+        void shouldFailReconcileOnVersionMismatch() {
             assertThrows(OptimisticLockingFailureException.class, () -> 
-                accountRepository.updateBalance(USER_2, ACCOUNT_1, BigDecimal.TEN, account.getVersion())
+                accountRepository.reconcile(USER_1, ACCOUNT_1, BigDecimal.TEN, 999L)
             );
         }
 
         @Test
         @DisplayName("should fail reconcile if UserID mismatch")
         void shouldFailReconcileOnUserMismatch() {
-            int rows = accountRepository.reconcile(USER_2, ACCOUNT_1, BigDecimal.TEN);
-            assertEquals(0, rows);
+            Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
+            assertThrows(OptimisticLockingFailureException.class, () -> 
+                accountRepository.reconcile(USER_2, ACCOUNT_1, BigDecimal.TEN, account.getVersion())
+            );
         }
     }
 

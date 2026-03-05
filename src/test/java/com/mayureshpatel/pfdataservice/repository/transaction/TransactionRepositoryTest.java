@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -71,6 +72,26 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                 t.getAmount().compareTo(new BigDecimal("1000.00")) >= 0 && 
                 t.getAmount().compareTo(new BigDecimal("2000.00")) <= 0
             ));
+        }
+
+        @Test
+        @DisplayName("should safely handle invalid sort direction and property")
+        void shouldHandleInvalidSort() {
+            // Arrange
+            TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
+                    null, null, null, null, null, null, null, null, null
+            );
+            // Try to inject SQL in Sort direction and property
+            Sort maliciousSort = Sort.by(Sort.Order.desc("date; DROP TABLE transactions; --"));
+            
+            // Act
+            Page<Transaction> result = transactionRepository.findAll(
+                    TransactionSpecification.withFilter(USER_ID, filter), 
+                    PageRequest.of(0, 10, maliciousSort)
+            );
+
+            // Assert
+            assertFalse(result.isEmpty()); // Should not crash and should return data
         }
     }
 

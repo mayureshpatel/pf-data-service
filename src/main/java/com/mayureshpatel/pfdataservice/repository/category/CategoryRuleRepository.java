@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -16,6 +17,14 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
 
     private final JdbcClient jdbcClient;
     private final CategoryRuleRowMapper rowMapper;
+
+    @Override
+    public Optional<CategoryRule> findById(Long id) {
+        return this.jdbcClient.sql(CategoryRuleQueries.FIND_BY_ID)
+                .param("id", id)
+                .query(rowMapper)
+                .optional();
+    }
 
     public List<CategoryRule> findByUserId(Long userId) {
         return this.jdbcClient.sql(CategoryRuleQueries.FIND_ALL_BY_USER_ID)

@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.security.JwtAuthenticationFilter;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.service.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -67,6 +68,14 @@ public abstract class BaseControllerTest {
     protected SnapshotService snapshotService;
     @MockitoBean
     protected CurrencyService currencyService;
+
+    @BeforeEach
+    void setUpSecurityMocks() {
+        org.mockito.Mockito.when(securityService.isAccountOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(securityService.isTransactionOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(securityService.isCategoryOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(securityService.isRuleOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+    }
 
     // User ID constant for convenience
     protected static final long USER_ID = 1L;

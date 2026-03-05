@@ -279,6 +279,7 @@ class AccountControllerTest extends BaseControllerTest {
             AccountReconcileRequest request = AccountReconcileRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .newBalance(newBalance)
+                    .version(1L)
                     .build();
             when(accountService.reconcileAccount(eq(USER_ID), any(AccountReconcileRequest.class))).thenReturn(1);
 
@@ -291,6 +292,24 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(content().string("1"));
 
             verify(accountService).reconcileAccount(eq(USER_ID), any(AccountReconcileRequest.class));
+        }
+
+        @Test
+        @DisplayName("POST /reconcile should return 400 Bad Request when version is missing")
+        void reconcileAccount_shouldReturn400WhenVersionIsMissing() throws Exception {
+            // Arrange
+            AccountReconcileRequest request = AccountReconcileRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .newBalance(new BigDecimal("1500.00"))
+                    .build();
+
+            // Act & Assert
+            mockMvc.perform(post("/api/v1/accounts/reconcile")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.validationErrors[0].field").value("version"));
         }
     }
 

@@ -97,12 +97,18 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .single();
     }
 
-    public int reconcile(Long userId, Long accountId, BigDecimal targetBalance) {
-        return jdbcClient.sql(AccountQueries.RECONCILE)
+    public int reconcile(Long userId, Long accountId, BigDecimal targetBalance, Long version) {
+        int updated = jdbcClient.sql(AccountQueries.RECONCILE)
                 .param("accountId", accountId)
                 .param("userId", userId)
                 .param("targetBalance", targetBalance)
+                .param("version", version)
                 .update();
+
+        if (updated == 0) {
+            throw new OptimisticLockingFailureException("Account reconciliation failed due to concurrent modification");
+        }
+        return updated;
     }
 
     public int updateBalance(Long userId, Long accountId, BigDecimal currentBalance, Long version) {

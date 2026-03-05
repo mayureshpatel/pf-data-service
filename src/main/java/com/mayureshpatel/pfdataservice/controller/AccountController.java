@@ -9,10 +9,10 @@ import com.mayureshpatel.pfdataservice.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -35,6 +35,7 @@ public class AccountController {
     }
 
     @PutMapping()
+    @PreAuthorize("@ss.isAccountOwner(#request.id, principal)")
     public ResponseEntity<Integer> updateAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid AccountUpdateRequest request) {
@@ -42,6 +43,7 @@ public class AccountController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.isAccountOwner(#id, principal)")
     public ResponseEntity<Integer> deleteAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
@@ -50,6 +52,7 @@ public class AccountController {
     }
 
     @PostMapping("/reconcile")
+    @PreAuthorize("@ss.isAccountOwner(#request.accountId, principal)")
     public ResponseEntity<Integer> reconcileAccount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid AccountReconcileRequest request) {

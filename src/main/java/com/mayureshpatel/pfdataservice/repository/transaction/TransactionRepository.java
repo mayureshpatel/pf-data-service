@@ -30,6 +30,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.List;
 import java.util.Optional;
 
@@ -292,14 +293,19 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 case "type" -> "t.type";
                 default -> "t.date";
             };
-            sortClause = " ORDER BY " + col + " " + order.getDirection();
+            String direction = order.getDirection().isAscending() ? "ASC" : "DESC";
+            sortClause = " ORDER BY " + col + " " + direction;
         }
 
         String pageSql = "SELECT " + TransactionQueries.ENRICHED_COLUMNS + " " + baseFrom + sortClause +
-                " LIMIT " + pageable.getPageSize() + " OFFSET " + pageable.getOffset();
+                " LIMIT :limit OFFSET :offset";
+
+        Map<String, Object> params = new HashMap<>(filter.parameters());
+        params.put("limit", pageable.getPageSize());
+        params.put("offset", pageable.getOffset());
 
         List<Transaction> content = jdbcClient.sql(pageSql)
-                .params(filter.parameters())
+                .params(params)
                 .query(detailRowMapper)
                 .list();
 
