@@ -10,6 +10,7 @@ Follow these patterns to ensure high-quality, maintainable, and robust controlle
 ## 2. Request/Response DTO Pattern
 - **Dedicated Request Objects**: Use specialized DTOs for input (`CreateRequest`, `UpdateRequest`).
 - **Response Objects**: Use DTO counterparts for output (e.g., `AccountDto`).
+- **Data Model Alignment**: Request DTO constraints (e.g., `@Size(max=...)`) MUST match the column limits defined in `src/main/resources/db/migration/`. Always verify the latest migration scripts for each field.
 - **Update ID in Body**: For `PUT` requests, the `id` should be part of the request body object, NOT a path variable.
 - **Validation**: Ensure all request DTOs have appropriate Jakarta Validation annotations (`@NotBlank`, `@NotNull`, `@Positive`, etc.).
 

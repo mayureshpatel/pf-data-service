@@ -10,7 +10,9 @@ This skill guides the generation of "Gold Standard" unit tests for Spring Boot c
 ## Workflow
 
 1.  **Analyze the Controller**: Read the target `Controller.java` to identify all endpoints, mappings, and service dependencies.
-2.  **Analyze DTOs**: Read the associated Request and Response DTOs to understand validation constraints and expected JSON structure.
+2.  **Analyze DTOs & Schema**: 
+    - Read the associated Request and Response DTOs to understand validation constraints and expected JSON structure.
+    - Research the Flyway migration scripts in `src/main/resources/db/migration/` to ensure that Request DTO validation annotations (e.g., `@Size`, `@NotBlank`) match the database column constraints (e.g., `VARCHAR(255)`, `NOT NULL`).
 3.  **Reference Best Practices**: Read [best-practices.md](references/best-practices.md) to understand the required test patterns (Nested classes, MockMvc, Security).
 4.  **Reference Gold Source**: Read [account-controller-gold-source.java](references/account-controller-gold-source.java) for a concrete implementation example.
 5.  **Generate Test Class**:
