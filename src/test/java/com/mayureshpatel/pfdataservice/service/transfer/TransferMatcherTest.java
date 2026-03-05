@@ -1,137 +1,164 @@
-//package com.mayureshpatel.pfdataservice.service.transfer;
-//
-//import com.mayureshpatel.pfdataservice.domain.account.Account;
-//import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
-//import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-//import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
-//import com.mayureshpatel.pfdataservice.domain.user.User;
-//import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
-//import org.junit.jupiter.api.DisplayName;
-//import org.junit.jupiter.api.Test;
-//
-//import java.math.BigDecimal;
-//import java.time.OffsetDateTime;
-//import java.util.List;
-//
-//import static org.assertj.core.api.Assertions.assertThat;
-//
-//@DisplayName("TransferMatcher unit tests")
-//class TransferMatcherTest {
-//
-//    private final TransferMatcher transferMatcher = new TransferMatcher();
-//
-//    private User buildUser(Long id) {
-//        User user = new User();
-//        user.setId(id);
-//        return user;
-//    }
-//
-//    private Account buildAccount(Long id, User user, BigDecimal balance) {
-//        Account account = new Account();
-//        account.setId(id);
-//        account.setUser(user);
-//        account.setCurrentBalance(balance);
-//        return account;
-//    }
-//
-//    private Transaction buildTransaction(Long id, Account account, BigDecimal amount,
-//                                         TransactionType type, OffsetDateTime date) {
-//        Transaction t = new Transaction();
-//        t.setId(id);
-//        t.setAccount(account);
-//        t.setAmount(amount);
-//        t.setType(type);
-//        t.setTransactionDate(date);
-//        t.setMerchant(new Merchant()); // Required for TransactionDtoMapper
-//        return t;
-//    }
-//
-//    @Test
-//    @DisplayName("should return empty list when no transactions exist")
-//    void findMatches_noTransactions_returnsEmptyList() {
-//        List<TransferSuggestionDto> result = transferMatcher.findMatches(List.of());
-//        assertThat(result).isEmpty();
-//    }
-//
-//    @Test
-//    @DisplayName("should detect a transfer pair when amounts match, types differ, accounts differ, and within 3 days")
-//    void findMatches_matchingPair_returnsSuggestion() {
-//        User user = buildUser(1L);
-//        Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-//        Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-//        OffsetDateTime now = OffsetDateTime.now();
-//
-//        Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("100"), TransactionType.INCOME, now);
-//        Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("100"), TransactionType.EXPENSE, now.plusDays(1));
-//
-//        List<TransferSuggestionDto> result = transferMatcher.findMatches(List.of(t1, t2));
-//
-//        assertThat(result).hasSize(1);
-//        // confidence = 0.9 - (1 * 0.1) = 0.8
-//        assertThat(result.get(0).confidenceScore()).isCloseTo(0.8, org.assertj.core.data.Offset.offset(1e-9));
-//    }
-//
-//    @Test
-//    @DisplayName("should not suggest transfer when transactions are in the same account")
-//    void findMatches_sameAccount_noSuggestion() {
-//        User user = buildUser(1L);
-//        Account account = buildAccount(1L, user, BigDecimal.ZERO);
-//        OffsetDateTime now = OffsetDateTime.now();
-//
-//        Transaction t1 = buildTransaction(1L, account, new BigDecimal("100"), TransactionType.INCOME, now);
-//        Transaction t2 = buildTransaction(2L, account, new BigDecimal("100"), TransactionType.EXPENSE, now);
-//
-//        List<TransferSuggestionDto> result = transferMatcher.findMatches(List.of(t1, t2));
-//
-//        assertThat(result).isEmpty();
-//    }
-//
-//    @Test
-//    @DisplayName("should not suggest transfer when transaction types are the same")
-//    void findMatches_sameType_noSuggestion() {
-//        User user = buildUser(1L);
-//        Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-//        Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-//        OffsetDateTime now = OffsetDateTime.now();
-//
-//        Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("100"), TransactionType.EXPENSE, now);
-//        Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("100"), TransactionType.EXPENSE, now);
-//
-//        List<TransferSuggestionDto> result = transferMatcher.findMatches(List.of(t1, t2));
-//
-//        assertThat(result).isEmpty();
-//    }
-//
-//    @Test
-//    @DisplayName("should not suggest transfer when amounts differ")
-//    void findMatches_differentAmounts_noSuggestion() {
-//        User user = buildUser(1L);
-//        Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-//        Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-//        OffsetDateTime now = OffsetDateTime.now();
-//
-//        Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("100"), TransactionType.INCOME, now);
-//        Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("200"), TransactionType.EXPENSE, now);
-//
-//        List<TransferSuggestionDto> result = transferMatcher.findMatches(List.of(t1, t2));
-//
-//        assertThat(result).isEmpty();
-//    }
-//
-//    @Test
-//    @DisplayName("should use confidence score of 0.9 when transactions occur on the same day")
-//    void findMatches_sameDayTransactions_confidenceIsMax() {
-//        User user = buildUser(1L);
-//        Account accountA = buildAccount(1L, user, BigDecimal.ZERO);
-//        Account accountB = buildAccount(2L, user, BigDecimal.ZERO);
-//        OffsetDateTime now = OffsetDateTime.now();
-//
-//        Transaction t1 = buildTransaction(1L, accountA, new BigDecimal("50"), TransactionType.INCOME, now);
-//        Transaction t2 = buildTransaction(2L, accountB, new BigDecimal("50"), TransactionType.EXPENSE, now);
-//
-//        List<TransferSuggestionDto> result = transferMatcher.findMatches(List.of(t1, t2));
-//
-//        assertThat(result).hasSize(1);
-//        assertThat(result.get(0).confidenceScore()).isEqualTo(0.9);
-//    }
-//}
+package com.mayureshpatel.pfdataservice.service.transfer;
+
+import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@DisplayName("TransferMatcher Unit Tests")
+class TransferMatcherTest {
+
+    private final TransferMatcher matcher = new TransferMatcher();
+
+    private Transaction createTxn(Long id, Long accountId, BigDecimal amount, TransactionType type, OffsetDateTime date) {
+        return Transaction.builder()
+                .id(id)
+                .account(Account.builder().id(accountId).build())
+                .amount(amount)
+                .type(type)
+                .transactionDate(date)
+                .description("Txn " + id)
+                .build();
+    }
+
+    @Nested
+    @DisplayName("findMatches")
+    class FindMatchesTests {
+
+        @Test
+        @DisplayName("should return empty list when no transactions provided")
+        void shouldHandleEmptyList() {
+            // Act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of());
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should match two identical transactions on same day from different accounts")
+        void shouldMatchPerfectPair() {
+            // Arrange
+            OffsetDateTime now = OffsetDateTime.now();
+            Transaction t1 = createTxn(1L, 10L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+            Transaction t2 = createTxn(2L, 20L, BigDecimal.TEN, TransactionType.INCOME, now);
+
+            // Act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(t1, t2));
+
+            // Assert
+            assertEquals(1, result.size());
+            assertEquals(0.9, result.get(0).confidenceScore());
+            assertEquals(1L, result.get(0).sourceTransaction().id());
+            assertEquals(2L, result.get(0).targetTransaction().id());
+        }
+
+        @Test
+        @DisplayName("should match transactions within 3-day window with decreasing confidence")
+        void shouldMatchWithinWindow() {
+            // Arrange
+            OffsetDateTime now = OffsetDateTime.now();
+            Transaction t1 = createTxn(1L, 10L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+            Transaction t2 = createTxn(2L, 20L, BigDecimal.TEN, TransactionType.INCOME, now.plusDays(2));
+
+            // Act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(t1, t2));
+
+            // Assert
+            assertEquals(1, result.size());
+            // 0.9 - (2 * 0.1) = 0.7
+            assertEquals(0.7, result.get(0).confidenceScore(), 0.001);
+        }
+
+        @Test
+        @DisplayName("should not match transactions more than 3 days apart")
+        void shouldNotMatchOutsideWindow() {
+            // Arrange
+            OffsetDateTime now = OffsetDateTime.now();
+            Transaction t1 = createTxn(1L, 10L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+            Transaction t2 = createTxn(2L, 20L, BigDecimal.TEN, TransactionType.INCOME, now.plusDays(4));
+
+            // Act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(t1, t2));
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should not match transactions from the same account")
+        void shouldNotMatchSameAccount() {
+            // Arrange
+            OffsetDateTime now = OffsetDateTime.now();
+            Transaction t1 = createTxn(1L, 10L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+            Transaction t2 = createTxn(2L, 10L, BigDecimal.TEN, TransactionType.INCOME, now);
+
+            // Act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(t1, t2));
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should not match transactions of the same type")
+        void shouldNotMatchSameType() {
+            // Arrange
+            OffsetDateTime now = OffsetDateTime.now();
+            Transaction t1 = createTxn(1L, 10L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+            Transaction t2 = createTxn(2L, 20L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+
+            // Act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(t1, t2));
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should not match transactions with different amounts")
+        void shouldNotMatchDiffAmounts() {
+            // Arrange
+            OffsetDateTime now = OffsetDateTime.now();
+            Transaction t1 = createTxn(1L, 10L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+            Transaction t2 = createTxn(2L, 20L, BigDecimal.ONE, TransactionType.INCOME, now);
+
+            // Act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(t1, t2));
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should skip already matched transactions in the target loop")
+        void shouldSkipAlreadyMatchedInTargetLoop() {
+            // Arrange
+            OffsetDateTime now = OffsetDateTime.now();
+            // t1 matches with t2. t3 would also match with t2, but t2 is gone.
+            Transaction t1 = createTxn(1L, 10L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+            Transaction t2 = createTxn(2L, 20L, BigDecimal.TEN, TransactionType.INCOME, now);
+            Transaction t3 = createTxn(3L, 30L, BigDecimal.TEN, TransactionType.EXPENSE, now);
+
+            // Act
+            // First loop matches 1 & 2. 
+            // Second loop (for t3) will see t2 in matchedIds.
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(t1, t2, t3));
+
+            // Assert
+            assertEquals(1, result.size());
+            assertEquals(1L, result.get(0).sourceTransaction().id());
+            assertEquals(2L, result.get(0).targetTransaction().id());
+        }
+    }
+}
