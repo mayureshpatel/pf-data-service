@@ -109,11 +109,17 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
     }
 
     private Category mapCategory(ResultSet rs) throws SQLException {
+        Long categoryId = getLongOrNull(rs, "category_id");
+        if (categoryId == null) return null;
+
+        String typeStr = rs.getString("cat_type");
+        String categoryType = typeStr != null ? CategoryType.valueOf(typeStr).name() : null;
+
         return Category.builder()
-                .id(rs.getLong("category_id"))
+                .id(categoryId)
                 .userId(rs.getLong("cat_user_id"))
                 .name(rs.getString("cat_name"))
-                .type(CategoryType.valueOf(rs.getString("cat_type")).name())
+                .type(categoryType)
                 .parentId(rs.getLong("pcat_id"))
                 .color(rs.getString("cat_color"))
                 .icon(rs.getString("cat_icon"))
@@ -121,8 +127,11 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
     }
 
     private Merchant mapMerchant(ResultSet rs) throws SQLException {
+        Long merchantId = getLongOrNull(rs, "merchant_id");
+        if (merchantId == null) return null;
+
         return Merchant.builder()
-                .id(rs.getLong("merchant_id"))
+                .id(merchantId)
                 .userId(rs.getLong("merch_user_id"))
                 .originalName(rs.getString("merch_original_name"))
                 .cleanName(rs.getString("merch_clean_name"))
