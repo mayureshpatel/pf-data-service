@@ -128,11 +128,10 @@ public final class AccountQueries {
     // language=SQL
     public static final String RECONCILE = """
             update accounts
-            set current_balance = :targetBalance
+            set current_balance = :targetBalance,
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP, updated_by = :userId
             where id = :accountId
-                and version = :version
                 and deleted_at is null
             """;
 }

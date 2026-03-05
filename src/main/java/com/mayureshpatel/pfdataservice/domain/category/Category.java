@@ -20,6 +20,7 @@ public class Category {
     private Long parentId;
     private String color;
     private String icon;
+    private Category parent;
 
     @ToString.Exclude
     private TableAudit audit;
