@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -26,24 +27,16 @@ public class StandardCsvParser implements TransactionParser {
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
         try {
-            CSVParser csvParser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get().parse(reader);
+            CSVParser csvParser = CSVFormat.DEFAULT.builder()
+                    .setHeader()
+                    .setSkipHeaderRecord(true)
+                    .setIgnoreHeaderCase(true)
+                    .setTrim(true)
+                    .get()
+                    .parse(reader);
+            
             return csvParser.stream()
-                    .map(csvRecord -> {
-                        Transaction t = Transaction.builder()
-                                .description(csvRecord.get("description"))
-                                .build();
-
-                        String amountStr = csvRecord.get("amount").replace("$", "").replace(",", "");
-                        BigDecimal amount = new BigDecimal(amountStr);
-
-                        TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
-
-                        return t.toBuilder()
-                                .amount(amount.abs())
-                                .transactionDate(OffsetDateTime.parse(csvRecord.get("date")))
-                                .type(type)
-                                .build();
-                    })
+                    .map(this::mapToTransaction)
                     .onClose(() -> {
                         try {
                             csvParser.close();
@@ -59,5 +52,22 @@ public class StandardCsvParser implements TransactionParser {
             }
             throw new RuntimeException("Failed to parse Standard CSV", e);
         }
+    }
+
+    private Transaction mapToTransaction(CSVRecord csvRecord) {
+        Transaction t = Transaction.builder()
+                .description(csvRecord.get("description"))
+                .build();
+
+        String amountStr = csvRecord.get("amount").replace("$", "").replace(",", "");
+        BigDecimal amount = new BigDecimal(amountStr);
+
+        TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
+
+        return t.toBuilder()
+                .amount(amount.abs())
+                .transactionDate(OffsetDateTime.parse(csvRecord.get("date")))
+                .type(type)
+                .build();
     }
 }
