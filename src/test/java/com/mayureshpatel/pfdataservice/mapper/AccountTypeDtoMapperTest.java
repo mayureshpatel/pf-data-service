@@ -1,49 +1,132 @@
-//package com.mayureshpatel.pfdataservice.mapper;
-//
-//import com.mayureshpatel.pfdataservice.domain.Iconography;
-//import com.mayureshpatel.pfdataservice.domain.account.AccountType;
-//import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
-//import com.mayureshpatel.pfdataservice.util.TestFixtures;
-//import org.junit.jupiter.api.DisplayName;
-//import org.junit.jupiter.api.Test;
-//
-//import static org.assertj.core.api.Assertions.assertThat;
-//
-//@DisplayName("AccountTypeDtoMapper unit tests")
-//class AccountTypeDtoMapperTest {
-//
-//    @Test
-//    @DisplayName("should return null when accountType is null")
-//    void toDto_null_returnsNull() {
-//        assertThat(AccountTypeDtoMapper.toDto(null)).isNull();
-//    }
-//
-//    @Test
-//    @DisplayName("should map all fields correctly with iconography")
-//    void toDto_fullAccountType_mapsAllFields() {
-//        AccountType type = TestFixtures.anAccountType();
-//        type.setIconography(new Iconography("bank", "#336699"));
-//
-//        AccountTypeDto dto = AccountTypeDtoMapper.toDto(type);
-//
-//        assertThat(dto.code()).isEqualTo(type.getCode());
-//        assertThat(dto.label()).isEqualTo(type.getLabel());
-//        assertThat(dto.isAsset()).isEqualTo(type.isAsset());
-//        assertThat(dto.sortOrder()).isEqualTo(type.getSortOrder());
-//        assertThat(dto.isActive()).isEqualTo(type.isActive());
-//        assertThat(dto.icon()).isEqualTo("bank");
-//        assertThat(dto.color()).isEqualTo("#336699");
-//    }
-//
-//    @Test
-//    @DisplayName("should handle null iconography")
-//    void toDto_nullIconography_mapsIconAndColorAsNull() {
-//        AccountType type = TestFixtures.anAccountType(); // iconography is null by default
-//
-//        AccountTypeDto dto = AccountTypeDtoMapper.toDto(type);
-//
-//        assertThat(dto.code()).isEqualTo("SAVINGS");
-//        assertThat(dto.icon()).isNull();
-//        assertThat(dto.color()).isNull();
-//    }
-//}
+package com.mayureshpatel.pfdataservice.mapper;
+
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
+import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Constructor;
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@DisplayName("AccountTypeDtoMapper Unit Tests")
+class AccountTypeDtoMapperTest {
+
+    @Test
+    @DisplayName("Private constructor should be accessible for coverage")
+    void testPrivateConstructor() throws Exception {
+        // Arrange
+        Constructor<AccountTypeDtoMapper> constructor = AccountTypeDtoMapper.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+
+        // Act
+        AccountTypeDtoMapper instance = constructor.newInstance();
+
+        // Assert
+        assertNotNull(instance);
+    }
+
+    @Nested
+    @DisplayName("Method: toDto(AccountType)")
+    class ToDtoMappingTests {
+
+        @Test
+        @DisplayName("should return null when source is null")
+        void toDto_shouldReturnNullWhenSourceIsNull() {
+            // Act
+            AccountTypeDto result = AccountTypeDtoMapper.toDto((AccountType) null);
+
+            // Assert
+            assertNull(result);
+        }
+
+        @Test
+        @DisplayName("should map all fields when source is fully populated")
+        void toDto_shouldMapAllFields() {
+            // Arrange
+            AccountType accountType = AccountType.builder()
+                    .code("CHECKING")
+                    .label("Checking Account")
+                    .asset(true)
+                    .sortOrder(1)
+                    .active(true)
+                    .icon("bank-icon")
+                    .color("#000000")
+                    .build();
+
+            // Act
+            AccountTypeDto dto = AccountTypeDtoMapper.toDto(accountType);
+
+            // Assert
+            assertNotNull(dto);
+            assertEquals(accountType.getCode(), dto.code());
+            assertEquals(accountType.getLabel(), dto.label());
+            assertEquals(accountType.isAsset(), dto.isAsset());
+            assertEquals(accountType.getSortOrder(), dto.sortOrder());
+            assertEquals(accountType.isActive(), dto.isActive());
+            assertEquals(accountType.getIcon(), dto.icon());
+            assertEquals(accountType.getColor(), dto.color());
+        }
+
+        @Test
+        @DisplayName("should handle null optional fields (icon and color)")
+        void toDto_shouldHandleNullOptionals() {
+            // Arrange
+            AccountType accountType = AccountType.builder()
+                    .code("SAVINGS")
+                    .label("Savings Account")
+                    .asset(true)
+                    .sortOrder(2)
+                    .active(true)
+                    .icon(null)
+                    .color(null)
+                    .build();
+
+            // Act
+            AccountTypeDto dto = AccountTypeDtoMapper.toDto(accountType);
+
+            // Assert
+            assertNotNull(dto);
+            assertNull(dto.icon());
+            assertNull(dto.color());
+        }
+    }
+
+    @Nested
+    @DisplayName("Method: toDto(List<AccountType>)")
+    class ToDtoListMappingTests {
+
+        @Test
+        @DisplayName("should map list of account types")
+        void toDto_shouldMapList() {
+            // Arrange
+            AccountType accountType = AccountType.builder()
+                    .code("CHECKING")
+                    .label("Checking")
+                    .build();
+            List<AccountType> source = List.of(accountType);
+
+            // Act
+            List<AccountTypeDto> result = AccountTypeDtoMapper.toDto(source);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals(accountType.getCode(), result.get(0).code());
+        }
+
+        @Test
+        @DisplayName("should return empty list when source is empty")
+        void toDto_shouldReturnEmptyListWhenSourceIsEmpty() {
+            // Act
+            List<AccountTypeDto> result = AccountTypeDtoMapper.toDto(Collections.emptyList());
+
+            // Assert
+            assertNotNull(result);
+            assertTrue(result.isEmpty());
+        }
+    }
+}

@@ -1,75 +1,119 @@
-//package com.mayureshpatel.pfdataservice.mapper;
-//
-//import com.mayureshpatel.pfdataservice.domain.category.Category;
-//import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
-//import com.mayureshpatel.pfdataservice.domain.user.User;
-//import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
-//import com.mayureshpatel.pfdataservice.util.TestFixtures;
-//import org.junit.jupiter.api.DisplayName;
-//import org.junit.jupiter.api.Test;
-//
-//import static org.assertj.core.api.Assertions.assertThat;
-//
-//@DisplayName("CategoryDtoMapper unit tests")
-//class CategoryDtoMapperTest {
-//
-//    @Test
-//    @DisplayName("should return null when category is null")
-//    void toDto_nullCategory_returnsNull() {
-//        assertThat(CategoryDtoMapper.toDto(null)).isNull();
-//    }
-//
-//    @Test
-//    @DisplayName("should map all fields correctly for top-level category")
-//    void toDto_topLevelCategory_mapsAllFields() {
-//        User user = TestFixtures.aUser();
-//        Category category = TestFixtures.aCategory(user);
-//
-//        CategoryDto dto = CategoryDtoMapper.toDto(category);
-//
-//        assertThat(dto.id()).isEqualTo(category.getId());
-//        assertThat(dto.userId()).isEqualTo(category.getUser().getId());
-//        assertThat(dto.name()).isEqualTo(category.getName());
-//        assertThat(dto.categoryType()).isEqualTo(category.getType());
-//        assertThat(dto.parent()).isNull();
-//        assertThat(dto.icon()).isEqualTo(category.getIconography().getIcon());
-//        assertThat(dto.color()).isEqualTo(category.getIconography().getColor());
-//    }
-//
-//    @Test
-//    @DisplayName("should recursively map parent category")
-//    void toDto_categoryWithParent_mapsParentRecursively() {
-//        User user = TestFixtures.aUser();
-//        Category parent = new Category();
-//        parent.setId(99L);
-//        parent.setUser(user);
-//        parent.setName("Food");
-//        parent.setType(CategoryType.EXPENSE);
-//
-//        Category child = TestFixtures.aCategory(user);
-//        child.setParent(parent);
-//
-//        CategoryDto dto = CategoryDtoMapper.toDto(child);
-//
-//        assertThat(dto.parent()).isNotNull();
-//        assertThat(dto.parent().id()).isEqualTo(99L);
-//        assertThat(dto.parent().name()).isEqualTo("Food");
-//        assertThat(dto.parent().parent()).isNull();
-//    }
-//
-//    @Test
-//    @DisplayName("should handle null optional fields (user, iconography)")
-//    void toDto_nullOptionalFields_mapsNulls() {
-//        Category category = new Category();
-//        category.setId(1L);
-//        category.setName("Test");
-//        category.setType(CategoryType.INCOME);
-//
-//        CategoryDto dto = CategoryDtoMapper.toDto(category);
-//
-//        assertThat(dto.id()).isEqualTo(1L);
-//        assertThat(dto.userId()).isNull();
-//        assertThat(dto.icon()).isNull();
-//        assertThat(dto.color()).isNull();
-//    }
-//}
+package com.mayureshpatel.pfdataservice.mapper;
+
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Constructor;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@DisplayName("CategoryDtoMapper Unit Tests")
+class CategoryDtoMapperTest {
+
+    @Test
+    @DisplayName("Private constructor should be accessible for coverage")
+    void testPrivateConstructor() throws Exception {
+        // Arrange
+        Constructor<CategoryDtoMapper> constructor = CategoryDtoMapper.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+
+        // Act
+        CategoryDtoMapper instance = constructor.newInstance();
+
+        // Assert
+        assertNotNull(instance);
+    }
+
+    @Nested
+    @DisplayName("Method: toDto")
+    class ToDtoMappingTests {
+
+        @Test
+        @DisplayName("should return null when source is null")
+        void toDto_shouldReturnNullWhenSourceIsNull() {
+            // Act
+            CategoryDto result = CategoryDtoMapper.toDto(null);
+
+            // Assert
+            assertNull(result);
+        }
+
+        @Test
+        @DisplayName("should map all fields when source is fully populated")
+        void toDto_shouldMapAllFields() {
+            // Arrange
+            Category category = Category.builder()
+                    .id(1L)
+                    .userId(100L)
+                    .name("Dining")
+                    .type("EXPENSE")
+                    .parentId(null)
+                    .icon("food-icon")
+                    .color("#FF0000")
+                    .build();
+
+            // Act
+            CategoryDto dto = CategoryDtoMapper.toDto(category);
+
+            // Assert
+            assertNotNull(dto);
+            assertEquals(category.getId(), dto.id());
+            assertEquals(category.getUserId(), dto.userId());
+            assertEquals(category.getName(), dto.name());
+            assertEquals(CategoryType.EXPENSE, dto.categoryType());
+            assertNull(dto.parent());
+            assertEquals(category.getIcon(), dto.icon());
+            assertEquals(category.getColor(), dto.color());
+        }
+
+        @Test
+        @DisplayName("should map parent ID when parentId is present")
+        void toDto_shouldMapParentId() {
+            // Arrange
+            Category category = Category.builder()
+                    .id(2L)
+                    .parentId(1L)
+                    .name("Restaurants")
+                    .type("EXPENSE")
+                    .build();
+
+            // Act
+            CategoryDto dto = CategoryDtoMapper.toDto(category);
+
+            // Assert
+            assertNotNull(dto);
+            assertNotNull(dto.parent());
+            assertEquals(1L, dto.parent().id());
+        }
+
+        @Test
+        @DisplayName("should handle null optional fields")
+        void toDto_shouldHandleNullOptionals() {
+            // Arrange
+            Category category = Category.builder()
+                    .id(1L)
+                    .name("Minimal")
+                    .type(null)
+                    .userId(null)
+                    .icon(null)
+                    .color(null)
+                    .parentId(null)
+                    .build();
+
+            // Act
+            CategoryDto dto = CategoryDtoMapper.toDto(category);
+
+            // Assert
+            assertNotNull(dto);
+            assertNull(dto.categoryType());
+            assertNull(dto.userId());
+            assertNull(dto.icon());
+            assertNull(dto.color());
+            assertNull(dto.parent());
+        }
+    }
+}

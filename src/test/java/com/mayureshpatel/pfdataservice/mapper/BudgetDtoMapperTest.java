@@ -1,52 +1,94 @@
-//package com.mayureshpatel.pfdataservice.mapper;
-//
-//import com.mayureshpatel.pfdataservice.domain.budget.Budget;
-//import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
-//import org.junit.jupiter.api.DisplayName;
-//import org.junit.jupiter.api.Test;
-//
-//import static org.assertj.core.api.Assertions.assertThat;
-//
-//@DisplayName("BudgetDtoMapper unit tests")
-//class BudgetDtoMapperTest {
-//
-//    @Test
-//    @DisplayName("should return null when budget is null")
-//    void toDto_nullBudget_returnsNull() {
-//        assertThat(BudgetDtoMapper.toDto(null)).isNull();
-//    }
-//
-//    @Test
-//    @DisplayName("should map all fields correctly")
-//    void toDto_fullBudget_mapsAllFields() {
-//        Budget budget = TestFixtures.aBudget();
-//
-//        BudgetDto dto = BudgetDtoMapper.toDto(budget);
-//
-//        assertThat(dto.id()).isEqualTo(budget.getId());
-//        assertThat(dto.userId()).isEqualTo(budget.getUser().getId());
-//        assertThat(dto.amount()).isEqualByComparingTo(budget.getAmount());
-//        assertThat(dto.month()).isEqualTo(budget.getMonth());
-//        assertThat(dto.year()).isEqualTo(budget.getYear());
-//        assertThat(dto.category()).isNotNull();
-//        assertThat(dto.category().id()).isEqualTo(budget.getCategory().getId());
-//    }
-//
-//    @Test
-//    @DisplayName("should handle null user and null category")
-//    void toDto_nullOptionalFields_mapsNulls() {
-//        Budget budget = Budget.builder()
-//                .id(1L)
-//                .amount(new java.math.BigDecimal("100.00"))
-//                .month(6)
-//                .year(2026)
-//                .build();
-//
-//        BudgetDto dto = BudgetDtoMapper.toDto(budget);
-//
-//        assertThat(dto.id()).isEqualTo(1L);
-//        assertThat(dto.userId()).isNull();
-//        assertThat(dto.category()).isNull();
-//        assertThat(dto.amount()).isEqualByComparingTo("100.00");
-//    }
-//}
+package com.mayureshpatel.pfdataservice.mapper;
+
+import com.mayureshpatel.pfdataservice.domain.budget.Budget;
+import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Constructor;
+import java.math.BigDecimal;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@DisplayName("BudgetDtoMapper Unit Tests")
+class BudgetDtoMapperTest {
+
+    @Test
+    @DisplayName("Private constructor should be accessible for coverage")
+    void testPrivateConstructor() throws Exception {
+        // Arrange
+        Constructor<BudgetDtoMapper> constructor = BudgetDtoMapper.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+
+        // Act
+        BudgetDtoMapper instance = constructor.newInstance();
+
+        // Assert
+        assertNotNull(instance);
+    }
+
+    @Nested
+    @DisplayName("Method: toDto")
+    class ToDtoMappingTests {
+
+        @Test
+        @DisplayName("should return null when source is null")
+        void toDto_shouldReturnNullWhenSourceIsNull() {
+            // Act
+            BudgetDto result = BudgetDtoMapper.toDto(null);
+
+            // Assert
+            assertNull(result);
+        }
+
+        @Test
+        @DisplayName("should map all fields when source is fully populated")
+        void toDto_shouldMapAllFields() {
+            // Arrange
+            Budget budget = Budget.builder()
+                    .id(1L)
+                    .userId(100L)
+                    .categoryId(50L)
+                    .amount(new BigDecimal("1000.00"))
+                    .month(10)
+                    .year(2023)
+                    .build();
+
+            // Act
+            BudgetDto dto = BudgetDtoMapper.toDto(budget);
+
+            // Assert
+            assertNotNull(dto);
+            assertEquals(budget.getId(), dto.id());
+            assertEquals(budget.getUserId(), dto.userId());
+            assertEquals(budget.getAmount(), dto.amount());
+            assertEquals(budget.getMonth(), dto.month());
+            assertEquals(budget.getYear(), dto.year());
+            assertNotNull(dto.category());
+            assertEquals(budget.getCategoryId(), dto.category().id());
+        }
+
+        @Test
+        @DisplayName("should handle null userId and categoryId")
+        void toDto_shouldHandleNullIds() {
+            // Arrange
+            Budget budget = Budget.builder()
+                    .id(1L)
+                    .userId(null)
+                    .categoryId(null)
+                    .amount(new BigDecimal("1000.00"))
+                    .month(10)
+                    .year(2023)
+                    .build();
+
+            // Act
+            BudgetDto dto = BudgetDtoMapper.toDto(budget);
+
+            // Assert
+            assertNotNull(dto);
+            assertNull(dto.userId());
+            assertNull(dto.category());
+        }
+    }
+}

@@ -11,12 +11,20 @@ public final class CategoryDtoMapper {
 
     public static CategoryDto toDto(Category category) {
         if (category == null) return null;
+        
+        CategoryDto parentDto = null;
+        if (category.getParentId() != null && category.getParentId() != 0) {
+            parentDto = CategoryDto.builder()
+                    .id(category.getParentId())
+                    .build();
+        }
+
         return new CategoryDto(
                 category.getId(),
                 category.getUserId() != null ? category.getUserId() : null,
                 category.getName(),
-                CategoryType.fromValue(category.getType()),
-                category.getParentId() != null ? toDto(Category.builder().parentId(category.getParentId()).build()) : null,
+                category.getType() != null ? CategoryType.fromValue(category.getType()) : null,
+                parentDto,
                 category.getIcon() != null ? category.getIcon() : null,
                 category.getColor() != null ? category.getColor() : null
         );
