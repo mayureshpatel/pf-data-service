@@ -1,5 +1,8 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import lombok.Builder;
+
+@Builder(toBuilder = true)
 public record AccountTypeDto(
         String code,
         String label,
