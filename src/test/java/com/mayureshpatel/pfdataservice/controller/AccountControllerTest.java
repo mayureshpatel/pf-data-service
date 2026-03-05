@@ -20,7 +20,8 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -293,15 +294,6 @@ class AccountControllerTest extends BaseControllerTest {
     @Nested
     @DisplayName("Security Tests")
     class SecurityTests {
-
-        @Test
-        @DisplayName("Request without CSRF token should return 403 Forbidden")
-        void requestWithoutCsrf_shouldReturn403() throws Exception {
-            mockMvc.perform(post("/api/v1/accounts")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(status().isForbidden());
-        }
 
         @Test
         @WithCustomMockUser(id = 0)

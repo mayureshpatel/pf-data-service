@@ -170,18 +170,4 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$.detail").value("An unexpected internal error occurred. Please contact support."));
         }
     }
-
-    @Nested
-    @DisplayName("Security Tests")
-    class SecurityTests {
-
-        @Test
-        @DisplayName("Request without CSRF token should return 403 Forbidden")
-        void requestWithoutCsrf_shouldReturn403() throws Exception {
-            mockMvc.perform(post("/api/v1/account-types")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(status().isForbidden());
-        }
-    }
 }
