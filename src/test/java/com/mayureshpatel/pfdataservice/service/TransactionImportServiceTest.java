@@ -28,7 +28,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -182,6 +181,7 @@ class TransactionImportServiceTest {
             TransactionDto dto = TransactionDto.builder().description("Test").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), anyString())).thenReturn(Optional.empty());
             when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
 
@@ -205,6 +205,7 @@ class TransactionImportServiceTest {
             TransactionDto dto2 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(now).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
 
             // Act
@@ -236,6 +237,7 @@ class TransactionImportServiceTest {
 
             // fileName is null case
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
             importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash");
             verify(fileImportHistoryRepository, never()).save(any());
@@ -295,27 +297,6 @@ class TransactionImportServiceTest {
 
             // Act & Assert
             assertThrows(AccessDeniedException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null));
-        }
-    }
-
-    @Nested
-    @DisplayName("calculateFileHash")
-    class HashTests {
-        @Test
-        @DisplayName("should calculate MD5 hex string")
-        void shouldHash() throws IOException {
-            InputStream stream = new ByteArrayInputStream("content".getBytes());
-            String hash = importService.calculateFileHash(stream);
-
-            // Assert
-            assertNotNull(hash);
-            assertEquals(64, hash.length());
-            }
-        @Test
-        @DisplayName("should hash byte array")
-        void shouldHashBytes() {
-            String hash = importService.calculateFileHash("content".getBytes());
-            assertNotNull(hash);
         }
     }
 }

@@ -26,13 +26,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -193,34 +189,11 @@ public class TransactionImportService {
             updatedAccount = updatedAccount.applyTransaction(t);
         }
 
-        accountRepository.updateBalance(updatedAccount.getUserId(), updatedAccount.getId(), updatedAccount.getCurrentBalance(), account.getVersion());
+        int updatedRows = accountRepository.updateBalance(updatedAccount.getUserId(), updatedAccount.getId(), updatedAccount.getCurrentBalance(), account.getVersion());
+        if (updatedRows == 0) {
+            throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+        }
 
         log.info("Updated Account ID: {} balance. Old: {}, New: {}", updatedAccount.getId(), oldBalance, updatedAccount.getCurrentBalance());
-    }
-
-    public String calculateFileHash(InputStream inputStream) throws IOException {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                digest.update(buffer, 0, bytesRead);
-            }
-
-            return HexFormat.of().formatHex(digest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not found", e);
-        }
-    }
-
-    // Kept for backward compatibility if needed, but intended to be removed or unused for streaming
-    public String calculateFileHash(byte[] content) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(content));
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not found", e);
-        }
     }
 }

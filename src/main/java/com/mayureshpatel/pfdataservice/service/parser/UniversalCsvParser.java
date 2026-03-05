@@ -80,7 +80,8 @@ public class UniversalCsvParser implements TransactionParser {
         } catch (Exception e) {
             try {
                 reader.close();
-            } catch (Exception ignored) {
+            } catch (Exception closeException) {
+                log.warn("Failed to close reader during exception handling", closeException);
             }
             throw new RuntimeException("Failed to parse Universal CSV", e);
         }
