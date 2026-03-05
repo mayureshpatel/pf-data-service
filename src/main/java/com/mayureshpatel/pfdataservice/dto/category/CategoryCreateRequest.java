@@ -17,17 +17,17 @@ public class CategoryCreateRequest {
     @Positive(message = "User ID must be a positive number.")
     private final Long userId;
 
-    @NotBlank(message = "Account name cannot be blank.")
-    @Size(max = 50, message = "Account name must be less than 50 characters.")
+    @NotBlank(message = "Category name cannot be blank.")
+    @Size(max = 50, message = "Category name must be less than 50 characters.")
     private final String name;
 
-    @Size(max = 20, message = "Account type must be less than 20 characters.")
+    @Size(max = 20, message = "Category type must be less than 20 characters.")
     private final String type;
 
-    @Size(max = 20, message = "Account type must be less than 20 characters.")
+    @Size(max = 20, message = "Category color must be less than 20 characters.")
     private final String color;
 
-    @Size(max = 50, message = "Account type must be less than 50 characters.")
+    @Size(max = 50, message = "Category icon must be less than 50 characters.")
     private final String icon;
 
     @Positive(message = "Parent ID must be a positive number.")

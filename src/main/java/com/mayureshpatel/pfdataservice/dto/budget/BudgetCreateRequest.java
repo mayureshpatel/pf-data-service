@@ -33,7 +33,7 @@ public class BudgetCreateRequest {
 
     @NotNull(message = "Year cannot be null.")
     @Positive(message = "Year must be a positive number.")
-    @Min(value = 1900, message = "Year must be greater than or equal to 1")
+    @Min(value = 1900, message = "Year must be greater than or equal to 1900")
     @Max(value = 9999, message = "Year must be less than or equal to 9999")
     private final Integer year;
 }

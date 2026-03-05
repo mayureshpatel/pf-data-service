@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
@@ -22,6 +23,7 @@ public class CategoryRuleUpdateRequest {
     private final Long categoryId;
 
     @NotBlank(message = "Keyword cannot be blank.")
+    @Size(max = 255, message = "Keyword cannot exceed 255 characters.")
     private final String keyword;
 
     @PositiveOrZero(message = "Priority must be a positive number or zero.")

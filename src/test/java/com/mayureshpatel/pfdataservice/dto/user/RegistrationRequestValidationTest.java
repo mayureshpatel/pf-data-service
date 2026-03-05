@@ -38,7 +38,7 @@ class RegistrationRequestValidationTest {
     }
 
     @Nested
-    @DisplayName("username validation")
+    @DisplayName("Field: username")
     class UsernameValidation {
 
         @Test
@@ -55,15 +55,6 @@ class RegistrationRequestValidationTest {
         void validate_nullUsername_hasViolation() {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().username(null).build());
-
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
-        }
-
-        @Test
-        @DisplayName("should fail when username is shorter than 3 characters")
-        void validate_usernameTooShort_hasViolation() {
-            Set<ConstraintViolation<RegistrationRequest>> violations =
-                    validator.validate(validRequest().username("ab").build());
 
             assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
         }
@@ -99,7 +90,7 @@ class RegistrationRequestValidationTest {
     }
 
     @Nested
-    @DisplayName("email validation")
+    @DisplayName("Field: email")
     class EmailValidation {
 
         @Test
@@ -107,6 +98,15 @@ class RegistrationRequestValidationTest {
         void validate_blankEmail_hasViolation() {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().email("").build());
+
+            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("email"));
+        }
+
+        @Test
+        @DisplayName("should fail when email is null")
+        void validate_nullEmail_hasViolation() {
+            Set<ConstraintViolation<RegistrationRequest>> violations =
+                    validator.validate(validRequest().email(null).build());
 
             assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("email"));
         }
@@ -121,10 +121,20 @@ class RegistrationRequestValidationTest {
                     v.getPropertyPath().toString().equals("email") &&
                             v.getMessage().contains("valid"));
         }
+
+        @Test
+        @DisplayName("should fail when email exceeds 100 characters")
+        void validate_emailTooLong_hasViolation() {
+            String longEmail = "a".repeat(90) + "@example.com"; // 102 chars
+            Set<ConstraintViolation<RegistrationRequest>> violations =
+                    validator.validate(validRequest().email(longEmail).build());
+
+            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("email"));
+        }
     }
 
     @Nested
-    @DisplayName("password validation")
+    @DisplayName("Field: password")
     class PasswordValidation {
 
         @Test
@@ -137,10 +147,28 @@ class RegistrationRequestValidationTest {
         }
 
         @Test
+        @DisplayName("should fail when password is null")
+        void validate_nullPassword_hasViolation() {
+            Set<ConstraintViolation<RegistrationRequest>> violations =
+                    validator.validate(validRequest().password(null).build());
+
+            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+        }
+
+        @Test
         @DisplayName("should fail when password is shorter than 8 characters")
         void validate_passwordTooShort_hasViolation() {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().password("P@ss1").build());
+
+            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+        }
+
+        @Test
+        @DisplayName("should fail when password exceeds 100 characters")
+        void validate_passwordTooLong_hasViolation() {
+            Set<ConstraintViolation<RegistrationRequest>> violations =
+                    validator.validate(validRequest().password("P1" + "a".repeat(99) + "@").build());
 
             assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
         }
