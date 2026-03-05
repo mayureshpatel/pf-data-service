@@ -80,13 +80,12 @@ public class CategoryRuleService {
      * Update an existing category rule for a user
      *
      * @param userId  the user id
-     * @param ruleId  the rule id to update
      * @param request the updated category rule request
      * @return the updated {@link CategoryRuleDto}
      */
     @Transactional
-    public int updateRule(Long userId, Long ruleId, CategoryRuleUpdateRequest request) {
-        CategoryRule rule = categoryRuleRepository.findById(ruleId)
+    public int updateRule(Long userId, CategoryRuleUpdateRequest request) {
+        CategoryRule rule = categoryRuleRepository.findById(request.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
 
         if (!rule.getUser().getId().equals(userId)) {
@@ -97,6 +96,7 @@ public class CategoryRuleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         CategoryRule updatedRule = rule.toBuilder()
+                .keyword(request.getKeyword())
                 .category(category)
                 .priority(request.getPriority())
                 .audit(TableAudit.updateAudit(rule.getUser()))

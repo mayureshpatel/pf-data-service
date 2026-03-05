@@ -128,38 +128,40 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         void updateRule_shouldReturnRowsAffected() throws Exception {
             // Arrange
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
+                    .id(RULE_ID)
+                    .keyword("Updated Keyword")
                     .categoryId(20L)
                     .priority(10)
                     .build();
 
-            when(categoryRuleService.updateRule(eq(USER_ID), eq(RULE_ID), any(CategoryRuleUpdateRequest.class))).thenReturn(1);
+            when(categoryRuleService.updateRule(eq(USER_ID), any(CategoryRuleUpdateRequest.class))).thenReturn(1);
 
             // Act & Assert
-            mockMvc.perform(put("/api/v1/category-rules/{id}", RULE_ID)
+            mockMvc.perform(put("/api/v1/category-rules")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(content().string("1"));
 
-            verify(categoryRuleService).updateRule(eq(USER_ID), eq(RULE_ID), any(CategoryRuleUpdateRequest.class));
+            verify(categoryRuleService).updateRule(eq(USER_ID), any(CategoryRuleUpdateRequest.class));
         }
 
         @Test
         @DisplayName("PUT should return 400 Bad Request when validation fails")
         void updateRule_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - missing categoryId
+            // Arrange - missing id and categoryId
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .priority(10)
                     .build();
 
             // Act & Assert
-            mockMvc.perform(put("/api/v1/category-rules/{id}", RULE_ID)
+            mockMvc.perform(put("/api/v1/category-rules")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validationErrors[0].field").value("categoryId"));
+                    .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("id", "categoryId", "keyword")));
         }
     }
 

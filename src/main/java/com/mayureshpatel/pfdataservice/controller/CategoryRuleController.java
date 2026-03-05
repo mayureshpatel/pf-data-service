@@ -33,12 +33,11 @@ public class CategoryRuleController {
         return ResponseEntity.ok(categoryRuleService.createRule(userDetails.getId(), request));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping
     public ResponseEntity<Integer> updateRule(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long id,
             @RequestBody @Valid CategoryRuleUpdateRequest request) {
-        return ResponseEntity.ok(categoryRuleService.updateRule(userDetails.getId(), id, request));
+        return ResponseEntity.ok(categoryRuleService.updateRule(userDetails.getId(), request));
     }
 
     @GetMapping("/preview")
