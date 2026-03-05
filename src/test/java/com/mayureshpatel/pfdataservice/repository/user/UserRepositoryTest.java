@@ -110,10 +110,10 @@ class UserRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = userRepository.insert(user);
+            int userId = userRepository.insert(user);
 
             // Assert
-            assertEquals(1, rows);
+            assertTrue(userId > 0);
             assertTrue(userRepository.existsByUsername("newuser"));
         }
 

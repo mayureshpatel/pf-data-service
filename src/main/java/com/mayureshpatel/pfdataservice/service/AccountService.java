@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
+import com.mayureshpatel.pfdataservice.dto.account.AccountReconcileRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
@@ -82,18 +83,17 @@ public class AccountService {
      * Reconciles the account balance with the target balance.
      *
      * @param userId        the user id
-     * @param accountId     the account id
-     * @param targetBalance the target balance
+     * @param request       the reconcile request
      * @return the updated account
      */
     @Transactional
-    public int reconcileAccount(Long userId, Long accountId, BigDecimal targetBalance) {
-        Account account = accountRepository.findByIdAndUserId(accountId, userId)
+    public int reconcileAccount(Long userId, AccountReconcileRequest request) {
+        Account account = accountRepository.findByIdAndUserId(request.getAccountId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         // calculate the difference between current and target balance
         BigDecimal currentBalance = account.getCurrentBalance();
-        BigDecimal diff = targetBalance.subtract(currentBalance);
+        BigDecimal diff = request.getNewBalance().subtract(currentBalance);
 
         if (diff.compareTo(BigDecimal.ZERO) == 0) {
             return 0;
@@ -105,7 +105,7 @@ public class AccountService {
 
         // update account balance
         account.applyTransaction(adjustmentTransaction);
-        return accountRepository.reconcile(userId, accountId, targetBalance);
+        return accountRepository.reconcile(userId, request.getAccountId(), request.getNewBalance());
     }
 
     /**
@@ -156,6 +156,6 @@ public class AccountService {
             );
         }
 
-        return accountRepository.deleteById(accountId);
+        return accountRepository.deleteById(accountId, userId);
     }
 }

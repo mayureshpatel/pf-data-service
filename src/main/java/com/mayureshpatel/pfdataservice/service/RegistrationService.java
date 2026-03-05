@@ -42,10 +42,11 @@ public class RegistrationService {
                 .build();
 
         // Save user to database
-        userService.insert(user);
+        int userId = userService.insert(user);
 
         // Generate JWT token with userId and email claims
-        CustomUserDetails userDetails = new CustomUserDetails(user);
+        User savedUser = user.toBuilder().id((long) userId).build();
+        CustomUserDetails userDetails = new CustomUserDetails(savedUser);
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", userDetails.getId());
         extraClaims.put("email", userDetails.getEmail());

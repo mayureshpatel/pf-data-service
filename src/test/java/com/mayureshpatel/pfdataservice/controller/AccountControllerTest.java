@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
+import com.mayureshpatel.pfdataservice.dto.account.AccountReconcileRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.dto.currency.CurrencyDto;
@@ -275,17 +276,21 @@ class AccountControllerTest extends BaseControllerTest {
         void reconcileAccount_shouldReconcile() throws Exception {
             // Arrange
             BigDecimal newBalance = new BigDecimal("1500.00");
-            when(accountService.reconcileAccount(USER_ID, ACCOUNT_ID, newBalance)).thenReturn(1);
+            AccountReconcileRequest request = AccountReconcileRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .newBalance(newBalance)
+                    .build();
+            when(accountService.reconcileAccount(eq(USER_ID), any(AccountReconcileRequest.class))).thenReturn(1);
 
             // Act & Assert
-            mockMvc.perform(post("/api/v1/accounts/{id}/reconcile", ACCOUNT_ID)
+            mockMvc.perform(post("/api/v1/accounts/reconcile")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(newBalance)))
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(content().string("1"));
 
-            verify(accountService).reconcileAccount(USER_ID, ACCOUNT_ID, newBalance);
+            verify(accountService).reconcileAccount(eq(USER_ID), any(AccountReconcileRequest.class));
         }
     }
 

@@ -53,13 +53,18 @@ public class TransactionService {
     @Transactional
     public void markAsTransfer(Long userId, List<Long> transactionIds) {
         List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
-        List<Transaction> updatedTransactions = new ArrayList<>();
-
         for (Transaction t : transactions) {
             if (!t.getAccount().getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
             }
+        }
+        
+        if (transactions.size() != transactionIds.size()) {
+            throw new ResourceNotFoundException("One or more transactions not found");
+        }
 
+        List<Transaction> updatedTransactions = new ArrayList<>();
+        for (Transaction t : transactions) {
             Account account = accountRepository.findById(t.getAccount().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             Account accountAfterUndo = account.undoTransaction(t);

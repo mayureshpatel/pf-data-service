@@ -71,6 +71,7 @@ public final class AccountQueries {
             set deleted_at = CURRENT_TIMESTAMP,
                 deleted_by = :deletedBy
             where id = :id
+              and user_id = :deletedBy
               and deleted_at is null
             """;
 
