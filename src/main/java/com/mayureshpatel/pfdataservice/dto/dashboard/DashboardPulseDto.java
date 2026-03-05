@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.dashboard;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 
 /**
@@ -12,6 +14,7 @@ import java.math.BigDecimal;
  * @param currentSavingsRate  savings rate for the current selected period
  * @param previousSavingsRate savings rate for the previous relative period
  */
+@Builder(toBuilder = true)
 public record DashboardPulseDto(
         BigDecimal currentIncome,
         BigDecimal previousIncome,

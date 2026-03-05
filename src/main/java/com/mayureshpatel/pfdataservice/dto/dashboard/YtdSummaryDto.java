@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.dashboard;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 
 /**
@@ -11,6 +13,7 @@ import java.math.BigDecimal;
  * @param netSavings     net savings for the year
  * @param avgSavingsRate average savings rate for the year
  */
+@Builder(toBuilder = true)
 public record YtdSummaryDto(
         int year,
         BigDecimal totalIncome,
