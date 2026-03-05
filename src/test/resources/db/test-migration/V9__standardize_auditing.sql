@@ -1,0 +1,16 @@
+-- Standardize auditing columns across all major tables
+
+-- 1. Categories
+ALTER TABLE categories
+    ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- 2. Tags
+ALTER TABLE tags
+    ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- 3. Category Rules
+ALTER TABLE category_rules
+    ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
