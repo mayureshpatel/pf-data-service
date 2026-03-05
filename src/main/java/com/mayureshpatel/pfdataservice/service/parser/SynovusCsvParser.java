@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.service.parser;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 @Component
+@Slf4j
 public class SynovusCsvParser implements TransactionParser {
     private static final String HEADER_DATE = "Date";
     private static final String HEADER_DESCRIPTION = "Description";
@@ -86,7 +88,7 @@ public class SynovusCsvParser implements TransactionParser {
                     .build();
 
             BigDecimal netAmount = calculateNetAmount(csvRecord);
-            configureTransactionTypeAndAmount(transaction, netAmount);
+            transaction = configureTransactionTypeAndAmount(transaction, netAmount);
 
             return Optional.of(transaction);
         } catch (Exception e) {

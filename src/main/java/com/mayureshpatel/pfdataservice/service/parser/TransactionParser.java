@@ -45,15 +45,16 @@ public interface TransactionParser {
      *
      * @param transaction the transaction to configure
      * @param netAmount   the net amount of the transaction
+     * @return a new transaction with type and amount configured
      */
-    default void configureTransactionTypeAndAmount(Transaction transaction, BigDecimal netAmount) {
+    default Transaction configureTransactionTypeAndAmount(Transaction transaction, BigDecimal netAmount) {
         if (netAmount.compareTo(BigDecimal.ZERO) >= 0) {
-            transaction.toBuilder()
+            return transaction.toBuilder()
                     .type(TransactionType.INCOME)
                     .amount(netAmount)
                     .build();
         } else {
-            transaction.toBuilder()
+            return transaction.toBuilder()
                     .type(TransactionType.EXPENSE)
                     .amount(netAmount.abs())
                     .build();

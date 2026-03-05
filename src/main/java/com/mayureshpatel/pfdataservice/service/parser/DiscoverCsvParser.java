@@ -86,7 +86,7 @@ public class DiscoverCsvParser implements TransactionParser {
                     .build();
 
             BigDecimal rawAmount = parseAmount(csvRecord, HEADER_AMOUNT);
-            configureTransactionTypeAndAmount(transaction, rawAmount);
+            transaction = configureTransactionTypeAndAmount(transaction, rawAmount);
 
             return Optional.of(transaction);
         } catch (Exception e) {

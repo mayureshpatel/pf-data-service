@@ -87,7 +87,7 @@ public class CapitalOneCsvParser implements TransactionParser {
                     .build();
 
             BigDecimal netAmount = calculateNetAmount(csvRecord);
-            configureTransactionTypeAndAmount(transaction, netAmount);
+            transaction = configureTransactionTypeAndAmount(transaction, netAmount);
 
             return Optional.of(transaction);
         } catch (Exception e) {

@@ -38,13 +38,11 @@ public class StandardCsvParser implements TransactionParser {
 
                         TransactionType type = amount.compareTo(BigDecimal.ZERO) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
 
-                        t.toBuilder()
+                        return t.toBuilder()
                                 .amount(amount.abs())
                                 .transactionDate(OffsetDateTime.parse(csvRecord.get("date")))
                                 .type(type)
                                 .build();
-
-                        return t;
                     })
                     .onClose(() -> {
                         try {
