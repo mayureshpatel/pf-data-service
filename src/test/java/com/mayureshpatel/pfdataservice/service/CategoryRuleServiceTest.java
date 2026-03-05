@@ -222,7 +222,7 @@ class CategoryRuleServiceTest {
             ruleService.deleteRule(USER_ID, RULE_ID);
 
             // Assert
-            verify(categoryRuleRepository).deleteById(RULE_ID);
+            verify(categoryRuleRepository).deleteById(RULE_ID, USER_ID);
         }
 
         @Test
@@ -334,7 +334,7 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(1, result);
-            verify(transactionRepository).updateAll(argThat(list -> list.size() == 1 && list.get(0).getCategoryId().equals(CATEGORY_ID)));
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.size() == 1 && list.get(0).getCategory().getId().equals(CATEGORY_ID)));
         }
 
         @Test
@@ -354,7 +354,7 @@ class CategoryRuleServiceTest {
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(999L);
             assertEquals(0, ruleService.applyRules(USER_ID));
 
-            verify(transactionRepository, never()).updateAll(anyList());
+            verify(transactionRepository, never()).updateAll(eq(USER_ID), anyList());
         }
 
         @Test
@@ -375,7 +375,7 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(1, result);
-            verify(transactionRepository).updateAll(anyList());
+            verify(transactionRepository).updateAll(eq(USER_ID), anyList());
         }
 
         @Test
@@ -389,7 +389,7 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(0, result);
-            verify(transactionRepository, never()).updateAll(anyList());
+            verify(transactionRepository, never()).updateAll(eq(USER_ID), anyList());
         }
     }
 }

@@ -76,19 +76,25 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should delete a category rule by ID")
+        @DisplayName("should delete a category rule by ID and UserID")
         void shouldDeleteById() {
             // Arrange
             List<CategoryRule> existing = repository.findByUserId(USER_1);
             Long idToDelete = existing.get(0).getId();
 
             // Act
-            int rows = repository.deleteById(idToDelete);
+            int rows = repository.deleteById(idToDelete, USER_1);
 
             // Assert
             assertEquals(1, rows);
             List<CategoryRule> afterDelete = repository.findByUserId(USER_1);
             assertEquals(2, afterDelete.size());
+        }
+
+        @Test
+        @DisplayName("should throw UnsupportedOperationException for insecure deleteById")
+        void shouldThrowOnInsecureDelete() {
+            assertThrows(UnsupportedOperationException.class, () -> repository.deleteById(1L));
         }
     }
 }

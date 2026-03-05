@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.config;
 
 import com.mayureshpatel.pfdataservice.security.JwtAuthenticationFilter;
+import com.mayureshpatel.pfdataservice.security.RateLimitingFilter;
 import com.mayureshpatel.pfdataservice.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -32,6 +33,7 @@ public class SecurityConfig {
 
     private final UserService userService;
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
     /**
      * Configures the HTTP security filter chain.
@@ -56,6 +58,7 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

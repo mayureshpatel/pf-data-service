@@ -9,7 +9,6 @@ import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryRuleDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
@@ -128,7 +127,7 @@ public class CategoryRuleService {
             throw new AccessDeniedException("You do not own this rule");
         }
 
-        categoryRuleRepository.deleteById(ruleId);
+        categoryRuleRepository.deleteById(ruleId, userId);
     }
 
     public List<RuleChangePreviewDto> previewApply(Long userId) {
@@ -179,7 +178,7 @@ public class CategoryRuleService {
                         Category::getId,
                         category -> category, (categoryA, categoryB) -> categoryA));
 
-        List<TransactionUpdateRequest> toUpdate = new ArrayList<>();
+        List<Transaction> toUpdate = new ArrayList<>();
 
         for (Transaction transaction : transactions) {
             if (transaction.getCategory() != null) {
@@ -196,13 +195,13 @@ public class CategoryRuleService {
                 continue;
             }
 
-            toUpdate.add(TransactionUpdateRequest.fromDomain(transaction).toBuilder()
-                    .categoryId(matchedCategory.getId())
+            toUpdate.add(transaction.toBuilder()
+                    .category(matchedCategory)
                     .build());
         }
 
         if (!toUpdate.isEmpty()) {
-            this.transactionRepository.updateAll(toUpdate);
+            this.transactionRepository.updateAll(userId, toUpdate);
         }
 
         return toUpdate.size();

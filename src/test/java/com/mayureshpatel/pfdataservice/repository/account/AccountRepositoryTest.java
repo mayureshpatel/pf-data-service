@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -153,6 +154,26 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("should fail update if UserID mismatch")
+        void shouldFailUpdateOnUserMismatch() {
+            // Arrange
+            Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
+            AccountUpdateRequest request = AccountUpdateRequest.builder()
+                    .id(ACCOUNT_1)
+                    .name("Fail")
+                    .type("CHECKING")
+                    .currencyCode("USD")
+                    .version(account.getVersion())
+                    .build();
+
+            // Act - User 2 trying to update User 1's account
+            int rows = accountRepository.update(USER_2, request);
+
+            // Assert
+            assertEquals(0, rows);
+        }
+
+        @Test
         @DisplayName("should soft delete an account")
         void shouldDelete() {
             // Act
@@ -194,6 +215,22 @@ class AccountRepositoryTest extends BaseRepositoryTest {
             assertEquals(1, rows);
             Account updated = accountRepository.findById(ACCOUNT_1).orElseThrow();
             assertEquals(0, new BigDecimal("1234.56").compareTo(updated.getCurrentBalance()));
+        }
+
+        @Test
+        @DisplayName("should fail update balance if UserID mismatch")
+        void shouldFailUpdateBalanceOnUserMismatch() {
+            Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
+            assertThrows(OptimisticLockingFailureException.class, () -> 
+                accountRepository.updateBalance(USER_2, ACCOUNT_1, BigDecimal.TEN, account.getVersion())
+            );
+        }
+
+        @Test
+        @DisplayName("should fail reconcile if UserID mismatch")
+        void shouldFailReconcileOnUserMismatch() {
+            int rows = accountRepository.reconcile(USER_2, ACCOUNT_1, BigDecimal.TEN);
+            assertEquals(0, rows);
         }
     }
 

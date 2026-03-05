@@ -52,7 +52,7 @@ public class TransactionService {
 
     @Transactional
     public void markAsTransfer(Long userId, List<Long> transactionIds) {
-        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
+        List<Transaction> transactions = transactionRepository.findAllById(userId, transactionIds);
         for (Transaction t : transactions) {
             if (!t.getAccount().getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
@@ -83,7 +83,7 @@ public class TransactionService {
             accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
         }
 
-        transactionRepository.updateAllT(updatedTransactions);
+        transactionRepository.updateAll(userId, updatedTransactions);
     }
 
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
@@ -100,7 +100,7 @@ public class TransactionService {
     public void deleteTransactions(Long userId, List<Long> transactionIds) {
         if (transactionIds == null || transactionIds.isEmpty()) return;
 
-        List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
+        List<Transaction> transactions = transactionRepository.findAllById(userId, transactionIds);
 
         if (transactions.size() != transactionIds.size()) {
             throw new ResourceNotFoundException("One or more transactions not found");
@@ -119,7 +119,7 @@ public class TransactionService {
             accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), account.getVersion());
         }
 
-        transactionRepository.deleteAll(transactions);
+        transactionRepository.deleteAll(userId, transactions);
     }
 
     @Transactional
@@ -160,7 +160,7 @@ public class TransactionService {
 
     @Transactional
     public int updateTransaction(Long userId, TransactionUpdateRequest request) {
-        Transaction transaction = transactionRepository.findById(request.getId())
+        Transaction transaction = transactionRepository.findById(request.getId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
         if (!transaction.getAccount().getUserId().equals(userId)) {
@@ -183,7 +183,7 @@ public class TransactionService {
         Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
         accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
 
-        return transactionRepository.update(updatedT);
+        return transactionRepository.update(userId, updatedT);
     }
 
     private Transaction resolveCategory(Long userId, Transaction transaction, Long requestedCategoryId) {
@@ -219,7 +219,7 @@ public class TransactionService {
 
     @Transactional
     public void deleteTransaction(Long userId, Long transactionId) {
-        Transaction transaction = transactionRepository.findById(transactionId)
+        Transaction transaction = transactionRepository.findById(transactionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
         if (!transaction.getAccount().getUserId().equals(userId)) {
@@ -229,7 +229,7 @@ public class TransactionService {
         Account accountAfterUndo = transaction.getAccount().undoTransaction(transaction);
         accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), transaction.getAccount().getVersion());
 
-        transactionRepository.delete(transaction);
+        transactionRepository.deleteById(transactionId, userId);
     }
 
     public List<CategoryTransactionsDto> getCountByCategory(Long userId) {

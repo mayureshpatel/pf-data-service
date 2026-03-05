@@ -64,19 +64,21 @@ public final class TransactionQueries {
     // language=SQL
     public static final String FIND_BY_ID_WITH_DETAILS =
             "SELECT " + ENRICHED_COLUMNS + " FROM transactions t " + ENRICHED_JOINS +
-                    " WHERE t.id = :id AND t.deleted_at IS NULL";
+                    " WHERE t.id = :id AND a.user_id = :userId AND t.deleted_at IS NULL";
 
     // language=SQL
     public static final String FIND_ALL_BY_IDS_WITH_DETAILS =
             "SELECT " + ENRICHED_COLUMNS + " FROM transactions t " + ENRICHED_JOINS +
-                    " WHERE t.id IN (:ids) AND t.deleted_at IS NULL";
+                    " WHERE t.id IN (:ids) AND a.user_id = :userId AND t.deleted_at IS NULL";
 
     // language=SQL
     public static final String FIND_BY_ID = """
-            select *
-            from transactions
-            where id = :id
-              and deleted_at is null
+            select t.*
+            from transactions t
+            join accounts a on t.account_id = a.id
+            where t.id = :id
+              and a.user_id = :userId
+              and t.deleted_at is null
             """;
 
     // language=SQL
@@ -137,6 +139,7 @@ public final class TransactionQueries {
                 category_id = :categoryId,
                 updated_at = CURRENT_TIMESTAMP
             where id = :id
+              and account_id in (select id from accounts where user_id = :userId)
               and deleted_at is null
             """;
 
@@ -145,6 +148,7 @@ public final class TransactionQueries {
             update transactions
             set deleted_at = CURRENT_TIMESTAMP
             where id = :id
+              and account_id in (select id from accounts where user_id = :userId)
               and deleted_at is null
             """;
 

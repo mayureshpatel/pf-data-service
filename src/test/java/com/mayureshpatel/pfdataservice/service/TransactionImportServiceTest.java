@@ -306,10 +306,11 @@ class TransactionImportServiceTest {
         void shouldHash() throws IOException {
             InputStream stream = new ByteArrayInputStream("content".getBytes());
             String hash = importService.calculateFileHash(stream);
-            assertNotNull(hash);
-            assertEquals(32, hash.length());
-        }
 
+            // Assert
+            assertNotNull(hash);
+            assertEquals(64, hash.length());
+            }
         @Test
         @DisplayName("should hash byte array")
         void shouldHashBytes() {

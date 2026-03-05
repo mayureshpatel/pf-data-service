@@ -96,7 +96,7 @@ class TransactionServiceTest {
             // Arrange
             Account account = createMockAccount(USER_ID);
             Transaction t1 = Transaction.builder().id(1L).type(TransactionType.INCOME).amount(BigDecimal.TEN).account(account).build();
-            when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t1));
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t1));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             
@@ -104,7 +104,7 @@ class TransactionServiceTest {
             transactionService.markAsTransfer(USER_ID, List.of(1L));
 
             // Assert
-            verify(transactionRepository).updateAllT(argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_IN));
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_IN));
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
         }
 
@@ -114,7 +114,7 @@ class TransactionServiceTest {
             // Arrange
             Account account = createMockAccount(USER_ID);
             Transaction t = Transaction.builder().id(1L).type(TransactionType.EXPENSE).amount(BigDecimal.ONE).account(account).build();
-            when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t));
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             
@@ -122,7 +122,7 @@ class TransactionServiceTest {
             transactionService.markAsTransfer(USER_ID, List.of(1L));
 
             // Assert
-            verify(transactionRepository).updateAllT(argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_OUT));
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_OUT));
         }
 
         @Test
@@ -131,7 +131,7 @@ class TransactionServiceTest {
             // Arrange
             Account otherAccount = createMockAccount(999L);
             Transaction t = Transaction.builder().id(1L).account(otherAccount).build();
-            when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t));
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
             // Act & Assert
             assertThrows(AccessDeniedException.class, () -> transactionService.markAsTransfer(USER_ID, List.of(1L)));
@@ -183,7 +183,7 @@ class TransactionServiceTest {
         void shouldReturnEarly() {
             transactionService.deleteTransactions(USER_ID, null);
             transactionService.deleteTransactions(USER_ID, Collections.emptyList());
-            verify(transactionRepository, never()).findAllById(any());
+            verify(transactionRepository, never()).findAllById(eq(USER_ID), any());
         }
 
         @Test
@@ -192,7 +192,7 @@ class TransactionServiceTest {
             // Arrange
             Account account = createMockAccount(USER_ID);
             Transaction t = Transaction.builder().id(1L).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
-            when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t));
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             
@@ -200,7 +200,7 @@ class TransactionServiceTest {
             transactionService.deleteTransactions(USER_ID, List.of(1L));
 
             // Assert
-            verify(transactionRepository).deleteAll(anyList());
+            verify(transactionRepository).deleteAll(eq(USER_ID), anyList());
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
         }
 
@@ -212,7 +212,7 @@ class TransactionServiceTest {
             Account other = createMockAccount(999L);
             Transaction t1 = Transaction.builder().id(1L).account(account).build();
             Transaction t2 = Transaction.builder().id(2L).account(other).build();
-            when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t1, t2));
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t1, t2));
 
             // Act & Assert
             assertThrows(AccessDeniedException.class, () -> transactionService.deleteTransactions(USER_ID, List.of(1L, 2L)));
@@ -315,7 +315,7 @@ class TransactionServiceTest {
             // Arrange
             Account account = createMockAccount(USER_ID);
             Transaction original = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(original));
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
 
             TransactionUpdateRequest request = TransactionUpdateRequest.builder()
                     .id(TRANSACTION_ID)
@@ -323,7 +323,7 @@ class TransactionServiceTest {
                     .type("INCOME")
                     .build();
 
-            when(transactionRepository.update(any(Transaction.class))).thenReturn(1);
+            when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
             // Act
             int result = transactionService.updateTransaction(USER_ID, request);
@@ -331,7 +331,7 @@ class TransactionServiceTest {
             // Assert
             assertEquals(1, result);
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
-            verify(transactionRepository).update((Transaction) argThat(t -> ((Transaction) t).getAmount().equals(BigDecimal.TEN)));
+            verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getAmount().equals(BigDecimal.TEN)));
         }
     }
 
@@ -344,14 +344,14 @@ class TransactionServiceTest {
             // Arrange
             Account account = createMockAccount(USER_ID);
             Transaction t = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(t));
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(t));
 
             // Act
             transactionService.deleteTransaction(USER_ID, TRANSACTION_ID);
 
             // Assert
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
-            verify(transactionRepository).delete(t);
+            verify(transactionRepository).deleteById(TRANSACTION_ID, USER_ID);
         }
     }
 

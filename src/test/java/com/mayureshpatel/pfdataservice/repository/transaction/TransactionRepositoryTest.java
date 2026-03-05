@@ -150,4 +150,64 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertTrue(exists);
         }
     }
+
+    @Nested
+    @DisplayName("Write Operations")
+    class WriteTests {
+        @Test
+        @DisplayName("should find by id and userId")
+        void shouldFindByIdAndUserId() {
+            Transaction t = transactionRepository.findById(1001L, USER_ID).orElseThrow();
+            assertEquals(1001L, t.getId());
+            assertEquals(USER_ID, t.getAccount().getUserId());
+        }
+
+        @Test
+        @DisplayName("should throw error for insecure findById")
+        void shouldThrowOnInsecureFind() {
+            assertThrows(UnsupportedOperationException.class, () -> transactionRepository.findById(1001L));
+        }
+
+        @Test
+        @DisplayName("should update transaction")
+        void shouldUpdate() {
+            Transaction t = transactionRepository.findById(1001L, USER_ID).orElseThrow();
+            Transaction updated = t.toBuilder().description("UPDATED DESC").build();
+            
+            int rows = transactionRepository.update(USER_ID, updated);
+            
+            assertEquals(1, rows);
+            Transaction result = transactionRepository.findById(1001L, USER_ID).orElseThrow();
+            assertEquals("UPDATED DESC", result.getDescription());
+        }
+
+        @Test
+        @DisplayName("should update multiple transactions")
+        void shouldUpdateAll() {
+            Transaction t1 = transactionRepository.findById(1001L, USER_ID).orElseThrow();
+            Transaction t2 = transactionRepository.findById(1002L, USER_ID).orElseThrow();
+            
+            List<Transaction> list = List.of(
+                t1.toBuilder().description("BULK 1").build(),
+                t2.toBuilder().description("BULK 2").build()
+            );
+            
+            int total = transactionRepository.updateAll(USER_ID, list);
+            assertEquals(2, total);
+        }
+
+        @Test
+        @DisplayName("should delete by id and userId")
+        void shouldDeleteByIdAndUserId() {
+            int rows = transactionRepository.deleteById(1001L, USER_ID);
+            assertEquals(1, rows);
+            assertTrue(transactionRepository.findById(1001L, USER_ID).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should throw error for insecure deleteById")
+        void shouldThrowOnInsecureDelete() {
+            assertThrows(UnsupportedOperationException.class, () -> transactionRepository.deleteById(1001L));
+        }
+    }
 }

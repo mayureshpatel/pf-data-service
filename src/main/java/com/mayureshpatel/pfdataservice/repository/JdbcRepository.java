@@ -55,9 +55,20 @@ public interface JdbcRepository<T, ID> {
     }
 
     /**
-     * Find all entities.
+     * Finds an entity by its ID and User ID.
      *
-     * @return List of all entities
+     * @param id     the ID
+     * @param userId the User ID
+     * @return the optional entity
+     */
+    default Optional<T> findById(ID id, Long userId) {
+        throw new UnsupportedOperationException("findById with userId is not implemented");
+    }
+
+    /**
+     * Finds all entities.
+     *
+     * @return the list of entities
      */
     default List<T> findAll() {
         throw new UnsupportedOperationException();
@@ -89,7 +100,7 @@ public interface JdbcRepository<T, ID> {
      *
      * @param id        The ID of the entity to delete
      * @param deletedBy The ID of the user who deleted the entity
-     * @return
+     * @return The number of rows affected
      */
     default int deleteById(ID id, Long deletedBy) {
         throw new UnsupportedOperationException();

@@ -26,6 +26,6 @@ public final class CategoryRuleQueries {
 
     // language=SQL
     public static final String DELETE = """
-            delete from category_rules where id = :id
+            delete from category_rules where id = :id and user_id = :userId
             """;
 }

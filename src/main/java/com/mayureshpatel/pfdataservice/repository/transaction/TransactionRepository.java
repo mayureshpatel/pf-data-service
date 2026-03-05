@@ -7,7 +7,6 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
@@ -48,8 +47,14 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     @Override
     public Optional<Transaction> findById(Long id) {
+        throw new UnsupportedOperationException("Use findById with userId");
+    }
+
+    @Override
+    public Optional<Transaction> findById(Long id, Long userId) {
         return jdbcClient.sql(TransactionQueries.FIND_BY_ID_WITH_DETAILS)
                 .param("id", id)
+                .param("userId", userId)
                 .query(detailRowMapper)
                 .optional();
     }
@@ -109,16 +114,18 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .update(keyHolder);
     }
 
-    public int update(TransactionUpdateRequest request) {
+    public int update(Long userId, Transaction transaction) {
         return jdbcClient.sql(TransactionQueries.UPDATE)
-                .param("id", request.getId())
-                .param("categoryId", request.getCategoryId())
-                .param("amount", request.getAmount())
-                .param("date", request.getTransactionDate())
-                .param("postDate", request.getPostDate())
-                .param("description", request.getDescription())
-                .param("type", request.getType())
-                .param("merchantId", request.getMerchantId())
+                .param("id", transaction.getId())
+                .param("userId", userId)
+                .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
+                .param("amount", transaction.getAmount())
+                .param("date", transaction.getTransactionDate())
+                .param("postDate", transaction.getPostDate())
+                .param("description", transaction.getDescription())
+                .param("type", transaction.getType().name())
+                .param("merchantId", transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
+                .param("accountId", transaction.getAccount() != null ? transaction.getAccount().getId() : null)
                 .update();
     }
 
@@ -128,23 +135,23 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .mapToInt(Integer::intValue).sum();
     }
 
-    public Integer updateAll(List<TransactionUpdateRequest> requestList) {
+    public Integer updateAll(Long userId, List<Transaction> requestList) {
         return requestList.stream()
-                .map(this::update)
-                .mapToInt(Integer::intValue).sum();
-    }
-
-    public Integer updateAllT(List<Transaction> requestList) {
-        return requestList.stream()
-                .map(this::update)
+                .map(t -> this.update(userId, t))
                 .mapToInt(Integer::intValue).sum();
     }
 
     @Override
-    public int deleteById(Long id) {
+    public int deleteById(Long id, Long userId) {
         return jdbcClient.sql(TransactionQueries.DELETE_BY_ID)
                 .param("id", id)
+                .param("userId", userId)
                 .update();
+    }
+
+    @Override
+    public int deleteById(Long id) {
+        throw new UnsupportedOperationException("Use deleteById with userId");
     }
 
     @Override
@@ -218,27 +225,28 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
-    public List<Transaction> findAllById(List<Long> ids) {
+    public List<Transaction> findAllById(Long userId, List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS_WITH_DETAILS)
                 .param("ids", ids)
+                .param("userId", userId)
                 .query(detailRowMapper)
                 .list();
     }
 
-    public List<Transaction> findAllByIdWithAccountAndUser(List<Long> ids) {
-        return findAllById(ids);
+    public List<Transaction> findAllByIdWithAccountAndUser(Long userId, List<Long> ids) {
+        return findAllById(userId, ids);
     }
 
-    public void deleteAll(List<Transaction> transactions) {
+    public void deleteAll(Long userId, List<Transaction> transactions) {
         transactions.forEach(t -> {
-            if (t.getId() != null) deleteById(t.getId());
+            if (t.getId() != null) deleteById(t.getId(), userId);
         });
     }
 
     public long countByIdInAndAccount_User_Id(List<Long> ids, Long userId) {
         if (ids == null || ids.isEmpty()) return 0;
-        return findAllById(ids).stream()
+        return findAllById(userId, ids).stream()
                 .filter(t -> t.getAccount() != null
                         && t.getAccount().getUserId() != null
                         && userId.equals(t.getAccount().getUserId()))

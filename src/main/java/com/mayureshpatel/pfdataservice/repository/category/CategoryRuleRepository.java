@@ -35,9 +35,15 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
     }
 
     @Override
-    public int deleteById(Long id) {
+    public int deleteById(Long id, Long userId) {
         return this.jdbcClient.sql(CategoryRuleQueries.DELETE)
                 .param("id", id)
+                .param("userId", userId)
                 .update();
+    }
+
+    @Override
+    public int deleteById(Long id) {
+        throw new UnsupportedOperationException("Use deleteById with userId");
     }
 }
