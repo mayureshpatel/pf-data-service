@@ -72,10 +72,9 @@ public class TransactionService {
 
             Transaction updatedT = t.toBuilder().type(newType).build();
             Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
-            
-            // Note: In a real system, we'd persist the updated account balance.
-            // For now, keeping logic consistent with existing patterns but fixing the immutable Transaction bug.
+
             updatedTransactions.add(updatedT);
+            accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance());
         }
 
         transactionRepository.updateAllT(updatedTransactions);
@@ -108,7 +107,8 @@ public class TransactionService {
         }
 
         for (Transaction t : transactions) {
-            t.getAccount().undoTransaction(t);
+            Account accountAfterUndo = t.getAccount().undoTransaction(t);
+            accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance());
         }
 
         transactionRepository.deleteAll(transactions);
@@ -134,7 +134,9 @@ public class TransactionService {
                 .build();
 
         transaction = resolveCategory(userId, transaction, request.getCategoryId());
-        account.applyTransaction(transaction);
+
+        Account finalAccount = account.applyTransaction(transaction);
+        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance());
 
         return transactionRepository.insert(transaction);
     }
@@ -169,7 +171,9 @@ public class TransactionService {
                 .build();
 
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());
-        accountAfterUndo.applyTransaction(updatedT);
+
+        Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
+        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance());
 
         return transactionRepository.update(updatedT);
     }
@@ -211,7 +215,8 @@ public class TransactionService {
             throw new AccessDeniedException("You do not own this transaction");
         }
 
-        transaction.getAccount().undoTransaction(transaction);
+        Account accountAfterUndo = transaction.getAccount().undoTransaction(transaction);
+        accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance());
 
         transactionRepository.delete(transaction);
     }

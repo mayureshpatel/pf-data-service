@@ -103,4 +103,12 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .param("targetBalance", targetBalance)
                 .update();
     }
+
+    public int updateBalance(Long userId, Long accountId, BigDecimal currentBalance) {
+        return jdbcClient.sql(AccountQueries.UPDATE_BALANCE)
+                .param("accountId", accountId)
+                .param("userId", userId)
+                .param("currentBalance", currentBalance)
+                .update();
+    }
 }

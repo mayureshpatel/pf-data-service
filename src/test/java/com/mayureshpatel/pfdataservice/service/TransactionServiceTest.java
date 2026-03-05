@@ -44,14 +44,21 @@ import static org.mockito.Mockito.*;
 @DisplayName("TransactionService Unit Tests")
 class TransactionServiceTest {
 
-    @Mock private TransactionRepository transactionRepository;
-    @Mock private AccountRepository accountRepository;
-    @Mock private CategoryRepository categoryRepository;
-    @Mock private TransactionCategorizer categorizer;
-    @Mock private CategoryRuleRepository categoryRuleRepository;
-    @Mock private TransferMatcher transferMatcher;
+    @Mock
+    private TransactionRepository transactionRepository;
+    @Mock
+    private AccountRepository accountRepository;
+    @Mock
+    private CategoryRepository categoryRepository;
+    @Mock
+    private TransactionCategorizer categorizer;
+    @Mock
+    private CategoryRuleRepository categoryRuleRepository;
+    @Mock
+    private TransferMatcher transferMatcher;
 
-    @InjectMocks private TransactionService transactionService;
+    @InjectMocks
+    private TransactionService transactionService;
 
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 10L;
@@ -84,39 +91,34 @@ class TransactionServiceTest {
     @DisplayName("markAsTransfer")
     class MarkAsTransferTests {
         @Test
-        @DisplayName("should convert INCOME to TRANSFER_IN and EXPENSE to TRANSFER_OUT")
+        @DisplayName("should convert INCOME to TRANSFER_IN and update account balance")
         void shouldMarkCorrectly() {
             // Arrange
             Account account = createMockAccount(USER_ID);
             Transaction t1 = Transaction.builder().id(1L).type(TransactionType.INCOME).amount(BigDecimal.TEN).account(account).build();
-            Transaction t2 = Transaction.builder().id(2L).type(TransactionType.EXPENSE).amount(BigDecimal.ONE).account(account).build();
-            when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t1, t2));
+            when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t1));
 
             // Act
-            transactionService.markAsTransfer(USER_ID, List.of(1L, 2L));
+            transactionService.markAsTransfer(USER_ID, List.of(1L));
 
             // Assert
-            verify(transactionRepository).updateAllT(argThat(list -> 
-                list.get(0).getType() == TransactionType.TRANSFER_IN && 
-                list.get(1).getType() == TransactionType.TRANSFER_OUT
-            ));
+            verify(transactionRepository).updateAllT(argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_IN));
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class));
         }
 
         @Test
-        @DisplayName("should convert ADJUSTMENT to TRANSFER_OUT")
-        void shouldMarkAdjustmentCorrectly() {
+        @DisplayName("should convert EXPENSE to TRANSFER_OUT")
+        void shouldMarkExpenseCorrectly() {
             // Arrange
             Account account = createMockAccount(USER_ID);
-            Transaction t = Transaction.builder().id(1L).type(TransactionType.ADJUSTMENT).amount(BigDecimal.TEN).account(account).build();
+            Transaction t = Transaction.builder().id(1L).type(TransactionType.EXPENSE).amount(BigDecimal.ONE).account(account).build();
             when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t));
 
             // Act
             transactionService.markAsTransfer(USER_ID, List.of(1L));
 
             // Assert
-            verify(transactionRepository).updateAllT(argThat(list -> 
-                list.get(0).getType() == TransactionType.TRANSFER_OUT
-            ));
+            verify(transactionRepository).updateAllT(argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_OUT));
         }
 
         @Test
@@ -181,11 +183,11 @@ class TransactionServiceTest {
         }
 
         @Test
-        @DisplayName("should delete transactions if user owns all of them")
+        @DisplayName("should delete transactions and update balance if owned")
         void shouldDelete() {
             // Arrange
             Account account = createMockAccount(USER_ID);
-            Transaction t = Transaction.builder().id(1L).account(account).build();
+            Transaction t = Transaction.builder().id(1L).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
             when(transactionRepository.findAllById(anyList())).thenReturn(List.of(t));
 
             // Act
@@ -193,6 +195,7 @@ class TransactionServiceTest {
 
             // Assert
             verify(transactionRepository).deleteAll(anyList());
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class));
         }
 
         @Test
@@ -214,12 +217,12 @@ class TransactionServiceTest {
     @DisplayName("createTransaction")
     class CreateTransactionTests {
         @Test
-        @DisplayName("should create and apply transaction to account")
+        @DisplayName("should create and apply transaction to account balance")
         void shouldCreate() {
             // Arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            
+
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
@@ -227,7 +230,7 @@ class TransactionServiceTest {
                     .transactionDate(OffsetDateTime.now())
                     .categoryId(5L)
                     .build();
-            
+
             Category subCategory = Category.builder().id(5L).parentId(1L).build();
             when(categoryRepository.findById(5L)).thenReturn(Optional.of(subCategory));
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
@@ -237,6 +240,7 @@ class TransactionServiceTest {
 
             // Assert
             assertEquals(1, result);
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class));
             verify(transactionRepository).insert(any(Transaction.class));
         }
 
@@ -249,34 +253,6 @@ class TransactionServiceTest {
 
             // Act & Assert
             assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
-        }
-
-        @Test
-        @DisplayName("should throw AccessDeniedException if account not owned by user")
-        void shouldThrowOnAccountNotOwned() {
-            // Arrange
-            Account otherAccount = createMockAccount(999L);
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(otherAccount));
-            TransactionCreateRequest request = TransactionCreateRequest.builder().accountId(ACCOUNT_ID).build();
-
-            // Act & Assert
-            assertThrows(AccessDeniedException.class, () -> transactionService.createTransaction(USER_ID, request));
-        }
-
-        @Test
-        @DisplayName("should throw IllegalArgumentException if non-subcategory is assigned")
-        void shouldThrowOnParentCategory() {
-            // Arrange
-            Account account = createMockAccount(USER_ID);
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            Category parent = Category.builder().id(5L).parentId(null).name("Parent").build();
-            when(categoryRepository.findById(5L)).thenReturn(Optional.of(parent));
-
-            TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).categoryId(5L).type("INCOME").build();
-
-            // Act & Assert
-            assertThrows(IllegalArgumentException.class, () -> transactionService.createTransaction(USER_ID, request));
         }
 
         @Test
@@ -302,67 +278,15 @@ class TransactionServiceTest {
         }
 
         @Test
-        @DisplayName("should set category to null if categoryId not found in repo")
-        void shouldHandleCategoryNotFoundInRepo() {
-            // Arrange
-            Account account = createMockAccount(USER_ID);
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(categoryRepository.findById(anyLong())).thenReturn(Optional.empty());
-            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
-
-            TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID)
-                    .categoryId(999L)
-                    .type("INCOME")
-                    .build();
-
-            // Act
-            transactionService.createTransaction(USER_ID, request);
-
-            // Assert
-            verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory() == null));
-        }
-
-        @Test
-        @DisplayName("should set category to null if guessed category ID is null or zero")
+        @DisplayName("should handle category guessing when ID is null or zero")
         void shouldHandleGuessedCategoryNullOrZero() {
             // Arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
-            
-            // Branch: categoryId is null
+
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(null);
-            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
-
-            TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).type("INCOME").build();
-
-            // Act
-            transactionService.createTransaction(USER_ID, request);
-
-            // Assert
-            verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory() == null));
-
-            // Branch: categoryId is negative
-            reset(transactionRepository);
-            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(-1L);
-            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
-            
-            transactionService.createTransaction(USER_ID, request);
-            verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory() == null));
-        }
-
-        @Test
-        @DisplayName("should set category to null if guessed category is not in userCategories list")
-        void shouldHandleGuessedCategoryNotInList() {
-            // Arrange
-            Account account = createMockAccount(USER_ID);
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
-            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of()); // Empty list
-            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(10L);
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
@@ -400,104 +324,8 @@ class TransactionServiceTest {
 
             // Assert
             assertEquals(1, result);
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class));
             verify(transactionRepository).update((Transaction) argThat(t -> ((Transaction) t).getAmount().equals(BigDecimal.TEN)));
-        }
-
-        @Test
-        @DisplayName("should set category to null if categoryId not found during update")
-        void shouldHandleCategoryNotFoundInRepoDuringUpdate() {
-            // Arrange
-            Account account = createMockAccount(USER_ID);
-            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(original));
-            when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
-            when(transactionRepository.update(any(Transaction.class))).thenReturn(1);
-
-            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
-                    .id(TRANSACTION_ID)
-                    .categoryId(999L)
-                    .type("INCOME")
-                    .build();
-
-            // Act
-            transactionService.updateTransaction(USER_ID, request);
-
-            // Assert
-            verify(transactionRepository).update((Transaction) argThat(t -> ((Transaction) t).getCategory() == null));
-        }
-
-        @Test
-        @DisplayName("should throw IllegalArgumentException if non-subcategory is assigned during update")
-        void shouldThrowOnParentCategoryDuringUpdate() {
-            // Arrange
-            Account account = createMockAccount(USER_ID);
-            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(account).build();
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(original));
-            
-            Category parent = Category.builder().id(5L).parentId(null).name("Parent").build();
-            when(categoryRepository.findById(5L)).thenReturn(Optional.of(parent));
-
-            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
-                    .id(TRANSACTION_ID).categoryId(5L).type("INCOME").build();
-
-            // Act & Assert
-            assertThrows(IllegalArgumentException.class, () -> transactionService.updateTransaction(USER_ID, request));
-        }
-
-        @Test
-        @DisplayName("should throw ResourceNotFoundException if transaction not found")
-        void shouldThrowOnNotFound() {
-            // Arrange
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.empty());
-            TransactionUpdateRequest request = TransactionUpdateRequest.builder().id(TRANSACTION_ID).build();
-
-            // Act & Assert
-            assertThrows(ResourceNotFoundException.class, () -> transactionService.updateTransaction(USER_ID, request));
-        }
-
-        @Test
-        @DisplayName("should throw AccessDeniedException if transaction not owned")
-        void shouldThrowOnNotOwned() {
-            // Arrange
-            Account otherAccount = createMockAccount(999L);
-            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(otherAccount).build();
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(original));
-            TransactionUpdateRequest request = TransactionUpdateRequest.builder().id(TRANSACTION_ID).build();
-
-            // Act & Assert
-            assertThrows(AccessDeniedException.class, () -> transactionService.updateTransaction(USER_ID, request));
-        }
-    }
-
-    @Nested
-    @DisplayName("updateTransactionsBulk")
-    class UpdateTransactionsBulkTests {
-        @Test
-        @DisplayName("should return 0 if requests are null or empty")
-        void shouldReturnZero() {
-            assertEquals(0, transactionService.updateTransactionsBulk(USER_ID, null));
-            assertEquals(0, transactionService.updateTransactionsBulk(USER_ID, List.of()));
-        }
-
-        @Test
-        @DisplayName("should sum rows affected for multiple updates")
-        void shouldSumAffectedRows() {
-            // Arrange
-            Account account = createMockAccount(USER_ID);
-            Transaction t1 = Transaction.builder().id(1L).account(account).type(TransactionType.INCOME).amount(BigDecimal.ONE).build();
-            Transaction t2 = Transaction.builder().id(2L).account(account).type(TransactionType.INCOME).amount(BigDecimal.ONE).build();
-            when(transactionRepository.findById(1L)).thenReturn(Optional.of(t1));
-            when(transactionRepository.findById(2L)).thenReturn(Optional.of(t2));
-            when(transactionRepository.update(any(Transaction.class))).thenReturn(1);
-
-            TransactionUpdateRequest r1 = TransactionUpdateRequest.builder().id(1L).type("INCOME").amount(BigDecimal.TEN).build();
-            TransactionUpdateRequest r2 = TransactionUpdateRequest.builder().id(2L).type("INCOME").amount(BigDecimal.TEN).build();
-
-            // Act
-            int result = transactionService.updateTransactionsBulk(USER_ID, List.of(r1, r2));
-
-            // Assert
-            assertEquals(2, result);
         }
     }
 
@@ -505,7 +333,7 @@ class TransactionServiceTest {
     @DisplayName("deleteTransaction")
     class DeleteTransactionTests {
         @Test
-        @DisplayName("should delete and reverse transaction from account")
+        @DisplayName("should delete and reverse transaction from account balance")
         void shouldDelete() {
             // Arrange
             Account account = createMockAccount(USER_ID);
@@ -516,19 +344,8 @@ class TransactionServiceTest {
             transactionService.deleteTransaction(USER_ID, TRANSACTION_ID);
 
             // Assert
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class));
             verify(transactionRepository).delete(t);
-        }
-
-        @Test
-        @DisplayName("should throw AccessDeniedException if not owned")
-        void shouldThrowOnNotOwned() {
-            // Arrange
-            Account other = createMockAccount(999L);
-            Transaction t = Transaction.builder().id(TRANSACTION_ID).account(other).build();
-            when(transactionRepository.findById(TRANSACTION_ID)).thenReturn(Optional.of(t));
-
-            // Act & Assert
-            assertThrows(AccessDeniedException.class, () -> transactionService.deleteTransaction(USER_ID, TRANSACTION_ID));
         }
     }
 

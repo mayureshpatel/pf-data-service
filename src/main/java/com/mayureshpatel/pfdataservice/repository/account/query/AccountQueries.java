@@ -115,6 +115,17 @@ public final class AccountQueries {
             """;
 
     // language=SQL
+    public static final String UPDATE_BALANCE = """
+            update accounts
+            set current_balance = :currentBalance,
+                version = version + 1,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = :userId
+            where id = :accountId
+              and deleted_at is null
+            """;
+
+    // language=SQL
     public static final String RECONCILE = """
             update accounts
             set current_balance = :targetBalance
