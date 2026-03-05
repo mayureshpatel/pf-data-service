@@ -1,122 +1,238 @@
-//package com.mayureshpatel.pfdataservice.domain.account;
-//
-//import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-//import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
-//import org.junit.jupiter.api.DisplayName;
-//import org.junit.jupiter.api.Test;
-//
-//import java.math.BigDecimal;
-//
-//import static org.assertj.core.api.Assertions.assertThat;
-//
-//@DisplayName("Account domain object tests")
-//class AccountTest {
-//
-//    @Test
-//    @DisplayName("applyTransaction — income should increase balance")
-//    void applyTransaction_income_increasesBalance() {
-//        // Arrange
-//        Account account = new Account();
-//        account.setCurrentBalance(new BigDecimal("100.00"));
-//
-//        Transaction income = new Transaction();
-//        income.setAmount(new BigDecimal("50.00"));
-//        income.setType(TransactionType.INCOME);
-//
-//        // Act
-//        account.applyTransaction(income);
-//
-//        // Assert
-//        assertThat(account.getCurrentBalance()).isEqualByComparingTo("150.00");
-//    }
-//
-//    @Test
-//    @DisplayName("applyTransaction — expense should decrease balance")
-//    void applyTransaction_expense_decreasesBalance() {
-//        // Arrange
-//        Account account = new Account();
-//        account.setCurrentBalance(new BigDecimal("100.00"));
-//
-//        Transaction expense = new Transaction();
-//        expense.setAmount(new BigDecimal("50.00"));
-//        expense.setType(TransactionType.EXPENSE);
-//
-//        // Act
-//        account.applyTransaction(expense);
-//
-//        // Assert
-//        assertThat(account.getCurrentBalance()).isEqualByComparingTo("50.00");
-//    }
-//
-//    @Test
-//    @DisplayName("undoTransaction — expense should increase balance back")
-//    void undoTransaction_expense_increasesBalanceBack() {
-//        // Arrange
-//        Account account = new Account();
-//        account.setCurrentBalance(new BigDecimal("50.00"));
-//
-//        Transaction expense = new Transaction();
-//        expense.setAmount(new BigDecimal("50.00"));
-//        expense.setType(TransactionType.EXPENSE);
-//
-//        // Act
-//        account.undoTransaction(expense);
-//
-//        // Assert
-//        assertThat(account.getCurrentBalance()).isEqualByComparingTo("100.00");
-//    }
-//
-//    @Test
-//    @DisplayName("applyTransaction — adjustment should use signed amount")
-//    void applyTransaction_adjustment_usesSignedAmount() {
-//        // Arrange
-//        Account account = new Account();
-//        account.setCurrentBalance(new BigDecimal("100.00"));
-//
-//        Transaction adjustment = new Transaction();
-//        adjustment.setAmount(new BigDecimal("-10.00"));
-//        adjustment.setType(TransactionType.ADJUSTMENT);
-//
-//        // Act
-//        account.applyTransaction(adjustment);
-//
-//        // Assert
-//        assertThat(account.getCurrentBalance()).isEqualByComparingTo("90.00");
-//    }
-//
-//    @Test
-//    @DisplayName("toDto — should map all fields correctly")
-//    void toDto_mapsAllFields() {
-//        // Arrange
-//        com.mayureshpatel.pfdataservice.domain.user.User user = new com.mayureshpatel.pfdataservice.domain.user.User();
-//        user.setId(1L);
-//
-//        Account account = new Account();
-//        account.setId(10L);
-//        account.setUser(user);
-//        account.setName("Checking");
-//        account.setCurrentBalance(new BigDecimal("123.45"));
-//
-//        AccountType type = new AccountType();
-//        type.setCode("CH");
-//        type.setLabel("Checking");
-//        account.setType(type);
-//
-//        com.mayureshpatel.pfdataservice.domain.currency.Currency currency = new com.mayureshpatel.pfdataservice.domain.currency.Currency();
-//        currency.setCode("USD");
-//        currency.setSymbol("$");
-//        account.setCurrency(currency);
-//
-//        // Act
-//        com.mayureshpatel.pfdataservice.dto.account.AccountDto dto = com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper.toDto(account);
-//
-//        // Assert
-//        assertThat(dto.id()).isEqualTo(10L);
-//        assertThat(dto.userId()).isEqualTo(1L);
-//        assertThat(dto.name()).isEqualTo("Checking");
-//        assertThat(dto.accountTypeCode()).isEqualTo("CH");
-//        assertThat(dto.currentBalance()).isEqualByComparingTo("123.45");
-//        assertThat(dto.currencyCode()).isEqualTo("USD");
-//        assertThat(dto.currencySymbol()).isEqualTo("$");
-//    }
-//}
+package com.mayureshpatel.pfdataservice.domain.account;
+
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@DisplayName("Account Domain Object Tests")
+class AccountTest {
+
+    @Test
+    @DisplayName("Constructor should set default balance to ZERO")
+    void constructor_shouldSetDefaultBalance() {
+        Account account = Account.builder().build();
+        assertEquals(BigDecimal.ZERO, account.getCurrentBalance());
+    }
+
+    @Nested
+    @DisplayName("Transaction Application (Domain Object)")
+    class ApplyTransactionDomainTests {
+
+        @Test
+        @DisplayName("applyTransaction should increase balance for INCOME")
+        void applyTransaction_shouldIncreaseForIncome() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.INCOME)
+                    .amount(new BigDecimal("50.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.applyTransaction(transaction);
+
+            // Assert
+            assertEquals(new BigDecimal("150.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
+        @DisplayName("applyTransaction should decrease balance for EXPENSE")
+        void applyTransaction_shouldDecreaseForExpense() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.EXPENSE)
+                    .amount(new BigDecimal("30.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.applyTransaction(transaction);
+
+            // Assert
+            assertEquals(new BigDecimal("70.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
+        @DisplayName("applyTransaction should handle ADJUSTMENT (positive)")
+        void applyTransaction_shouldHandlePositiveAdjustment() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.ADJUSTMENT)
+                    .amount(new BigDecimal("10.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.applyTransaction(transaction);
+
+            // Assert
+            assertEquals(new BigDecimal("110.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
+        @DisplayName("applyTransaction should handle null balance by defaulting to ZERO")
+        void applyTransaction_shouldHandleNullBalance() {
+            // Arrange - forcing null balance via toBuilder
+            Account account = Account.builder().currentBalance(null).build();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.INCOME)
+                    .amount(new BigDecimal("50.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.applyTransaction(transaction);
+
+            // Assert
+            assertEquals(new BigDecimal("50.00"), updatedAccount.getCurrentBalance());
+        }
+    }
+
+    @Nested
+    @DisplayName("Transaction Undo (Domain Object)")
+    class UndoTransactionDomainTests {
+
+        @Test
+        @DisplayName("undoTransaction should reverse INCOME application")
+        void undoTransaction_shouldReverseIncome() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("150.00")).build();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.INCOME)
+                    .amount(new BigDecimal("50.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.undoTransaction(transaction);
+
+            // Assert
+            assertEquals(new BigDecimal("100.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
+        @DisplayName("undoTransaction should reverse EXPENSE application")
+        void undoTransaction_shouldReverseExpense() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("70.00")).build();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.EXPENSE)
+                    .amount(new BigDecimal("30.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.undoTransaction(transaction);
+
+            // Assert
+            assertEquals(new BigDecimal("100.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
+        @DisplayName("undoTransaction should handle null balance")
+        void undoTransaction_shouldHandleNullBalance() {
+            // Arrange
+            Account account = Account.builder().currentBalance(null).build();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.INCOME)
+                    .amount(new BigDecimal("50.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.undoTransaction(transaction);
+
+            // Assert
+            assertEquals(new BigDecimal("-50.00"), updatedAccount.getCurrentBalance());
+        }
+    }
+
+    @Nested
+    @DisplayName("Transaction Application (DTO)")
+    class ApplyTransactionDtoTests {
+
+        @Test
+        @DisplayName("applyTransaction (DTO) should add amount to balance")
+        void applyTransactionDto_shouldAddAmount() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .amount(new BigDecimal("25.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.applyTransaction(request);
+
+            // Assert
+            assertEquals(new BigDecimal("125.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
+        @DisplayName("applyTransaction (DTO) should handle null balance")
+        void applyTransactionDto_shouldHandleNullBalance() {
+            // Arrange
+            Account account = Account.builder().currentBalance(null).build();
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .amount(new BigDecimal("25.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.applyTransaction(request);
+
+            // Assert
+            assertEquals(new BigDecimal("25.00"), updatedAccount.getCurrentBalance());
+        }
+    }
+
+    @Nested
+    @DisplayName("Transaction Undo (DTO)")
+    class UndoTransactionDtoTests {
+
+        @Test
+        @DisplayName("undoTransaction (DTO) should subtract amount from balance")
+        void undoTransactionDto_shouldSubtractAmount() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .amount(new BigDecimal("25.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.undoTransaction(request);
+
+            // Assert
+            assertEquals(new BigDecimal("75.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
+        @DisplayName("undoTransaction (DTO) should handle null balance")
+        void undoTransactionDto_shouldHandleNullBalance() {
+            // Arrange
+            Account account = Account.builder().currentBalance(null).build();
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .amount(new BigDecimal("25.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.undoTransaction(request);
+
+            // Assert
+            assertEquals(new BigDecimal("-25.00"), updatedAccount.getCurrentBalance());
+        }
+    }
+
+    @Test
+    @DisplayName("Account equality should be based on ID")
+    void equality_shouldBeBasedOnId() {
+        Account a1 = Account.builder().id(1L).name("A").build();
+        Account a2 = Account.builder().id(1L).name("B").build();
+        Account a3 = Account.builder().id(2L).name("A").build();
+
+        assertEquals(a1, a2);
+        assertNotEquals(a1, a3);
+        assertEquals(a1.hashCode(), a2.hashCode());
+    }
+}
