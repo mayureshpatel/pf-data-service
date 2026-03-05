@@ -3,9 +3,7 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
-import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
-import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.*;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification.TransactionFilter;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionService;
@@ -91,16 +89,16 @@ public class TransactionCrudController {
     @PostMapping
     public ResponseEntity<Integer> createTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid TransactionDto dto) {
+            @RequestBody @Valid TransactionCreateRequest request) {
 
-        return ResponseEntity.status(201).body(transactionService.createTransaction(userDetails.getId(), dto));
+        return ResponseEntity.status(201).body(transactionService.createTransaction(userDetails.getId(), request));
     }
 
     @PatchMapping("/bulk")
     public ResponseEntity<Integer> updateTransactionsBulk(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid List<TransactionDto> dtos) {
-        return ResponseEntity.ok(transactionService.updateTransactions(userDetails.getId(), dtos));
+            @RequestBody @Valid List<TransactionUpdateRequest> requests) {
+        return ResponseEntity.ok(transactionService.updateTransactionsBulk(userDetails.getId(), requests));
     }
 
     @DeleteMapping("/bulk")
@@ -111,14 +109,12 @@ public class TransactionCrudController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("@ss.isTransactionOwner(#id, principal)")
+    @PutMapping
     public ResponseEntity<Integer> updateTransaction(
-            @PathVariable Long id,
-            @RequestBody @Valid TransactionDto dto,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid TransactionUpdateRequest request) {
 
-        return ResponseEntity.ok(transactionService.updateTransaction(userDetails.getId(), id, dto));
+        return ResponseEntity.ok(transactionService.updateTransaction(userDetails.getId(), request));
     }
 
     @DeleteMapping("/{id}")
