@@ -12,6 +12,7 @@ import lombok.ToString;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Tag {
 
+    @EqualsAndHashCode.Include
     private Long id;
     @ToString.Exclude
     private Long userId;
