@@ -1,270 +1,217 @@
-//package com.mayureshpatel.pfdataservice.service;
-//
-//import com.mayureshpatel.pfdataservice.domain.user.User;
-//import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
-//import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
-//import org.junit.jupiter.api.DisplayName;
-//import org.junit.jupiter.api.Nested;
-//import org.junit.jupiter.api.Test;
-//import org.junit.jupiter.api.extension.ExtendWith;
-//import org.mockito.InjectMocks;
-//import org.mockito.Mock;
-//import org.mockito.junit.jupiter.MockitoExtension;
-//import org.springframework.security.core.userdetails.UserDetails;
-//import org.springframework.security.core.userdetails.UsernameNotFoundException;
-//
-//import java.util.List;
-//import java.util.Optional;
-//
-//import static org.assertj.core.api.Assertions.assertThat;
-//import static org.assertj.core.api.Assertions.assertThatThrownBy;
-//import static org.mockito.Mockito.verify;
-//import static org.mockito.Mockito.when;
-//
-//@ExtendWith(MockitoExtension.class)
-//@DisplayName("UserService unit tests")
-//class UserServiceTest {
-//
-//    @Mock
-//    private UserRepository repository;
-//
-//    @InjectMocks
-//    private UserService userService;
-//
-//    private static final String USERNAME = "john_doe";
-//    private static final String EMAIL = "john@example.com";
-//
-//    private User buildUser(Long id, String username, String email) {
-//        User user = new User();
-//        user.setId(id);
-//        user.setUsername(username);
-//        user.setEmail(email);
-//        user.setPasswordHash("$2a$10$hash");
-//        return user;
-//    }
-//
-//    @Nested
-//    @DisplayName("isUserExistsByUsername()")
-//    class IsUserExistsByUsernameTests {
-//
-//        @Test
-//        @DisplayName("should return true when username exists in repository")
-//        void isUserExistsByUsername_exists_returnsTrue() {
-//            when(repository.existsByUsername(USERNAME)).thenReturn(true);
-//
-//            assertThat(userService.isUserExistsByUsername(USERNAME)).isTrue();
-//            verify(repository).existsByUsername(USERNAME);
-//        }
-//
-//        @Test
-//        @DisplayName("should return false when username does not exist in repository")
-//        void isUserExistsByUsername_notExists_returnsFalse() {
-//            when(repository.existsByUsername(USERNAME)).thenReturn(false);
-//
-//            assertThat(userService.isUserExistsByUsername(USERNAME)).isFalse();
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("isUserExistsByEmail()")
-//    class IsUserExistsByEmailTests {
-//
-//        @Test
-//        @DisplayName("should return true when email exists in repository")
-//        void isUserExistsByEmail_exists_returnsTrue() {
-//            when(repository.existsByEmail(EMAIL)).thenReturn(true);
-//
-//            assertThat(userService.isUserExistsByEmail(EMAIL)).isTrue();
-//            verify(repository).existsByEmail(EMAIL);
-//        }
-//
-//        @Test
-//        @DisplayName("should return false when email does not exist in repository")
-//        void isUserExistsByEmail_notExists_returnsFalse() {
-//            when(repository.existsByEmail(EMAIL)).thenReturn(false);
-//
-//            assertThat(userService.isUserExistsByEmail(EMAIL)).isFalse();
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("save()")
-//    class SaveTests {
-//
-//        @Test
-//        @DisplayName("should delegate to repository and return the saved user")
-//        void save_delegatesToRepository_returnsSavedUser() {
-//            User user = buildUser(1L, USERNAME, EMAIL);
-//            when(repository.save(user)).thenReturn(user);
-//
-//            User result = userService.save(user);
-//
-//            assertThat(result).isSameAs(user);
-//            verify(repository).save(user);
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("findById()")
-//    class FindByIdTests {
-//
-//        @Test
-//        @DisplayName("should return Optional containing user when id is found")
-//        void findById_found_returnsOptionalWithUser() {
-//            User user = buildUser(1L, USERNAME, EMAIL);
-//            when(repository.findById(1L)).thenReturn(Optional.of(user));
-//
-//            Optional<User> result = userService.findById(1L);
-//
-//            assertThat(result).contains(user);
-//        }
-//
-//        @Test
-//        @DisplayName("should return empty Optional when id is not found")
-//        void findById_notFound_returnsEmpty() {
-//            when(repository.findById(99L)).thenReturn(Optional.empty());
-//
-//            Optional<User> result = userService.findById(99L);
-//
-//            assertThat(result).isEmpty();
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("existsById()")
-//    class ExistsByIdTests {
-//
-//        @Test
-//        @DisplayName("should return true when id exists in repository")
-//        void existsById_exists_returnsTrue() {
-//            when(repository.existsById(1L)).thenReturn(true);
-//
-//            assertThat(userService.existsById(1L)).isTrue();
-//        }
-//
-//        @Test
-//        @DisplayName("should return false when id does not exist in repository")
-//        void existsById_notExists_returnsFalse() {
-//            when(repository.existsById(1L)).thenReturn(false);
-//
-//            assertThat(userService.existsById(1L)).isFalse();
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("findByUsername()")
-//    class FindByUsernameTests {
-//
-//        @Test
-//        @DisplayName("should return Optional containing user when username is found")
-//        void findByUsername_found_returnsOptionalWithUser() {
-//            User user = buildUser(1L, USERNAME, EMAIL);
-//            when(repository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
-//
-//            Optional<User> result = userService.findByUsername(USERNAME);
-//
-//            assertThat(result).contains(user);
-//        }
-//
-//        @Test
-//        @DisplayName("should return empty Optional when username is not found")
-//        void findByUsername_notFound_returnsEmpty() {
-//            when(repository.findByUsername(USERNAME)).thenReturn(Optional.empty());
-//
-//            Optional<User> result = userService.findByUsername(USERNAME);
-//
-//            assertThat(result).isEmpty();
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("findByEmail()")
-//    class FindByEmailTests {
-//
-//        @Test
-//        @DisplayName("should return Optional containing user when email is found")
-//        void findByEmail_found_returnsOptionalWithUser() {
-//            User user = buildUser(1L, USERNAME, EMAIL);
-//            when(repository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-//
-//            Optional<User> result = userService.findByEmail(EMAIL);
-//
-//            assertThat(result).contains(user);
-//        }
-//
-//        @Test
-//        @DisplayName("should return empty Optional when email is not found")
-//        void findByEmail_notFound_returnsEmpty() {
-//            when(repository.findByEmail(EMAIL)).thenReturn(Optional.empty());
-//
-//            Optional<User> result = userService.findByEmail(EMAIL);
-//
-//            assertThat(result).isEmpty();
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("findAll()")
-//    class FindAllTests {
-//
-//        @Test
-//        @DisplayName("should return all users from repository")
-//        void findAll_returnsAllUsers() {
-//            User u1 = buildUser(1L, "user1", "u1@test.com");
-//            User u2 = buildUser(2L, "user2", "u2@test.com");
-//            when(repository.findAll()).thenReturn(List.of(u1, u2));
-//
-//            List<User> result = userService.findAll();
-//
-//            assertThat(result).hasSize(2).containsExactly(u1, u2);
-//        }
-//
-//        @Test
-//        @DisplayName("should return empty list when no users exist")
-//        void findAll_noUsers_returnsEmptyList() {
-//            when(repository.findAll()).thenReturn(List.of());
-//
-//            List<User> result = userService.findAll();
-//
-//            assertThat(result).isEmpty();
-//        }
-//    }
-//
-//    @Nested
-//    @DisplayName("loadUserByUsername()")
-//    class LoadUserByUsernameTests {
-//
-//        @Test
-//        @DisplayName("should return CustomUserDetails wrapping the user when user is found")
-//        void loadUserByUsername_found_returnsCustomUserDetails() {
-//            User user = buildUser(1L, USERNAME, EMAIL);
-//            when(repository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
-//
-//            UserDetails result = userService.loadUserByUsername(USERNAME);
-//
-//            assertThat(result).isInstanceOf(CustomUserDetails.class);
-//            assertThat(result.getUsername()).isEqualTo(USERNAME);
-//        }
-//
-//        @Test
-//        @DisplayName("should throw UsernameNotFoundException when user is not found")
-//        void loadUserByUsername_notFound_throwsUsernameNotFoundException() {
-//            when(repository.findByUsername("ghost")).thenReturn(Optional.empty());
-//
-//            assertThatThrownBy(() -> userService.loadUserByUsername("ghost"))
-//                    .isInstanceOf(UsernameNotFoundException.class)
-//                    .hasMessageContaining("ghost");
-//        }
-//
-//        @Test
-//        @DisplayName("should use the exact username string to query the repository")
-//        void loadUserByUsername_passesExactUsernameToRepository() {
-//            User user = buildUser(42L, USERNAME, EMAIL);
-//            when(repository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
-//
-//            userService.loadUserByUsername(USERNAME);
-//
-//            verify(repository).findByUsername(USERNAME);
-//        }
-//    }
-//}
+package com.mayureshpatel.pfdataservice.service;
+
+import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
+import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("UserService Unit Tests")
+class UserServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @InjectMocks
+    private UserService userService;
+
+    private static final String USERNAME = "testuser";
+    private static final String EMAIL = "test@example.com";
+    private static final Long USER_ID = 1L;
+
+    @Nested
+    @DisplayName("Existence Checks")
+    class ExistenceTests {
+        @Test
+        @DisplayName("should check if user exists by username")
+        void shouldCheckExistsByUsername() {
+            // Arrange
+            when(userRepository.existsByUsername(USERNAME)).thenReturn(true);
+
+            // Act
+            boolean result = userService.isUserExistsByUsername(USERNAME);
+
+            // Assert
+            assertTrue(result);
+            verify(userRepository).existsByUsername(USERNAME);
+        }
+
+        @Test
+        @DisplayName("should check if user exists by email")
+        void shouldCheckExistsByEmail() {
+            // Arrange
+            when(userRepository.existsByEmail(EMAIL)).thenReturn(true);
+
+            // Act
+            boolean result = userService.isUserExistsByEmail(EMAIL);
+
+            // Assert
+            assertTrue(result);
+            verify(userRepository).existsByEmail(EMAIL);
+        }
+
+        @Test
+        @DisplayName("should check if user exists by id")
+        void shouldCheckExistsById() {
+            // Arrange
+            when(userRepository.existsById(USER_ID)).thenReturn(true);
+
+            // Act
+            boolean result = userService.existsById(USER_ID);
+
+            // Assert
+            assertTrue(result);
+            verify(userRepository).existsById(USER_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("Persistence Operations")
+    class PersistenceTests {
+        @Test
+        @DisplayName("should insert user successfully")
+        void shouldInsertUser() {
+            // Arrange
+            User user = User.builder().username(USERNAME).build();
+            when(userRepository.insert(user)).thenReturn(1);
+
+            // Act
+            int result = userService.insert(user);
+
+            // Assert
+            assertEquals(1, result);
+            verify(userRepository).insert(user);
+        }
+
+        @Test
+        @DisplayName("should update user successfully")
+        void shouldUpdateUser() {
+            // Arrange
+            User user = User.builder().id(USER_ID).username(USERNAME).build();
+            when(userRepository.update(user)).thenReturn(1);
+
+            // Act
+            int result = userService.update(user);
+
+            // Assert
+            assertEquals(1, result);
+            verify(userRepository).update(user);
+        }
+    }
+
+    @Nested
+    @DisplayName("Lookup Operations")
+    class LookupTests {
+        @Test
+        @DisplayName("should find user by username")
+        void shouldFindByUsername() {
+            // Arrange
+            User user = User.builder().username(USERNAME).build();
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
+
+            // Act
+            Optional<User> result = userService.findByUsername(USERNAME);
+
+            // Assert
+            assertTrue(result.isPresent());
+            assertEquals(USERNAME, result.get().getUsername());
+        }
+
+        @Test
+        @DisplayName("should find user by email")
+        void shouldFindByEmail() {
+            // Arrange
+            User user = User.builder().email(EMAIL).build();
+            when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+
+            // Act
+            Optional<User> result = userService.findByEmail(EMAIL);
+
+            // Assert
+            assertTrue(result.isPresent());
+            assertEquals(EMAIL, result.get().getEmail());
+        }
+
+        @Test
+        @DisplayName("should find user by id")
+        void shouldFindById() {
+            // Arrange
+            User user = User.builder().id(USER_ID).build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+            // Act
+            Optional<User> result = userService.findById(USER_ID);
+
+            // Assert
+            assertTrue(result.isPresent());
+            assertEquals(USER_ID, result.get().getId());
+        }
+
+        @Test
+        @DisplayName("should find all users")
+        void shouldFindAll() {
+            // Arrange
+            User user = User.builder().id(USER_ID).build();
+            when(userRepository.findAll()).thenReturn(List.of(user));
+
+            // Act
+            List<User> result = userService.findAll();
+
+            // Assert
+            assertEquals(1, result.size());
+            verify(userRepository).findAll();
+        }
+    }
+
+    @Nested
+    @DisplayName("loadUserByUsername")
+    class LoadUserByUsernameTests {
+        @Test
+        @DisplayName("should load UserDetails when user exists")
+        void shouldLoadUserDetails() {
+            // Arrange
+            User user = User.builder()
+                    .id(USER_ID)
+                    .username(USERNAME)
+                    .passwordHash("hashed-password")
+                    .email(EMAIL)
+                    .build();
+            when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
+
+            // Act
+            UserDetails result = userService.loadUserByUsername(USERNAME);
+
+            // Assert
+            assertNotNull(result);
+            assertTrue(result instanceof CustomUserDetails);
+            assertEquals(USERNAME, result.getUsername());
+            assertEquals(USER_ID, ((CustomUserDetails) result).getId());
+        }
+
+        @Test
+        @DisplayName("should throw UsernameNotFoundException when user does not exist")
+        void shouldThrowException() {
+            // Arrange
+            when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThrows(UsernameNotFoundException.class, () -> userService.loadUserByUsername("nonexistent"));
+        }
+    }
+}

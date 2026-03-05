@@ -31,10 +31,6 @@ public class SnapshotService {
     public void createEndOfMonthSnapshot(Long accountId, LocalDate dateInMonth) {
         LocalDate endOfMonth = dateInMonth.withDayOfMonth(dateInMonth.lengthOfMonth());
 
-        // Don't create snapshots for the future (or today if month isn't over? actually we can, it's just a snapshot at that time)
-        // But typically "End of Month" implies the month is closed. 
-        // For now, we allow calculating it as "Balance on that date".
-
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found: " + accountId));
 
@@ -52,8 +48,8 @@ public class SnapshotService {
 
         Optional<AccountSnapshot> existing = snapshotRepository.findByAccountIdAndSnapshotDate(accountId, endOfMonth);
 
-        AccountSnapshot snapshot = existing.orElse(AccountSnapshot.builder().build());
-        snapshot.toBuilder()
+        AccountSnapshot snapshot = existing.orElse(AccountSnapshot.builder().build())
+                .toBuilder()
                 .account(account)
                 .snapshotDate(endOfMonth)
                 .balance(historicBalance)
