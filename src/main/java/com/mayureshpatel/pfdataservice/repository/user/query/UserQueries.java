@@ -43,12 +43,14 @@ public final class UserQueries {
                  username,
                  email,
                  password_hash,
+                 role,
                  last_updated_by,
                  created_at, last_updated_timestamp)
             values (
                     :username,
                     :email,
                     :passwordHash,
+                    :role,
                     :lastUpdatedBy,
                     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             returning id
@@ -60,6 +62,7 @@ public final class UserQueries {
             set username = :username,
                 email = :email,
                 password_hash = :passwordHash,
+                role = :role,
                 last_updated_by = :lastUpdatedBy,
                 last_updated_timestamp = CURRENT_TIMESTAMP
             where id = :id

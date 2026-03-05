@@ -5,6 +5,7 @@ CREATE TABLE users
     username               VARCHAR(50)  NOT NULL UNIQUE,
     password_hash          VARCHAR(255) NOT NULL,
     email                  VARCHAR(100) NOT NULL UNIQUE,
+    role                   VARCHAR(20)  NOT NULL DEFAULT 'USER',
     last_updated_by        VARCHAR(255) NOT NULL,
     last_updated_timestamp TIMESTAMP,
     created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -89,8 +90,8 @@ CREATE INDEX idx_users_deleted_at ON users (deleted_at);
 CREATE INDEX idx_accounts_deleted_at ON accounts (deleted_at);
 CREATE INDEX idx_transactions_deleted_at ON transactions (deleted_at);
 -- Seed Initial User (Username: admin, Password: password)
-INSERT INTO users (username, password_hash, email, last_updated_by, last_updated_timestamp)
-VALUES ('admin', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'admin@example.com', 'system',
+INSERT INTO users (username, password_hash, email, role, last_updated_by, last_updated_timestamp)
+VALUES ('admin', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'admin@example.com', 'ADMIN', 'system',
         CURRENT_TIMESTAMP);
 
 -- Seed Categories for admin
@@ -134,10 +135,11 @@ FROM users
 WHERE username = 'admin';
 -- V14: Robust Seed Data (REVERTED TO PRE-MODIFICATION STATE FOR CHECKSUM)
 -- 1. Seed Initial User (Username: admin, Password: password)
-INSERT INTO users (username, password_hash, email, last_updated_by, last_updated_timestamp)
+INSERT INTO users (username, password_hash, email, role, last_updated_by, last_updated_timestamp)
 SELECT 'admin',
        '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2',
        'admin@example.com',
+       'ADMIN',
        'system',
        CURRENT_TIMESTAMP
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
@@ -352,8 +354,8 @@ VALUES ((SELECT id
 TRUNCATE TABLE transactions, transaction_tags, tags, category_rules, categories, account_snapshots, file_import_history, accounts, users RESTART IDENTITY CASCADE;
 
 -- 2. Seed Initial User (Will get ID 1)
-INSERT INTO users (username, password_hash, email, last_updated_by, last_updated_timestamp)
-VALUES ('admin', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'admin@example.com', 'system',
+INSERT INTO users (username, password_hash, email, role, last_updated_by, last_updated_timestamp)
+VALUES ('admin', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'admin@example.com', 'ADMIN', 'system',
         CURRENT_TIMESTAMP);
 
 -- 3. Seed Categories (Will get IDs 1-6 for parents)

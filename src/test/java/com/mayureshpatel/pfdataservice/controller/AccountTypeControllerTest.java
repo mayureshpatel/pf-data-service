@@ -83,6 +83,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
 
     @Nested
     @DisplayName("createAccountType")
+    @WithCustomMockUser(id = BaseControllerTest.USER_ID, roles = {"ADMIN"})
     class CreateAccountTypeTests {
 
         @Test
@@ -134,6 +135,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
 
     @Nested
     @DisplayName("deleteAccountType")
+    @WithCustomMockUser(id = BaseControllerTest.USER_ID, roles = {"ADMIN"})
     class DeleteAccountTypeTests {
 
         @Test

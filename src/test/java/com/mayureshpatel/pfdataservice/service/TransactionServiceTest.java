@@ -237,7 +237,7 @@ class TransactionServiceTest {
                     .categoryId(5L)
                     .build();
 
-            Category subCategory = Category.builder().id(5L).parentId(1L).build();
+            Category subCategory = Category.builder().id(5L).parentId(1L).userId(USER_ID).build();
             when(categoryRepository.findById(5L)).thenReturn(Optional.of(subCategory));
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 

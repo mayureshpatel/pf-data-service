@@ -18,6 +18,7 @@ public class UserRowMapper extends JdbcMapperUtils implements RowMapper<User> {
                 .username(rs.getString("username"))
                 .passwordHash(rs.getString("password_hash"))
                 .email(rs.getString("email"))
+                .role(rs.getString("role"))
                 .audit(getAuditColumns(rs))
                 .build();
     }

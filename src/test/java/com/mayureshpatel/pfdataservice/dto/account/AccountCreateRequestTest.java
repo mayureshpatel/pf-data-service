@@ -32,7 +32,6 @@ class AccountCreateRequestTest {
     @DisplayName("should pass when all fields are valid")
     void shouldPassWithValidData() {
         AccountCreateRequest request = AccountCreateRequest.builder()
-                .userId(1L)
                 .name("Savings")
                 .type("SAVINGS")
                 .startingBalance(BigDecimal.ZERO)
@@ -42,30 +41,6 @@ class AccountCreateRequestTest {
 
         Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
-    }
-
-    @Nested
-    @DisplayName("Field: userId")
-    class UserIdValidationTests {
-        @Test
-        @DisplayName("should fail when userId is null")
-        void shouldFailWhenUserIdIsNull() {
-            AccountCreateRequest request = AccountCreateRequest.builder()
-                    .userId(null)
-                    .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
-            assertViolation(violations, "userId", "User ID cannot be null.");
-        }
-
-        @Test
-        @DisplayName("should fail when userId is not positive")
-        void shouldFailWhenUserIdIsNotPositive() {
-            AccountCreateRequest request = AccountCreateRequest.builder()
-                    .userId(0L)
-                    .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
-            assertViolation(violations, "userId", "User ID must be a positive number.");
-        }
     }
 
     @Nested
@@ -195,7 +170,6 @@ class AccountCreateRequestTest {
         @DisplayName("should pass when bankName is null")
         void shouldPassWhenBankNameIsNull() {
             AccountCreateRequest request = AccountCreateRequest.builder()
-                    .userId(1L)
                     .name("Savings")
                     .type("SAVINGS")
                     .startingBalance(BigDecimal.ZERO)

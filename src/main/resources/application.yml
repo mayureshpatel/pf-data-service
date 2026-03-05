@@ -28,7 +28,7 @@ spring:
       expiration: ${JWT_EXPIRATION:86400000} # 1 day
 
 cors:
-  allowed-origins: "*"
+  allowed-origins: "http://localhost:4200"
 
 logging:
   pattern:

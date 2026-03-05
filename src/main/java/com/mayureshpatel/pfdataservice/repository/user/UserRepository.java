@@ -80,6 +80,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash", user.getPasswordHash())
+                .param("role", user.getRole() != null ? user.getRole() : "USER")
                 .param("lastUpdatedBy", lastUpdatedBy)
                 .update(keyHolder);
     }
@@ -94,6 +95,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 .param("username", user.getUsername())
                 .param("email", user.getEmail())
                 .param("passwordHash", user.getPasswordHash())
+                .param("role", user.getRole() != null ? user.getRole() : "USER")
                 .param("lastUpdatedBy", lastUpdatedBy)
                 .param("id", user.getId())
                 .update();

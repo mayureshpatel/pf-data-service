@@ -18,6 +18,7 @@ public class User {
     @ToString.Exclude
     private String passwordHash;
     private String email;
+    private String role;
 
     @ToString.Exclude
     private TableAudit audit;

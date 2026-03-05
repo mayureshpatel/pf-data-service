@@ -12,10 +12,6 @@ import java.math.BigDecimal;
 @ToString
 public class AccountCreateRequest {
 
-    @NotNull(message = "User ID cannot be null.")
-    @Positive(message = "User ID must be a positive number.")
-    private final Long userId;
-
     @NotBlank(message = "Account name cannot be blank.")
     @Size(max = 100, message = "Account name must be less than 100 characters.")
     private final String name;

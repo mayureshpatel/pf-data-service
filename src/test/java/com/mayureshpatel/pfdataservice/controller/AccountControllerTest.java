@@ -115,7 +115,6 @@ class AccountControllerTest extends BaseControllerTest {
         void createAccount_shouldCreateNewAccount() throws Exception {
             // Arrange
             AccountCreateRequest request = AccountCreateRequest.builder()
-                    .userId(USER_ID)
                     .name("Savings")
                     .type("SAVINGS")
                     .startingBalance(new BigDecimal("500.00"))
@@ -141,7 +140,6 @@ class AccountControllerTest extends BaseControllerTest {
         void createAccount_shouldReturn400WhenValidationFails() throws Exception {
             // Arrange - invalid request (blank name, invalid currency)
             AccountCreateRequest request = AccountCreateRequest.builder()
-                    .userId(USER_ID)
                     .name("")
                     .type("SAVINGS")
                     .startingBalance(new BigDecimal("500.00"))

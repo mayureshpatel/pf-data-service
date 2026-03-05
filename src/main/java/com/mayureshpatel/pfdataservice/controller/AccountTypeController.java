@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,14 +26,15 @@ public class AccountTypeController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Integer> createAccountType(
             @RequestBody @Valid AccountTypeCreateRequest request) {
         return ResponseEntity.ok(accountTypeRepository.insert(request));
     }
 
     @DeleteMapping("/{code}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Integer> deleteAccountType(@PathVariable String code) {
         return ResponseEntity.ok(accountTypeRepository.deleteByCode(code));
     }
-
 }

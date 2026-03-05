@@ -5,10 +5,23 @@
 TRUNCATE TABLE transactions, transaction_tags, tags, category_rules, recurring_transactions, categories, account_snapshots, file_import_history, merchants, accounts, users RESTART IDENTITY CASCADE;
 
 -- 2. USERS
+CREATE TABLE IF NOT EXISTS users
+(
+    id                     BIGSERIAL PRIMARY KEY,
+    username               VARCHAR(50)  NOT NULL UNIQUE,
+    password_hash          VARCHAR(255) NOT NULL,
+    email                  VARCHAR(100) NOT NULL UNIQUE,
+    role                   VARCHAR(20)  NOT NULL DEFAULT 'USER',
+    last_updated_by        VARCHAR(255) NOT NULL,
+    last_updated_timestamp TIMESTAMP,
+    created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at             TIMESTAMP
+);
+
 -- Password is 'Password1!' hashed
-INSERT INTO users (id, username, password_hash, email, last_updated_by, last_updated_timestamp)
-VALUES (1, 'testuser', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'test@example.com', 'system', CURRENT_TIMESTAMP),
-       (2, 'otheruser', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'other@example.com', 'system', CURRENT_TIMESTAMP);
+INSERT INTO users (id, username, password_hash, email, role, last_updated_by, last_updated_timestamp)
+VALUES (1, 'testuser', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'test@example.com', 'USER', 'system', CURRENT_TIMESTAMP),
+       (2, 'otheruser', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVuHOn2', 'other@example.com', 'USER', 'system', CURRENT_TIMESTAMP);
 
 -- 3. CATEGORIES
 -- User 1 Parent Categories

@@ -184,15 +184,18 @@ public class TransactionService {
     private Transaction resolveCategory(Long userId, Transaction transaction, Long requestedCategoryId) {
         if (requestedCategoryId != null) {
             Category category = categoryRepository.findById(requestedCategoryId)
-                    .orElse(null);
-            if (category != null) {
-                if (!category.isSubCategory()) {
-                    throw new IllegalArgumentException(
-                            "Only subcategories can be assigned to transactions. " +
-                                    "Please select a specific subcategory under '" + category.getName() + "'.");
-                }
-                return transaction.toBuilder().category(category).build();
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+            if (!category.getUserId().equals(userId)) {
+                throw new AccessDeniedException("You do not have access to this category");
             }
+
+            if (!category.isSubCategory()) {
+                throw new IllegalArgumentException(
+                        "Only subcategories can be assigned to transactions. " +
+                                "Please select a specific subcategory under '" + category.getName() + "'.");
+            }
+            return transaction.toBuilder().category(category).build();
         } else {
             List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
             List<Category> userCategories = categoryRepository.findByUserId(userId);
