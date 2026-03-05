@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.dto.account.AccountTypeCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 import com.mayureshpatel.pfdataservice.mapper.AccountTypeDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class AccountTypeController {
 
     @PostMapping
     public ResponseEntity<Integer> createAccountType(
-            @RequestBody AccountTypeCreateRequest request) {
+            @RequestBody @Valid AccountTypeCreateRequest request) {
         return ResponseEntity.ok(accountTypeRepository.insert(request));
     }
 
