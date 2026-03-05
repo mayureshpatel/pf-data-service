@@ -74,7 +74,8 @@ FROM generate_series('2025-09-01'::timestamptz, '2026-02-01'::timestamptz, '1 mo
 -- Specific Transactions for precise matching
 INSERT INTO transactions (id, account_id, category_id, merchant_id, amount, date, description, type)
 VALUES (1000, 1, 8, 4, 25.50, '2026-03-01 10:00:00+00', 'Morning Coffee', 'EXPENSE'),
-       (1001, 3, 9, 3, 45.00, '2026-03-02 15:30:00+00', 'Gas Fill-up', 'EXPENSE');
+       (1001, 3, 9, 3, 45.00, '2026-03-02 15:30:00+00', 'Gas Fill-up', 'EXPENSE'),
+       (1002, 1, NULL, NULL, 500.00, '2026-03-03 12:00:00+00', 'ATM Deposit', 'INCOME');
 
 -- 8. CATEGORY RULES
 INSERT INTO category_rules (id, user_id, keyword, category_id, priority)

@@ -36,16 +36,8 @@ public abstract class BaseRepositoryTest {
 
     @BeforeEach
     void setUpBaseline() {
-        try {
-            ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
-            populator.addScript(new ClassPathResource("test-data-baseline.sql"));
-            populator.execute(dataSource);
-        } catch (Exception e) {
-            System.err.println("FAILED TO EXECUTE test-data-baseline.sql: " + e.getMessage());
-            if (e.getCause() != null) {
-                System.err.println("CAUSE: " + e.getCause().getMessage());
-            }
-            throw e;
-        }
+        ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
+        populator.addScript(new ClassPathResource("test-data-baseline.sql"));
+        populator.execute(dataSource);
     }
 }
