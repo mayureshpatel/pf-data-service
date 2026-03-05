@@ -46,13 +46,13 @@ public class TransactionUpdateRequest {
     public static TransactionUpdateRequest fromDomain(Transaction transaction) {
         return TransactionUpdateRequest.builder()
                 .id(transaction.getId())
-                .categoryId(transaction.getCategory().getId())
+                .categoryId(transaction.getCategory() != null ? transaction.getCategory().getId() : null)
                 .amount(transaction.getAmount())
                 .transactionDate(transaction.getTransactionDate())
                 .description(transaction.getDescription())
                 .type(transaction.getType().name())
                 .postDate(transaction.getPostDate())
-                .merchantId(transaction.getMerchant().getId())
+                .merchantId(transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
                 .build();
     }
 

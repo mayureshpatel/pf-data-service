@@ -164,10 +164,7 @@ public class CategoryRuleService {
     public int applyRules(Long userId) {
         List<CategoryRule> rules = this.categoryRuleRepository.findByUserId(userId);
         List<Category> categories = this.categoryRepository.findByUserId(userId);
-        List<TransactionUpdateRequest> transactions = this.transactionRepository.findByUserId(userId)
-                .stream()
-                .map(TransactionUpdateRequest::fromDomain)
-                .toList();
+        List<Transaction> transactions = this.transactionRepository.findByUserId(userId);
 
         Map<Long, Category> categoryMap = categories.stream()
                 .collect(Collectors.toMap(
@@ -176,12 +173,12 @@ public class CategoryRuleService {
 
         List<TransactionUpdateRequest> toUpdate = new ArrayList<>();
 
-        for (TransactionUpdateRequest t : transactions) {
-            if (t.getCategoryId() != null) {
+        for (Transaction transaction : transactions) {
+            if (transaction.getCategory() != null) {
                 continue;
             }
 
-            Long guessedCategory = this.categorizer.guessCategory(userId, t, rules, categories);
+            Long guessedCategory = this.categorizer.guessCategory(transaction, rules, categories);
             if (null == guessedCategory) {
                 continue;
             }
@@ -191,10 +188,9 @@ public class CategoryRuleService {
                 continue;
             }
 
-            t.toBuilder()
+            toUpdate.add(TransactionUpdateRequest.fromDomain(transaction).toBuilder()
                     .categoryId(matchedCategory.getId())
-                    .build();
-            toUpdate.add(t);
+                    .build());
         }
 
         if (!toUpdate.isEmpty()) {
