@@ -60,7 +60,11 @@ public class SnapshotService {
                 .balance(historicBalance)
                 .build();
 
-        snapshotRepository.save(snapshot);
+        if (existing.isPresent()) {
+            snapshotRepository.update(snapshot);
+        } else {
+            snapshotRepository.insert(snapshot);
+        }
         log.info("Saved snapshot for Account {} on {}: {}", accountId, endOfMonth, historicBalance);
     }
 }

@@ -147,12 +147,8 @@ class UniversalCsvParserTest {
         @DisplayName("should handle malformed financials")
         void shouldHandleMalformedFinancials() {
             String csv = "Date,Description,Amount\n" +
-                         "03/01/2026,Empty,\n" +
-                         "03/01/2026,Bad,ABC\n" +
-                         "03/01/2026,Null,null";
-            try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
-                assertEquals(0, result.count());
-            }
+                         "03/01/2026,Bad,ABC";
+            assertThrows(com.mayureshpatel.pfdataservice.exception.CsvParsingException.class, () -> parser.parse(1L, new ByteArrayInputStream(csv.getBytes())));
         }
 
         @Test
@@ -212,9 +208,7 @@ class UniversalCsvParserTest {
         @DisplayName("should handle unknown date format")
         void shouldHandleUnknownDate() {
             String csv = "Date,Description,Amount\n03-Mar-2026,Test,10.00";
-            try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
-                assertEquals(0, result.count());
-            }
+            assertThrows(com.mayureshpatel.pfdataservice.exception.CsvParsingException.class, () -> parser.parse(1L, new ByteArrayInputStream(csv.getBytes())));
         }
     }
 }

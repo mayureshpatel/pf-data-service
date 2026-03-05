@@ -62,7 +62,6 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
                 .update(keyHolder);
     }
 
-    @Override
     public int save(FileImportHistory history) {
         return jdbcClient.sql(FileImportHistoryQueries.INSERT)
                 .param("accountId", history.getAccountId())

@@ -82,7 +82,7 @@ public interface TransactionParser {
         try {
             return new BigDecimal(amount);
         } catch (NumberFormatException e) {
-            return BigDecimal.ZERO;
+            throw new IllegalArgumentException("Invalid amount format: " + stringVal, e);
         }
     }
 }

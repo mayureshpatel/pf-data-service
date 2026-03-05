@@ -157,7 +157,7 @@ class CategoryRuleServiceTest {
 
             when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(rule));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-            when(categoryRuleRepository.save(any())).thenReturn(1);
+            when(categoryRuleRepository.update(any())).thenReturn(1);
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .id(RULE_ID)
                     .keyword("NewKW")
@@ -170,7 +170,7 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(1, result);
-            verify(categoryRuleRepository).save(argThat(r -> r.getKeyword().equals("NewKW") && r.getPriority() == 5));
+            verify(categoryRuleRepository).update(argThat(r -> r.getKeyword().equals("NewKW") && r.getPriority() == 5));
         }
 
         @Test

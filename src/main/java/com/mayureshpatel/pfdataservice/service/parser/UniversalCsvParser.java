@@ -20,7 +20,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -65,18 +64,35 @@ public class UniversalCsvParser implements TransactionParser {
             Map<String, Integer> headerMap = parser.getHeaderMap();
             ColumnMapping mapping = identifyColumns(headerMap);
 
-            return parser.stream()
-                    .map(record -> parseRecord(record, mapping))
-                    .filter(Objects::nonNull) // Skip failed rows
-                    .onClose(() -> {
-                        try {
-                            parser.close();
-                            reader.close();
-                        } catch (Exception e) {
-                            log.error("Error closing CSV resources", e);
-                        }
-                    });
+            java.util.List<Transaction> transactions = new java.util.ArrayList<>();
+            java.util.List<String> errors = new java.util.ArrayList<>();
 
+            for (CSVRecord record : parser) {
+                try {
+                    Transaction t = parseRecord(record, mapping);
+                    if (t != null) {
+                        transactions.add(t);
+                    }
+                } catch (Exception e) {
+                    errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
+                }
+            }
+
+            try {
+                parser.close();
+                reader.close();
+            } catch (Exception e) {
+                log.error("Error closing CSV resources", e);
+            }
+
+            if (!errors.isEmpty()) {
+                throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join("; ", errors));
+            }
+
+            return transactions.stream();
+
+        } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
+            throw e;
         } catch (Exception e) {
             try {
                 reader.close();
@@ -150,82 +166,76 @@ public class UniversalCsvParser implements TransactionParser {
      * @return Parsed Transaction object
      */
     private Transaction parseRecord(CSVRecord record, ColumnMapping mapping) {
-        try {
-            // parse date
-            LocalDate localDate = parseDate(record.get(mapping.dateCol));
-            if (localDate == null) return null;
-            OffsetDateTime date = localDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
+        // parse date
+        LocalDate localDate = parseDate(record.get(mapping.dateCol));
+        if (localDate == null) return null;
+        OffsetDateTime date = localDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
 
-            OffsetDateTime postDate = null;
-            if (mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)) {
-                LocalDate localPostDate = parseDate(record.get(mapping.postDateCol));
-                if (localPostDate != null) {
-                    postDate = localPostDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
-                }
+        OffsetDateTime postDate = null;
+        if (mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)) {
+            LocalDate localPostDate = parseDate(record.get(mapping.postDateCol));
+            if (localPostDate != null) {
+                postDate = localPostDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
             }
+        }
 
-            // parse description
-            String description = record.get(mapping.descCol);
+        // parse description
+        String description = record.get(mapping.descCol);
 
-            // parse amount and transaction type
-            BigDecimal amount = BigDecimal.ZERO;
-            TransactionType type = TransactionType.EXPENSE; // Default
+        // parse amount and transaction type
+        BigDecimal amount = BigDecimal.ZERO;
+        TransactionType type = TransactionType.EXPENSE; // Default
 
-            if (mapping.debitCol != null && mapping.creditCol != null) {
-                // two column strategy
-                String debitStr = record.get(mapping.debitCol);
-                String creditStr = record.get(mapping.creditCol);
+        if (mapping.debitCol != null && mapping.creditCol != null) {
+            // two column strategy
+            String debitStr = record.get(mapping.debitCol);
+            String creditStr = record.get(mapping.creditCol);
 
-                BigDecimal debit = parseAmount(debitStr);
-                BigDecimal credit = parseAmount(creditStr);
+            BigDecimal debit = parseAmount(debitStr);
+            BigDecimal credit = parseAmount(creditStr);
 
-                if (debit.compareTo(BigDecimal.ZERO) > 0) {
-                    amount = debit;
-                } else if (credit.compareTo(BigDecimal.ZERO) > 0) {
-                    amount = credit;
-                    type = TransactionType.INCOME;
-                }
-            } else if (mapping.amountCol != null) {
-                // single amount strategy
-                BigDecimal rawAmount = parseAmount(record.get(mapping.amountCol));
-
-                if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
-                    amount = rawAmount.abs();
-                } else {
-                    type = TransactionType.INCOME;
-                    amount = rawAmount;
-                }
-            } else if (mapping.debitCol != null) {
-                amount = parseAmount(record.get(mapping.debitCol));
-            } else if (mapping.creditCol != null) {
-                amount = parseAmount(record.get(mapping.creditCol));
+            if (debit.compareTo(BigDecimal.ZERO) > 0) {
+                amount = debit;
+            } else if (credit.compareTo(BigDecimal.ZERO) > 0) {
+                amount = credit;
                 type = TransactionType.INCOME;
             }
+        } else if (mapping.amountCol != null) {
+            // single amount strategy
+            BigDecimal rawAmount = parseAmount(record.get(mapping.amountCol));
 
-            // skip zero-amount transactions (often pending or auth holds)
-            if (amount.compareTo(BigDecimal.ZERO) == 0) {
-                return null;
+            if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
+                amount = rawAmount.abs();
+            } else {
+                type = TransactionType.INCOME;
+                amount = rawAmount;
             }
+        } else if (mapping.debitCol != null) {
+            amount = parseAmount(record.get(mapping.debitCol));
+        } else if (mapping.creditCol != null) {
+            amount = parseAmount(record.get(mapping.creditCol));
+            type = TransactionType.INCOME;
+        }
 
-            String truncatedDescription = description != null && description.length() > 255
-                    ? description.substring(0, 255)
-                    : description;
-
-            return Transaction.builder()
-                    .transactionDate(date)
-                    .postDate(postDate)
-                    .description(description)
-                    .amount(amount)
-                    .type(type)
-                    .merchant(com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
-                            .originalName(truncatedDescription)
-                            .build())
-                    .build();
-
-        } catch (Exception e) {
-            log.warn("Skipping invalid row in CSV at index {} - Error: {}", record.getRecordNumber(), e.getMessage());
+        // skip zero-amount transactions (often pending or auth holds)
+        if (amount.compareTo(BigDecimal.ZERO) == 0) {
             return null;
         }
+
+        String truncatedDescription = description != null && description.length() > 255
+                ? description.substring(0, 255)
+                : description;
+
+        return Transaction.builder()
+                .transactionDate(date)
+                .postDate(postDate)
+                .description(description)
+                .amount(amount)
+                .type(type)
+                .merchant(com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
+                        .originalName(truncatedDescription)
+                        .build())
+                .build();
     }
 
     /**
@@ -250,7 +260,7 @@ public class UniversalCsvParser implements TransactionParser {
         try {
             return new BigDecimal(clean);
         } catch (NumberFormatException e) {
-            return BigDecimal.ZERO;
+            throw new IllegalArgumentException("Invalid amount format detected: " + amountStr, e);
         }
     }
 

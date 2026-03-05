@@ -76,7 +76,7 @@ public class AccountService {
             throw new AccessDeniedException("Access denied");
         }
 
-        return accountRepository.save(request.toDomain());
+        return accountRepository.update(request.toDomain());
     }
 
     /**

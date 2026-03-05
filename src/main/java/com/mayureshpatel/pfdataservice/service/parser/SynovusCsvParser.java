@@ -16,7 +16,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 @Component
@@ -53,18 +52,33 @@ public class SynovusCsvParser implements TransactionParser {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
         try {
             CSVParser csvParser = CSV_FORMAT.parse(reader);
-            return csvParser.stream()
-                    .filter(csvRecord -> isValidRecord(csvRecord, HEADER_DATE))
-                    .map(this::parseTransaction)
-                    .flatMap(Optional::stream)
-                    .onClose(() -> {
-                        try {
-                            csvParser.close();
-                            reader.close();
-                        } catch (Exception e) {
-                            throw new RuntimeException("Failed to close CSV parser resources", e);
-                        }
-                    });
+            java.util.List<Transaction> transactions = new java.util.ArrayList<>();
+            java.util.List<String> errors = new java.util.ArrayList<>();
+
+            for (CSVRecord record : csvParser) {
+                if (isValidRecord(record, HEADER_DATE)) {
+                    try {
+                        transactions.add(parseTransaction(record));
+                    } catch (Exception e) {
+                        errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
+                    }
+                }
+            }
+
+            try {
+                csvParser.close();
+                reader.close();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to close CSV parser resources", e);
+            }
+
+            if (!errors.isEmpty()) {
+                throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", errors));
+            }
+
+            return transactions.stream();
+        } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
+            throw e;
         } catch (Exception e) {
             try {
                 reader.close();
@@ -78,22 +92,18 @@ public class SynovusCsvParser implements TransactionParser {
      * Parses a transaction from a CSV record.
      *
      * @param csvRecord the CSV record containing transaction data
-     * @return an Optional containing the parsed transaction or empty if parsing fails
+     * @return the parsed transaction
      */
-    private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
-        try {
-            Transaction transaction = Transaction.builder()
-                    .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_TIME_FORMATTER))
-                    .description(csvRecord.get(HEADER_DESCRIPTION))
-                    .build();
+    private Transaction parseTransaction(CSVRecord csvRecord) {
+        Transaction transaction = Transaction.builder()
+                .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_TIME_FORMATTER))
+                .description(csvRecord.get(HEADER_DESCRIPTION))
+                .build();
 
-            BigDecimal netAmount = calculateNetAmount(csvRecord);
-            transaction = configureTransactionTypeAndAmount(transaction, netAmount);
+        BigDecimal netAmount = calculateNetAmount(csvRecord);
+        transaction = configureTransactionTypeAndAmount(transaction, netAmount);
 
-            return Optional.of(transaction);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        return transaction;
     }
 
     /**

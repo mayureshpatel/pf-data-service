@@ -60,7 +60,7 @@ class SnapshotServiceTest {
             snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, dateInMonth);
 
             // Assert
-            verify(snapshotRepository).save(argThat(s ->
+            verify(snapshotRepository).insert(argThat(s ->
                     s.getBalance().compareTo(new BigDecimal("900.00")) == 0 &&
                             s.getSnapshotDate().equals(endOfMonth) &&
                             s.getAccount().getId().equals(ACCOUNT_ID)
@@ -84,7 +84,7 @@ class SnapshotServiceTest {
             snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, dateInMonth);
 
             // Assert
-            verify(snapshotRepository).save(argThat(s ->
+            verify(snapshotRepository).update(argThat(s ->
                     s.getId().equals(1L) &&
                             s.getBalance().compareTo(new BigDecimal("1000.00")) == 0
             ));
@@ -106,7 +106,7 @@ class SnapshotServiceTest {
             snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, dateInMonth);
 
             // Assert
-            verify(snapshotRepository).save(argThat(s -> s.getBalance().compareTo(new BigDecimal("1000.00")) == 0));
+            verify(snapshotRepository).insert(argThat(s -> s.getBalance().compareTo(new BigDecimal("1000.00")) == 0));
         }
 
         @Test

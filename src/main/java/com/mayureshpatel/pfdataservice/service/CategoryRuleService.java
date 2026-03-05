@@ -109,7 +109,7 @@ public class CategoryRuleService {
                 .audit(TableAudit.updateAudit(rule.getUser()))
                 .build();
 
-        return categoryRuleRepository.save(updatedRule);
+        return categoryRuleRepository.update(updatedRule);
     }
 
     /**

@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.service.parser;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -15,7 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Stream;
 
 @Component
@@ -52,18 +54,33 @@ public class CapitalOneCsvParser implements TransactionParser {
 
         try {
             CSVParser csvParser = CSV_FORMAT.parse(reader);
-            return csvParser.stream()
-                    .filter(csvRecord -> isValidRecord(csvRecord, HEADER_DATE))
-                    .map(this::parseTransaction)
-                    .flatMap(Optional::stream)
-                    .onClose(() -> {
-                        try {
-                            csvParser.close();
-                            reader.close();
-                        } catch (Exception e) {
-                            throw new RuntimeException("Failed to close CSV parser resources", e);
-                        }
-                    });
+            List<Transaction> transactions = new ArrayList<>();
+            List<String> errors = new ArrayList<>();
+
+            for (CSVRecord record : csvParser) {
+                if (isValidRecord(record, HEADER_DATE)) {
+                    try {
+                        transactions.add(parseTransaction(record));
+                    } catch (Exception e) {
+                        errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
+                    }
+                }
+            }
+
+            try {
+                csvParser.close();
+                reader.close();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to close CSV parser resources", e);
+            }
+
+            if (!errors.isEmpty()) {
+                throw new CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", errors));
+            }
+
+            return transactions.stream();
+        } catch (CsvParsingException e) {
+            throw e;
         } catch (Exception e) {
             try {
                 reader.close();
@@ -77,22 +94,18 @@ public class CapitalOneCsvParser implements TransactionParser {
      * Parses a CSV record into a {@link Transaction}.
      *
      * @param csvRecord the CSV record to parse
-     * @return the parsed Transaction or empty if invalid
+     * @return the parsed Transaction
      */
-    private Optional<Transaction> parseTransaction(CSVRecord csvRecord) {
-        try {
-            Transaction transaction = Transaction.builder()
-                    .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_FORMATTER))
-                    .description(csvRecord.get(HEADER_DESCRIPTION))
-                    .build();
+    private Transaction parseTransaction(CSVRecord csvRecord) {
+        Transaction transaction = Transaction.builder()
+                .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_FORMATTER))
+                .description(csvRecord.get(HEADER_DESCRIPTION))
+                .build();
 
-            BigDecimal netAmount = calculateNetAmount(csvRecord);
-            transaction = configureTransactionTypeAndAmount(transaction, netAmount);
+        BigDecimal netAmount = calculateNetAmount(csvRecord);
+        transaction = configureTransactionTypeAndAmount(transaction, netAmount);
 
-            return Optional.of(transaction);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        return transaction;
     }
 
     /**
