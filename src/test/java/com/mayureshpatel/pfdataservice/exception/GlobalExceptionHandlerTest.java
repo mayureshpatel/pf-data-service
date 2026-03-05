@@ -1,11 +1,9 @@
 package com.mayureshpatel.pfdataservice.exception;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.MethodParameter;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -118,7 +116,7 @@ class GlobalExceptionHandlerTest {
             // Assert
             assertEquals(HttpStatus.BAD_REQUEST.value(), detail.getStatus());
             assertEquals("Validation failed for one or more fields", detail.getDetail());
-            
+
             List<Map<String, String>> errors = (List<Map<String, String>>) detail.getProperties().get("validationErrors");
             assertNotNull(errors);
             assertEquals(1, errors.size());
