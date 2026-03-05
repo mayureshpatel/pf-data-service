@@ -15,20 +15,25 @@ public class RecurringTransactionRowMapper extends JdbcMapperUtils implements Ro
 
     @Override
     public RecurringTransaction mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Long accountId = getLongOrNull(rs, "account_id");
+        Long merchantId = getLongOrNull(rs, "merchant_id");
+        java.sql.Date lastDateSql = rs.getDate("last_date");
+        java.sql.Date nextDateSql = rs.getDate("next_date");
+
         return RecurringTransaction.builder()
                 .id(rs.getLong("id"))
                 .userId(rs.getLong("user_id"))
-                .account(
-                        Account.builder().id(rs.getLong("account_id"))
+                .account(accountId != null ?
+                        Account.builder().id(accountId)
                                 .userId(rs.getLong("user_id"))
-                                .build())
-                .merchant(
-                        Merchant.builder().id(rs.getLong("merchant_id"))
+                                .build() : null)
+                .merchant(merchantId != null ?
+                        Merchant.builder().id(merchantId)
                                 .userId(rs.getLong("user_id"))
-                                .build())
+                                .build() : null)
                 .frequency(rs.getString("frequency"))
-                .lastDate(rs.getDate("last_date").toLocalDate())
-                .nextDate(rs.getDate("next_date").toLocalDate())
+                .lastDate(lastDateSql != null ? lastDateSql.toLocalDate() : null)
+                .nextDate(nextDateSql != null ? nextDateSql.toLocalDate() : null)
                 .amount(rs.getBigDecimal("amount"))
                 .active(rs.getBoolean("active"))
                 .audit(getAuditColumns(rs))
