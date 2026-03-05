@@ -61,7 +61,7 @@ class GlobalExceptionHandlerTest {
 
             // Assert
             assertEquals(HttpStatus.BAD_REQUEST.value(), detail.getStatus());
-            assertEquals("Bad CSV", detail.getDetail());
+            assertEquals("Failed to parse the provided CSV file. Please check the file format and try again.", detail.getDetail());
         }
 
         @Test

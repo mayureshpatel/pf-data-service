@@ -171,13 +171,17 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update balance explicitly")
         void shouldUpdateBalance() {
+            // Arrange
+            Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
+
             // Act
-            int rows = accountRepository.updateBalance(USER_1, ACCOUNT_1, new BigDecimal("999.99"));
+            int rows = accountRepository.updateBalance(USER_1, ACCOUNT_1, new BigDecimal("999.99"), account.getVersion());
 
             // Assert
             assertEquals(1, rows);
             Account updated = accountRepository.findById(ACCOUNT_1).orElseThrow();
             assertEquals(0, new BigDecimal("999.99").compareTo(updated.getCurrentBalance()));
+            assertEquals(account.getVersion() + 1, updated.getVersion());
         }
 
         @Test

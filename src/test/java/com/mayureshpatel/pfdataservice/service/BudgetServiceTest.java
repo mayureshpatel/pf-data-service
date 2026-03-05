@@ -111,6 +111,22 @@ class BudgetServiceTest {
     @DisplayName("create")
     class CreateTests {
         @Test
+        @DisplayName("should throw exception when budget already exists")
+        void shouldThrowWhenBudgetExists() {
+            // Arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(Category.builder().id(CATEGORY_ID).userId(USER_ID).build()));
+            when(budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(
+                    USER_ID, CATEGORY_ID, 3, 2026)).thenReturn(Optional.of(Budget.builder().id(1L).build()));
+
+            BudgetCreateRequest request = BudgetCreateRequest.builder().categoryId(CATEGORY_ID).month(3).year(2026).amount(BigDecimal.TEN).build();
+
+            // Act & Assert
+            assertThrows(IllegalArgumentException.class, () -> budgetService.create(USER_ID, request));
+            verify(budgetRepository, org.mockito.Mockito.never()).insert(any(BudgetCreateRequest.class));
+        }
+
+        @Test
         @DisplayName("should create budget when user and category are valid and owned")
         void shouldCreate() {
             // Arrange

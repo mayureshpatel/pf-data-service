@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
 import com.mayureshpatel.pfdataservice.repository.account.query.AccountQueries;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -104,11 +105,17 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .update();
     }
 
-    public int updateBalance(Long userId, Long accountId, BigDecimal currentBalance) {
-        return jdbcClient.sql(AccountQueries.UPDATE_BALANCE)
+    public int updateBalance(Long userId, Long accountId, BigDecimal currentBalance, Long version) {
+        int updated = jdbcClient.sql(AccountQueries.UPDATE_BALANCE)
                 .param("accountId", accountId)
                 .param("userId", userId)
                 .param("currentBalance", currentBalance)
+                .param("version", version)
                 .update();
+                
+        if (updated == 0) {
+            throw new OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+        }
+        return updated;
     }
 }

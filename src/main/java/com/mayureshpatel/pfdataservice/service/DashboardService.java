@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class DashboardService {
 
-    private static final ZoneId EASTERN = ZoneId.of("America/New_York");
+    private static final ZoneId UTC_ZONE = java.time.ZoneOffset.UTC;
 
     private final TransactionRepository transactionRepository;
     private final MerchantRepository merchantRepository;
@@ -42,7 +42,7 @@ public class DashboardService {
      * @return dashboard data for the specified user, month, and year
      */
     public DashboardData getDashboardData(Long userId, int month, int year) {
-        OffsetDateTime startOfMonth = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime startOfMonth = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
         OffsetDateTime endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
 
         BigDecimal totalIncome = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.INCOME);
@@ -59,7 +59,7 @@ public class DashboardService {
     }
 
     public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, int month, int year) {
-        OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
         OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
 
         return getCategoryBreakdown(userId, startDate, endDate);
@@ -70,7 +70,7 @@ public class DashboardService {
     }
 
     public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, int month, int year) {
-        OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
         OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
 
         return getMerchantBreakdown(userId, startDate, endDate);
@@ -81,7 +81,7 @@ public class DashboardService {
     }
 
     public DashboardPulseDto getPulse(Long userId, int month, int year) {
-        OffsetDateTime startCurrent = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
+        OffsetDateTime startCurrent = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
         OffsetDateTime endCurrent = startCurrent.plusMonths(1).minusDays(1);
 
         // previous month
@@ -163,11 +163,11 @@ public class DashboardService {
     public YtdSummaryDto getYtdSummary(Long userId, int year) {
 //        LocalDate startYtd = LocalDate.of(year, 1, 1);
 //        LocalDate endYtd = LocalDate.now();
-        OffsetDateTime startYtd = ZonedDateTime.of(year, 1, 1, 0, 0, 0, 0, EASTERN).toOffsetDateTime();
-        OffsetDateTime endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, EASTERN).toOffsetDateTime();
+        OffsetDateTime startYtd = ZonedDateTime.of(year, 1, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
+        OffsetDateTime endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, UTC_ZONE).toOffsetDateTime();
 
         if (endYtd.getYear() > year) {
-            endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, EASTERN).toOffsetDateTime();
+            endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, UTC_ZONE).toOffsetDateTime();
         }
         if (endYtd.getYear() < year) {
             return new YtdSummaryDto(year, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);

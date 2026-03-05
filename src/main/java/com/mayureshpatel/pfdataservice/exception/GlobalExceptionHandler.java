@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CsvParsingException.class)
     public ProblemDetail handleCsvParsingException(CsvParsingException ex, HttpServletRequest request) {
         log.warn("CSV Parsing Error: {} at {}", ex.getMessage(), request.getRequestURI());
-        return createProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+        return createProblemDetail(HttpStatus.BAD_REQUEST, "Failed to parse the provided CSV file. Please check the file format and try again.", request);
     }
 
     @ExceptionHandler(DuplicateImportException.class)

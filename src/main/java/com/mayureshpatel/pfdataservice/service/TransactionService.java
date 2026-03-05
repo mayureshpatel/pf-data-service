@@ -60,7 +60,8 @@ public class TransactionService {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
             }
 
-            Account account = t.getAccount();
+            Account account = accountRepository.findById(t.getAccount().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             Account accountAfterUndo = account.undoTransaction(t);
 
             TransactionType newType;
@@ -74,7 +75,7 @@ public class TransactionService {
             Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
 
             updatedTransactions.add(updatedT);
-            accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance());
+            accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
         }
 
         transactionRepository.updateAllT(updatedTransactions);
@@ -96,19 +97,21 @@ public class TransactionService {
 
         List<Transaction> transactions = transactionRepository.findAllById(transactionIds);
 
-        long ownedCount = transactions.stream()
-                .filter(t -> t.getAccount() != null
-                        && t.getAccount().getUserId() != null
-                        && userId.equals(t.getAccount().getUserId()))
-                .count();
-
-        if (ownedCount != transactionIds.size()) {
-            throw new AccessDeniedException("You do not own one or more of these transactions");
+        if (transactions.size() != transactionIds.size()) {
+            throw new ResourceNotFoundException("One or more transactions not found");
         }
 
         for (Transaction t : transactions) {
-            Account accountAfterUndo = t.getAccount().undoTransaction(t);
-            accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance());
+            if (t.getAccount() == null || !userId.equals(t.getAccount().getUserId())) {
+                throw new AccessDeniedException("You do not own transaction " + t.getId());
+            }
+        }
+
+        for (Transaction t : transactions) {
+            Account account = accountRepository.findById(t.getAccount().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+            Account accountAfterUndo = account.undoTransaction(t);
+            accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), account.getVersion());
         }
 
         transactionRepository.deleteAll(transactions);
@@ -136,7 +139,7 @@ public class TransactionService {
         transaction = resolveCategory(userId, transaction, request.getCategoryId());
 
         Account finalAccount = account.applyTransaction(transaction);
-        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance());
+        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
 
         return transactionRepository.insert(transaction);
     }
@@ -173,7 +176,7 @@ public class TransactionService {
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());
 
         Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
-        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance());
+        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
 
         return transactionRepository.update(updatedT);
     }
@@ -216,7 +219,7 @@ public class TransactionService {
         }
 
         Account accountAfterUndo = transaction.getAccount().undoTransaction(transaction);
-        accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance());
+        accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), transaction.getAccount().getVersion());
 
         transactionRepository.delete(transaction);
     }

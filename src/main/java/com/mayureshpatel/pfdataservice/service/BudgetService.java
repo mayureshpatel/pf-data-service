@@ -84,7 +84,10 @@ public class BudgetService {
 
         // check if budget already exists for the user, category, month and year
         budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(
-                userId, request.getCategoryId(), request.getMonth(), request.getYear());
+                userId, request.getCategoryId(), request.getMonth(), request.getYear()
+        ).ifPresent(b -> {
+            throw new IllegalArgumentException("A budget already exists for this category in the specified month and year.");
+        });
 
         return budgetRepository.insert(request);
     }

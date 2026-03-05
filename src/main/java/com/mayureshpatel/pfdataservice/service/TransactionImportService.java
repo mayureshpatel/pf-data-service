@@ -174,13 +174,14 @@ public class TransactionImportService {
     private void updateAccountBalance(Account account, List<TransactionCreateRequest> newTransactions) {
         BigDecimal oldBalance = account.getCurrentBalance();
 
+        Account updatedAccount = account;
         for (TransactionCreateRequest t : newTransactions) {
-            account.applyTransaction(t);
+            updatedAccount = updatedAccount.applyTransaction(t);
         }
 
-        accountRepository.update(account);
+        accountRepository.updateBalance(updatedAccount.getUserId(), updatedAccount.getId(), updatedAccount.getCurrentBalance(), account.getVersion());
 
-        log.info("Updated Account ID: {} balance. Old: {}, New: {}", account.getId(), oldBalance, account.getCurrentBalance());
+        log.info("Updated Account ID: {} balance. Old: {}, New: {}", updatedAccount.getId(), oldBalance, updatedAccount.getCurrentBalance());
     }
 
     public String calculateFileHash(InputStream inputStream) throws IOException {

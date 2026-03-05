@@ -156,7 +156,7 @@ class TransactionImportServiceTest {
         @DisplayName("should save unique transactions and update account balance")
         void shouldSaveAndBalance() {
             // Arrange
-            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
             TransactionDto dto = TransactionDto.builder().description("Test").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
@@ -169,7 +169,7 @@ class TransactionImportServiceTest {
             // Assert
             assertEquals(1, result);
             verify(transactionRepository).insertAll(anyList());
-            verify(accountRepository).update(any(Account.class));
+            verify(accountRepository).updateBalance(eq(1L), eq(10L), any(BigDecimal.class), anyLong());
             verify(fileImportHistoryRepository).save(any(FileImportHistory.class));
         }
 

@@ -39,22 +39,22 @@ public class TransactionSpecification {
             }
 
             if (filter.description() != null && !filter.description().isBlank()) {
-                conditions.add("LOWER(t.description) LIKE :description");
-                parameters.put("description", "%" + filter.description().toLowerCase() + "%");
+                conditions.add("LOWER(t.description) LIKE :description ESCAPE '\\'");
+                parameters.put("description", "%" + escapeLike(filter.description().toLowerCase()) + "%");
             }
 
             if (filter.categoryName() != null && !filter.categoryName().isBlank()) {
                 if ("null".equalsIgnoreCase(filter.categoryName())) {
                     conditions.add("t.category_id IS NULL");
                 } else {
-                    conditions.add("LOWER(c.name) LIKE :categoryName");
-                    parameters.put("categoryName", "%" + filter.categoryName().toLowerCase() + "%");
+                    conditions.add("LOWER(c.name) LIKE :categoryName ESCAPE '\\'");
+                    parameters.put("categoryName", "%" + escapeLike(filter.categoryName().toLowerCase()) + "%");
                 }
             }
 
             if (filter.vendorName() != null && !filter.vendorName().isBlank()) {
-                conditions.add("LOWER(m.clean_name) LIKE :vendorName");
-                parameters.put("vendorName", "%" + filter.vendorName().toLowerCase() + "%");
+                conditions.add("LOWER(m.clean_name) LIKE :vendorName ESCAPE '\\'");
+                parameters.put("vendorName", "%" + escapeLike(filter.vendorName().toLowerCase()) + "%");
             }
 
             if (filter.minAmount() != null) {
@@ -83,6 +83,12 @@ public class TransactionSpecification {
 
         String whereClause = String.join(" AND ", conditions);
         return new FilterResult(whereClause, parameters);
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_");
     }
 
     public record FilterResult(String whereClause, Map<String, Object> parameters) {
