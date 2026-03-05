@@ -56,7 +56,7 @@ public class CurrencyRepository implements JdbcRepository<Currency, String> {
     }
 
     public boolean existsById(String code) {
-        Integer count = jdbcClient.sql(CurrencyQueries.COUNT)
+        Integer count = jdbcClient.sql(CurrencyQueries.EXISTS_BY_CODE)
                 .param("code", code)
                 .query(Integer.class)
                 .single();

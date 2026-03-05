@@ -53,8 +53,9 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
 
     public int insert(FileImportCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
+        Long accountId = Long.parseLong(request.getAccountId());
         return jdbcClient.sql(FileImportHistoryQueries.INSERT)
-                .param("accountId", request.getAccountId())
+                .param("accountId", accountId)
                 .param("fileHash", request.getFileHash())
                 .param("fileName", request.getFileName())
                 .param("transactionCount", 0)

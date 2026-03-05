@@ -15,8 +15,6 @@ public final class CurrencyQueries {
     // language=SQL
     public static final String COUNT = """
             select count(*) from currencies
-            where is_active = true
-                and code = :code
             """;
 
     // language=SQl
