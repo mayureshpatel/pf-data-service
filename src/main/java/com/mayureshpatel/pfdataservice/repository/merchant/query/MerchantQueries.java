@@ -60,9 +60,7 @@ public final class MerchantQueries {
     // language=SQL
     public static final String UPDATE = """
             update merchants
-            set user_id = :userId,
-                original_name = :originalName,
-                clean_name = :name
+            set clean_name = :name
             where id = :id
             """;
 

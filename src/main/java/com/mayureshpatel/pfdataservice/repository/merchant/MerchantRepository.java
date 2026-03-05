@@ -75,7 +75,6 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
 
     public int update(MerchantUpdateRequest request, Long userId) {
         return jdbcClient.sql(MerchantQueries.UPDATE)
-                .param("userId", userId)
                 .param("name", request.getCleanName())
                 .param("id", request.getId())
                 .update();

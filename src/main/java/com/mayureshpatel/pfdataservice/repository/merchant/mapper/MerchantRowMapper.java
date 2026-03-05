@@ -15,7 +15,7 @@ public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merc
     public Merchant mapRow(ResultSet rs, int rowNum) throws SQLException {
         return Merchant.builder()
                 .id(rs.getLong("id"))
-                .userId(rs.getLong("user_id"))
+                .userId(getLongOrNull(rs, "user_id"))
                 .originalName(rs.getString("original_name"))
                 .cleanName(rs.getString("clean_name"))
                 .audit(getAuditColumns(rs))
