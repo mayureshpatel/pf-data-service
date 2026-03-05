@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -77,7 +78,9 @@ class TransactionImportServiceTest {
             TransactionParser parser = mock(TransactionParser.class);
             Transaction t = Transaction.builder().description("Test").amount(BigDecimal.TEN).transactionDate(OffsetDateTime.now()).build();
             Category cat = Category.builder().id(5L).name("Food").build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
 
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(parserFactory.getTransactionParser(bankName)).thenReturn(parser);
             when(parser.parse(eq(ACCOUNT_ID), any())).thenReturn(Stream.of(t));
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(cat));
@@ -99,7 +102,9 @@ class TransactionImportServiceTest {
             TransactionParser parser = mock(TransactionParser.class);
             Transaction t1 = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.TEN).build();
             Transaction t2 = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.ONE).build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
 
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(parserFactory.getTransactionParser(bankName)).thenReturn(parser);
             // Return a fresh stream for each call to avoid IllegalStateException
             when(parser.parse(anyLong(), any())).thenReturn(Stream.of(t1), Stream.of(t2));
@@ -122,6 +127,9 @@ class TransactionImportServiceTest {
             String bankName = "Standard";
             TransactionParser parser = mock(TransactionParser.class);
             Transaction t = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.TEN).build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(parserFactory.getTransactionParser(bankName)).thenReturn(parser);
             when(parser.parse(anyLong(), any())).thenReturn(Stream.of(t));
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(Collections.emptyList());
@@ -140,12 +148,26 @@ class TransactionImportServiceTest {
             // Arrange
             String bankName = "Standard";
             TransactionParser parser = mock(TransactionParser.class);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(parserFactory.getTransactionParser(bankName)).thenReturn(parser);
             // Throw inside the try block (during parse or stream processing)
             when(parser.parse(anyLong(), any())).thenThrow(new RuntimeException("Oops"));
 
             // Act & Assert
             assertThrows(CsvParsingException.class, () -> importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, null, "test.csv"));
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException if user does not own account during preview")
+        void shouldThrowOnAccessDenied() {
+            // Arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(99L).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // Act & Assert
+            assertThrows(AccessDeniedException.class, () -> importService.previewTransactions(USER_ID, ACCOUNT_ID, "Standard", null, "test.csv"));
         }
     }
 
@@ -177,7 +199,7 @@ class TransactionImportServiceTest {
         @DisplayName("should skip duplicates in database and batch")
         void shouldDetectBatchDuplicates() {
             // Arrange
-            Account account = Account.builder().id(ACCOUNT_ID).currentBalance(BigDecimal.ZERO).build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).build();
             OffsetDateTime now = OffsetDateTime.now();
             TransactionDto dto1 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(now).type(TransactionType.INCOME).build();
             TransactionDto dto2 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(now).type(TransactionType.INCOME).build();
@@ -197,7 +219,8 @@ class TransactionImportServiceTest {
         @DisplayName("should throw DuplicateImportException if file hash exists")
         void shouldThrowOnDuplicateHash() {
             // Arrange
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(Account.builder().build()));
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), eq("existing"))).thenReturn(Optional.of(FileImportHistory.builder().build()));
 
             // Act & Assert
@@ -208,7 +231,7 @@ class TransactionImportServiceTest {
         @DisplayName("should handle null fileName or fileHash separately")
         void shouldHandlePartialFileMetadata() {
             // Arrange
-            Account account = Account.builder().id(ACCOUNT_ID).build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             TransactionDto dto = TransactionDto.builder().description("T").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             // fileName is null case
@@ -227,7 +250,8 @@ class TransactionImportServiceTest {
         @DisplayName("should handle empty approved list")
         void shouldHandleEmptyList() {
             // Arrange
-            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(Account.builder().build()));
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
             // Act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, Collections.emptyList(), null, null);
@@ -241,7 +265,7 @@ class TransactionImportServiceTest {
         @DisplayName("should skip if transaction exists in database")
         void shouldSkipOnDatabaseMatch() {
             // Arrange
-            Account account = Account.builder().id(ACCOUNT_ID).currentBalance(BigDecimal.ZERO).build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).build();
             TransactionDto dto = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
@@ -260,6 +284,17 @@ class TransactionImportServiceTest {
         void shouldThrowOnMissingAccount() {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
             assertThrows(ResourceNotFoundException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null));
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException if user does not own account during save")
+        void shouldThrowOnAccessDenied() {
+            // Arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(99L).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // Act & Assert
+            assertThrows(AccessDeniedException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null));
         }
     }
 

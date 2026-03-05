@@ -206,6 +206,10 @@ public class UniversalCsvParser implements TransactionParser {
                 return null;
             }
 
+            String truncatedDescription = description != null && description.length() > 255
+                    ? description.substring(0, 255)
+                    : description;
+
             return Transaction.builder()
                     .transactionDate(date)
                     .postDate(postDate)
@@ -213,12 +217,12 @@ public class UniversalCsvParser implements TransactionParser {
                     .amount(amount)
                     .type(type)
                     .merchant(com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
-                            .originalName(description)
+                            .originalName(truncatedDescription)
                             .build())
                     .build();
 
         } catch (Exception e) {
-            log.warn("Skipping invalid row in CSV: {} - Error: {}", record, e.getMessage());
+            log.warn("Skipping invalid row in CSV at index {} - Error: {}", record.getRecordNumber(), e.getMessage());
             return null;
         }
     }

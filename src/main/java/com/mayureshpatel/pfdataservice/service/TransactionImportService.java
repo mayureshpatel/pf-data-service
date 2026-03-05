@@ -22,6 +22,7 @@ import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
@@ -66,6 +67,13 @@ public class TransactionImportService {
     public List<TransactionPreviewDto> previewTransactions(Long userId, Long accountId, String bankName, InputStream fileContent, String fileName) {
         log.info("Starting transaction preview for User: {}, Account ID: {}, Bank: {}, File: {}", userId, accountId, bankName, fileName);
 
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + accountId));
+
+        if (!account.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Access denied to account");
+        }
+
         TransactionParser parser = parserFactory.getTransactionParser(bankName);
         List<CategoryRule> userRules = this.categoryRuleRepository.findByUserId(userId);
         List<Category> userCategories = categoryRepository.findByUserId(userId);
@@ -105,6 +113,10 @@ public class TransactionImportService {
 
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + accountId));
+
+        if (!account.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Access denied to account");
+        }
 
         if (fileHash != null && fileImportHistoryRepository.findByAccountIdAndFileHash(accountId, fileHash).isPresent()) {
             log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);

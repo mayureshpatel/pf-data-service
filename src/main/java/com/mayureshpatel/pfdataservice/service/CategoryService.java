@@ -45,7 +45,10 @@ public class CategoryService {
             }
         }
 
-        return categoryRepository.insert(request);
+        CategoryCreateRequest securedRequest = request.toBuilder()
+                .userId(userId)
+                .build();
+        return categoryRepository.insert(securedRequest);
     }
 
     @Transactional
@@ -74,7 +77,10 @@ public class CategoryService {
             }
         }
 
-        return this.categoryRepository.update(request);
+        CategoryUpdateRequest securedRequest = request.toBuilder()
+                .userId(userId)
+                .build();
+        return this.categoryRepository.update(securedRequest);
     }
 
     @Transactional

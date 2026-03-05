@@ -21,4 +21,8 @@ public record AuthenticationRequest(
         @NotBlank(message = "Password is required")
         String password
 ) {
+    @Override
+    public String toString() {
+        return "AuthenticationRequest[username=" + username + ", password=[PROTECTED]]";
+    }
 }

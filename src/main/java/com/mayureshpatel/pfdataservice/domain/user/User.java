@@ -15,6 +15,7 @@ public class User {
     @EqualsAndHashCode.Include
     private Long id;
     private String username;
+    @ToString.Exclude
     private String passwordHash;
     private String email;
 

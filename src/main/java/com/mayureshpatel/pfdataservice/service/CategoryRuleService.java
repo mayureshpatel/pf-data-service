@@ -65,6 +65,10 @@ public class CategoryRuleService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
+        if (!category.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Access denied to category");
+        }
+
         CategoryRule rule = CategoryRule.builder()
                 .user(user)
                 .keyword(request.getKeyword())
@@ -94,6 +98,10 @@ public class CategoryRuleService {
 
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        if (!category.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Access denied to category");
+        }
 
         CategoryRule updatedRule = rule.toBuilder()
                 .keyword(request.getKeyword())

@@ -89,7 +89,11 @@ public class BudgetService {
             throw new IllegalArgumentException("A budget already exists for this category in the specified month and year.");
         });
 
-        return budgetRepository.insert(request);
+        BudgetCreateRequest securedRequest = request.toBuilder()
+                .userId(userId)
+                .build();
+
+        return budgetRepository.insert(securedRequest);
     }
 
     @Transactional

@@ -19,7 +19,7 @@ import java.util.Arrays;
 public class LoggingAspect {
 
     @Pointcut("within(@org.springframework.stereotype.Repository *)" +
-            " || within(@org.springframework.stereotype.Service *)" +
+            " || (within(@org.springframework.stereotype.Service *) && !within(com.mayureshpatel.pfdataservice.security..*))" +
             " || within(@org.springframework.web.bind.annotation.RestController *)")
     public void springBeanPointcut() {
         // empty as this is just a Pointcut; the implementations are in the advices

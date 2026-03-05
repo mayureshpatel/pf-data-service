@@ -24,7 +24,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,13 +35,19 @@ import static org.mockito.Mockito.*;
 @DisplayName("CategoryRuleService Unit Tests")
 class CategoryRuleServiceTest {
 
-    @Mock private CategoryRuleRepository categoryRuleRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private TransactionRepository transactionRepository;
-    @Mock private TransactionCategorizer categorizer;
-    @Mock private CategoryRepository categoryRepository;
+    @Mock
+    private CategoryRuleRepository categoryRuleRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private TransactionRepository transactionRepository;
+    @Mock
+    private TransactionCategorizer categorizer;
+    @Mock
+    private CategoryRepository categoryRepository;
 
-    @InjectMocks private CategoryRuleService ruleService;
+    @InjectMocks
+    private CategoryRuleService ruleService;
 
     private static final Long USER_ID = 1L;
     private static final Long RULE_ID = 100L;
@@ -75,7 +80,7 @@ class CategoryRuleServiceTest {
         void shouldCreate() {
             // Arrange
             User user = User.builder().id(USER_ID).build();
-            Category category = Category.builder().id(CATEGORY_ID).build();
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRuleRepository.insert(any())).thenReturn(1);
@@ -96,11 +101,11 @@ class CategoryRuleServiceTest {
         }
 
         @Test
-        @DisplayName("should create rule with default priority if not provided")
+        @DisplayName("should create with default priority if not provided")
         void shouldCreateWithDefaultPriority() {
             // Arrange
             User user = User.builder().id(USER_ID).build();
-            Category category = Category.builder().id(CATEGORY_ID).build();
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRuleRepository.insert(any())).thenReturn(1);
@@ -148,12 +153,11 @@ class CategoryRuleServiceTest {
             // Arrange
             User user = User.builder().id(USER_ID).build();
             CategoryRule rule = CategoryRule.builder().id(RULE_ID).user(user).build();
-            Category category = Category.builder().id(CATEGORY_ID).build();
-            
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
+
             when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(rule));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRuleRepository.save(any())).thenReturn(1);
-
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .id(RULE_ID)
                     .keyword("NewKW")
@@ -341,7 +345,7 @@ class CategoryRuleServiceTest {
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
-            
+
             // Case 1: guess is null
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(null);
             assertEquals(0, ruleService.applyRules(USER_ID));
@@ -349,7 +353,7 @@ class CategoryRuleServiceTest {
             // Case 2: matched category is null
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(999L);
             assertEquals(0, ruleService.applyRules(USER_ID));
-            
+
             verify(transactionRepository, never()).updateAll(anyList());
         }
 

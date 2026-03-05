@@ -62,6 +62,16 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
                 .update(keyHolder);
     }
 
+    @Override
+    public int save(FileImportHistory history) {
+        return jdbcClient.sql(FileImportHistoryQueries.INSERT)
+                .param("accountId", history.getAccountId())
+                .param("fileHash", history.getFileHash())
+                .param("fileName", history.getFileName())
+                .param("transactionCount", history.getTransactionCount())
+                .update();
+    }
+
     public int deleteById(Long id) {
         return jdbcClient.sql(FileImportHistoryQueries.DELETE)
                 .param("id", id)

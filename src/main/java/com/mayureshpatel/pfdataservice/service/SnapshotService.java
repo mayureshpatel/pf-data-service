@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.repository.account.AccountSnapshotReposit
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,11 +29,15 @@ public class SnapshotService {
      * Logic: Balance(EndOfMonth) = CurrentBalance - NetFlow(AfterEndOfMonth)
      */
     @Transactional
-    public void createEndOfMonthSnapshot(Long accountId, LocalDate dateInMonth) {
+    public void createEndOfMonthSnapshot(Long userId, Long accountId, LocalDate dateInMonth) {
         LocalDate endOfMonth = dateInMonth.withDayOfMonth(dateInMonth.lengthOfMonth());
 
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found: " + accountId));
+
+        if (!account.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Access denied to account");
+        }
 
         BigDecimal currentBalance = account.getCurrentBalance();
 
