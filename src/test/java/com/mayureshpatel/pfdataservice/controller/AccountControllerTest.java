@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.dto.currency.CurrencyDto;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -85,6 +87,21 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$", hasSize(0)));
 
             verify(accountService).getAllAccountsByUserId(USER_ID);
+        }
+
+        @Test
+        @DisplayName("GET should return 500 Internal Server Error when service throws an unhandled exception")
+        void getAccounts_shouldReturn500WhenServiceFails() throws Exception {
+            // Arrange
+            when(accountService.getAllAccountsByUserId(USER_ID))
+                    .thenThrow(new RuntimeException("Database connection failure"));
+
+            // Act & Assert
+            mockMvc.perform(get("/api/v1/accounts"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.title").value("Internal Server Error"))
+                    .andExpect(jsonPath("$.detail").value("An unexpected internal error occurred. Please contact support."))
+                    .andExpect(jsonPath("$.instance").value("/api/v1/accounts"));
         }
     }
 
@@ -192,6 +209,31 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validationErrors[0].field").value("id"));
         }
+
+        @Test
+        @DisplayName("PUT should return 403 Forbidden when user does not own the account")
+        void updateAccount_shouldReturn403WhenAccessDenied() throws Exception {
+            // Arrange
+            AccountUpdateRequest request = AccountUpdateRequest.builder()
+                    .id(ACCOUNT_ID)
+                    .name("Unauthorized Update")
+                    .type("SAVINGS")
+                    .currencyCode("USD")
+                    .version(1L)
+                    .build();
+
+            when(accountService.updateAccount(eq(USER_ID), any(AccountUpdateRequest.class)))
+                    .thenThrow(new AccessDeniedException("You do not have permission to access this resource."));
+
+            // Act & Assert
+            mockMvc.perform(put("/api/v1/accounts")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.title").value("Forbidden"))
+                    .andExpect(jsonPath("$.detail").value("You do not have permission to access this resource."));
+        }
     }
 
     @Nested
@@ -207,6 +249,21 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(status().isNoContent());
 
             verify(accountService).deleteAccount(USER_ID, ACCOUNT_ID);
+        }
+
+        @Test
+        @DisplayName("DELETE should return 404 Not Found when account does not exist")
+        void deleteAccount_shouldReturn404WhenNotFound() throws Exception {
+            // Arrange
+            when(accountService.deleteAccount(USER_ID, ACCOUNT_ID))
+                    .thenThrow(new ResourceNotFoundException("Account with ID " + ACCOUNT_ID + " not found"));
+
+            // Act & Assert
+            mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
+                            .with(csrf()))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.title").value("Not Found"))
+                    .andExpect(jsonPath("$.detail").value("Account with ID " + ACCOUNT_ID + " not found"));
         }
     }
 
