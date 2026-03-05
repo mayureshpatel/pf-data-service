@@ -80,6 +80,13 @@ public class RecurringTransactionService {
 
             if (group.size() < 3) continue;
 
+            // Filter out any transactions with null dates to prevent NPE during sort
+            group = group.stream()
+                    .filter(t -> t.getTransactionDate() != null)
+                    .collect(Collectors.toList());
+
+            if (group.size() < 3) continue;
+
             group.sort(Comparator.comparing(Transaction::getTransactionDate));
 
             Frequency frequency = detectFrequency(group);
@@ -144,9 +151,9 @@ public class RecurringTransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (request.getAccountId() != null) {
-            accountRepository.findById(request.getAccountId())
+            Account account = accountRepository.findById(request.getAccountId())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-            if (!request.getUserId().equals(userId)) {
+            if (!account.getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to account");
             }
         }
