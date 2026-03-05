@@ -6,7 +6,9 @@ import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryRuleDtoMapper;
@@ -51,25 +53,23 @@ public class CategoryRuleService {
     /**
      * Create a new category rule for a user
      *
-     * @param userId the user id
-     * @param dto    the category rule dto
+     * @param userId  the user id
+     * @param request the category rule create request
      * @return the created {@link CategoryRuleDto}
      */
     @Transactional
-    public int createRule(Long userId, CategoryRuleDto dto) {
+    public int createRule(Long userId, CategoryRuleCreateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
         CategoryRule rule = CategoryRule.builder()
                 .user(user)
-                .keyword(dto.keyword())
-                .priority(dto.priority() != null ? dto.priority() : 0)
-                .category(
-                        Category.builder()
-                                .id(dto.category().id())
-                                .name(dto.category().name())
-                                .build()
-                )
+                .keyword(request.getKeyword())
+                .priority(request.getPriority() != null ? request.getPriority() : 0)
+                .category(category)
                 .audit(TableAudit.insertAudit(user))
                 .build();
 
@@ -79,12 +79,13 @@ public class CategoryRuleService {
     /**
      * Update an existing category rule for a user
      *
-     * @param ruleId the rule id to update
-     * @param dto    the updated category rule dto
+     * @param userId  the user id
+     * @param ruleId  the rule id to update
+     * @param request the updated category rule request
      * @return the updated {@link CategoryRuleDto}
      */
     @Transactional
-    public int updateRule(Long userId, Long ruleId, CategoryRuleDto dto) {
+    public int updateRule(Long userId, Long ruleId, CategoryRuleUpdateRequest request) {
         CategoryRule rule = categoryRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rule not found"));
 
@@ -92,18 +93,16 @@ public class CategoryRuleService {
             throw new AccessDeniedException("You do not own this rule");
         }
 
-        Category category = Category.builder()
-                .id(dto.category().id())
-                .name(dto.category().name())
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        CategoryRule updatedRule = rule.toBuilder()
+                .category(category)
+                .priority(request.getPriority())
+                .audit(TableAudit.updateAudit(rule.getUser()))
                 .build();
 
-        rule.toBuilder()
-                .keyword(dto.keyword())
-                .category(category)
-                .priority(dto.priority())
-                .audit(TableAudit.updateAudit(rule.getUser()));
-
-        return categoryRuleRepository.save(rule);
+        return categoryRuleRepository.save(updatedRule);
     }
 
     /**

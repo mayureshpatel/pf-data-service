@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.CategoryRuleService;
 import jakarta.validation.Valid;
@@ -27,8 +29,16 @@ public class CategoryRuleController {
     @PostMapping
     public ResponseEntity<Integer> createRule(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid CategoryRuleDto dto) {
-        return ResponseEntity.ok(categoryRuleService.createRule(userDetails.getId(), dto));
+            @RequestBody @Valid CategoryRuleCreateRequest request) {
+        return ResponseEntity.ok(categoryRuleService.createRule(userDetails.getId(), request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Integer> updateRule(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody @Valid CategoryRuleUpdateRequest request) {
+        return ResponseEntity.ok(categoryRuleService.updateRule(userDetails.getId(), id, request));
     }
 
     @GetMapping("/preview")
