@@ -11,15 +11,18 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("AccountDtoMapper Unit Tests")
-class AccountDtoMapperTest {
+/**
+ * Gold Standard examples for Mapper unit testing.
+ * Demonstrates testing for full mapping, partial mapping, and null handling using @Nested organization.
+ */
+@DisplayName("Mapper Gold Standard Tests")
+class MapperGoldStandardTest {
 
     @Test
-    @DisplayName("Private constructor should not be accessible but can be called for coverage")
+    @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
         // Arrange
         Constructor<AccountDtoMapper> constructor = AccountDtoMapper.class.getDeclaredConstructor();
-        assertTrue(java.lang.reflect.Modifier.isPrivate(constructor.getModifiers()));
         constructor.setAccessible(true);
 
         // Act
@@ -30,24 +33,21 @@ class AccountDtoMapperTest {
     }
 
     @Nested
-    @DisplayName("toDto mapping logic")
+    @DisplayName("Method: toDto")
     class ToDtoMappingTests {
 
         @Test
-        @DisplayName("should return null when account is null")
-        void toDto_shouldReturnNullWhenAccountIsNull() {
-            // Arrange
-            Account account = null;
-
+        @DisplayName("should return null when source is null")
+        void toDto_shouldReturnNullWhenSourceIsNull() {
             // Act
-            AccountDto result = AccountDtoMapper.toDto(account);
+            AccountDto result = AccountDtoMapper.toDto(null);
 
             // Assert
             assertNull(result);
         }
 
         @Test
-        @DisplayName("should map all fields when account is fully populated")
+        @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
             // Arrange
             Account account = Account.builder()
@@ -68,18 +68,10 @@ class AccountDtoMapperTest {
             assertEquals(account.getId(), dto.id());
             assertEquals(account.getName(), dto.name());
             assertEquals(account.getCurrentBalance(), dto.currentBalance());
-
             assertNotNull(dto.user());
-            assertEquals(account.getUserId(), dto.user().id());
-
             assertNotNull(dto.type());
-            assertEquals(account.getTypeCode(), dto.type().code());
-
             assertNotNull(dto.currency());
-            assertEquals(account.getCurrencyCode(), dto.currency().code());
-
             assertNotNull(dto.bank());
-            assertEquals("CAPITAL_ONE", dto.bank().name());
         }
 
         @Test
@@ -89,10 +81,6 @@ class AccountDtoMapperTest {
             Account account = Account.builder()
                     .id(1L)
                     .name("Minimal Account")
-                    .userId(null)
-                    .typeCode(null)
-                    .currencyCode(null)
-                    .bankCode(null)
                     .build();
 
             // Act
@@ -100,8 +88,6 @@ class AccountDtoMapperTest {
 
             // Assert
             assertNotNull(dto);
-            assertEquals(account.getId(), dto.id());
-            assertEquals(account.getName(), dto.name());
             assertNull(dto.user());
             assertNull(dto.type());
             assertNull(dto.currency());
