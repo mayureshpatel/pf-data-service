@@ -51,8 +51,8 @@ public class LoggingAspect {
             }
             return result;
         } catch (IllegalArgumentException e) {
-            log.error("Illegal argument: {} in {}.{}()", Arrays.toString(joinPoint.getArgs()),
-                    joinPoint.getSignature().getDeclaringTypeName(), joinPoint.getSignature().getName());
+            log.error("Illegal argument in {}.{}() - Message: {}",
+                    joinPoint.getSignature().getDeclaringTypeName(), joinPoint.getSignature().getName(), e.getMessage());
             throw e;
         }
     }

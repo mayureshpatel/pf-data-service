@@ -176,6 +176,7 @@ public class TransactionService {
                 .postDate(request.getPostDate())
                 .description(request.getDescription())
                 .type(TransactionType.valueOf(request.getType()))
+                .merchant(request.getMerchantId() != null ? Merchant.builder().id(request.getMerchantId()).build() : null)
                 .build();
 
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());
