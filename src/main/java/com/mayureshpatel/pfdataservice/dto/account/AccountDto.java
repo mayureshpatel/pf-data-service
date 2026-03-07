@@ -15,6 +15,7 @@ public record AccountDto(
         AccountTypeDto type,
         BigDecimal currentBalance,
         CurrencyDto currency,
-        BankName bank
+        BankName bank,
+        Long version
 ) {
 }

@@ -33,13 +33,12 @@ public final class AccountDtoMapper {
         }
 
         if (account.getCurrencyCode() != null) {
-            currency = new CurrencyDto(account.getCurrencyCode(), null, null, false);
+            currency = new CurrencyDto(account.getCurrencyCode(), null, null, true);
         }
 
         if (account.getBankCode() != null) {
             bankName = BankName.fromString(account.getBankCode());
         }
-
 
         return new AccountDto(
                 account.getId(),
@@ -48,7 +47,8 @@ public final class AccountDtoMapper {
                 type,
                 account.getCurrentBalance(),
                 currency,
-                bankName
+                bankName,
+                account.getVersion()
         );
     }
 }

@@ -22,6 +22,7 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
                 .currencyCode(rs.getString("currency_code"))
                 .version(rs.getLong("version"))
                 .bankCode(rs.getString("bank_name"))
+                .version(rs.getLong("version"))
                 .audit(getAuditColumns(rs))
                 .build();
     }
