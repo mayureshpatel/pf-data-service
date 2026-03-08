@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.budget;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -17,7 +18,7 @@ public class Budget {
     @EqualsAndHashCode.Include
     private Long id;
     private Long userId;
-    private Long categoryId;
+    private Category category;
     private BigDecimal amount;
 
     private Integer month;

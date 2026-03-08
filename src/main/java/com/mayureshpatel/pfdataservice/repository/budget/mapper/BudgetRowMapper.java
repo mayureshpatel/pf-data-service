@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.budget.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import org.jspecify.annotations.NonNull;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -37,7 +38,7 @@ public class BudgetRowMapper extends JdbcMapperUtils implements RowMapper<Budget
             builder.userId(rs.getLong(safePrefix + "user_id"));
         }
         if (hasColumn(safePrefix + "category_id", availableColumns)) {
-            builder.categoryId(rs.getLong(safePrefix + "category_id"));
+            builder.category(CategoryRowMapper.mapRow(rs, safePrefix + "category"));
         }
         if (hasColumn(safePrefix + "amount", availableColumns)) {
             builder.amount(rs.getBigDecimal(safePrefix + "amount"));

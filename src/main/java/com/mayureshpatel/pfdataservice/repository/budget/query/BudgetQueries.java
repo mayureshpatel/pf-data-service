@@ -7,10 +7,17 @@ public class BudgetQueries {
 
     // language=SQL
     public static final String FIND_BY_ID = """
-            select *
+            select
+                budgets.*,
+                categories.name as category_name,
+                categories.type as category_type,
+                categories.icon as category_icon,
+                categories.color as category_color,
+                categories.parent_id as category_parent_id
             from budgets
-            where id = :id
-              and deleted_at is null
+                left join categories on categories.id = budgets.category_id
+            where budgets.id = :id
+              and budgets.deleted_at is null
             """;
 
     // language=SQL
@@ -51,32 +58,53 @@ public class BudgetQueries {
 
     // language=SQL
     public static final String FIND_BY_USER_ID_AND_MONTH_AND_YEAR = """
-            select *
+            select
+                budgets.*,
+                categories.name as category_name,
+                categories.type as category_type,
+                categories.icon as category_icon,
+                categories.color as category_color,
+                categories.parent_id as category_parent_id
             from budgets
-            where user_id = :userId
-              and month = :month
-              and year = :year
-              and deleted_at is null
+                left join categories on categories.id = budgets.category_id
+            where budgets.user_id = :userId
+              and budgets.month = :month
+              and budgets.year = :year
+              and budgets.deleted_at is null
             """;
 
     // language=SQL
     public static final String FIND_BY_USER_ID_ORDER_BY_YEAR_DESC_MONTH_DESC = """
-            select *
+            select
+                budgets.*,
+                categories.name as category_name,
+                categories.type as category_type,
+                categories.icon as category_icon,
+                categories.color as category_color,
+                categories.parent_id as category_parent_id
             from budgets
-            where user_id = :userId
-              and deleted_at is null
-            order by year desc, month desc
+                left join categories on categories.id = budgets.category_id
+            where budgets.user_id = :userId
+              and budgets.deleted_at is null
+            order by budgets.year desc, budgets.month desc
             """;
 
     // language=SQL
     public static final String FIND_BY_USER_ID_AND_CATEGORY_ID_AND_MONTH_AND_YEAR = """
-            select *
+            select
+                budgets.*,
+                categories.name as category_name,
+                categories.type as category_type,
+                categories.icon as category_icon,
+                categories.color as category_color,
+                categories.parent_id as category_parent_id
             from budgets
-            where user_id = :userId
-              and category_id = :categoryId
-              and month = :month
-              and year = :year
-              and deleted_at is null
+                left join categories on categories.id = budgets.category_id
+            where budgets.user_id = :userId
+              and budgets.category_id = :categoryId
+              and budgets.month = :month
+              and budgets.year = :year
+              and budgets.deleted_at is null
             """;
 
     // language=SQL
@@ -102,8 +130,8 @@ public class BudgetQueries {
                 c.user_id                                                AS category_user_id,
                 c.name                                                   AS category_name,
                 c.type                                                   AS category_type,
-                pc.id                                                    AS parent_category_id,
-                pc.name                                                  AS parent_category_name,
+                pc.id                                                    AS category_parent_id,
+                pc.name                                                  AS category_parent_name,
                 b.amount                                                 AS budgeted_amount,
                 COALESCE(s.total_spent, 0)                               AS spending_amount,
                 b.amount - COALESCE(s.total_spent, 0)                    AS remaining_amount,
@@ -128,8 +156,8 @@ public class BudgetQueries {
                 c.user_id                                                AS category_user_id,
                 c.name                                                   AS category_name,
                 c.type                                                   AS category_type,
-                pc.id                                                    AS parent_category_id,
-                pc.name                                                  AS parent_category_name,
+                pc.id                                                    AS category_parent_id,
+                pc.name                                                  AS category_parent_name,
                 0                                                        AS budgeted_amount,
                 s.total_spent                                            AS spending_amount,
                 -s.total_spent                                           AS remaining_amount,
