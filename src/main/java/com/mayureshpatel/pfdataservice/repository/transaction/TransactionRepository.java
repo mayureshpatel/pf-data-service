@@ -14,7 +14,6 @@ import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMap
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryTransactionsRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionDetailRowMapper;
-import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +29,9 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository("jdbcTransactionRepository")
@@ -39,8 +39,7 @@ import java.util.Optional;
 public class TransactionRepository implements JdbcRepository<Transaction, Long>, SoftDeleteSupport {
 
     private final JdbcClient jdbcClient;
-    private final TransactionRowMapper rowMapper;
-    private final TransactionDetailRowMapper detailRowMapper;
+    private final TransactionDetailRowMapper rowMapper;
     private final CategoryBreakdownRowMapper categoryBreakdownRowMapper;
     private final CategoryTransactionsRowMapper categoryTransactionsDtoMapper;
     private final CategoryRowMapper categoryRowMapper;
@@ -56,7 +55,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return jdbcClient.sql(TransactionQueries.FIND_BY_ID_WITH_DETAILS)
                 .param("id", id)
                 .param("userId", userId)
-                .query(detailRowMapper)
+                .query(rowMapper)
                 .optional();
     }
 
@@ -231,7 +230,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS_WITH_DETAILS)
                 .param("ids", ids)
                 .param("userId", userId)
-                .query(detailRowMapper)
+                .query(rowMapper)
                 .list();
     }
 
@@ -306,7 +305,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
         List<Transaction> content = jdbcClient.sql(pageSql)
                 .params(params)
-                .query(detailRowMapper)
+                .query(rowMapper)
                 .list();
 
         return new PageImpl<>(content, pageable, total);

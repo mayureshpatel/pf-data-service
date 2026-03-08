@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 
+// todo: maybe make this not extend Transaction?
 @Getter
 @SuperBuilder(toBuilder = true)
 @ToString

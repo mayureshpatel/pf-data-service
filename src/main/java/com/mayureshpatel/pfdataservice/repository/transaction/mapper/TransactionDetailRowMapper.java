@@ -1,21 +1,18 @@
 package com.mayureshpatel.pfdataservice.repository.transaction.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.account.AccountType;
-import com.mayureshpatel.pfdataservice.domain.bank.BankName;
-import com.mayureshpatel.pfdataservice.domain.category.Category;
-import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
-import com.mayureshpatel.pfdataservice.domain.currency.Currency;
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
+import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
+import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
+import org.jspecify.annotations.NonNull;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Set;
 
 /**
  * Maps a fully-joined transaction result set (with account, account_type,
@@ -27,114 +24,54 @@ import java.sql.SQLException;
 public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMapper<Transaction> {
 
     @Override
-    public Transaction mapRow(ResultSet rs, int rowNum) throws SQLException {
-        return Transaction.builder()
-                .id(rs.getLong("id"))
-                .account(mapAccount(rs))
-                .category(mapCategory(rs))
-                .amount(getBigDecimal(rs, "amount"))
-                .transactionDate(getOffsetDateTime(rs, "date"))
-                .postDate(getOffsetDateTime(rs, "post_date"))
-                .description(rs.getString("description"))
-                .merchant(mapMerchant(rs))
-                .type(mapType(rs))
-                .audit(getAuditColumns(rs))
-                .build();
+    public Transaction mapRow(@NonNull ResultSet rs, int rowNum) throws SQLException {
+        return mapRow(rs, "");
     }
 
-    private TransactionType mapType(ResultSet rs) throws SQLException {
-        return TransactionType.valueOf(rs.getString("type"));
-    }
+    /**
+     * Maps a fully-joined transaction result set (with account, account_type,
+     * category, parent category, and merchant) into a {@link Transaction} domain object.
+     *
+     * @param rs     the result set to map
+     * @param prefix the prefix to use for column names
+     * @return the mapped {@link Transaction} object
+     * @throws SQLException if an error occurs while accessing the result set
+     */
+    public static Transaction mapRow(ResultSet rs, String prefix) throws SQLException {
+        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        Set<String> availableColumns = getAvailableColumns(rs);
 
-    private Account mapAccount(ResultSet rs) throws SQLException {
-        Long accountId = getLongOrNull(rs, "account_id");
-        if (accountId == null) return null;
+        Transaction.TransactionBuilder builder = Transaction.builder();
 
-        Long userId = mapUser(rs) != null ? mapUser(rs).getId() : null;
-        String typeCode = mapAccountType(rs) != null ? mapAccountType(rs).getCode() : null;
-        String currencyCode = mapCurrency(rs) != null ? mapCurrency(rs).getCode() : null;
-        String bankName = mapBankName(rs) != null ? mapBankName(rs).name() : null;
+        if (availableColumns.contains(safePrefix + "id")) {
+            builder.id(rs.getLong(safePrefix + "id"));
+        }
+        if (availableColumns.contains(safePrefix + "account_id")) {
+            builder.account(AccountRowMapper.mapRow(rs, "account"));
+        }
+        if (availableColumns.contains(safePrefix + "category_id")) {
+            builder.category(CategoryRowMapper.mapRow(rs, "category"));
+        }
+        if (availableColumns.contains(safePrefix + "amount")) {
+            builder.amount(rs.getBigDecimal(safePrefix + "amount"));
+        }
+        if (availableColumns.contains(safePrefix + "transaction_date")) {
+            builder.transactionDate(getOffsetDateTime(rs, safePrefix + "transaction_date"));
+        }
+        if (availableColumns.contains(safePrefix + "post_date")) {
+            builder.postDate(getOffsetDateTime(rs, safePrefix + "post_date"));
+        }
+        if (availableColumns.contains(safePrefix + "description")) {
+            builder.description(rs.getString(safePrefix + "description"));
+        }
+        if (availableColumns.contains(safePrefix + "type")) {
+            builder.type(TransactionType.valueOf(rs.getString(safePrefix + "type")));
+        }
+        if (availableColumns.contains(safePrefix + "merchant_id")) {
+            builder.merchant(MerchantRowMapper.mapRow(rs, "merchant"));
+        }
+        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
 
-        return Account.builder()
-                .id(accountId)
-                .userId(userId)
-                .name(rs.getString("acc_name"))
-                .typeCode(typeCode)
-                .currentBalance(rs.getBigDecimal("acc_balance"))
-                .currencyCode(currencyCode)
-                .version(rs.getLong("acc_version"))
-                .bankCode(bankName)
-                .audit(getAuditColumns(rs))
-                .build();
-    }
-
-    private User mapUser(ResultSet rs) throws SQLException {
-        Long userId = getLongOrNull(rs, "acc_user_id");
-        if (userId == null) return null;
-
-        return User.builder()
-                .id(userId)
-                .build();
-    }
-
-    private BankName mapBankName(ResultSet rs) throws SQLException {
-        String bankNameStr = rs.getString("acc_bank_name");
-        if (bankNameStr == null) return null;
-
-        return BankName.valueOf(bankNameStr);
-    }
-
-    private Currency mapCurrency(ResultSet rs) throws SQLException {
-        String currencyCode = rs.getString("acc_currency_code");
-        if (currencyCode == null) return null;
-
-        return Currency.builder()
-                .code(currencyCode)
-                .build();
-    }
-
-    private AccountType mapAccountType(ResultSet rs) throws SQLException {
-        String accTypeCode = rs.getString("acc_type_code");
-        if (accTypeCode == null) return null;
-
-        return AccountType.builder()
-                .code(accTypeCode)
-                .label(rs.getString("acc_type_label"))
-                .asset(rs.getBoolean("acc_type_is_asset"))
-                .sortOrder(rs.getInt("acc_type_sort_order"))
-                .active(rs.getBoolean("acc_type_is_active"))
-                .color(rs.getString("acc_type_color"))
-                .icon(rs.getString("acc_type_icon"))
-                .build();
-    }
-
-    private Category mapCategory(ResultSet rs) throws SQLException {
-        Long categoryId = getLongOrNull(rs, "category_id");
-        if (categoryId == null) return null;
-
-        String typeStr = rs.getString("cat_type");
-        String categoryType = typeStr != null ? CategoryType.valueOf(typeStr).name() : null;
-
-        return Category.builder()
-                .id(categoryId)
-                .userId(rs.getLong("cat_user_id"))
-                .name(rs.getString("cat_name"))
-                .type(categoryType)
-                .parentId(rs.getLong("pcat_id"))
-                .color(rs.getString("cat_color"))
-                .icon(rs.getString("cat_icon"))
-                .build();
-    }
-
-    private Merchant mapMerchant(ResultSet rs) throws SQLException {
-        Long merchantId = getLongOrNull(rs, "merchant_id");
-        if (merchantId == null) return null;
-
-        return Merchant.builder()
-                .id(merchantId)
-                .userId(rs.getLong("merch_user_id"))
-                .originalName(rs.getString("merch_original_name"))
-                .cleanName(rs.getString("merch_clean_name"))
-                .build();
+        return builder.build();
     }
 }
