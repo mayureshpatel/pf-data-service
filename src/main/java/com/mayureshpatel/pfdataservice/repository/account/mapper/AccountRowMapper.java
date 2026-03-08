@@ -41,13 +41,13 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
             builder.name(rs.getString(safePrefix + "name"));
         }
         if (hasColumn(safePrefix + "type", availableColumns)) {
-            builder.type(AccountTypeRowMapper.mapRow(rs, safePrefix));
+            builder.type(AccountTypeRowMapper.mapRow(rs, "account_type"));
         }
         if (hasColumn(safePrefix + "current_balance", availableColumns)) {
             builder.currentBalance(getBigDecimal(rs, safePrefix + "current_balance"));
         }
         if (hasColumn(safePrefix + "currency_code", availableColumns)) {
-            builder.currency(CurrencyRowMapper.mapRow(rs, safePrefix));
+            builder.currency(CurrencyRowMapper.mapRow(rs, "currency"));
         }
         if (hasColumn(safePrefix + "bank_name", availableColumns)) {
             builder.bankCode(rs.getString(safePrefix + "bank_name"));

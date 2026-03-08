@@ -7,17 +7,47 @@ public final class AccountSnapshotQueries {
 
     // language=SQL
     public static final String FIND_BY_ACCOUNT_ID_AND_SNAPSHOT_DATE = """
-            select *
+            select
+                account_snapshots.*,
+                accounts.id as account_id,
+                accounts.name as account_name,
+                accounts.bank_name as account_bank_name,
+                account_types.code as account_type_code,
+                account_types.label as account_type_label,
+                account_types.color as account_type_color,
+                account_types.icon as account_type_icon,
+                account_types.is_asset as account_type_is_asset,
+                currencies.code as currency_code,
+                currencies.name as currency_name,
+                currencies.symbol as currency_symbol
             from account_snapshots
-            where account_id = :accountId
-              and snapshot_date = :snapshotDate
+            left join accounts on accounts.id = account_snapshots.account_id
+            left join account_types on account_types.code = accounts.type
+            left join currencies on currencies.code = accounts.currency_code
+            where accounts.id = :accountId
+              and account_snapshots.snapshot_date = :snapshotDate
             """;
 
     // language=SQL
     public static final String FIND_BY_ID = """
-            select *
+            select
+                account_snapshots.*,
+                accounts.id as account_id,
+                accounts.name as account_name,
+                accounts.bank_name as account_bank_name,
+                account_types.code as account_type_code,
+                account_types.label as account_type_label,
+                account_types.color as account_type_color,
+                account_types.icon as account_type_icon,
+                account_types.is_asset as account_type_is_asset,
+                currencies.code as currency_code,
+                currencies.name as currency_name,
+                currencies.symbol as currency_symbol
             from account_snapshots
-            where id = :id
+            left join accounts on accounts.id = account_snapshots.account_id
+            left join account_types on account_types.code = accounts.type
+            left join currencies on currencies.code = accounts.currency_code
+            where account_snapshots.id = :id
             """;
 
     // language=SQL

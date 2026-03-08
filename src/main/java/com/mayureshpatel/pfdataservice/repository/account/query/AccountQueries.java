@@ -32,6 +32,7 @@ public final class AccountQueries {
                    act.color as account_type_color,
                    act.icon as account_type_icon,
                    act.is_asset as is_asset,
+                   cur.code as currency_code,
                    cur.name as currency_name,
                    cur.symbol as currency_symbol
             from accounts acc
@@ -47,6 +48,7 @@ public final class AccountQueries {
                    act.color as account_type_color,
                    act.icon as account_type_icon,
                    act.is_asset as is_asset,
+                   cur.code as currency_code,
                    cur.name as currency_name,
                    cur.symbol as currency_symbol
             from accounts acc
@@ -63,6 +65,7 @@ public final class AccountQueries {
                    act.color as account_type_color,
                    act.icon as account_type_icon,
                    act.is_asset as is_asset,
+                   cur.code as currency_code,
                    cur.name as currency_name,
                    cur.symbol as currency_symbol
             from accounts acc
@@ -80,6 +83,7 @@ public final class AccountQueries {
                    act.color as account_type_color,
                    act.icon as account_type_icon,
                    act.is_asset as is_asset,
+                   cur.code as currency_code,
                    cur.name as currency_name,
                    cur.symbol as currency_symbol
             from accounts acc
