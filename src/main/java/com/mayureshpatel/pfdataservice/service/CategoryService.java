@@ -108,7 +108,7 @@ public class CategoryService {
      */
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesGrouped(Long userId) {
-        return categoryRepository.findAllWIthParent(userId)
+        return categoryRepository.findAllParentCategories(userId)
                 .stream().map(CategoryDtoMapper::toDto).toList();
     }
 

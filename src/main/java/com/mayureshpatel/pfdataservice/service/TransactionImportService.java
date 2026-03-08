@@ -156,7 +156,7 @@ public class TransactionImportService {
 
             if (fileName != null && fileHash != null) {
                 FileImportHistory history = FileImportHistory.builder()
-                        .accountId(account.getId())
+                        .account(account)
                         .fileName(fileName)
                         .fileHash(fileHash)
                         .transactionCount(uniqueTransactions.size())

@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 
 public final class BudgetDtoMapper {
 
@@ -14,17 +13,10 @@ public final class BudgetDtoMapper {
             return null;
         }
 
-        CategoryDto category = null;
-        if (budget.getCategoryId() != null) {
-            category = CategoryDto.builder()
-                    .id(budget.getCategoryId())
-                    .build();
-        }
-
         return new BudgetDto(
                 budget.getId(),
                 budget.getUserId(),
-                category,
+                budget.getCategory() == null ? null : CategoryDtoMapper.toDto(budget.getCategory()),
                 budget.getAmount(),
                 budget.getMonth(),
                 budget.getYear()
