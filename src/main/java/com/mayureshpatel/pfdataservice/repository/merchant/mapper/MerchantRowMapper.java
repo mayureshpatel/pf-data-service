@@ -28,14 +28,27 @@ public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merc
      * @throws SQLException if there is an error accessing ResultSet
      */
     public static Merchant mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        String safePrefix;
+        if (prefix == null || prefix.isEmpty()) {
+            safePrefix = "";
+        } else {
+            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        }
         Set<String> availableColumns = getAvailableColumns(rs);
 
         Merchant.MerchantBuilder builder = Merchant.builder();
-        builder.id(rs.getLong(safePrefix + "id"));
+        if (hasColumn(safePrefix + "id", availableColumns)) {
+            Long id = getLongOrNull(rs, safePrefix + "id");
+            if (id == null) {
+                return null;
+            }
+            builder.id(id);
+        } else {
+            return null;
+        }
 
         if (hasColumn(safePrefix + "user_id", availableColumns)) {
-            builder.userId(rs.getLong(safePrefix + "user_id"));
+            builder.userId(getLongOrNull(rs, safePrefix + "user_id"));
         }
         if (hasColumn(safePrefix + "original_name", availableColumns)) {
             builder.originalName(rs.getString(safePrefix + "original_name"));

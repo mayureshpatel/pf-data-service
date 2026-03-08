@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,7 @@ class FileImportHistoryTest {
         TableAudit audit = TableAudit.insertAudit(null);
         FileImportHistory history = FileImportHistory.builder()
                 .id(1L)
-                .accountId(10L)
+                .account(Account.builder().id(10L).build())
                 .fileName("transactions.csv")
                 .fileHash("hash123")
                 .transactionCount(50)
@@ -23,7 +24,7 @@ class FileImportHistoryTest {
                 .build();
 
         assertEquals(1L, history.getId());
-        assertEquals(10L, history.getAccountId());
+        assertEquals(10L, history.getAccount().getId());
         assertEquals("transactions.csv", history.getFileName());
         assertEquals("hash123", history.getFileHash());
         assertEquals(50, history.getTransactionCount());

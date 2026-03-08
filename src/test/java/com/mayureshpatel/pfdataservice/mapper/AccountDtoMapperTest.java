@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -54,9 +56,9 @@ class AccountDtoMapperTest {
                     .id(1L)
                     .userId(100L)
                     .name("Checking")
-                    .typeCode("CHECKING")
+                    .type(AccountType.builder().code("CHECKING").build())
                     .currentBalance(new BigDecimal("1500.00"))
-                    .currencyCode("USD")
+                    .currency(Currency.builder().code("USD").build())
                     .bankCode("CAPITAL_ONE")
                     .build();
 
@@ -73,10 +75,10 @@ class AccountDtoMapperTest {
             assertEquals(account.getUserId(), dto.user().id());
 
             assertNotNull(dto.type());
-            assertEquals(account.getTypeCode(), dto.type().code());
+            assertEquals(account.getType().getCode(), dto.type().code());
 
             assertNotNull(dto.currency());
-            assertEquals(account.getCurrencyCode(), dto.currency().code());
+            assertEquals(account.getCurrency().getCode(), dto.currency().code());
 
             assertNotNull(dto.bank());
             assertEquals("CAPITAL_ONE", dto.bank().name());
@@ -90,8 +92,8 @@ class AccountDtoMapperTest {
                     .id(1L)
                     .name("Minimal Account")
                     .userId(null)
-                    .typeCode(null)
-                    .currencyCode(null)
+                    .type(null)
+                    .currency(null)
                     .bankCode(null)
                     .build();
 

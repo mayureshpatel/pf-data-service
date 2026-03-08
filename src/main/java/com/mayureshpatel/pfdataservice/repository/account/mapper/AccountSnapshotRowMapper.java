@@ -27,7 +27,12 @@ public class AccountSnapshotRowMapper extends JdbcMapperUtils implements RowMapp
      * @throws SQLException if an error occurs while accessing the ResultSet
      */
     public static AccountSnapshot mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        String safePrefix;
+        if (prefix == null || prefix.isEmpty()) {
+            safePrefix = "";
+        } else {
+            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        }
         Set<String> availableColumns = getAvailableColumns(rs);
 
         AccountSnapshot.AccountSnapshotBuilder builder = AccountSnapshot.builder();
@@ -37,7 +42,7 @@ public class AccountSnapshotRowMapper extends JdbcMapperUtils implements RowMapp
             builder.accountId(rs.getLong(safePrefix + "account_id"));
         }
         if (hasColumn(safePrefix + "snapshot_date", availableColumns)) {
-            builder.snapshotDate(rs.getDate(safePrefix + "snapshot_date").toLocalDate());
+            builder.snapshotDate(getLocalDate(rs, safePrefix + "snapshot_date"));
         }
         if (hasColumn(safePrefix + "balance", availableColumns)) {
             builder.balance(rs.getBigDecimal(safePrefix + "balance"));

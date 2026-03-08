@@ -59,8 +59,8 @@ class AccountUpdateRequestTest {
 
         assertEquals(request.getId(), account.getId());
         assertEquals(request.getName(), account.getName());
-        assertEquals(request.getType(), account.getTypeCode());
-        assertEquals(request.getCurrencyCode(), account.getCurrencyCode());
+        assertEquals(request.getType(), account.getType().getCode());
+        assertEquals(request.getCurrencyCode(), account.getCurrency().getCode());
         assertEquals(request.getBankName(), account.getBankCode());
         assertEquals(request.getVersion(), account.getVersion());
     }

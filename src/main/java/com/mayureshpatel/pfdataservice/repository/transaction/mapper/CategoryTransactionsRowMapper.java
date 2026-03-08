@@ -17,7 +17,7 @@ public class CategoryTransactionsRowMapper extends JdbcMapperUtils implements Ro
 
     @Override
     public CategoryTransactionsDto mapRow(@NonNull ResultSet rs, int rowNum) throws SQLException {
-        Category category = CategoryRowMapper.mapRow(rs, "");
+        Category category = CategoryRowMapper.mapRow(rs, "category");
 
         return new CategoryTransactionsDto(
                 CategoryDtoMapper.toDto(category),

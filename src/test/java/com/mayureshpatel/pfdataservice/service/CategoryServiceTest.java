@@ -339,14 +339,14 @@ class CategoryServiceTest {
         @DisplayName("should return grouped categories")
         void shouldReturnGrouped() {
             // Arrange
-            when(categoryRepository.findAllWIthParent(USER_ID)).thenReturn(Collections.emptyList());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
             // Act
-            List<CategoryDto> result = categoryService.getCategoriesGrouped(USER_ID);
+            List<CategoryDto> result = categoryService.getCategoriesByUserId(USER_ID);
 
             // Assert
-            assertNotNull(result);
-            verify(categoryRepository).findAllWIthParent(USER_ID);
+            assertTrue(result.isEmpty());
+            verify(categoryRepository).findByUserId(USER_ID);
         }
     }
 

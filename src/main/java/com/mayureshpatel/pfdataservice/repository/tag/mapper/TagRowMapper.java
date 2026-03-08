@@ -28,14 +28,27 @@ public class TagRowMapper extends JdbcMapperUtils implements RowMapper<Tag> {
      * @throws SQLException if there is an error accessing the ResultSet
      */
     public static Tag mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        String safePrefix;
+        if (prefix == null || prefix.isEmpty()) {
+            safePrefix = "";
+        } else {
+            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        }
         Set<String> availableColumns = getAvailableColumns(rs);
 
         Tag.TagBuilder builder = Tag.builder();
-        builder.id(rs.getLong(safePrefix + "id"));
+        if (hasColumn(safePrefix + "id", availableColumns)) {
+            Long id = getLongOrNull(rs, safePrefix + "id");
+            if (id == null) {
+                return null;
+            }
+            builder.id(id);
+        } else {
+            return null;
+        }
 
         if (hasColumn(safePrefix + "user_id", availableColumns)) {
-            builder.userId(rs.getLong(safePrefix + "user_id"));
+            builder.userId(getLongOrNull(rs, safePrefix + "user_id"));
         }
         if (hasColumn(safePrefix + "name", availableColumns)) {
             builder.name(rs.getString(safePrefix + "name"));

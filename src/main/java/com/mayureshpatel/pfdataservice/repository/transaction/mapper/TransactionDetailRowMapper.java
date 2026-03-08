@@ -38,7 +38,12 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
      * @throws SQLException if an error occurs while accessing the result set
      */
     public static Transaction mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        String safePrefix;
+        if (prefix == null || prefix.isEmpty()) {
+            safePrefix = "";
+        } else {
+            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        }
         Set<String> availableColumns = getAvailableColumns(rs);
 
         Transaction.TransactionBuilder builder = Transaction.builder();

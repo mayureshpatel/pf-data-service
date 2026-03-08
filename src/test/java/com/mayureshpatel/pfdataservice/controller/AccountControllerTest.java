@@ -58,7 +58,8 @@ class AccountControllerTest extends BaseControllerTest {
                     AccountTypeDto.builder().code("CHECKING").build(),
                     new BigDecimal("1000.00"),
                     CurrencyDto.builder().code("USD").build(),
-                    BankName.CAPITAL_ONE
+                    BankName.CAPITAL_ONE,
+                    1L
             );
 
             when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(List.of(accountDto));

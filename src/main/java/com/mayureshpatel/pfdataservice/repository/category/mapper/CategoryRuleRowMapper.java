@@ -20,11 +20,24 @@ public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<
     }
 
     public static CategoryRule mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        String safePrefix;
+        if (prefix == null || prefix.isEmpty()) {
+            safePrefix = "";
+        } else {
+            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        }
         Set<String> availableColumns = getAvailableColumns(rs);
 
         CategoryRule.CategoryRuleBuilder builder = CategoryRule.builder();
-        builder.id(rs.getLong(safePrefix + "id"));
+        if (hasColumn(safePrefix + "id", availableColumns)) {
+            Long id = getLongOrNull(rs, safePrefix + "id");
+            if (id == null) {
+                return null;
+            }
+            builder.id(id);
+        } else {
+            return null;
+        }
 
         if (availableColumns.contains(safePrefix + "keyword")) {
             builder.keyword(rs.getString(safePrefix + "keyword"));

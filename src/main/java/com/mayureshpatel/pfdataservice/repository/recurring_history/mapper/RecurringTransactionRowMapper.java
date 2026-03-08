@@ -29,7 +29,12 @@ public class RecurringTransactionRowMapper extends JdbcMapperUtils implements Ro
      * @throws SQLException if an error occurs while accessing the ResultSet
      */
     public RecurringTransaction mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        String safePrefix;
+        if (prefix == null || prefix.isEmpty()) {
+            safePrefix = "";
+        } else {
+            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        }
         Set<String> availableColumns = getAvailableColumns(rs);
 
         RecurringTransaction.RecurringTransactionBuilder builder = RecurringTransaction.builder();
@@ -48,10 +53,10 @@ public class RecurringTransactionRowMapper extends JdbcMapperUtils implements Ro
             builder.frequency(rs.getString(safePrefix + "frequency"));
         }
         if (hasColumn(safePrefix + "last_date", availableColumns)) {
-            builder.lastDate(rs.getDate(safePrefix + "last_date").toLocalDate());
+            builder.lastDate(getLocalDate(rs, safePrefix + "last_date"));
         }
         if (hasColumn(safePrefix + "next_date", availableColumns)) {
-            builder.nextDate(rs.getDate(safePrefix + "next_date").toLocalDate());
+            builder.nextDate(getLocalDate(rs, safePrefix + "next_date"));
         }
         if (hasColumn(safePrefix + "amount", availableColumns)) {
             builder.amount(rs.getBigDecimal(safePrefix + "amount"));

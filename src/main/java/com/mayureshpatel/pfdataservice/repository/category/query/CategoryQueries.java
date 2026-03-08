@@ -10,6 +10,7 @@ public final class CategoryQueries {
             select
                 categories.id,
                 categories.user_id,
+                categories.parent_id,
                 categories.name,
                 categories.color,
                 categories.icon,
@@ -32,6 +33,7 @@ public final class CategoryQueries {
             select
                 categories.id,
                 categories.user_id,
+                categories.parent_id,
                 categories.name,
                 categories.color,
                 categories.icon,
@@ -52,6 +54,7 @@ public final class CategoryQueries {
             select
                 categories.id,
                 categories.user_id,
+                categories.parent_id,
                 categories.name,
                 categories.color,
                 categories.icon,
@@ -73,6 +76,7 @@ public final class CategoryQueries {
             select
                 categories.id,
                 categories.user_id,
+                categories.parent_id,
                 categories.name,
                 categories.color,
                 categories.icon,
@@ -89,6 +93,7 @@ public final class CategoryQueries {
             select
                 categories.id,
                 categories.user_id,
+                categories.parent_id,
                 categories.name,
                 categories.color,
                 categories.icon,

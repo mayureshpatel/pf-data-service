@@ -17,7 +17,7 @@ public class CategoryBreakdownRowMapper extends JdbcMapperUtils implements RowMa
 
     @Override
     public CategoryBreakdownDto mapRow(@NonNull ResultSet rs, int rowNum) throws SQLException {
-        Category category = CategoryRowMapper.mapRow(rs, "");
+        Category category = CategoryRowMapper.mapRow(rs, "category");
 
         return new CategoryBreakdownDto(
                 CategoryDtoMapper.toDto(category),

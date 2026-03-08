@@ -23,7 +23,7 @@ class AccountResponseDtoTest {
         BankName bank = BankName.CAPITAL_ONE;
         BigDecimal balance = new BigDecimal("100.50");
 
-        AccountDto dto = new AccountDto(1L, user, "My Savings", type, balance, currency, bank);
+        AccountDto dto = new AccountDto(1L, user, "My Savings", type, balance, currency, bank, 1L);
 
         assertEquals(1L, dto.id());
         assertEquals(user, dto.user());
@@ -63,7 +63,7 @@ class AccountResponseDtoTest {
     @Test
     @DisplayName("AccountSnapshotDto: should correctly map all fields")
     void accountSnapshotDtoShouldPopulateFields() {
-        AccountDto account = new AccountDto(1L, null, "Savings", null, null, null, null);
+        AccountDto account = new AccountDto(1L, null, "Savings", null, null, null, null, 1L);
         LocalDate date = LocalDate.now();
         BigDecimal balance = new BigDecimal("1000.00");
 

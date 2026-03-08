@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -49,7 +50,7 @@ class BudgetDtoMapperTest {
             Budget budget = Budget.builder()
                     .id(1L)
                     .userId(100L)
-                    .categoryId(50L)
+                    .category(Category.builder().id(50L).build())
                     .amount(new BigDecimal("1000.00"))
                     .month(10)
                     .year(2023)
@@ -66,7 +67,7 @@ class BudgetDtoMapperTest {
             assertEquals(budget.getMonth(), dto.month());
             assertEquals(budget.getYear(), dto.year());
             assertNotNull(dto.category());
-            assertEquals(budget.getCategoryId(), dto.category().id());
+            assertEquals(budget.getCategory().getId(), dto.category().id());
         }
 
         @Test
@@ -76,7 +77,7 @@ class BudgetDtoMapperTest {
             Budget budget = Budget.builder()
                     .id(1L)
                     .userId(null)
-                    .categoryId(null)
+                    .category(null)
                     .amount(new BigDecimal("1000.00"))
                     .month(10)
                     .year(2023)

@@ -13,7 +13,7 @@ public final class TransactionQueries {
             """
                     transactions.id,
                     transactions.amount,
-                    transactions.date,
+                    transactions.date as transaction_date,
                     transactions.post_date,
                     transactions.description,
                     transactions.type,
@@ -25,17 +25,17 @@ public final class TransactionQueries {
                     transactions.deleted_at,
                     accounts.name as account_name,
                     accounts.current_balance as account_balance,
-                    accounts.currency_code as accoun_currency_code,
+                    accounts.currency_code as account_currency_code,
                     accounts.bank_name as account_bank_name,
                     accounts.user_id as account_user_id,
                     accounts.version as account_version,
-                    account_types.code as account_type_code,
-                    account_types.label as account_type_label,
-                    account_types.icon as account_type_icon,
-                    account_types.color as account_type_color,
-                    account_types.is_asset as account_type_is_asset,
-                    account_types.sort_order as account_type_sort_order,
-                    account_types.is_active as account_type_is_active,
+                    account_types.code as account_account_type_code,
+                    account_types.label as account_account_type_label,
+                    account_types.icon as account_account_type_icon,
+                    account_types.color as account_account_type_color,
+                    account_types.is_asset as account_account_type_is_asset,
+                    account_types.sort_order as account_account_type_sort_order,
+                    account_types.is_active as account_account_type_is_active,
                     categories.name as category_name,
                     categories.color as category_color,
                     categories.icon as category_icon,
@@ -58,7 +58,7 @@ public final class TransactionQueries {
             "join accounts ON transactions.account_id = accounts.id " +
                     "left join account_types ON accounts.type = account_types.code " +
                     "left join categories ON transactions.category_id = categories.id " +
-                    "left join categories ON categories.parent_id = parent_categories.id " +
+                    "left join categories parent_categories ON categories.parent_id = parent_categories.id " +
                     "left join merchants ON transactions.merchant_id = merchants.id";
 
     // language=SQL
@@ -334,11 +334,11 @@ public final class TransactionQueries {
                    categories.color     as category_color,
                    categories.icon      as category_icon,
                    categories.type      as category_type,
-                   parent_categories.id       as cateogry_parent_id,
-                   parent_categories.name     as cateogry_parent_name,
-                   parent_categories.color    as cateogry_parent_color,
-                   parent_categories.icon     as cateogry_parent_icon,
-                   parent_categories.type     as cateogry_parent_type,
+                   parent_categories.id       as category_parent_id,
+                   parent_categories.name     as category_parent_name,
+                   parent_categories.color    as category_parent_color,
+                   parent_categories.icon     as category_parent_icon,
+                   parent_categories.type     as category_parent_type,
                    count(transactions.id) as transaction_count
             from transactions
             join accounts on transactions.account_id = accounts.id

@@ -5,6 +5,24 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class AccountQueries {
 
+    /**
+     * Common SELECT columns for accounts with enriched metadata (type, currency).
+     */
+    private static final String ENRICHED_SELECT = """
+            select accounts.*,
+                   account_types.code as account_type_code,
+                   account_types.label as account_type_label,
+                   account_types.color as account_type_color,
+                   account_types.icon as account_type_icon,
+                   account_types.is_asset as account_type_is_asset,
+                   currencies.code as currency_code,
+                   currencies.name as currency_name,
+                   currencies.symbol as currency_symbol
+            from accounts
+                left join account_types on accounts.type = account_types.code
+                left join currencies on accounts.currency_code = currencies.code
+            """;
+
     // language=SQL
     public static final String COUNT_ACTIVE = """
             select count(*)
@@ -26,71 +44,27 @@ public final class AccountQueries {
             """;
 
     // language=SQL
-    public static final String FIND_ALL = """
-            select acc.*,
-                   act.label as account_type_label,
-                   act.color as account_type_color,
-                   act.icon as account_type_icon,
-                   act.is_asset as is_asset,
-                   cur.code as currency_code,
-                   cur.name as currency_name,
-                   cur.symbol as currency_symbol
-            from accounts acc
-                left join account_types act on acc.type = act.code
-                left join currencies cur on acc.currency_code = cur.code
-            where deleted_at is null
+    public static final String FIND_ALL = ENRICHED_SELECT + """
+            where accounts.deleted_at is null
             """;
 
     // language=SQL
-    public static final String FIND_BY_ID = """
-            select acc.*,
-                   act.label as account_type_label,
-                   act.color as account_type_color,
-                   act.icon as account_type_icon,
-                   act.is_asset as is_asset,
-                   cur.code as currency_code,
-                   cur.name as currency_name,
-                   cur.symbol as currency_symbol
-            from accounts acc
-                left join account_types act on acc.type = act.code
-                left join currencies cur on acc.currency_code = cur.code
-            where id = :id
-                and deleted_at is null
+    public static final String FIND_BY_ID = ENRICHED_SELECT + """
+            where accounts.id = :id
+                and accounts.deleted_at is null
             """;
 
     // language=SQL
-    public static final String FIND_BY_ACCOUNT_ID_AND_USER_ID = """
-            select acc.*,
-                   act.label as account_type_label,
-                   act.color as account_type_color,
-                   act.icon as account_type_icon,
-                   act.is_asset as is_asset,
-                   cur.code as currency_code,
-                   cur.name as currency_name,
-                   cur.symbol as currency_symbol
-            from accounts acc
-                left join account_types act on acc.type = act.code
-                left join currencies cur on acc.currency_code = cur.code
-            where id = :accountId
-                and user_id = :userId
-                and deleted_at is null
+    public static final String FIND_BY_ACCOUNT_ID_AND_USER_ID = ENRICHED_SELECT + """
+            where accounts.id = :accountId
+                and accounts.user_id = :userId
+                and accounts.deleted_at is null
             """;
 
     // language=SQL
-    public static final String FIND_ALL_BY_USER_ID = """
-            select acc.*,
-                   act.label as account_type_label,
-                   act.color as account_type_color,
-                   act.icon as account_type_icon,
-                   act.is_asset as is_asset,
-                   cur.code as currency_code,
-                   cur.name as currency_name,
-                   cur.symbol as currency_symbol
-            from accounts acc
-                left join account_types act on acc.type = act.code
-                left join currencies cur on acc.currency_code = cur.code
-            where user_id = :userId
-                and deleted_at is null
+    public static final String FIND_ALL_BY_USER_ID = ENRICHED_SELECT + """
+            where accounts.user_id = :userId
+                and accounts.deleted_at is null
             """;
 
     // language=SQL

@@ -98,7 +98,7 @@ class AccountServiceTest {
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.update(any())).thenReturn(1);
+            when(accountRepository.update(eq(USER_ID), any())).thenReturn(1);
 
             AccountUpdateRequest request = AccountUpdateRequest.builder().id(ACCOUNT_ID).name("Updated").build();
 
@@ -107,7 +107,7 @@ class AccountServiceTest {
 
             // Assert
             assertEquals(1, result);
-            verify(accountRepository).update(any());
+            verify(accountRepository).update(eq(USER_ID), any());
         }
 
         @Test

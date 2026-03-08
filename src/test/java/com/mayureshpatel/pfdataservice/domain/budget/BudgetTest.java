@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.budget;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,7 @@ class BudgetTest {
         Budget budget = Budget.builder()
                 .id(1L)
                 .userId(100L)
-                .categoryId(10L)
+                .category(Category.builder().id(10L).build())
                 .amount(new BigDecimal("500.00"))
                 .month(3)
                 .year(2026)
@@ -27,7 +28,7 @@ class BudgetTest {
 
         assertEquals(1L, budget.getId());
         assertEquals(100L, budget.getUserId());
-        assertEquals(10L, budget.getCategoryId());
+        assertEquals(10L, budget.getCategory().getId());
         assertEquals(new BigDecimal("500.00"), budget.getAmount());
         assertEquals(3, budget.getMonth());
         assertEquals(2026, budget.getYear());

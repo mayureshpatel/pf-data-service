@@ -64,20 +64,14 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should find all with parent enrichment")
-        void shouldFindAllWithParent() {
+        @DisplayName("should find all parent categories")
+        void shouldFindAllParentCategories() {
             // Act
-            List<Category> result = categoryRepository.findAllWIthParent(USER_1);
+            List<Category> result = categoryRepository.findAllParentCategories(USER_1);
 
             // Assert
             assertFalse(result.isEmpty());
-            Category groceries = result.stream()
-                    .filter(c -> c.getId().equals(CAT_GROCERIES))
-                    .findFirst()
-                    .orElseThrow();
-            
-            assertNotNull(groceries.getParent());
-            assertEquals("Food", groceries.getParent().getName());
+            assertTrue(result.stream().allMatch(c -> c.getParentId() != null));
         }
 
         @Test

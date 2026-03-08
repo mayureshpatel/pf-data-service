@@ -27,11 +27,24 @@ public class CurrencyRowMapper extends JdbcMapperUtils implements RowMapper<Curr
      * @throws SQLException if an error occurs while accessing ResultSet
      */
     public static Currency mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        String safePrefix;
+        if (prefix == null || prefix.isEmpty()) {
+            safePrefix = "";
+        } else {
+            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        }
         Set<String> availableColumns = getAvailableColumns(rs);
 
         Currency.CurrencyBuilder builder = Currency.builder();
-        builder.code(rs.getString(safePrefix + "code"));
+        if (hasColumn(safePrefix + "code", availableColumns)) {
+            String code = rs.getString(safePrefix + "code");
+            if (code == null) {
+                return null;
+            }
+            builder.code(code);
+        } else {
+            return null;
+        }
 
         if (hasColumn(safePrefix + "name", availableColumns)) {
             builder.name(rs.getString(safePrefix + "name"));
