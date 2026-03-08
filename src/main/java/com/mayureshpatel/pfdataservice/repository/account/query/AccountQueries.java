@@ -27,32 +27,64 @@ public final class AccountQueries {
 
     // language=SQL
     public static final String FIND_ALL = """
-            select *
-            from accounts
+            select acc.*,
+                   act.label as account_type_label,
+                   act.color as account_type_color,
+                   act.icon as account_type_icon,
+                   act.is_asset as is_asset,
+                   cur.name as currency_name,
+                   cur.symbol as currency_symbol
+            from accounts acc
+                left join account_types act on acc.type = act.code
+                left join currencies cur on acc.currency_code = cur.code
             where deleted_at is null
             """;
 
     // language=SQL
     public static final String FIND_BY_ID = """
-            select *
-            from accounts
+            select acc.*,
+                   act.label as account_type_label,
+                   act.color as account_type_color,
+                   act.icon as account_type_icon,
+                   act.is_asset as is_asset,
+                   cur.name as currency_name,
+                   cur.symbol as currency_symbol
+            from accounts acc
+                left join account_types act on acc.type = act.code
+                left join currencies cur on acc.currency_code = cur.code
             where id = :id
                 and deleted_at is null
             """;
 
     // language=SQL
     public static final String FIND_BY_ACCOUNT_ID_AND_USER_ID = """
-            select *
-            from accounts
-            where accounts.id = :accountId
+            select acc.*,
+                   act.label as account_type_label,
+                   act.color as account_type_color,
+                   act.icon as account_type_icon,
+                   act.is_asset as is_asset,
+                   cur.name as currency_name,
+                   cur.symbol as currency_symbol
+            from accounts acc
+                left join account_types act on acc.type = act.code
+                left join currencies cur on acc.currency_code = cur.code
+            where id = :accountId
                 and user_id = :userId
                 and deleted_at is null
             """;
 
     // language=SQL
     public static final String FIND_ALL_BY_USER_ID = """
-            select *
-            from accounts
+            select acc.*,
+                   act.label as account_type_label,
+                   act.color as account_type_color,
+                   act.icon as account_type_icon,
+                   act.is_asset as is_asset,
+                   cur.name as currency_name,
+                   cur.symbol as currency_symbol
+            from accounts acc
+                left join account_types act on acc.type = act.code
+                left join currencies cur on acc.currency_code = cur.code
             where user_id = :userId
                 and deleted_at is null
             """;
@@ -62,7 +94,7 @@ public final class AccountQueries {
             select count(*)
             from accounts
             where id = :id
-              and deleted_at IS NULL
+                and deleted_at IS NULL
             """;
 
     // language=SQL
@@ -71,8 +103,8 @@ public final class AccountQueries {
             set deleted_at = CURRENT_TIMESTAMP,
                 deleted_by = :deletedBy
             where id = :id
-              and user_id = :deletedBy
-              and deleted_at is null
+                and user_id = :deletedBy
+                and deleted_at is null
             """;
 
     // language=SQL
@@ -103,17 +135,17 @@ public final class AccountQueries {
 
     // language=SQL
     public static final String UPDATE = """
-                    update accounts
-                    set name = :name,
-                        type = :type,
-                        currency_code = :currencyCode,
-                        bank_name = :bankName,
-                        version = version + 1,
-                        updated_at = CURRENT_TIMESTAMP, updated_by = :updatedBy
-                    where id = :id
-                      and user_id = :updatedBy
-                      and version = :version
-                      and deleted_at is null
+            update accounts
+            set name = :name,
+                type = :type,
+                currency_code = :currencyCode,
+                bank_name = :bankName,
+                version = version + 1,
+                updated_at = CURRENT_TIMESTAMP, updated_by = :updatedBy
+            where id = :id
+              and user_id = :updatedBy
+              and version = :version
+              and deleted_at is null
             """;
 
     // language=SQL

@@ -12,6 +12,7 @@ public final class AccountDtoMapper {
     private AccountDtoMapper() {
     }
 
+    // todo: refactor by using specific dto mappers
     public static AccountDto toDto(Account account) {
         if (account == null) {
             return null;
@@ -25,15 +26,24 @@ public final class AccountDtoMapper {
             user = new UserDto(account.getUserId(), null, null);
         }
 
-        if (account.getTypeCode() != null) {
+        if (account.getType() != null) {
             type = new AccountTypeDto(
-                    account.getTypeCode(),
-                    null, false, null, false, null, null
+                    account.getType().getCode(),
+                    account.getType().getLabel(),
+                    account.getType().isAsset(),
+                    account.getType().getSortOrder(),
+                    account.getType().isActive(),
+                    account.getType().getIcon(),
+                    account.getType().getColor()
             );
         }
 
-        if (account.getCurrencyCode() != null) {
-            currency = new CurrencyDto(account.getCurrencyCode(), null, null, true);
+        if (account.getCurrency() != null) {
+            currency = new CurrencyDto(
+                    account.getCurrency().getCode(),
+                    account.getCurrency().getName(),
+                    account.getCurrency().getSymbol(),
+                    account.getCurrency().isActive());
         }
 
         if (account.getBankCode() != null) {

@@ -10,6 +10,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.HashSet;
+import java.util.Set;
 
 @Component
 public class JdbcMapperUtils {
@@ -22,6 +24,33 @@ public class JdbcMapperUtils {
      * @throws SQLException if an error occurs
      */
     public static TableAudit getAuditColumns(ResultSet rs) throws SQLException {
+        return getAuditColumns(rs, "");
+    }
+
+    /**
+     * Hydrates audit columns from ResultSet with a prefix.
+     *
+     * @param rs     the result set
+     * @param prefix the prefix for the column names
+     * @return the audit columns
+     * @throws SQLException if an error occurs
+     */
+    public static TableAudit getAuditColumns(ResultSet rs, String prefix) throws SQLException {
+        return getAuditColumns(rs, prefix, getAvailableColumns(rs));
+    }
+
+    /**
+     * Hydrates audit columns from ResultSet with a prefix and pre-calculated available columns.
+     *
+     * @param rs               the result set
+     * @param prefix           the prefix for the column names
+     * @param availableColumns the set of available columns in the result set
+     * @return the audit columns
+     * @throws SQLException if an error occurs
+     */
+    public static TableAudit getAuditColumns(ResultSet rs, String prefix, Set<String> availableColumns) throws SQLException {
+        String safePrefix = prefix == null ? "" : prefix;
+
         OffsetDateTime createdAt = null;
         OffsetDateTime updatedAt = null;
         OffsetDateTime deletedAt = null;
@@ -30,34 +59,37 @@ public class JdbcMapperUtils {
         User updatedBy = null;
         User deletedBy = null;
 
-        if (hasColumn(rs, "created_at")) {
-            createdAt = getOffsetDateTime(rs, "created_at");
+        if (hasColumn(safePrefix + "created_at", availableColumns)) {
+            createdAt = getOffsetDateTime(rs, safePrefix + "created_at");
         }
 
-        if (hasColumn(rs, "updated_at")) {
-            updatedAt = getOffsetDateTime(rs, "updated_at");
+        if (hasColumn(safePrefix + "updated_at", availableColumns)) {
+            updatedAt = getOffsetDateTime(rs, safePrefix + "updated_at");
         }
 
-        if (hasColumn(rs, "deleted_at")) {
-            deletedAt = getOffsetDateTime(rs, "deleted_at");
+        if (hasColumn(safePrefix + "deleted_at", availableColumns)) {
+            deletedAt = getOffsetDateTime(rs, safePrefix + "deleted_at");
         }
 
-        if (hasColumn(rs, "created_by")) {
-            createdBy = User.builder()
-                    .id(rs.getLong("created_by"))
-                    .build();
+        if (hasColumn(safePrefix + "created_by", availableColumns)) {
+            Long userId = getLongOrNull(rs, safePrefix + "created_by");
+            if (userId != null) {
+                createdBy = User.builder().id(userId).build();
+            }
         }
 
-        if (hasColumn(rs, "updated_by")) {
-            updatedBy = User.builder()
-                    .id(rs.getLong("updated_by"))
-                    .build();
+        if (hasColumn(safePrefix + "updated_by", availableColumns)) {
+            Long userId = getLongOrNull(rs, safePrefix + "updated_by");
+            if (userId != null) {
+                updatedBy = User.builder().id(userId).build();
+            }
         }
 
-        if (hasColumn(rs, "deleted_by")) {
-            deletedBy = User.builder()
-                    .id(rs.getLong("deleted_by"))
-                    .build();
+        if (hasColumn(safePrefix + "deleted_by", availableColumns)) {
+            Long userId = getLongOrNull(rs, safePrefix + "deleted_by");
+            if (userId != null) {
+                deletedBy = User.builder().id(userId).build();
+            }
         }
 
         return TableAudit.builder()
@@ -71,6 +103,24 @@ public class JdbcMapperUtils {
     }
 
     /**
+     * Get all available column labels from ResultSet.
+     *
+     * @param rs the result set
+     * @return a set of lowercase column labels
+     * @throws SQLException if an error occurs
+     */
+    public static Set<String> getAvailableColumns(ResultSet rs) throws SQLException {
+        ResultSetMetaData metaData = rs.getMetaData();
+        int columnCount = metaData.getColumnCount();
+
+        Set<String> columns = new HashSet<>(columnCount * 2);
+        for (int i = 1; i <= columnCount; i++) {
+            columns.add(metaData.getColumnLabel(i).toLowerCase());
+        }
+        return columns;
+    }
+
+    /**
      * Safely check if column exists in ResultSet.
      *
      * @param rs         the result set
@@ -79,13 +129,18 @@ public class JdbcMapperUtils {
      * @throws SQLException if an error occurs
      */
     public static boolean hasColumn(ResultSet rs, String columnName) throws SQLException {
-        ResultSetMetaData metaData = rs.getMetaData();
-        for (int i = 1; i <= metaData.getColumnCount(); i++) {
-            if (columnName.equalsIgnoreCase(metaData.getColumnName(i))) {
-                return true;
-            }
-        }
-        return false;
+        return hasColumn(columnName, getAvailableColumns(rs));
+    }
+
+    /**
+     * Safely check if column exists in pre-calculated set of available columns.
+     *
+     * @param columnName       the column name to check
+     * @param availableColumns the set of available columns
+     * @return true if column exists, false otherwise
+     */
+    public static boolean hasColumn(String columnName, Set<String> availableColumns) {
+        return columnName != null && availableColumns.contains(columnName.toLowerCase());
     }
 
     /**

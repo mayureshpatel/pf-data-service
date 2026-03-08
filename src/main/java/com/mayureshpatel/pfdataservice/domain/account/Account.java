@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.account;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import lombok.Builder;
@@ -20,11 +21,11 @@ public class Account {
     private final Long id;
     private final Long userId;
     private final String name;
-    private final String typeCode;
+    private final AccountType type;
     @Builder.Default
     private final BigDecimal currentBalance = BigDecimal.ZERO;
     @ToString.Exclude
-    private final String currencyCode;
+    private final Currency currency;
     private final Long version;
     private final String bankCode;
     @ToString.Exclude
