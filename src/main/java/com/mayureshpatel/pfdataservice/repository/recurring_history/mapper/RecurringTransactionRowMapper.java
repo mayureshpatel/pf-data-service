@@ -39,10 +39,10 @@ public class RecurringTransactionRowMapper extends JdbcMapperUtils implements Ro
             builder.userId(rs.getLong(safePrefix + "user_id"));
         }
         if (hasColumn(safePrefix + "account_id", availableColumns)) {
-            builder.account(AccountRowMapper.mapRow(rs, "account"));
+            builder.account(AccountRowMapper.mapRow(rs, safePrefix + "account"));
         }
         if (hasColumn(safePrefix + "merchant_id", availableColumns)) {
-            builder.merchant(MerchantRowMapper.mapRow(rs, "merchant"));
+            builder.merchant(MerchantRowMapper.mapRow(rs, safePrefix + "merchant"));
         }
         if (hasColumn(safePrefix + "frequency", availableColumns)) {
             builder.frequency(rs.getString(safePrefix + "frequency"));
