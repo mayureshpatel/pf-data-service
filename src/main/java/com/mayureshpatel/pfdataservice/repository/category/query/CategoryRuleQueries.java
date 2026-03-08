@@ -10,9 +10,10 @@ public final class CategoryRuleQueries {
                 select cr.*,
                        c.name as category_name,
                        c.color as category_color,
-                       c.icon as category_icon
+                       c.icon as category_icon,
+                       c.type as category_type
                 from category_rules cr
-                left join categories c on cr.category_id = c.id
+                    left join categories c on cr.category_id = c.id
                 where cr.user_id = :userId
                 order by cr.priority desc, length(cr.keyword) desc
             """;
@@ -22,9 +23,10 @@ public final class CategoryRuleQueries {
                 select cr.*,
                        c.name as category_name,
                        c.color as category_color,
-                       c.icon as category_icon
+                       c.icon as category_icon,
+                       c.type as category_type
                 from category_rules cr
-                left join categories c on cr.category_id = c.id
+                    left join categories c on cr.category_id = c.id
                 where cr.id = :id
             """;
 

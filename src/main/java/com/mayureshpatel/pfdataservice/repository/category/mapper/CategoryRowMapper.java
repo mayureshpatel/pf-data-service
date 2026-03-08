@@ -82,7 +82,7 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
             builder.parentId(parentId);
 
             if (parentId != 0) {
-                builder.parent(mapParent(parentId, rs, safePrefix + "parent_", availableColumns));
+                builder.parent(mapParent(parentId, rs, safePrefix + "parent", availableColumns));
             }
         }
         if (hasColumn(safePrefix + "color", availableColumns)) {
@@ -95,6 +95,7 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
             builder.type(rs.getString(safePrefix + "type"));
         }
         builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+
         return builder.build();
     }
 }

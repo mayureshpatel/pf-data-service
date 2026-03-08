@@ -1,41 +1,45 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
-import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
-import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
+import com.mayureshpatel.pfdataservice.repository.user.mapper.UserRowMapper;
+import org.jspecify.annotations.NonNull;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Set;
 
 @Component
 public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<CategoryRule> {
 
     @Override
-    public CategoryRule mapRow(ResultSet rs, int rowNum) throws SQLException {
-        // user
-        User user = User.builder()
-                .id(rs.getLong("user_id"))
-                .build();
+    public CategoryRule mapRow(@NonNull ResultSet rs, int rowNum) throws SQLException {
+        return mapRow(rs, "");
+    }
 
-        // category
-        Category category = Category.builder()
-                .id(rs.getLong("category_id"))
-                .userId(rs.getLong("user_id"))
-                .name(rs.getString("category_name"))
-                .color(rs.getString("category_color"))
-                .icon(rs.getString("category_icon"))
-                .build();
+    public static CategoryRule mapRow(ResultSet rs, String prefix) throws SQLException {
+        String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
+        Set<String> availableColumns = getAvailableColumns(rs);
 
-        return CategoryRule.builder()
-                .id(rs.getLong("id"))
-                .keyword(rs.getString("keyword"))
-                .priority(rs.getInt("priority"))
-                .category(category)
-                .user(user)
-                .audit(getAuditColumns(rs))
-                .build();
+        CategoryRule.CategoryRuleBuilder builder = CategoryRule.builder();
+        builder.id(rs.getLong(safePrefix + "id"));
+
+        if (availableColumns.contains(safePrefix + "keyword")) {
+            builder.keyword(rs.getString(safePrefix + "keyword"));
+        }
+        if (availableColumns.contains(safePrefix + "priority")) {
+            builder.priority(rs.getInt(safePrefix + "priority"));
+        }
+        if (availableColumns.contains(safePrefix + "category_id")) {
+            builder.category(CategoryRowMapper.mapRow(rs, safePrefix + "category"));
+        }
+        if (availableColumns.contains(safePrefix + "user_id")) {
+            builder.user(UserRowMapper.mapRow(rs, safePrefix + "user"));
+        }
+        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+
+        return builder.build();
     }
 }

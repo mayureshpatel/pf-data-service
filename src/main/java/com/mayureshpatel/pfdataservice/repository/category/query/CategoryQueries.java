@@ -7,61 +7,104 @@ public final class CategoryQueries {
 
     // language=SQL
     public static final String FIND_BY_ID = """
-            select *
+            select
+                categories.id,
+                categories.user_id,
+                categories.name,
+                categories.color,
+                categories.icon,
+                categories.type,
+                parent_category.id as category_parent_id,
+                parent_category.name as category_parent_name,
+                parent_category.color as category_parent_color,
+                parent_category.icon as category_parent_icon,
+                parent_category.type as category_parent_type,
+                categories.created_at,
+                categories.updated_at
             from categories
-            where id = :id
-                and user_id = :userId
+                left join categories parent_category on parent_category.id = categories.parent_id
+            where categories.id = :id
+                and categories.user_id = :userId
             """;
 
     // language=SQL
     public static final String FIND_ALL = """
-            select *
+            select
+                categories.id,
+                categories.user_id,
+                categories.name,
+                categories.color,
+                categories.icon,
+                categories.type,
+                parent_category.id as category_parent_id,
+                parent_category.name as category_parent_name,
+                parent_category.color as category_parent_color,
+                parent_category.icon as category_parent_icon,
+                parent_category.type as category_parent_type,
+                categories.created_at,
+                categories.updated_at
             from categories
+                left join categories parent_category on parent_category.id = categories.parent_id
             """;
 
     // language=SQL
     public static final String FIND_ALL_BY_USER_ID = """
-            select *
+            select
+                categories.id,
+                categories.user_id,
+                categories.name,
+                categories.color,
+                categories.icon,
+                categories.type,
+                parent_category.id as category_parent_id,
+                parent_category.name as category_parent_name,
+                parent_category.color as category_parent_color,
+                parent_category.icon as category_parent_icon,
+                parent_category.type as category_parent_type,
+                categories.created_at,
+                categories.updated_at
             from categories
-            where user_id = :userId
+                left join categories parent_category on parent_category.id = categories.parent_id
+            where categories.user_id = :userId
             """;
 
     // language=SQl
     public static final String FIND_ALL_SUB_CATEGORIES = """
-            select *
+            select
+                categories.id,
+                categories.user_id,
+                categories.name,
+                categories.color,
+                categories.icon,
+                categories.type,
+                categories.created_at,
+                categories.updated_at
             from categories
-            where parent_id is not null
-                and user_id = :userId
-            """;
-
-    //language=SQL
-    public static final String FIND_ALL_WITH_PARENT = """
-            SELECT
-                c.id,
-                c.name,
-                c.type,
-                c.user_id,
-                c.parent_id,
-                c.color,
-                c.icon,
-                c.created_at,
-                c.updated_at,
-                p.name  AS parent_name,
-                p.type  AS parent_type,
-                p.color AS parent_color,
-                p.icon  AS parent_icon
-            FROM categories c
-            LEFT JOIN categories p ON c.parent_id = p.id
-            WHERE c.user_id = :userId
-            ORDER BY p.id NULLS FIRST, c.name
+            where categories.parent_id is not null
+                and categories.user_id = :userId
             """;
 
     // language=SQL
     public static final String FIND_ALL_PARENT_CATEGORIES = """
-            select *
+            select
+                categories.id,
+                categories.user_id,
+                categories.name,
+                categories.color,
+                categories.icon,
+                categories.type,
+                parent_category.id as category_parent_id,
+                parent_category.name as category_parent_name,
+                parent_category.color as category_parent_color,
+                parent_category.icon as category_parent_icon,
+                parent_category.type as category_parent_type,
+                categories.created_at,
+                categories.updated_at
             from categories
-            where id in (select parent_id from categories where parent_id is not null)
-            and user_id = :userId
+                     left join categories parent_category on parent_category.id = categories.parent_id
+            WHERE categories.user_id = :userId
+                and parent_category.id is null
+            ORDER BY parent_category.id nulls first
             """;
 
     // language=SQL

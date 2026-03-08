@@ -26,7 +26,7 @@ public class UserRowMapper extends JdbcMapperUtils implements RowMapper<User> {
      * @return User object populated with data from the ResultSet
      * @throws SQLException if there is an error accessing the ResultSet
      */
-    public User mapRow(ResultSet rs, String prefix) throws SQLException {
+    public static User mapRow(ResultSet rs, String prefix) throws SQLException {
         String safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
         Set<String> availableColumns = getAvailableColumns(rs);
 

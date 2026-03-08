@@ -44,15 +44,15 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .list();
     }
 
-    public List<Category> findAllWIthParent(Long userId) {
-        return jdbcClient.sql(CategoryQueries.FIND_ALL_WITH_PARENT)
+    public List<Category> findAllSubCategories(Long userId) {
+        return jdbcClient.sql(CategoryQueries.FIND_ALL_SUB_CATEGORIES)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
     }
 
-    public List<Category> findAllSubCategories(Long userId) {
-        return jdbcClient.sql(CategoryQueries.FIND_ALL_SUB_CATEGORIES)
+    public List<Category> findAllParentCategories(Long userId) {
+        return jdbcClient.sql(CategoryQueries.FIND_ALL_PARENT_CATEGORIES)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
