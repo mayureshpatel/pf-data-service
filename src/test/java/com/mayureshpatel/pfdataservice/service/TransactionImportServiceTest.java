@@ -58,6 +58,8 @@ class TransactionImportServiceTest {
     private TransactionCategorizer categorizer;
     @Mock
     private CategoryRuleRepository categoryRuleRepository;
+    @Mock
+    private MerchantService merchantService;
 
     @InjectMocks
     private TransactionImportService importService;
@@ -184,6 +186,7 @@ class TransactionImportServiceTest {
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), anyString())).thenReturn(Optional.empty());
             when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Test"))).thenReturn(1001L);
 
             // Act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), "file.csv", "hash");
@@ -207,6 +210,7 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("D1"))).thenReturn(1001L);
 
             // Act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null);
@@ -239,6 +243,8 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("T"))).thenReturn(1001L);
+
             importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash");
             verify(fileImportHistoryRepository, never()).save(any());
 

@@ -56,6 +56,8 @@ class TransactionServiceTest {
     private CategoryRuleRepository categoryRuleRepository;
     @Mock
     private TransferMatcher transferMatcher;
+    @Mock
+    private MerchantService merchantService;
 
     @InjectMocks
     private TransactionService transactionService;
@@ -234,8 +236,11 @@ class TransactionServiceTest {
                     .amount(BigDecimal.TEN)
                     .type("INCOME")
                     .transactionDate(OffsetDateTime.now())
+                    .description("Test Description")
                     .categoryId(5L)
                     .build();
+
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Test Description"))).thenReturn(1001L);
 
             Category subCategory = Category.builder().id(5L).parentId(1L).userId(USER_ID).build();
             when(categoryRepository.findById(5L)).thenReturn(Optional.of(subCategory));
@@ -272,9 +277,10 @@ class TransactionServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(cat));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(10L);
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), any())).thenReturn(1001L);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).type("INCOME").build();
+                    .accountId(ACCOUNT_ID).type("INCOME").description("Guess Me").build();
 
             // Act
             transactionService.createTransaction(USER_ID, request);
@@ -294,9 +300,10 @@ class TransactionServiceTest {
 
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(null);
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), any())).thenReturn(1001L);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).type("INCOME").build();
+                    .accountId(ACCOUNT_ID).type("INCOME").description("No Category").build();
 
             // Act
             transactionService.createTransaction(USER_ID, request);
@@ -321,8 +328,10 @@ class TransactionServiceTest {
                     .id(TRANSACTION_ID)
                     .amount(BigDecimal.TEN)
                     .type("INCOME")
+                    .description("Updated Description")
                     .build();
 
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Updated Description"))).thenReturn(1001L);
             when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
             // Act

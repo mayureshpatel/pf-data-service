@@ -43,6 +43,7 @@ public class TransactionImportService {
     private final TransactionParserFactory parserFactory;
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
+    private final MerchantService merchantService;
 
     @Autowired
     public TransactionImportService(TransactionRepository transactionRepository,
@@ -51,7 +52,8 @@ public class TransactionImportService {
                                     FileImportHistoryRepository fileImportHistoryRepository,
                                     TransactionParserFactory parserFactory,
                                     TransactionCategorizer categorizer,
-                                    CategoryRuleRepository categoryRuleRepository) {
+                                    CategoryRuleRepository categoryRuleRepository,
+                                    MerchantService merchantService) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.categoryRepository = categoryRepository;
@@ -59,6 +61,7 @@ public class TransactionImportService {
         this.fileImportHistoryRepository = fileImportHistoryRepository;
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
+        this.merchantService = merchantService;
     }
 
     @Transactional(readOnly = true)
@@ -137,9 +140,11 @@ public class TransactionImportService {
             );
 
             if (!existsInDb && !existsInBatch) {
+                Long merchantId = merchantService.findOrCreateMerchant(userId, dto.description());
                 TransactionCreateRequest t = mapToEntity(dto)
                         .toBuilder()
                         .accountId(account.getId())
+                        .merchantId(merchantId)
                         .build();
                 uniqueTransactions.add(t);
             } else {

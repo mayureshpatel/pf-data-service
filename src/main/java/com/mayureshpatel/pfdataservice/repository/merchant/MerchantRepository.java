@@ -55,6 +55,14 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
+    public Optional<Merchant> findByOriginalNameAndUserId(String originalName, Long userId) {
+        return jdbcClient.sql(MerchantQueries.FIND_BY_ORIGINAL_NAME_AND_USER_ID)
+                .param("originalName", originalName)
+                .param("userId", userId)
+                .query(rowMapper)
+                .optional();
+    }
+
     public List<MerchantBreakdownDto> findMerchantTotals(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_TOTALS)
                 .param("userId", userId)
@@ -64,13 +72,14 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
-    public int insert(MerchantCreateRequest request) {
+    public Long insert(MerchantCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        return jdbcClient.sql(MerchantQueries.INSERT)
+        jdbcClient.sql(MerchantQueries.INSERT)
                 .param("userId", request.getUserId())
                 .param("originalName", request.getOriginalName())
                 .param("name", request.getCleanName())
                 .update(keyHolder);
+        return keyHolder.getKey().longValue();
     }
 
     public int update(MerchantUpdateRequest request, Long userId) {

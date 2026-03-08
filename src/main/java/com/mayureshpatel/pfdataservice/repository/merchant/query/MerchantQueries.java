@@ -34,6 +34,14 @@ public final class MerchantQueries {
             """;
 
     // language=SQL
+    public static final String FIND_BY_ORIGINAL_NAME_AND_USER_ID = """
+            select *
+            from merchants
+            where original_name = :originalName
+              and user_id = :userId
+            """;
+
+    // language=SQL
     public static final String FIND_MERCHANT_TOTALS = """
             select m.id as merchant_id,
                    m.original_name as merchant_original_name,

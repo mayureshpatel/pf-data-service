@@ -42,6 +42,7 @@ public class TransactionService {
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
     private final TransferMatcher transferMatcher;
+    private final MerchantService merchantService;
 
     public List<TransferSuggestionDto> findPotentialTransfers(Long userId) {
         LocalDate startDate = LocalDate.now().minusYears(5);
@@ -131,6 +132,8 @@ public class TransactionService {
             throw new AccessDeniedException("You do not own this account");
         }
 
+        Long merchantId = merchantService.findOrCreateMerchant(userId, request.getDescription());
+
         Transaction transaction = Transaction.builder()
                 .account(account)
                 .transactionDate(request.getTransactionDate())
@@ -138,7 +141,7 @@ public class TransactionService {
                 .amount(request.getAmount())
                 .description(request.getDescription())
                 .type(TransactionType.valueOf(request.getType()))
-                .merchant(Merchant.builder().id(request.getMerchantId()).build())
+                .merchant(Merchant.builder().id(merchantId).build())
                 .build();
 
         transaction = resolveCategory(userId, transaction, request.getCategoryId());
@@ -170,13 +173,15 @@ public class TransactionService {
         Account account = transaction.getAccount();
         Account accountAfterUndo = account.undoTransaction(transaction);
 
+        Long merchantId = merchantService.findOrCreateMerchant(userId, request.getDescription());
+
         Transaction updatedT = transaction.toBuilder()
                 .amount(request.getAmount())
                 .transactionDate(request.getTransactionDate())
                 .postDate(request.getPostDate())
                 .description(request.getDescription())
                 .type(TransactionType.valueOf(request.getType()))
-                .merchant(request.getMerchantId() != null ? Merchant.builder().id(request.getMerchantId()).build() : null)
+                .merchant(Merchant.builder().id(merchantId).build())
                 .build();
 
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());

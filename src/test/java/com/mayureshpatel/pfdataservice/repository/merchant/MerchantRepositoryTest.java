@@ -120,10 +120,11 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = repository.insert(request);
+            Long id = repository.insert(request);
 
             // Assert
-            assertEquals(1, rows);
+            assertNotNull(id);
+            assertTrue(id > 0);
             List<Merchant> all = repository.findAllByUserId(USER_1);
             assertTrue(all.stream().anyMatch(m -> m.getCleanName().equals("New Shop")));
         }
