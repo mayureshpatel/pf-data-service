@@ -19,69 +19,69 @@ public class TransactionSpecification {
         List<String> conditions = new ArrayList<>();
         Map<String, Object> parameters = new HashMap<>();
 
-        // Always filter by User ID (Security) - join with accounts table
-        conditions.add("a.user_id = :userId");
+        // filter by user id; users can only access their own transactions
+        conditions.add("accounts.user_id = :userId");
         parameters.put("userId", userId);
 
         if (filter != null) {
             if (filter.accountId() != null) {
-                conditions.add("t.account_id = :accountId");
+                conditions.add("transactions.account_id = :accountId");
                 parameters.put("accountId", filter.accountId());
             }
 
             if (filter.type() != null) {
                 if (filter.type() == TransactionType.TRANSFER) {
-                    conditions.add("t.type IN ('TRANSFER', 'TRANSFER_IN', 'TRANSFER_OUT')");
+                    conditions.add("transactions.type IN ('TRANSFER', 'TRANSFER_IN', 'TRANSFER_OUT')");
                 } else {
-                    conditions.add("t.type = :type");
+                    conditions.add("transactions.type = :type");
                     parameters.put("type", filter.type().name());
                 }
             }
 
             if (filter.description() != null && !filter.description().isBlank()) {
-                conditions.add("LOWER(t.description) LIKE :description ESCAPE '\\'");
+                conditions.add("LOWER(transactions.description) LIKE :description ESCAPE '\\'");
                 parameters.put("description", "%" + escapeLike(filter.description().toLowerCase()) + "%");
             }
 
             if (filter.categoryName() != null && !filter.categoryName().isBlank()) {
                 if ("null".equalsIgnoreCase(filter.categoryName())) {
-                    conditions.add("t.category_id IS NULL");
+                    conditions.add("transactions.category_id IS NULL");
                 } else {
-                    conditions.add("LOWER(c.name) LIKE :categoryName ESCAPE '\\'");
+                    conditions.add("LOWER(categories.name) LIKE :categoryName ESCAPE '\\'");
                     parameters.put("categoryName", "%" + escapeLike(filter.categoryName().toLowerCase()) + "%");
                 }
             }
 
-            if (filter.vendorName() != null && !filter.vendorName().isBlank()) {
-                conditions.add("LOWER(m.clean_name) LIKE :vendorName ESCAPE '\\'");
-                parameters.put("vendorName", "%" + escapeLike(filter.vendorName().toLowerCase()) + "%");
+            if (filter.merchantCleanName() != null && !filter.merchantCleanName().isBlank()) {
+                conditions.add("LOWER(merchants.clean_name) LIKE :merchantCleanName ESCAPE '\\'");
+                parameters.put("merchantCleanName", "%" + escapeLike(filter.merchantCleanName().toLowerCase()) + "%");
             }
 
             if (filter.minAmount() != null) {
-                conditions.add("t.amount >= :minAmount");
+                conditions.add("transactions.amount >= :minAmount");
                 parameters.put("minAmount", filter.minAmount());
             }
 
             if (filter.maxAmount() != null) {
-                conditions.add("t.amount <= :maxAmount");
+                conditions.add("transactions.amount <= :maxAmount");
                 parameters.put("maxAmount", filter.maxAmount());
             }
 
             if (filter.startDate() != null) {
-                conditions.add("t.date >= :startDate");
+                conditions.add("transactions.date >= :startDate");
                 parameters.put("startDate", filter.startDate());
             }
 
             if (filter.endDate() != null) {
-                conditions.add("t.date <= :endDate");
+                conditions.add("transactions.date <= :endDate");
                 parameters.put("endDate", filter.endDate());
             }
         }
 
-        // Always filter out deleted transactions
-        conditions.add("t.deleted_at IS NULL");
+        // always filter out deleted transactions
+        conditions.add("transactions.deleted_at IS NULL");
 
-        String whereClause = String.join(" AND ", conditions);
+        String whereClause = String.join(" and ", conditions);
         return new FilterResult(whereClause, parameters);
     }
 
@@ -99,7 +99,7 @@ public class TransactionSpecification {
             TransactionType type,
             String description,
             String categoryName,
-            String vendorName,
+            String merchantCleanName,
             BigDecimal minAmount,
             BigDecimal maxAmount,
             LocalDate startDate,

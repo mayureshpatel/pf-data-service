@@ -244,15 +244,6 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         });
     }
 
-    public long countByIdInAndAccount_User_Id(List<Long> ids, Long userId) {
-        if (ids == null || ids.isEmpty()) return 0;
-        return findAllById(userId, ids).stream()
-                .filter(t -> t.getAccount() != null
-                        && t.getAccount().getUserId() != null
-                        && userId.equals(t.getAccount().getUserId()))
-                .count();
-    }
-
     public BigDecimal getNetFlowAfterDate(Long accountId, LocalDate date) {
         return jdbcClient.sql(TransactionQueries.GET_NET_FLOW_AFTER_DATE)
                 .param("accountId", accountId)
@@ -271,33 +262,33 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     public Page<Transaction> findAll(TransactionSpecification.FilterResult filter, Pageable pageable) {
-        String baseFrom = "FROM transactions t " +
+        String baseFrom = "from transactions " +
                 TransactionQueries.ENRICHED_JOINS + " " +
-                "WHERE " + filter.whereClause();
+                "where " + filter.whereClause();
 
-        long total = jdbcClient.sql("SELECT COUNT(*) " + baseFrom)
+        long total = jdbcClient.sql("select count(*) " + baseFrom)
                 .params(filter.parameters())
                 .query(Long.class)
                 .single();
 
-        String sortClause = " ORDER BY t.date DESC";
+        String sortClause = " order by transactions.date desc";
         if (pageable.getSort().isSorted()) {
             Sort.Order order = pageable.getSort().iterator().next();
             String col = switch (order.getProperty()) {
-                case "date" -> "t.date";
-                case "description" -> "t.description";
-                case "merchant.cleanName" -> "m.clean_name";
-                case "category.name" -> "c.name";
-                case "amount" -> "t.amount";
-                case "type" -> "t.type";
-                default -> "t.date";
+                case "date" -> "transactions.date";
+                case "description" -> "transactions.description";
+                case "merchant.cleanName" -> "merchants.clean_name";
+                case "category.name" -> "categories.name";
+                case "amount" -> "transactions.amount";
+                case "type" -> "transactions.type";
+                default -> "transactions.date";
             };
-            String direction = order.getDirection().isAscending() ? "ASC" : "DESC";
-            sortClause = " ORDER BY " + col + " " + direction;
+            String direction = order.getDirection().isAscending() ? "asc" : "desc";
+            sortClause = " order by " + col + " " + direction;
         }
 
-        String pageSql = "SELECT " + TransactionQueries.ENRICHED_COLUMNS + " " + baseFrom + sortClause +
-                " LIMIT :limit OFFSET :offset";
+        String pageSql = "select " + TransactionQueries.ENRICHED_COLUMNS + " " + baseFrom + sortClause +
+                " limit :limit offset :offset";
 
         Map<String, Object> params = new HashMap<>(filter.parameters());
         params.put("limit", pageable.getPageSize());
