@@ -49,6 +49,11 @@ public class CapitalOneCsvParser implements TransactionParser {
     }
 
     @Override
+    public boolean isCreditCard() {
+        return true;
+    }
+
+    @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
 
@@ -103,7 +108,7 @@ public class CapitalOneCsvParser implements TransactionParser {
                 .build();
 
         BigDecimal netAmount = calculateNetAmount(csvRecord);
-        transaction = configureTransactionTypeAndAmount(transaction, netAmount);
+        transaction = configureCreditCardTransactionTypeAndAmount(transaction, netAmount);
 
         return transaction;
     }
@@ -117,6 +122,6 @@ public class CapitalOneCsvParser implements TransactionParser {
     private BigDecimal calculateNetAmount(CSVRecord csvRecord) {
         BigDecimal credit = parseAmount(csvRecord, HEADER_CREDIT);
         BigDecimal debit = parseAmount(csvRecord, HEADER_DEBIT);
-        return credit.subtract(debit);
+        return debit.subtract(credit);
     }
 }

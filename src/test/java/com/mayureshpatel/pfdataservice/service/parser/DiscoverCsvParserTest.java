@@ -63,8 +63,8 @@ class DiscoverCsvParserTest {
         }
 
         @Test
-        @DisplayName("should parse positive amount as INCOME")
-        void parse_positiveAmount_returnsIncomeTransaction() {
+        @DisplayName("should parse positive amount as EXPENSE for credit card")
+        void parse_positiveAmount_returnsExpenseTransaction() {
             String csv = "Trans. Date,Description,Amount\n" +
                     "1/15/2025,Starbucks,25.00\n";
 
@@ -75,14 +75,14 @@ class DiscoverCsvParserTest {
 
             assertThat(result).hasSize(1);
             Transaction t = result.get(0);
-            assertThat(t.getType()).isEqualTo(TransactionType.INCOME);
+            assertThat(t.getType()).isEqualTo(TransactionType.EXPENSE);
             assertThat(t.getAmount()).isEqualByComparingTo(new BigDecimal("25.00"));
             assertThat(t.getDescription()).isEqualTo("Starbucks");
         }
 
         @Test
-        @DisplayName("should parse negative amount as EXPENSE")
-        void parse_negativeAmount_returnsExpenseTransaction() {
+        @DisplayName("should parse negative amount as TRANSFER_IN for credit card")
+        void parse_negativeAmount_returnsTransferInTransaction() {
             String csv = "Trans. Date,Description,Amount\n" +
                     "1/2/2025,INTERNET PAYMENT - THANK YOU,-843.00\n";
 
@@ -93,7 +93,7 @@ class DiscoverCsvParserTest {
 
             assertThat(result).hasSize(1);
             Transaction t = result.get(0);
-            assertThat(t.getType()).isEqualTo(TransactionType.EXPENSE);
+            assertThat(t.getType()).isEqualTo(TransactionType.TRANSFER_IN);
             assertThat(t.getAmount()).isEqualByComparingTo(new BigDecimal("843.00"));
         }
 

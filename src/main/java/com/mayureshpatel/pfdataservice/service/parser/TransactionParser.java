@@ -62,6 +62,39 @@ public interface TransactionParser {
     }
 
     /**
+     * Configures the transaction type and amount based on the net amount for credit card accounts.
+     * Positive amounts are treated as expenses (charges), negative amounts as transfers in (payments).
+     *
+     * @param transaction the transaction to configure
+     * @param netAmount   the net amount of the transaction
+     * @return a new transaction with type and amount configured
+     */
+    default Transaction configureCreditCardTransactionTypeAndAmount(Transaction transaction, BigDecimal netAmount) {
+        if (netAmount.compareTo(BigDecimal.ZERO) >= 0) {
+            // Charges are positive in Discover/CapitalOne(debit-credit)
+            return transaction.toBuilder()
+                    .type(TransactionType.EXPENSE)
+                    .amount(netAmount)
+                    .build();
+        } else {
+            // Payments are negative in Discover/CapitalOne(debit-credit)
+            return transaction.toBuilder()
+                    .type(TransactionType.TRANSFER_IN)
+                    .amount(netAmount.abs())
+                    .build();
+        }
+    }
+
+    /**
+     * Indicates if this parser is for a credit card account.
+     *
+     * @return true if it's a credit card account, false otherwise
+     */
+    default boolean isCreditCard() {
+        return false;
+    }
+
+    /**
      * Parses an amount string from a CSV record into a {@link BigDecimal}.
      *
      * @param csvRecord the CSV record containing the amount

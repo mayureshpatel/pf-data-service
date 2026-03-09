@@ -50,6 +50,11 @@ public class DiscoverCsvParser implements TransactionParser {
     }
 
     @Override
+    public boolean isCreditCard() {
+        return true;
+    }
+
+    @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
         try {
@@ -106,7 +111,7 @@ public class DiscoverCsvParser implements TransactionParser {
                 .build();
 
         BigDecimal rawAmount = parseAmount(csvRecord, HEADER_AMOUNT);
-        transaction = configureTransactionTypeAndAmount(transaction, rawAmount);
+        transaction = configureCreditCardTransactionTypeAndAmount(transaction, rawAmount);
 
         return transaction;
     }

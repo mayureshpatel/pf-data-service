@@ -38,9 +38,9 @@ class CapitalOneCsvParserTest {
     class ValidCsvTests {
 
         @Test
-        @DisplayName("should return EXPENSE when debit > 0 and credit is empty (net = credit - debit < 0)")
+        @DisplayName("should return EXPENSE when debit > 0 and credit is empty (net = debit - credit > 0)")
         void parse_debitOnly_returnsExpense() {
-            // net = 0 - 50 = -50 → EXPENSE
+            // net = 50 - 0 = 50 → EXPENSE
             String csv = "Transaction Date,Description,Debit,Credit\n" +
                     "2025-01-15,Coffee Shop,50.00,\n";
 
@@ -57,9 +57,9 @@ class CapitalOneCsvParserTest {
         }
 
         @Test
-        @DisplayName("should return INCOME when credit > 0 and debit is empty (net = credit - debit > 0)")
-        void parse_creditOnly_returnsIncome() {
-            // net = 1000 - 0 = 1000 → INCOME
+        @DisplayName("should return TRANSFER_IN when credit > 0 and debit is empty (net = debit - credit < 0)")
+        void parse_creditOnly_returnsTransferIn() {
+            // net = 0 - 1000 = -1000 → TRANSFER_IN
             String csv = "Transaction Date,Description,Debit,Credit\n" +
                     "2025-01-20,Paycheck,,1000.00\n";
 
@@ -70,7 +70,7 @@ class CapitalOneCsvParserTest {
 
             assertThat(result).hasSize(1);
             Transaction t = result.get(0);
-            assertThat(t.getType()).isEqualTo(TransactionType.INCOME);
+            assertThat(t.getType()).isEqualTo(TransactionType.TRANSFER_IN);
             assertThat(t.getAmount()).isEqualByComparingTo(new BigDecimal("1000.00"));
         }
 
