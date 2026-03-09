@@ -116,6 +116,61 @@ class SynovusCsvParserTest {
 
             assertThat(result).hasSize(2);
         }
+
+        @Test
+        @DisplayName("should parse the new Synovus format with quotes, metadata and footer")
+        void parse_newFormat_parsesCorrectly() {
+            String csv = "\"Plus Checking\",\"*******0744\"\n" +
+                    "\"Balance as of 12/04/2025\",\"9499.150000\"\n" +
+                    "\"Date\",\"Account\",\"Account Number\",\"Account Type\",\"Description\",\"Category\",\"Credit\",\"Debit\"\n" +
+                    "\"11/28/2025\",\"Plus Checking\",\"*******0744\",\"Plus Checking\",\"GM-GMC DIVISION\",\"Income\",\"2914.46\",\"\"\n" +
+                    "\"11/26/2025\",\"Plus Checking\",\"*******0744\",\"Plus Checking\",\"PAPER STMT FEE\",\"Fees\",\"\",\"-2.00\"\n" +
+                    "\"\",\"\",\"\",\"\",\"Totals:\",\"9 items\",\"5826.86\",\"-4979.96\"\n";
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).getDescription()).isEqualTo("GM-GMC DIVISION");
+            assertThat(result.get(1).getDescription()).isEqualTo("PAPER STMT FEE");
+            assertThat(result.get(1).getType()).isEqualTo(TransactionType.EXPENSE);
+            assertThat(result.get(1).getAmount()).isEqualByComparingTo(new BigDecimal("2.00"));
+        }
+
+        @Test
+        @DisplayName("should parse tab-separated Synovus format correctly")
+        void parse_tabSeparated_parsesCorrectly() {
+            String tsv = "Plus Checking\t*******0744\t\t\t\t\t\n" +
+                    "Balance as of 12/04/2025\t9499.15\t\t\t\t\t\n" +
+                    "Date\tAccount\tAccount Number\tAccount Type\tDescription\tCategory\tCredit\tDebit\n" +
+                    "11/28/25\tPlus Checking\t*******0744\tPlus Checking\tGM-GMC\tIncome\t2914.46\t\n";
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(tsv))) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getDescription()).isEqualTo("GM-GMC");
+            assertThat(result.get(0).getAmount()).isEqualByComparingTo(new BigDecimal("2914.46"));
+        }
+
+        @Test
+        @DisplayName("should handle Byte Order Mark (BOM) at start of file")
+        void parse_withBOM_parsesCorrectly() {
+            String csv = "\uFEFFDate,Description,Credit,Debit\n" +
+                    "1/01/2025,BOM Test,100.00,0\n";
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getDescription()).isEqualTo("BOM Test");
+        }
     }
 
     @Nested

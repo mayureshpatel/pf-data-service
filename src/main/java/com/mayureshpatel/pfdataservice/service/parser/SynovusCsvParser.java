@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.service.parser;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -27,7 +28,7 @@ public class SynovusCsvParser implements TransactionParser {
     private static final String HEADER_DEBIT = "Debit";
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = new DateTimeFormatterBuilder()
-            .appendPattern("[M/d/yyyy][MM/dd/yyyy][MMdd/yyyy]")
+            .appendPattern("[M/d/yyyy][MM/dd/yyyy][MMdd/yyyy][M/d/yy][MM/dd/yy]")
             .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
             .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
             .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
@@ -49,9 +50,53 @@ public class SynovusCsvParser implements TransactionParser {
 
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+        if (inputStream == null) {
+            throw new NullPointerException("InputStream cannot be null");
+        }
         try {
-            CSVParser csvParser = CSV_FORMAT.parse(reader);
+            // Read until we find the header row starting with "Date"
+            BufferedReader lineReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            String line;
+            StringBuilder csvContent = new StringBuilder();
+            boolean headerFound = false;
+            boolean isTabSeparated = false;
+
+            while ((line = lineReader.readLine()) != null) {
+                if (line.startsWith("\uFEFF")) {
+                    line = line.substring(1);
+                }
+                String trimmedLine = line.trim();
+                if (!headerFound) {
+                    // Check if line starts with Date (handling potential quotes or BOM)
+                    // We remove leading quotes to check for "Date"
+                    String headerCheck = trimmedLine.replace("\"", "");
+                    if (headerCheck.toLowerCase().startsWith("date")) {
+                        headerFound = true;
+                        isTabSeparated = line.contains("\t");
+                        csvContent.append(line).append("\n");
+                    }
+                    continue;
+                }
+                // Skip the totals footer
+                if (trimmedLine.contains("Totals:")) {
+                    continue;
+                }
+                csvContent.append(line).append("\n");
+            }
+
+            if (!headerFound) {
+                throw new CsvParsingException("Could not find header row starting with 'Date'");
+            }
+
+            CSVFormat format = isTabSeparated ? CSVFormat.TDF.builder()
+                    .setHeader()
+                    .setSkipHeaderRecord(true)
+                    .setIgnoreHeaderCase(true)
+                    .setTrim(true)
+                    .setIgnoreSurroundingSpaces(true)
+                    .get() : CSV_FORMAT;
+
+            CSVParser csvParser = format.parse(new java.io.StringReader(csvContent.toString()));
             java.util.List<Transaction> transactions = new java.util.ArrayList<>();
             java.util.List<String> errors = new java.util.ArrayList<>();
 
@@ -65,12 +110,7 @@ public class SynovusCsvParser implements TransactionParser {
                 }
             }
 
-            try {
-                csvParser.close();
-                reader.close();
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to close CSV parser resources", e);
-            }
+            csvParser.close();
 
             if (!errors.isEmpty()) {
                 throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", errors));
@@ -80,10 +120,6 @@ public class SynovusCsvParser implements TransactionParser {
         } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
             throw e;
         } catch (Exception e) {
-            try {
-                reader.close();
-            } catch (Exception ignored) {
-            }
             throw new RuntimeException("Failed to parse Synovus CSV", e);
         }
     }
@@ -98,6 +134,9 @@ public class SynovusCsvParser implements TransactionParser {
         Transaction transaction = Transaction.builder()
                 .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_TIME_FORMATTER))
                 .description(csvRecord.get(HEADER_DESCRIPTION))
+                .merchant(com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
+                        .originalName(csvRecord.get(HEADER_DESCRIPTION))
+                        .build())
                 .build();
 
         BigDecimal netAmount = calculateNetAmount(csvRecord);
