@@ -62,7 +62,10 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
         }
         if (availableColumns.contains(safePrefix + "transaction_date")) {
             builder.transactionDate(getOffsetDateTime(rs, safePrefix + "transaction_date"));
+        } else if (availableColumns.contains(safePrefix + "date")) {
+            builder.transactionDate(getOffsetDateTime(rs, safePrefix + "date"));
         }
+
         if (availableColumns.contains(safePrefix + "post_date")) {
             builder.postDate(getOffsetDateTime(rs, safePrefix + "post_date"));
         }

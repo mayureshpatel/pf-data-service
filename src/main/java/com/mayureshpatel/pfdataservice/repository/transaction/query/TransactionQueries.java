@@ -89,14 +89,11 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String FIND_BY_USER_ID = """
-            select transactions.*
-            from transactions
-            join accounts on transactions.account_id = accounts.id
-            where accounts.user_id = :userId
-              and transactions.deleted_at is null
-            order by transactions.date desc
-            """;
+    public static final String FIND_BY_USER_ID = "select " + ENRICHED_COLUMNS +
+            " from transactions " + ENRICHED_JOINS +
+            " where accounts.user_id = :userId" +
+            "   and transactions.deleted_at is null" +
+            " order by transactions.date desc";
 
     // language=SQL
     public static final String FIND_BY_ACCOUNT_ID_AND_DATE_AND_AMOUNT_AND_DESCRIPTION_AND_TYPE = """
@@ -270,16 +267,13 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String FIND_RECENT_NON_TRANSFER = """
-            select transactions.*
-            from transactions
-            join accounts on transactions.account_id = accounts.id
-            where accounts.user_id = :userId
-              and transactions.date >= :startDate
-              and transactions.type not in ('TRANSFER_IN', 'TRANSFER_OUT', 'TRANSFER')
-              and transactions.deleted_at is null
-            order by transactions.date desc
-            """;
+    public static final String FIND_RECENT_NON_TRANSFER = "select " + ENRICHED_COLUMNS +
+            " from transactions " + ENRICHED_JOINS +
+            " where accounts.user_id = :userId" +
+            "   and transactions.date >= :startDate" +
+            "   and transactions.type not in ('TRANSFER_IN', 'TRANSFER_OUT', 'TRANSFER')" +
+            "   and transactions.deleted_at is null" +
+            " order by transactions.date desc";
 
     // language=SQL
     public static final String FIND_ALL_BY_IDS = """
@@ -305,16 +299,13 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String FIND_EXPENSES_SINCE = """
-            select transactions.*
-            from transactions
-            join accounts on transactions.account_id = accounts.id
-            where accounts.user_id = :userId
-              and transactions.date >= :startDate
-              and transactions.type = 'EXPENSE'
-              and transactions.deleted_at is null
-            order by transactions.date desc
-            """;
+    public static final String FIND_EXPENSES_SINCE = "select " + ENRICHED_COLUMNS +
+            " from transactions " + ENRICHED_JOINS +
+            " where accounts.user_id = :userId" +
+            "   and transactions.date >= :startDate" +
+            "   and transactions.type = 'EXPENSE'" +
+            "   and transactions.deleted_at is null" +
+            " order by transactions.date desc";
 
     // language=SQL
     public static final String GET_UNCATEGORIZED_EXPENSE_TOTALS = """
