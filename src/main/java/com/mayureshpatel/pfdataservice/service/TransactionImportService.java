@@ -5,12 +5,12 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
-import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
@@ -23,6 +23,7 @@ import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Set;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -51,6 +49,7 @@ public class TransactionImportService {
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
     private final MerchantService merchantService;
+    private final TransactionImportService self;
 
     @Autowired
     public TransactionImportService(TransactionRepository transactionRepository,
@@ -60,15 +59,17 @@ public class TransactionImportService {
                                     TransactionParserFactory parserFactory,
                                     TransactionCategorizer categorizer,
                                     CategoryRuleRepository categoryRuleRepository,
-                                    MerchantService merchantService) {
+                                    MerchantService merchantService,
+                                    @Lazy TransactionImportService self) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.categoryRepository = categoryRepository;
-        this.categoryRuleRepository = categoryRuleRepository;
         this.fileImportHistoryRepository = fileImportHistoryRepository;
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
+        this.categoryRuleRepository = categoryRuleRepository;
         this.merchantService = merchantService;
+        this.self = self;
     }
 
     @Transactional(readOnly = true)
@@ -116,6 +117,15 @@ public class TransactionImportService {
     }
 
     @Transactional
+    public int saveBulkTransactions(Long userId, List<SaveTransactionRequest> requests) {
+        int totalSaved = 0;
+        for (SaveTransactionRequest req : requests) {
+            totalSaved += self.saveTransactions(userId, req.accountId(), req.transactions(), req.fileName(), req.fileHash());
+        }
+        return totalSaved;
+    }
+
+    @Transactional
     public int saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash) {
         log.info("Saving {} transactions for User: {}, Account ID: {}", approvedDtos.size(), userId, accountId);
 
@@ -144,8 +154,8 @@ public class TransactionImportService {
         List<Transaction> existingTransactions = transactionRepository.findExistingForDuplicateCheck(accountId, earliest, latest);
 
         Set<String> existingSignatures = existingTransactions.stream()
-            .map(t -> String.format("%s_%s_%s_%s", t.getTransactionDate(), t.getAmount().stripTrailingZeros(), t.getDescription(), t.getType().name()))
-            .collect(Collectors.toSet());
+                .map(t -> String.format("%s_%s_%s_%s", t.getTransactionDate(), t.getAmount().stripTrailingZeros(), t.getDescription(), t.getType().name()))
+                .collect(Collectors.toSet());
 
         List<TransactionCreateRequest> uniqueTransactions = new ArrayList<>();
         Set<String> batchSignatures = new java.util.HashSet<>();
@@ -160,9 +170,9 @@ public class TransactionImportService {
             if (!existsInDb && !existsInBatch) {
                 Long merchantId = merchantMap.get(dto.description());
                 if (merchantId == null) {
-                     // Fallback for edge cases
-                     merchantId = merchantService.findOrCreateMerchant(userId, dto.description());
-                     merchantMap.put(dto.description(), merchantId);
+                    // Fallback for edge cases
+                    merchantId = merchantService.findOrCreateMerchant(userId, dto.description());
+                    merchantMap.put(dto.description(), merchantId);
                 }
                 TransactionCreateRequest t = mapToEntity(dto)
                         .toBuilder()
