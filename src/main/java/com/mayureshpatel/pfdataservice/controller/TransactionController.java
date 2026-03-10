@@ -60,4 +60,13 @@ public class TransactionController {
 
         return ResponseEntity.ok("Successfully saved " + count + " transactions.");
     }
+
+    @PostMapping("/transactions/bulk")
+    public ResponseEntity<String> saveBulkTransactions(
+            @RequestBody @Valid List<SaveTransactionRequest> requests,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        int count = transactionImportService.saveBulkTransactions(userDetails.getId(), requests);
+        return ResponseEntity.ok("Successfully saved " + count + " transactions.");
+    }
 }

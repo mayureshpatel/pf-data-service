@@ -12,8 +12,10 @@ public record SaveTransactionRequest(
 
         @NotBlank(message = "File name cannot be blank")
         String fileName,
-
+        
         @NotBlank(message = "File hash cannot be blank")
-        String fileHash
+        String fileHash,
+        
+        Long accountId
 ) {
 }

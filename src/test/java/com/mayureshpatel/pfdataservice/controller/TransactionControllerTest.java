@@ -111,7 +111,7 @@ class TransactionControllerTest extends BaseControllerTest {
                     .description("Test")
                     .amount(new BigDecimal("10.00"))
                     .build();
-            SaveTransactionRequest request = new SaveTransactionRequest(List.of(transaction), "test.csv", "hash123");
+            SaveTransactionRequest request = new SaveTransactionRequest(List.of(transaction), "test.csv", "hash123", 10L);
 
             when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq("test.csv"), eq("hash123")))
                     .thenReturn(1);
@@ -131,7 +131,7 @@ class TransactionControllerTest extends BaseControllerTest {
         @DisplayName("POST /transactions should return 400 Bad Request when validation fails")
         void saveTransactions_shouldReturn400OnInvalidInput() throws Exception {
             // Arrange - empty transactions list
-            SaveTransactionRequest request = new SaveTransactionRequest(Collections.emptyList(), "", "");
+            SaveTransactionRequest request = new SaveTransactionRequest(Collections.emptyList(), "", "", 10L);
 
             // Act & Assert
             mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", ACCOUNT_ID)
@@ -148,7 +148,7 @@ class TransactionControllerTest extends BaseControllerTest {
         @WithCustomMockUser(id = 999L)
         void saveTransactions_shouldReturn403WhenNotOwner() throws Exception {
             // Arrange
-            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().build()), "test.csv", "hash");
+            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().build()), "test.csv", "hash", 10L);
             when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
 
             // Act & Assert
