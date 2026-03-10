@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -233,6 +235,47 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should throw error for insecure deleteById")
         void shouldThrowOnInsecureDelete() {
             assertThrows(UnsupportedOperationException.class, () -> transactionRepository.deleteById(1001L));
+        }
+
+        @Test
+        @DisplayName("should insert multiple transactions dynamically in batches")
+        void shouldInsertAll() {
+            // arrange
+            List<TransactionCreateRequest> requests = new ArrayList<>();
+            int totalRecordsToInsert = 1050; // Tests that chunking (500 limit) works properly
+            
+            for (int i = 0; i < totalRecordsToInsert; i++) {
+                requests.add(TransactionCreateRequest.builder()
+                        .accountId(1L)
+                        .amount(new BigDecimal("10.50"))
+                        .transactionDate(OffsetDateTime.now(ZoneOffset.UTC))
+                        .postDate(OffsetDateTime.now(ZoneOffset.UTC))
+                        .description("Batch Insert " + i)
+                        .type(TransactionType.EXPENSE.name())
+                        .build());
+            }
+
+            long beforeCount = transactionRepository.count();
+
+            // act
+            int inserted = transactionRepository.insertAll(requests);
+
+            // assert & verify
+            assertEquals(totalRecordsToInsert, inserted);
+            assertEquals(beforeCount + totalRecordsToInsert, transactionRepository.count());
+        }
+
+        @Test
+        @DisplayName("should handle empty list on insertAll without failing")
+        void shouldHandleEmptyInsertAll() {
+            // arrange
+            List<TransactionCreateRequest> requests = List.of();
+
+            // act
+            int inserted = transactionRepository.insertAll(requests);
+
+            // assert & verify
+            assertEquals(0, inserted);
         }
     }
 }

@@ -130,9 +130,54 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     public Integer insertAll(List<TransactionCreateRequest> requestList) {
-        return requestList.stream()
-                .map(this::insert)
-                .mapToInt(Integer::intValue).sum();
+        if (requestList == null || requestList.isEmpty()) {
+            return 0;
+        }
+
+        int totalInserted = 0;
+        int batchSize = 500;
+
+        for (int i = 0; i < requestList.size(); i += batchSize) {
+            int toIndex = Math.min(i + batchSize, requestList.size());
+            List<TransactionCreateRequest> chunk = requestList.subList(i, toIndex);
+            totalInserted += insertChunk(chunk);
+        }
+
+        return totalInserted;
+    }
+
+    private int insertChunk(List<TransactionCreateRequest> chunk) {
+        StringBuilder sql = new StringBuilder("""
+            insert into transactions
+                (amount, date, post_date, description, merchant_id, type, account_id, category_id, created_at, updated_at)
+            values
+            """);
+
+        Map<String, Object> params = new HashMap<>();
+
+        for (int i = 0; i < chunk.size(); i++) {
+            TransactionCreateRequest req = chunk.get(i);
+            
+            sql.append(String.format("( :amount_%d, :date_%d, :postDate_%d, :description_%d, :merchantId_%d, :type_%d, :accountId_%d, :categoryId_%d, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP )", 
+                i, i, i, i, i, i, i, i));
+            
+            if (i < chunk.size() - 1) {
+                sql.append(",\n");
+            }
+
+            params.put("amount_" + i, req.getAmount());
+            params.put("date_" + i, req.getTransactionDate());
+            params.put("postDate_" + i, req.getPostDate());
+            params.put("description_" + i, req.getDescription());
+            params.put("merchantId_" + i, req.getMerchantId());
+            params.put("type_" + i, req.getType());
+            params.put("accountId_" + i, req.getAccountId());
+            params.put("categoryId_" + i, req.getCategoryId());
+        }
+
+        return jdbcClient.sql(sql.toString())
+                .params(params)
+                .update();
     }
 
     public Integer updateAll(Long userId, List<Transaction> requestList) {
