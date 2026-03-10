@@ -41,7 +41,7 @@ public class Account {
     public Account applyTransaction(TransactionCreateRequest transaction) {
         BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
         return this.toBuilder()
-                .currentBalance(balance.add(transaction.getAmount()))
+                .currentBalance(balance.add(transaction.getNetChange()))
                 .build();
     }
 
@@ -55,7 +55,7 @@ public class Account {
     public Account undoTransaction(TransactionCreateRequest transaction) {
         BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
         return this.toBuilder()
-                .currentBalance(balance.subtract(transaction.getAmount()))
+                .currentBalance(balance.subtract(transaction.getNetChange()))
                 .build();
     }
 }

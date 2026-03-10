@@ -40,4 +40,26 @@ public class TransactionCreateRequest {
 
     @Positive(message = "Merchant ID must be a positive number.")
     private final Long merchantId;
+
+    /**
+     * Calculates the net change this transaction applies to an account balance.
+     * INCOME/TRANSFER_IN is positive, EXPENSE/TRANSFER_OUT is negative.
+     *
+     * @return the net change
+     */
+    public BigDecimal getNetChange() {
+        if (amount == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if ("ADJUSTMENT".equals(type)) {
+            return amount;
+        }
+
+        if ("INCOME".equals(type) || "TRANSFER_IN".equals(type)) {
+            return amount.abs();
+        }
+
+        return amount.abs().negate();
+    }
 }

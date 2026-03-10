@@ -155,11 +155,12 @@ class AccountTest {
     class ApplyTransactionDtoTests {
 
         @Test
-        @DisplayName("applyTransaction (DTO) should add amount to balance")
-        void applyTransactionDto_shouldAddAmount() {
+        @DisplayName("applyTransaction (DTO) should handle INCOME correctly")
+        void applyTransactionDto_shouldAddIncome() {
             // Arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
@@ -171,11 +172,29 @@ class AccountTest {
         }
 
         @Test
+        @DisplayName("applyTransaction (DTO) should handle EXPENSE correctly")
+        void applyTransactionDto_shouldSubtractExpense() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .type("EXPENSE")
+                    .amount(new BigDecimal("25.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.applyTransaction(request);
+
+            // Assert
+            assertEquals(new BigDecimal("75.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
         @DisplayName("applyTransaction (DTO) should handle null balance")
         void applyTransactionDto_shouldHandleNullBalance() {
             // Arrange
             Account account = Account.builder().currentBalance(null).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
@@ -192,11 +211,12 @@ class AccountTest {
     class UndoTransactionDtoTests {
 
         @Test
-        @DisplayName("undoTransaction (DTO) should subtract amount from balance")
-        void undoTransactionDto_shouldSubtractAmount() {
+        @DisplayName("undoTransaction (DTO) should reverse INCOME correctly")
+        void undoTransactionDto_shouldSubtractIncome() {
             // Arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
@@ -208,11 +228,29 @@ class AccountTest {
         }
 
         @Test
+        @DisplayName("undoTransaction (DTO) should reverse EXPENSE correctly")
+        void undoTransactionDto_shouldAddExpense() {
+            // Arrange
+            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .type("EXPENSE")
+                    .amount(new BigDecimal("25.00"))
+                    .build();
+
+            // Act
+            Account updatedAccount = account.undoTransaction(request);
+
+            // Assert
+            assertEquals(new BigDecimal("125.00"), updatedAccount.getCurrentBalance());
+        }
+
+        @Test
         @DisplayName("undoTransaction (DTO) should handle null balance")
         void undoTransactionDto_shouldHandleNullBalance() {
             // Arrange
             Account account = Account.builder().currentBalance(null).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
