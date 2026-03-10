@@ -7,6 +7,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class MerchantService {
@@ -18,6 +22,32 @@ public class MerchantService {
         return merchantRepository.findByOriginalNameAndUserId(description, userId)
                 .map(Merchant::getId)
                 .orElseGet(() -> createMerchant(userId, description));
+    }
+
+    @Transactional
+    public Map<String, Long> findOrCreateMerchants(Long userId, List<String> descriptions) {
+        if (descriptions == null || descriptions.isEmpty()) {
+            return Map.of();
+        }
+        
+        List<String> distinctDescriptions = descriptions.stream().distinct().toList();
+        
+        List<Merchant> existingMerchants = merchantRepository.findAllByOriginalNamesAndUserId(distinctDescriptions, userId);
+        
+        Map<String, Long> merchantMap = existingMerchants.stream()
+                .collect(Collectors.toMap(Merchant::getOriginalName, Merchant::getId));
+                
+        List<MerchantCreateRequest> missingMerchants = distinctDescriptions.stream()
+                .filter(desc -> !merchantMap.containsKey(desc))
+                .map(desc -> MerchantCreateRequest.builder()
+                        .userId(userId)
+                        .originalName(desc)
+                        .cleanName("")
+                        .build())
+                .toList();
+                
+        merchantRepository.insertAllAndReturn(missingMerchants).forEach(m -> merchantMap.put(m.getOriginalName(), m.getId()));
+        return merchantMap;
     }
 
     private Long createMerchant(Long userId, String description) {

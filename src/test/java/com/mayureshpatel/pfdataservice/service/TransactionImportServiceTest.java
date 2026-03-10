@@ -33,6 +33,8 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -185,8 +187,8 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), anyString())).thenReturn(Optional.empty());
-            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Test"))).thenReturn(1001L);
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
+            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
 
             // Act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), "file.csv", "hash");
@@ -209,8 +211,8 @@ class TransactionImportServiceTest {
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
-            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("D1"))).thenReturn(1001L);
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
+            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
             // Act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null);
@@ -242,8 +244,8 @@ class TransactionImportServiceTest {
             // fileName is null case
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
-            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(false);
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("T"))).thenReturn(1001L);
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
+            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("T", 1001L));
 
             importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash");
             verify(fileImportHistoryRepository, never()).save(any());
@@ -277,7 +279,12 @@ class TransactionImportServiceTest {
             TransactionDto dto = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(anyLong(), any(), any(), anyString(), any())).thenReturn(true);
+            
+            Transaction mockExisting = Transaction.builder()
+                .transactionDate(dto.date()).amount(dto.amount()).description(dto.description()).type(TransactionType.INCOME)
+                .build();
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of(mockExisting));
+            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
             // Act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);

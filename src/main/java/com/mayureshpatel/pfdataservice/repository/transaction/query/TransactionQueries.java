@@ -107,6 +107,15 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
+    public static final String FIND_EXISTING_FOR_DUPLICATE_CHECK = """
+            select *
+            from transactions
+            where account_id = :accountId
+              and date >= :startDate
+              and date <= :endDate
+            """;
+
+    // language=SQL
     public static final String INSERT = """
             insert into transactions
                 (amount, date, post_date, description, merchant_id, type, account_id, category_id, created_at, updated_at)

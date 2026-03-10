@@ -99,6 +99,15 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .optional().isPresent();
     }
 
+    public List<Transaction> findExistingForDuplicateCheck(Long accountId, OffsetDateTime startDate, OffsetDateTime endDate) {
+        return jdbcClient.sql(TransactionQueries.FIND_EXISTING_FOR_DUPLICATE_CHECK)
+                .param("accountId", accountId)
+                .param("startDate", startDate)
+                .param("endDate", endDate)
+                .query(rowMapper)
+                .list();
+    }
+
     public int insert(TransactionCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 

@@ -63,6 +63,17 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .optional();
     }
 
+    public List<Merchant> findAllByOriginalNamesAndUserId(List<String> originalNames, Long userId) {
+        if (originalNames == null || originalNames.isEmpty()) {
+            return List.of();
+        }
+        return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_ORIGINAL_NAMES_AND_USER_ID)
+                .param("originalNames", originalNames)
+                .param("userId", userId)
+                .query(rowMapper)
+                .list();
+    }
+
     public List<MerchantBreakdownDto> findMerchantTotals(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_TOTALS)
                 .param("userId", userId)
@@ -80,6 +91,22 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .param("name", request.getCleanName())
                 .update(keyHolder);
         return keyHolder.getKey().longValue();
+    }
+
+    public List<Merchant> insertAllAndReturn(List<MerchantCreateRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+
+        return requests.stream().map(req -> {
+            Long id = insert(req);
+            return Merchant.builder()
+                .id(id)
+                .userId(req.getUserId())
+                .originalName(req.getOriginalName())
+                .cleanName(req.getCleanName())
+                .build();
+        }).toList();
     }
 
     public int update(MerchantUpdateRequest request, Long userId) {

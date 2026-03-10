@@ -10,6 +10,7 @@ import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
@@ -28,9 +29,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -124,29 +131,46 @@ public class TransactionImportService {
             throw new DuplicateImportException("This file has already been imported.");
         }
 
+        if (approvedDtos == null || approvedDtos.isEmpty()) {
+            return 0;
+        }
+
+        OffsetDateTime earliest = approvedDtos.stream().map(TransactionDto::date).min(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
+        OffsetDateTime latest = approvedDtos.stream().map(TransactionDto::date).max(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
+
+        List<String> incomingDescriptions = approvedDtos.stream().map(TransactionDto::description).toList();
+        Map<String, Long> merchantMap = merchantService.findOrCreateMerchants(userId, incomingDescriptions);
+
+        List<Transaction> existingTransactions = transactionRepository.findExistingForDuplicateCheck(accountId, earliest, latest);
+
+        Set<String> existingSignatures = existingTransactions.stream()
+            .map(t -> String.format("%s_%s_%s_%s", t.getTransactionDate(), t.getAmount().stripTrailingZeros(), t.getDescription(), t.getType().name()))
+            .collect(Collectors.toSet());
+
         List<TransactionCreateRequest> uniqueTransactions = new ArrayList<>();
+        Set<String> batchSignatures = new java.util.HashSet<>();
         int duplicateCount = 0;
 
         for (TransactionDto dto : approvedDtos) {
-            boolean existsInDb = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
-                    accountId, dto.date(), dto.amount(), dto.description(), dto.type()
-            );
+            String signature = String.format("%s_%s_%s_%s", dto.date(), dto.amount().stripTrailingZeros(), dto.description(), dto.type().name());
 
-            boolean existsInBatch = uniqueTransactions.stream().anyMatch(t ->
-                    t.getTransactionDate().equals(dto.date()) &&
-                            t.getAmount().compareTo(dto.amount()) == 0 &&
-                            t.getDescription().equals(dto.description()) &&
-                            Objects.equals(t.getType(), dto.type().name())
-            );
+            boolean existsInDb = existingSignatures.contains(signature);
+            boolean existsInBatch = batchSignatures.contains(signature);
 
             if (!existsInDb && !existsInBatch) {
-                Long merchantId = merchantService.findOrCreateMerchant(userId, dto.description());
+                Long merchantId = merchantMap.get(dto.description());
+                if (merchantId == null) {
+                     // Fallback for edge cases
+                     merchantId = merchantService.findOrCreateMerchant(userId, dto.description());
+                     merchantMap.put(dto.description(), merchantId);
+                }
                 TransactionCreateRequest t = mapToEntity(dto)
                         .toBuilder()
                         .accountId(account.getId())
                         .merchantId(merchantId)
                         .build();
                 uniqueTransactions.add(t);
+                batchSignatures.add(signature);
             } else {
                 duplicateCount++;
                 if (log.isTraceEnabled()) {
