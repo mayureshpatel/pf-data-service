@@ -26,10 +26,10 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.getCategoriesByUserId(userDetails.getId()));
     }
 
-    @GetMapping("/grouped")
-    public ResponseEntity<List<CategoryDto>> getCategoriesGrouped(
+    @GetMapping("/parents")
+    public ResponseEntity<List<CategoryDto>> getParentCategories(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(categoryService.getCategoriesGrouped(userDetails.getId()));
+        return ResponseEntity.ok(categoryService.getParentCategories(userDetails.getId()));
     }
 
     @GetMapping("/children")

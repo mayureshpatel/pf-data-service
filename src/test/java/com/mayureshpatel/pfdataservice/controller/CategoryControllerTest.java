@@ -77,13 +77,13 @@ class CategoryControllerTest extends BaseControllerTest {
         @DisplayName("GET /grouped should return grouped categories")
         void getCategoriesGrouped_shouldReturnList() throws Exception {
             // Arrange
-            when(categoryService.getCategoriesGrouped(USER_ID)).thenReturn(List.of());
+            when(categoryService.getParentCategories(USER_ID)).thenReturn(List.of());
 
             // Act & Assert
             mockMvc.perform(get("/api/v1/categories/grouped"))
                     .andExpect(status().isOk());
 
-            verify(categoryService).getCategoriesGrouped(USER_ID);
+            verify(categoryService).getParentCategories(USER_ID);
         }
     }
 

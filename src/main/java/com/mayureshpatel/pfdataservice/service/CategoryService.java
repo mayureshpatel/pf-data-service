@@ -107,7 +107,7 @@ public class CategoryService {
      * @return list of {@link CategoryDto} grouped by parent-child relationship
      */
     @Transactional(readOnly = true)
-    public List<CategoryDto> getCategoriesGrouped(Long userId) {
+    public List<CategoryDto> getParentCategories(Long userId) {
         return categoryRepository.findAllParentCategories(userId)
                 .stream().map(CategoryDtoMapper::toDto).toList();
     }
