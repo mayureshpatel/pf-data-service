@@ -335,6 +335,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 case "category.name" -> "categories.name";
                 case "amount" -> "transactions.amount";
                 case "type" -> "transactions.type";
+                case "account.name" -> "accounts.name";
                 default -> "transactions.date";
             };
             String direction = order.getDirection().isAscending() ? "asc" : "desc";
