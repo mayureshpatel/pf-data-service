@@ -34,7 +34,7 @@ class CategoryDtoTest {
         assertEquals(2L, dto.id());
         assertEquals(1L, dto.userId());
         assertEquals("Child", dto.name());
-        assertEquals(CategoryType.EXPENSE, dto.categoryType());
+        assertEquals(CategoryType.EXPENSE, dto.type());
         assertEquals(parent, dto.parent());
         assertEquals("child-icon", dto.icon());
         assertEquals("child-color", dto.color());
@@ -70,7 +70,7 @@ class CategoryDtoTest {
         }
 
         @Test
-        @DisplayName("should fail when categoryType is null")
+        @DisplayName("should fail when type is null")
         void shouldFailWhenCategoryTypeIsNull() {
             CategoryDto dto = new CategoryDto(1L, 1L, "Groceries", null, null, "icon", "color");
             Set<ConstraintViolation<CategoryDto>> violations = validator.validate(dto);

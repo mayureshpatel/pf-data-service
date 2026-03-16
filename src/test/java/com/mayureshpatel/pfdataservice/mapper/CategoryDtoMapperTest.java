@@ -64,7 +64,7 @@ class CategoryDtoMapperTest {
             assertEquals(category.getId(), dto.id());
             assertEquals(category.getUserId(), dto.userId());
             assertEquals(category.getName(), dto.name());
-            assertEquals(CategoryType.EXPENSE, dto.categoryType());
+            assertEquals(CategoryType.EXPENSE, dto.type());
             assertNull(dto.parent());
             assertEquals(category.getIcon(), dto.icon());
             assertEquals(category.getColor(), dto.color());
@@ -109,7 +109,7 @@ class CategoryDtoMapperTest {
 
             // Assert
             assertNotNull(dto);
-            assertNull(dto.categoryType());
+            assertNull(dto.type());
             assertNull(dto.userId());
             assertNull(dto.icon());
             assertNull(dto.color());

@@ -16,7 +16,7 @@ public record CategoryDto(
         String name,
 
         @NotNull(message = "Category type is required")
-        CategoryType categoryType,
+        CategoryType type,
 
         CategoryDto parent,
 
