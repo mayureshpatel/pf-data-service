@@ -23,7 +23,8 @@ public class CategoryController {
 
     @GetMapping
     public ResponseEntity<List<CategoryDto>> getCategories(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(categoryService.getCategoriesByUserId(userDetails.getId()));
+        List<CategoryDto> categories = categoryService.getCategoriesByUserId(userDetails.getId());
+        return ResponseEntity.ok(categories);
     }
 
     @GetMapping("/parents")

@@ -16,6 +16,12 @@ public final class CategoryDtoMapper {
         if (category.getParentId() != null && category.getParentId() != 0) {
             parentDto = CategoryDto.builder()
                     .id(category.getParentId())
+                    .userId(category.getParent().getUserId() != null ? category.getParent().getUserId() : null)
+                    .name(category.getParent().getName())
+                    .type(category.getParent().getType() != null ? CategoryType.fromValue(category.getParent().getType()) : null)
+                    .parent(null)
+                    .icon(category.getParent().getIcon() != null ? category.getParent().getIcon() : null)
+                    .color(category.getParent().getColor() != null ? category.getParent().getColor() : null)
                     .build();
         }
 

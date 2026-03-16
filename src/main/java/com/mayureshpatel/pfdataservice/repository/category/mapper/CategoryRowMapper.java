@@ -96,7 +96,7 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
             builder.parentId(parentId);
 
             if (parentId != 0) {
-                builder.parent(mapParent(parentId, rs, safePrefix + "parent", availableColumns));
+                builder.parent(mapParent(parentId, rs, safePrefix + "category_parent", availableColumns));
             }
         }
         if (hasColumn(safePrefix + "color", availableColumns)) {
