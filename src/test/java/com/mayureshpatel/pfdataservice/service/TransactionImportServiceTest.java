@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
@@ -34,7 +35,6 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -279,10 +279,10 @@ class TransactionImportServiceTest {
             TransactionDto dto = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            
+
             Transaction mockExisting = Transaction.builder()
-                .transactionDate(dto.date()).amount(dto.amount()).description(dto.description()).type(TransactionType.INCOME)
-                .build();
+                    .transactionDate(dto.date()).amount(dto.amount()).description(dto.description()).type(TransactionType.INCOME)
+                    .build();
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of(mockExisting));
             when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
@@ -310,6 +310,36 @@ class TransactionImportServiceTest {
 
             // Act & Assert
             assertThrows(AccessDeniedException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null));
+        }
+
+        @Test
+        @DisplayName("should map category ID from TransactionDto to TransactionCreateRequest")
+        void shouldMapCategoryId() {
+            // Arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
+            com.mayureshpatel.pfdataservice.dto.category.CategoryDto categoryDto = com.mayureshpatel.pfdataservice.dto.category.CategoryDto.builder().id(42L).name("Test Category").build();
+            TransactionDto dto = TransactionDto.builder()
+                    .description("Test")
+                    .amount(BigDecimal.TEN)
+                    .date(OffsetDateTime.now())
+                    .type(TransactionType.INCOME)
+                    .category(categoryDto)
+                    .build();
+
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
+            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
+
+            // Act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);
+
+            // Assert
+            verify(transactionRepository).insertAll(argThat(list -> {
+                if (list.size() != 1) return false;
+                TransactionCreateRequest req = list.get(0);
+                return Long.valueOf(42L).equals(req.getCategoryId());
+            }));
         }
     }
 }

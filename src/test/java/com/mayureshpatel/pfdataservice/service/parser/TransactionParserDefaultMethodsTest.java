@@ -57,12 +57,12 @@ class TransactionParserDefaultMethodsTest {
     @Test
     @DisplayName("configureTransactionTypeAndAmount() should handle positive and negative amounts")
     void configureTransactionTypeAndAmount_variousAmounts() {
-        Transaction income = new Transaction();
+        Transaction income = Transaction.builder().build();
         parser.configureTransactionTypeAndAmount(income, new BigDecimal("100.50"));
         assertThat(income.getType()).isEqualTo(TransactionType.INCOME);
         assertThat(income.getAmount()).isEqualByComparingTo("100.50");
 
-        Transaction expense = new Transaction();
+        Transaction expense = Transaction.builder().build();
         parser.configureTransactionTypeAndAmount(expense, new BigDecimal("-50.25"));
         assertThat(expense.getType()).isEqualTo(TransactionType.EXPENSE);
         assertThat(expense.getAmount()).isEqualByComparingTo("50.25");
@@ -77,9 +77,9 @@ class TransactionParserDefaultMethodsTest {
                 "invalid,x\n" +
                 ",x\n";
         CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv));
-        
+
         List<CSVRecord> records = csvParser.getRecords();
-        
+
         assertThat(parser.parseAmount(records.get(0), "Amount")).isEqualByComparingTo("1234.56");
         assertThat(parser.parseAmount(records.get(1), "Amount")).isEqualByComparingTo("-100.00");
         assertThat(parser.parseAmount(records.get(2), "Amount")).isEqualByComparingTo("0");

@@ -217,6 +217,7 @@ public class TransactionImportService {
                 .description(dto.description())
                 .amount(dto.amount())
                 .type(dto.type().name())
+                .categoryId(dto.category() != null ? dto.category().id() : null)
                 .build();
     }
 
