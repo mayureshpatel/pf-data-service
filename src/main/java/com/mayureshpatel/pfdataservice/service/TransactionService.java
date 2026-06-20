@@ -59,7 +59,7 @@ public class TransactionService {
                 throw new AccessDeniedException("Access denied for transaction " + t.getId());
             }
         }
-        
+
         if (transactions.size() != transactionIds.size()) {
             throw new ResourceNotFoundException("One or more transactions not found");
         }
@@ -81,7 +81,10 @@ public class TransactionService {
             Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
 
             updatedTransactions.add(updatedT);
-            accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+            int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+            if (updatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
         }
 
         transactionRepository.updateAll(userId, updatedTransactions);
@@ -117,7 +120,10 @@ public class TransactionService {
             Account account = accountRepository.findById(t.getAccount().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             Account accountAfterUndo = account.undoTransaction(t);
-            accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), account.getVersion());
+            int updatedRows = accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), account.getVersion());
+            if (updatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
         }
 
         transactionRepository.deleteAll(userId, transactions);
@@ -147,7 +153,10 @@ public class TransactionService {
         transaction = resolveCategory(userId, transaction, request.getCategoryId());
 
         Account finalAccount = account.applyTransaction(transaction);
-        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+        int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+        if (updatedRows == 0) {
+            throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+        }
 
         return transactionRepository.insert(transaction);
     }
@@ -187,7 +196,10 @@ public class TransactionService {
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());
 
         Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
-        accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+        int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+        if (updatedRows == 0) {
+            throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+        }
 
         return transactionRepository.update(userId, updatedT);
     }
@@ -233,7 +245,10 @@ public class TransactionService {
         }
 
         Account accountAfterUndo = transaction.getAccount().undoTransaction(transaction);
-        accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), transaction.getAccount().getVersion());
+        int updatedRows = accountRepository.updateBalance(userId, accountAfterUndo.getId(), accountAfterUndo.getCurrentBalance(), transaction.getAccount().getVersion());
+        if (updatedRows == 0) {
+            throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+        }
 
         transactionRepository.deleteById(transactionId, userId);
     }

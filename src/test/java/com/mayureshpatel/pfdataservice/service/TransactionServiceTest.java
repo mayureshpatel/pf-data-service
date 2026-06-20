@@ -62,6 +62,11 @@ class TransactionServiceTest {
     @InjectMocks
     private TransactionService transactionService;
 
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        lenient().when(accountRepository.updateBalance(anyLong(), anyLong(), any(), anyLong())).thenReturn(1);
+    }
+
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 10L;
     private static final Long TRANSACTION_ID = 100L;
@@ -101,7 +106,7 @@ class TransactionServiceTest {
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t1));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            
+
             // Act
             transactionService.markAsTransfer(USER_ID, List.of(1L));
 
@@ -119,7 +124,7 @@ class TransactionServiceTest {
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            
+
             // Act
             transactionService.markAsTransfer(USER_ID, List.of(1L));
 
@@ -197,7 +202,7 @@ class TransactionServiceTest {
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            
+
             // Act
             transactionService.deleteTransactions(USER_ID, List.of(1L));
 
@@ -253,6 +258,28 @@ class TransactionServiceTest {
             assertEquals(1, result);
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
             verify(transactionRepository).insert(any(Transaction.class));
+        }
+
+        @Test
+        @DisplayName("should throw OptimisticLockingFailureException if account balance update fails due to concurrency")
+        void shouldThrowOnOptimisticLockingFailure() {
+            // Arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong())).thenReturn(0);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("INCOME")
+                    .description("Test")
+                    .build();
+
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), any())).thenReturn(1001L);
+
+            // Act & Assert
+            assertThrows(org.springframework.dao.OptimisticLockingFailureException.class, () -> transactionService.createTransaction(USER_ID, request));
+            verify(transactionRepository, never()).insert(any(Transaction.class));
         }
 
         @Test
