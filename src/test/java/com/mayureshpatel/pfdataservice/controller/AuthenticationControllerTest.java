@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationRequest;
 import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
 import com.mayureshpatel.pfdataservice.dto.user.RegistrationRequest;
+import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -79,6 +80,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
     class RegisterTests {
 
         @Test
+        @WithCustomMockUser(roles = "ADMIN")
         @DisplayName("POST /register should return token on valid registration")
         void register_shouldReturnToken() throws Exception {
             // Arrange
@@ -107,6 +109,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         }
 
         @Test
+        @WithCustomMockUser(roles = "ADMIN")
         @DisplayName("POST /register should return 400 Bad Request on invalid email")
         void register_shouldReturn400OnInvalidEmail() throws Exception {
             // Arrange
