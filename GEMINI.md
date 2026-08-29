@@ -1,23 +1,24 @@
-# pf-data-service Instructions
+# Backend (`pf-data-service`) Instructions
 
-This document outlines the specific rules, commands, and structures for the Spring Boot backend service. It acts as an extension to the root `GEMINI.md` file.
+## Framework & Architecture
+- **Framework:** Modern Spring Boot (3.5.x).
+- **Layers:** Strictly follow the Controller -> Service -> Repository layer pattern.
+- **Data Access:** Use **Spring JDBC Client** exclusively in the Repository layer for data access control.
+- **Data Mapping:** Manually map objects; do **NOT** use mapper libraries (e.g., MapStruct). Use Lombok restrictively.
 
-## Build and Run Commands
-When modifying or interacting with the backend, utilize the following Maven commands:
-- **Build the project:** `mvn clean install`
-- **Run standard tests:** `mvn test`
+## Coding Standards & Documentation
+- **API Design:** REST API endpoints must use **kebab-case plural nouns** (e.g., `/api/v1/bank-accounts`).
+- **Database Schema:** All tables and columns must use **snake_case**.
+- **Imports:** Always optimize imports and remove unused ones.
+- **Javadoc:** Provide complete Javadoc at both the **class** and **method** levels explaining the "what" and "why".
+- **In-Code Comments:** All in-code comments must be entirely in **lowercase**.
 
-## Package Structure
-The project is a single-module application located under `src/main/java/com/mayureshpatel/pfdataservice`. Enforce the following package organization:
+## Error Handling & Logging
+- **Logging Strategy:** 
+	- `ERROR`: Use **ONLY** at the `@ExceptionHandler` level to prevent duplicate logs. Include full stack trace.
+	- `INFO/DEBUG/TRACE/WARN`: Use appropriately for context without breaking the flow.
 
-- **`aspect`**: Aspect-oriented programming logic.
-- **`config`**: Application configuration files and Spring `@Configuration` classes.
-- **`controller`**: REST API endpoints (following kebab-case plural nouns).
-- **`domain`**: Entities that strictly mirror database tables.
-- **`dto`**: Data Transfer Objects passed to and from the UI.
-- **`exception`**: Custom exceptions and `@ExceptionHandler` controllers.
-- **`filter`**: Interceptors and servlet filters.
-- **`mapper`**: Manual mapping logic between DTOs and Domain objects (Reminder: Do not use mapper libraries).
-- **`repository`**: Data access layer exclusively utilizing Spring JDBC Client.
-- **`security`**: Spring Security configurations.
-- **`service`**: Core business logic.
+## Testing (Backend)
+- **Tools:** JUnit5, Mockito, Testcontainers, AssertJ.
+- **Structure:** Follow the AAA pattern with exact lowercase comments: `// arrange`, `// act`, `// assert & verify`.
+- **Quality:** Use **PiTest** for mutation testing to validate test quality. Adhere to Test-Driven Development (TDD) for bugs.
