@@ -4,6 +4,8 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -30,7 +32,17 @@ public class UserService implements UserDetailsService {
         return this.repository.insert(user);
     }
 
-    public int update(User user) {
+    public int updateProfile(Long authenticatedUserId, String username, String email) {
+        User existing = repository.findById(authenticatedUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User updated = existing.toBuilder()
+                .username(username)
+                .email(email)
+                .build();
+        return repository.update(updated);
+    }
+
+    private int update(User user) {
         return this.repository.update(user);
     }
 
@@ -50,8 +62,8 @@ public class UserService implements UserDetailsService {
         return repository.existsById(id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public List<User> findAll() {
-
         return this.repository.findAll();
     }
 

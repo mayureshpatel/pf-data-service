@@ -8,7 +8,9 @@ import com.mayureshpatel.pfdataservice.repository.transaction.specification.Tran
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
+@Validated
 public class TransactionCrudController {
 
     private final TransactionService transactionService;
@@ -38,7 +41,7 @@ public class TransactionCrudController {
     @PostMapping("/mark-as-transfer")
     public ResponseEntity<Void> markAsTransfer(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody List<Long> transactionIds) {
+            @RequestBody @Size(max = 1000, message = "Cannot process more than 1000 items at once") List<Long> transactionIds) {
         transactionService.markAsTransfer(userDetails.getId(), transactionIds);
         return ResponseEntity.ok().build();
     }
@@ -97,14 +100,14 @@ public class TransactionCrudController {
     @PatchMapping("/bulk")
     public ResponseEntity<Integer> updateTransactionsBulk(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid List<TransactionUpdateRequest> requests) {
+            @RequestBody @Valid @Size(max = 1000, message = "Cannot process more than 1000 items at once") List<TransactionUpdateRequest> requests) {
         return ResponseEntity.ok(transactionService.updateTransactionsBulk(userDetails.getId(), requests));
     }
 
     @DeleteMapping("/bulk")
     public ResponseEntity<Void> deleteTransactionsBulk(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody List<Long> ids) {
+            @RequestBody @Size(max = 1000, message = "Cannot process more than 1000 items at once") List<Long> ids) {
         transactionService.deleteTransactions(userDetails.getId(), ids);
         return ResponseEntity.noContent().build();
     }

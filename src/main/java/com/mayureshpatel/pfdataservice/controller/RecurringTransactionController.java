@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.service.RecurringTransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,6 +42,7 @@ public class RecurringTransactionController {
     }
 
     @PutMapping
+    @PreAuthorize("@ss.isRecurringTransactionOwner(#request.id, principal)")
     public ResponseEntity<Integer> updateRecurringTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid RecurringTransactionUpdateRequest request) {
@@ -48,6 +50,7 @@ public class RecurringTransactionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.isRecurringTransactionOwner(#id, principal)")
     public ResponseEntity<Integer> deleteRecurringTransaction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {

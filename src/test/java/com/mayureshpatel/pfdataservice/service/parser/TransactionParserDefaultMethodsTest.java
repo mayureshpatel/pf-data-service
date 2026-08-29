@@ -58,14 +58,14 @@ class TransactionParserDefaultMethodsTest {
     @DisplayName("configureTransactionTypeAndAmount() should handle positive and negative amounts")
     void configureTransactionTypeAndAmount_variousAmounts() {
         Transaction income = Transaction.builder().build();
-        parser.configureTransactionTypeAndAmount(income, new BigDecimal("100.50"));
-        assertThat(income.getType()).isEqualTo(TransactionType.INCOME);
-        assertThat(income.getAmount()).isEqualByComparingTo("100.50");
+        Transaction updatedIncome = parser.configureTransactionTypeAndAmount(income, new BigDecimal("100.50"));
+        assertThat(updatedIncome.getType()).isEqualTo(TransactionType.INCOME);
+        assertThat(updatedIncome.getAmount()).isEqualByComparingTo("100.50");
 
         Transaction expense = Transaction.builder().build();
-        parser.configureTransactionTypeAndAmount(expense, new BigDecimal("-50.25"));
-        assertThat(expense.getType()).isEqualTo(TransactionType.EXPENSE);
-        assertThat(expense.getAmount()).isEqualByComparingTo("50.25");
+        Transaction updatedExpense = parser.configureTransactionTypeAndAmount(expense, new BigDecimal("-50.25"));
+        assertThat(updatedExpense.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(updatedExpense.getAmount()).isEqualByComparingTo("50.25");
     }
 
     @Test
@@ -82,7 +82,9 @@ class TransactionParserDefaultMethodsTest {
 
         assertThat(parser.parseAmount(records.get(0), "Amount")).isEqualByComparingTo("1234.56");
         assertThat(parser.parseAmount(records.get(1), "Amount")).isEqualByComparingTo("-100.00");
-        assertThat(parser.parseAmount(records.get(2), "Amount")).isEqualByComparingTo("0");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(records.get(2), "Amount"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid amount format");
         assertThat(parser.parseAmount(records.get(3), "Amount")).isEqualByComparingTo("0"); // Empty string case
         assertThat(parser.parseAmount(records.get(0), "NonExistent")).isEqualByComparingTo("0");
     }

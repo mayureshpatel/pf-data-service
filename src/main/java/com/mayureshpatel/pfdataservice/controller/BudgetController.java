@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.service.BudgetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,6 +61,7 @@ public class BudgetController {
     }
 
     @PutMapping
+    @PreAuthorize("@ss.isBudgetOwner(#request.id, principal)")
     public ResponseEntity<Integer> updateBudget(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid BudgetUpdateRequest request
@@ -68,6 +70,7 @@ public class BudgetController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@ss.isBudgetOwner(#id, principal)")
     public ResponseEntity<Void> deleteBudget(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {

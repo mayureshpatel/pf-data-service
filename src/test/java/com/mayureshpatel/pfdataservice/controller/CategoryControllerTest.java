@@ -70,17 +70,17 @@ class CategoryControllerTest extends BaseControllerTest {
     }
 
     @Nested
-    @DisplayName("getCategoriesGrouped")
-    class GetCategoriesGroupedTests {
+    @DisplayName("getParentCategories")
+    class GetParentCategoriesTests {
 
         @Test
-        @DisplayName("GET /grouped should return grouped categories")
-        void getCategoriesGrouped_shouldReturnList() throws Exception {
+        @DisplayName("GET /parents should return parent categories")
+        void getParentCategories_shouldReturnList() throws Exception {
             // Arrange
             when(categoryService.getParentCategories(USER_ID)).thenReturn(List.of());
 
             // Act & Assert
-            mockMvc.perform(get("/api/v1/categories/grouped"))
+            mockMvc.perform(get("/api/v1/categories/parents"))
                     .andExpect(status().isOk());
 
             verify(categoryService).getParentCategories(USER_ID);

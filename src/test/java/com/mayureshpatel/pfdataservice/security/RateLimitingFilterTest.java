@@ -76,4 +76,27 @@ class RateLimitingFilterTest {
         verify(filterChain, times(15)).doFilter(request, response);
         verify(response, never()).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
     }
+
+    @Test
+    @DisplayName("should use remote address and ignore X-Forwarded-For header")
+    void rateLimiter_usesRemoteAddr_ignoringXForwardedFor() throws Exception {
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");
+        when(request.getRemoteAddr()).thenReturn("192.168.1.1");
+        
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        when(response.getWriter()).thenReturn(pw);
+
+        for (int i = 0; i < 10; i++) {
+            when(request.getHeader("X-Forwarded-For")).thenReturn("10.0.0." + i);
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        
+        // 11th request from same remote address but different X-Forwarded-For
+        when(request.getHeader("X-Forwarded-For")).thenReturn("10.0.0.11");
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain, times(10)).doFilter(request, response);
+        verify(response).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+    }
 }
