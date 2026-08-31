@@ -7,6 +7,9 @@
 - **Data Mapping:** Manually map objects; do **NOT** use mapper libraries (e.g., MapStruct). Use Lombok restrictively.
 
 ## Coding Standards & Documentation
+- **Formatting:** Standard Java 4-space indentation. No formatter plugin (Spotless, Checkstyle,
+  etc.) is configured in `pom.xml` — this states the existing convention, not a new enforcement
+  tool.
 - **API Design:** REST API endpoints must use **kebab-case plural nouns** (e.g., `/api/v1/bank-accounts`).
 - **Database Schema:** All tables and columns must use **snake_case**.
 - **Imports:** Always optimize imports and remove unused ones.
