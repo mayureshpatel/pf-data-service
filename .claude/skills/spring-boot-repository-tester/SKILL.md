@@ -22,6 +22,22 @@ This skill guides the creation of robust integration tests for the repository la
 -   **Date Handling**: Use `OffsetDateTime` for all temporal fields to maintain consistency with the database's `TIMESTAMPTZ` columns.
 -   **BigDecimal Equality**: Use `compareTo(other) == 0` for `BigDecimal` assertions to avoid scale-related failures.
 
+## ✅ Validation Loop
+Don't consider a generated test finished until it's actually been run — a repository test that
+merely compiles proves nothing about the query it's supposed to cover. After writing or changing a
+test class:
+1. Run it in isolation: `./mvnw test -Dtest=<TestClassName>` from `pf-data-service/` (fast —
+   skips the full suite, which is what `verify.sh` runs and which can take a while).
+2. If it fails to compile: fix the compile error and re-run step 1. Don't guess at a second fix
+   before seeing whether the first one worked.
+3. If it compiles but fails: read the actual assertion failure (expected vs. actual), not just the
+   test name — a `BigDecimal` scale mismatch (see Technical Standards above) and a genuinely wrong
+   query produce different failure messages, and the fix is different for each.
+4. Repeat 1–3 until it passes. Only then is the test done — a green compile is not a green test.
+5. Before moving on, confirm it's asserting *behavior* (the right rows come back, in the right
+   order, with the right values) and not just that the call didn't throw — an empty-catch-block
+   test that merely doesn't crash isn't coverage.
+
 ## Reference Patterns
 
 -   **Base Class**: See [repository-base-gold-source.java](references/repository-base-gold-source.java).

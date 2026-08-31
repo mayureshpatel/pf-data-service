@@ -94,3 +94,7 @@ application*.yml.local
 .env
 .env.local
 .env.*.local
+
+### Python (harness scripts under scripts/) ###
+__pycache__/
+*.pyc
