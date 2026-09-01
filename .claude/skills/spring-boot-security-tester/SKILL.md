@@ -16,7 +16,7 @@ This skill guides the generation of unit tests for security-critical components.
     -   Use `@Nested` classes for logical grouping (e.g., `TokenLogic`, `OwnershipChecks`).
     -   For high-logic services, use fast POJO tests with `ReflectionTestUtils`.
     -   For record-based checks, use Mockito to verify repository interactions.
-    -   Follow the AAA pattern with `// Arrange`, `// Act`, `// Assert` comments.
+    -   Follow the AAA pattern with `// arrange`, `// act`, `// assert & verify` comments.
 5.  **Validate**: Run the tests and check JaCoCo coverage.
 
 ## Key Requirements

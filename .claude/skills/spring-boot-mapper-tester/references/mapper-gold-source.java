@@ -21,14 +21,14 @@ class MapperGoldStandardTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<AccountDtoMapper> constructor = AccountDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         AccountDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -39,17 +39,17 @@ class MapperGoldStandardTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             AccountDto result = AccountDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             Account account = Account.builder()
                     .id(1L)
                     .userId(100L)
@@ -60,10 +60,10 @@ class MapperGoldStandardTest {
                     .bankCode("CAPITAL_ONE")
                     .build();
 
-            // Act
+            // act
             AccountDto dto = AccountDtoMapper.toDto(account);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(account.getId(), dto.id());
             assertEquals(account.getName(), dto.name());
@@ -77,16 +77,16 @@ class MapperGoldStandardTest {
         @Test
         @DisplayName("should handle null optional fields")
         void toDto_shouldHandleNullOptionals() {
-            // Arrange
+            // arrange
             Account account = Account.builder()
                     .id(1L)
                     .name("Minimal Account")
                     .build();
 
-            // Act
+            // act
             AccountDto dto = AccountDtoMapper.toDto(account);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.user());
             assertNull(dto.type());

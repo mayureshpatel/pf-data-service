@@ -42,7 +42,7 @@ class ServiceGoldStandardTest {
         @Test
         @DisplayName("should create transaction when inputs are valid and owned")
         void shouldCreateSuccessfully() {
-            // Arrange
+            // arrange
             Long userId = 1L;
             Account account = Account.builder().id(10L).userId(userId).build();
             when(accountRepository.findById(10L)).thenReturn(Optional.of(account));
@@ -50,23 +50,23 @@ class ServiceGoldStandardTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(10L).amount(BigDecimal.TEN).type("INCOME").build();
 
-            // Act
+            // act
             transactionService.createTransaction(userId, request);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).insert(any(Transaction.class));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user doesn't own the account")
         void shouldFailOwnershipCheck() {
-            // Arrange
+            // arrange
             Long userId = 1L;
             Account otherAccount = Account.builder().id(10L).userId(999L).build();
             when(accountRepository.findById(10L)).thenReturn(Optional.of(otherAccount));
             TransactionCreateRequest request = TransactionCreateRequest.builder().accountId(10L).build();
 
-            // Act & Assert
+            // act & Assert
             assertThrows(AccessDeniedException.class, () -> transactionService.createTransaction(userId, request));
         }
     }

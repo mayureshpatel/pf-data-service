@@ -4,7 +4,7 @@ Service layers contain the core business logic and orchestration of the applicat
 
 ## 1. Core Principles
 - **Isolation via Mocking**: Use `@ExtendWith(MockitoExtension.class)` and `@Mock` to isolate the service from its dependencies (repositories, other services).
-- **AAA Pattern**: Every test method MUST follow the Arrange-Act-Assert pattern, with explicit comments (`// Arrange`, `// Act`, `// Assert`) for each section.
+- **AAA Pattern**: Every test method MUST follow the Arrange-Act-Assert pattern, with explicit comments (`// arrange`, `// act`, `// assert & verify`) for each section.
 - **Exhaustive Branch Coverage**: Services often have complex conditional logic (e.g., resolving categories, checking ownership). Test every path, including error scenarios.
 - **Transactional Verification**: While unit tests don't run in a real transaction, verify that the service calls the repository methods that modify state (insert, update, delete).
 

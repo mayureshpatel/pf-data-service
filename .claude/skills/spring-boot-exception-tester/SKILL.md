@@ -17,7 +17,7 @@ This skill guides the generation of unit tests for custom exception classes.
     -   Test every constructor explicitly.
     -   Verify message formatting for dynamic exceptions.
     -   Verify root cause preservation.
-    -   Follow the AAA pattern with `// Arrange`, `// Act`, `// Assert` comments.
+    -   Follow the AAA pattern with `// arrange`, `// act`, `// assert & verify` comments.
 5.  **Validate**: Run the tests and check JaCoCo coverage.
 
 ## Key Requirements

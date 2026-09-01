@@ -37,17 +37,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by type and user")
         void shouldFilterByType() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, TransactionType.INCOME, null, null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.getContent().stream().allMatch(t -> t.getType() == TransactionType.INCOME));
         }
@@ -55,17 +55,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by amount range")
         void shouldFilterByAmount() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, new BigDecimal("1000.00"), new BigDecimal("2000.00"), null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.getContent().stream().allMatch(t -> 
                 t.getAmount().compareTo(new BigDecimal("1000.00")) >= 0 && 
@@ -80,14 +80,14 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should calculate sum for date range and type")
         void shouldCalculateSum() {
-            // Arrange
+            // arrange
             OffsetDateTime start = LocalDate.of(2026, 3, 1).atStartOfDay().atOffset(ZoneOffset.UTC);
             OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
 
-            // Act
+            // act
             BigDecimal sum = transactionRepository.getSumByDateRange(USER_ID, start, end, TransactionType.INCOME);
 
-            // Assert
+            // assert & verify
             // Based on baseline: 1002 is 500.00 INCOME
             assertEquals(0, new BigDecimal("500.00").compareTo(sum));
         }
@@ -95,14 +95,14 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find category totals")
         void shouldFindCategoryTotals() {
-            // Arrange
+            // arrange
             OffsetDateTime start = LocalDate.of(2026, 3, 1).atStartOfDay().atOffset(ZoneOffset.UTC);
             OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
 
-            // Act
+            // act
             List<CategoryBreakdownDto> result = transactionRepository.findCategoryTotals(USER_ID, start, end);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.stream().anyMatch(b -> b.category().name().equals("Dining Out")));
         }
@@ -110,10 +110,10 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find monthly sums for cash flow trend")
         void shouldFindMonthlySums() {
-            // Act
+            // act
             List<Object[]> result = transactionRepository.findMonthlySums(USER_ID, LocalDate.of(2025, 9, 1));
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             // result is [year, month, type, sum]
             Object[] first = result.get(0);
@@ -127,10 +127,10 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should get count by category")
         void shouldGetCountByCategory() {
-            // Act
+            // act
             List<CategoryTransactionsDto> result = transactionRepository.getCountByCategory(USER_ID);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.stream().anyMatch(c -> c.category().name().equals("Rent")));
         }
@@ -138,15 +138,15 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should check if transaction exists by specific fields")
         void shouldCheckExistence() {
-            // Arrange
+            // arrange
             OffsetDateTime date = OffsetDateTime.parse("2026-03-01T10:00:00Z");
             
-            // Act
+            // act
             boolean exists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
                     1L, date, new BigDecimal("25.50"), "Morning Coffee", TransactionType.EXPENSE
             );
 
-            // Assert
+            // assert & verify
             assertTrue(exists);
         }
     }

@@ -20,13 +20,13 @@ class ExceptionGoldStandardTest {
         @Test
         @DisplayName("should create exception with simple message")
         void shouldCreateWithSimpleMessage() {
-            // Arrange
+            // arrange
             String message = "Resource not found";
 
-            // Act
+            // act
             ResourceNotFoundException exception = new ResourceNotFoundException(message);
 
-            // Assert
+            // assert & verify
             assertEquals(message, exception.getMessage());
         }
     }
@@ -38,16 +38,16 @@ class ExceptionGoldStandardTest {
         @Test
         @DisplayName("should create exception with formatted message")
         void shouldCreateWithFormattedMessage() {
-            // Arrange
+            // arrange
             String resourceName = "User";
             String fieldName = "email";
             String fieldValue = "test@example.com";
             String expectedMessage = "User not found with email: 'test@example.com'";
 
-            // Act
+            // act
             ResourceNotFoundException exception = new ResourceNotFoundException(resourceName, fieldName, fieldValue);
 
-            // Assert
+            // assert & verify
             assertEquals(expectedMessage, exception.getMessage());
         }
     }
@@ -59,14 +59,14 @@ class ExceptionGoldStandardTest {
         @Test
         @DisplayName("should create exception with message and cause")
         void shouldCreateWithMessageAndCause() {
-            // Arrange
+            // arrange
             String message = "Unexpected error";
             Throwable cause = new IllegalStateException("Internal failure");
 
-            // Act
+            // act
             ResourceNotFoundException exception = new ResourceNotFoundException(message, cause);
 
-            // Assert
+            // assert & verify
             assertEquals(message, exception.getMessage());
             assertEquals(cause, exception.getCause());
         }

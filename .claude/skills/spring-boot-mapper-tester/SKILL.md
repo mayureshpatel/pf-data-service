@@ -18,7 +18,7 @@ This skill guides the generation of unit tests for mapper classes that bridge do
     -   Test full mapping with all source fields populated.
     -   Test partial mapping with optional fields as `null`.
     -   Use reflection to test the private constructor.
-    -   Follow the AAA pattern with `// Arrange`, `// Act`, `// Assert` comments.
+    -   Follow the AAA pattern with `// arrange`, `// act`, `// assert & verify` comments.
     -   Use `@Nested` classes for logical organization.
 5.  **Validate**: Run the tests and check JaCoCo coverage.
 

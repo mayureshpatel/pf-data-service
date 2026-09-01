@@ -18,7 +18,7 @@ This skill guides the generation of unit tests for service layer classes.
     -   Use `@InjectMocks` for the target service.
     -   Create exhaustive tests for every public method using `@Nested` classes.
     -   Test happy paths, error paths (Exceptions), and edge cases (nulls, empty lists).
-    -   Explicitly label sections with `// Arrange`, `// Act`, and `// Assert`.
+    -   Explicitly label sections with `// arrange`, `// act`, and `// assert & verify`.
 5.  **Validate**: Run the tests and check JaCoCo coverage.
 
 ## Key Requirements

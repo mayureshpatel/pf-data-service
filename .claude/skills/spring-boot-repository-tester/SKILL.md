@@ -13,7 +13,7 @@ This skill guides the creation of robust integration tests for the repository la
 2.  **Configuration**: Use `@Import` to pull in the specific Repository class being tested.
 3.  **Data Baseline**: Tests run against `test-data-baseline.sql`. Familiarize yourself with the existing users (ID 1, 2), accounts, and categories in that file before writing assertions.
 4.  **Pattern**: Group tests by functionality (e.g., Filtering, Aggregations, CRUD) using JUnit 5 `@Nested` classes.
-5.  **AAA Pattern**: Explicitly label `// Arrange`, `// Act`, and `// Assert` sections in every test.
+5.  **AAA Pattern**: Explicitly label `// arrange`, `// act`, and `// assert & verify` sections in every test.
 
 ## Technical Standards
 

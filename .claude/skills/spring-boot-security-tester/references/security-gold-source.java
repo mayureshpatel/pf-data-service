@@ -38,14 +38,14 @@ class SecurityGoldStandardTest {
         @Test
         @DisplayName("should generate and parse valid token")
         void shouldGenerateAndParse() {
-            // Arrange
+            // arrange
             UserDetails user = User.builder().username("test").password("p").authorities(Collections.emptyList()).build();
 
-            // Act
+            // act
             String token = jwtService.generateToken(user);
             String extracted = jwtService.extractUsername(token);
 
-            // Assert
+            // assert & verify
             assertEquals("test", extracted);
             assertTrue(jwtService.isTokenValid(token, user));
         }
@@ -53,27 +53,27 @@ class SecurityGoldStandardTest {
         @Test
         @DisplayName("should fail validation for incorrect user")
         void shouldFailForIncorrectUser() {
-            // Arrange
+            // arrange
             UserDetails user1 = User.builder().username("u1").password("p").authorities(Collections.emptyList()).build();
             UserDetails user2 = User.builder().username("u2").password("p").authorities(Collections.emptyList()).build();
             String token = jwtService.generateToken(user1);
 
-            // Act
+            // act
             boolean isValid = jwtService.isTokenValid(token, user2);
 
-            // Assert
+            // assert & verify
             assertFalse(isValid);
         }
 
         @Test
         @DisplayName("should throw on expired token")
         void shouldThrowOnExpired() {
-            // Arrange
+            // arrange
             ReflectionTestUtils.setField(jwtService, "jwtExpiration", -1000L);
             UserDetails user = User.builder().username("u").password("p").authorities(Collections.emptyList()).build();
             String token = jwtService.generateToken(user);
 
-            // Act & Assert
+            // act & Assert
             assertThrows(ExpiredJwtException.class, () -> jwtService.isTokenValid(token, user));
         }
     }

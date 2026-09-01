@@ -63,7 +63,7 @@ class DomainGoldStandardTest {
         @Test
         @DisplayName("applyTransaction should return a NEW instance with updated balance")
         void applyTransaction_shouldReturnNewInstance() {
-            // Arrange
+            // arrange
             Account original = Account.builder()
                     .currentBalance(new BigDecimal("100.00"))
                     .build();
@@ -72,10 +72,10 @@ class DomainGoldStandardTest {
                     .amount(new BigDecimal("50.00"))
                     .build();
 
-            // Act
+            // act
             Account updated = original.applyTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertNotSame(original, updated, "Should return a fresh instance");
             assertEquals(new BigDecimal("100.00"), original.getCurrentBalance(), "Original should remain unchanged");
             assertEquals(new BigDecimal("150.00"), updated.getCurrentBalance(), "New instance should have updated balance");
