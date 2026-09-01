@@ -22,3 +22,6 @@ This skill governs the creation of HTTP presentation layers (Controllers).
 
 ## 🛡️ Security
 Ensure endpoints are protected via `@PreAuthorize` where tenant isolation is required (e.g., `@PreAuthorize("@securityService.isAccountOwner(#accountId, principal)")`).
+
+## 📚 References
+- [Controller Gold-Source](references/controller-gold-source.java)

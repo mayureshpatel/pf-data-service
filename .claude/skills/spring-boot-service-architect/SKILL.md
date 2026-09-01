@@ -16,3 +16,6 @@ This skill dictates how to write robust, side-effect-free business logic in Spri
 1. **Validation**: Perform business rule validation (e.g., "Cannot delete an account with a non-zero balance").
 2. **Orchestration**: Call multiple repositories if necessary (e.g., fetching a Category before saving a Transaction).
 3. **Events**: Publish Spring `@DomainEvents` if side-effects are required (e.g., notifying the SnapshotService when a Transaction changes).
+
+## 📚 References
+- [Service Gold-Source](references/service-gold-source.java)

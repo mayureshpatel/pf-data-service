@@ -46,3 +46,4 @@ before writing anything non-trivial, but these are the parts easy to miss on a s
 
 ## 📚 References
 Agents must refer to the `references/` directory (if populated) for gold-standard implementations of batch inserts, paginated queries, and `pg_trgm` fuzzy searches.
+- [Repository Gold-Source](references/repository-gold-source.java)
