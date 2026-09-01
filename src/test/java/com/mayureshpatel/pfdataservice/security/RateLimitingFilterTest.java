@@ -78,6 +78,34 @@ class RateLimitingFilterTest {
     }
 
     @Test
+    @DisplayName("should give /register its own, tighter bucket, independent of other auth endpoints")
+    void registerEndpoint_hasIndependentTighterLimit() throws Exception {
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        when(response.getWriter()).thenReturn(pw);
+
+        // exhaust /authenticate's 10/min bucket first
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");
+        for (int i = 0; i < 10; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        verify(response, never()).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+
+        // /register from the same IP is still allowed -- independent bucket, not shared
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/register");
+        for (int i = 0; i < 5; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        verify(response, never()).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+
+        // register's bucket is tighter (5/min) -- the 6th request from the same IP is blocked
+        filter.doFilterInternal(request, response, filterChain);
+        verify(response).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+    }
+
+    @Test
     @DisplayName("should use remote address and ignore X-Forwarded-For header")
     void rateLimiter_usesRemoteAddr_ignoringXForwardedFor() throws Exception {
         when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");

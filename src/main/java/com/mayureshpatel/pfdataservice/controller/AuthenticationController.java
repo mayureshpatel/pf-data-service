@@ -12,17 +12,17 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Login and user-registration endpoints. Registration is admin-only ({@code #register} requires
- * {@code ROLE_ADMIN}) -- there is no public self-service sign-up flow.
+ * Login and user-registration endpoints. Both are public, unauthenticated endpoints -- self-service
+ * registration is open to anyone, guarded by {@code RegistrationRequest}'s honeypot field and a
+ * per-IP rate limit on {@code /register} specifically (see {@code RateLimitingFilter}).
  */
-@Tag(name = "Authentication", description = "Login and admin-only user registration")
+@Tag(name = "Authentication", description = "Login and self-service user registration")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -47,17 +47,17 @@ public class AuthenticationController {
     }
 
     /**
-     * Registers a new user. Restricted to administrators -- there is no self-service registration.
+     * Registers a new user. Public and self-service -- no authentication required to call it.
      *
      * @param request the new user's details
      * @return 201 with a token for the newly created user
      */
-    @Operation(summary = "Register a user", description = "Creates a new user account. Admin-only.")
+    @Operation(summary = "Register a user", description = "Creates a new user account. Public, self-service.")
     @ApiResponse(responseCode = "201", description = "User created, token returned")
-    @ApiResponse(responseCode = "403", description = "Forbidden -- caller is not an admin")
+    @ApiResponse(responseCode = "400", description = "Validation failed, or the honeypot field was filled")
     @ApiResponse(responseCode = "409", description = "Username or email already exists")
+    @ApiResponse(responseCode = "429", description = "Too many registration attempts from this IP")
     @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthenticationResponse> register(
             @Valid @RequestBody RegistrationRequest request
     ) {

@@ -3,7 +3,6 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationRequest;
 import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
 import com.mayureshpatel.pfdataservice.dto.user.RegistrationRequest;
-import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -80,10 +79,10 @@ class AuthenticationControllerTest extends BaseControllerTest {
     class RegisterTests {
 
         @Test
-        @WithCustomMockUser(roles = "ADMIN")
-        @DisplayName("POST /register should return token on valid registration")
-        void register_shouldReturnToken() throws Exception {
-            // Arrange
+        @DisplayName("POST /register should succeed for an anonymous, unauthenticated caller (PF-183)")
+        void register_anonymousCallerSucceeds() throws Exception {
+            // Arrange -- no @WithCustomMockUser here: this is the whole point of PF-183, an
+            // anonymous caller with no principal at all must be able to register.
             RegistrationRequest request = RegistrationRequest.builder()
                     .username("new_user")
                     .email("new@example.com")
@@ -109,7 +108,6 @@ class AuthenticationControllerTest extends BaseControllerTest {
         }
 
         @Test
-        @WithCustomMockUser(roles = "ADMIN")
         @DisplayName("POST /register should return 400 Bad Request on invalid email")
         void register_shouldReturn400OnInvalidEmail() throws Exception {
             // Arrange
@@ -126,6 +124,29 @@ class AuthenticationControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validationErrors[0].field").value("email"));
+        }
+
+        @Test
+        @DisplayName("POST /register should return 400 Bad Request when the honeypot field is filled")
+        void register_shouldReturn400OnHoneypotFilled() throws Exception {
+            // Arrange
+            RegistrationRequest request = RegistrationRequest.builder()
+                    .username("new_user")
+                    .email("new@example.com")
+                    .password("Pass123!@")
+                    .website("http://spam.example.com")
+                    .build();
+
+            when(registrationService.register(any(RegistrationRequest.class)))
+                    .thenThrow(new IllegalArgumentException("Registration failed. Please try again."));
+
+            // Act & Assert
+            mockMvc.perform(post("/api/v1/auth/register")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("Registration failed. Please try again."));
         }
     }
 

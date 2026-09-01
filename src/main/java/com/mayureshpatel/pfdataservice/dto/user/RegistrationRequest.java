@@ -28,4 +28,12 @@ public class RegistrationRequest {
             message = "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character")
     @ToString.Exclude
     private final String password;
+
+    /**
+     * Honeypot field. Rendered off-screen on the real registration form, where no human ever
+     * sees or fills it -- a value here means the caller is an unsophisticated bot rather than a
+     * real user, and the request is silently rejected. Not a validation-annotated field on
+     * purpose: a real user must never be able to trigger a message about it.
+     */
+    private final String website;
 }
