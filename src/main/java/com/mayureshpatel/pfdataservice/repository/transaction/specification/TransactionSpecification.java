@@ -73,8 +73,12 @@ public class TransactionSpecification {
             }
 
             if (filter.endDate() != null) {
-                conditions.add("transactions.date <= :endDate");
-                parameters.put("endDate", filter.endDate());
+                // exclusive upper bound on the day AFTER endDate, so the filter covers the whole
+                // end date rather than cutting off at midnight -- endDate is a LocalDate with no
+                // time component, and transactions.date is a timestamptz, so a literal `<= :endDate`
+                // silently excluded anything on the end date itself after 00:00:00.
+                conditions.add("transactions.date < :endDate");
+                parameters.put("endDate", filter.endDate().plusDays(1));
             }
         }
 
