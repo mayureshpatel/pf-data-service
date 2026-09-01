@@ -19,7 +19,7 @@ This skill guides the generation of unit tests for domain objects that map to th
     -   Test ID-based equality (`equals` and `hashCode`).
     -   Test all business methods with exhaustive branch coverage (including null scenarios).
     -   Verify immutability (ops return new instances).
-5.  **Validate**: Run the tests and check JaCoCo coverage.
+6.  **Validate**: Run the tests and check JaCoCo coverage.
 
 ## Key Requirements
 
