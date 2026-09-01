@@ -96,6 +96,43 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.BAD_REQUEST, "Database constraint violation. Please check your input data.", request);
     }
 
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ProblemDetail handleConstraintViolation(jakarta.validation.ConstraintViolationException ex, HttpServletRequest request) {
+        log.warn("Constraint Violation at {}: {}", request.getRequestURI(), ex.getMessage());
+
+        List<Map<String, String>> validationErrors = ex.getConstraintViolations()
+                .stream()
+                .map(violation -> Map.of(
+                        "field", violation.getPropertyPath().toString(),
+                        "message", violation.getMessage()))
+                .toList();
+
+        ProblemDetail problemDetail = createProblemDetail(HttpStatus.BAD_REQUEST, "Validation failed for one or more parameters", request);
+        problemDetail.setProperty("validationErrors", validationErrors);
+        return problemDetail;
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ProblemDetail handleMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Malformed Request Body at {}: {}", request.getRequestURI(), ex.getMessage());
+        return createProblemDetail(HttpStatus.BAD_REQUEST, "The request body is missing or malformed. Please check your JSON syntax.", request);
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ProblemDetail handleMissingRequestParameter(org.springframework.web.bind.MissingServletRequestParameterException ex, HttpServletRequest request) {
+        log.warn("Missing Request Parameter at {}: {}", request.getRequestURI(), ex.getMessage());
+        String detail = String.format("Required parameter '%s' is missing", ex.getParameterName());
+        return createProblemDetail(HttpStatus.BAD_REQUEST, detail, request);
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ProblemDetail handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        log.warn("Method Not Supported at {}: {}", request.getRequestURI(), ex.getMessage());
+        String supported = ex.getSupportedMethods() != null ? String.join(", ", ex.getSupportedMethods()) : "none";
+        String detail = String.format("Method '%s' is not supported for this endpoint. Supported methods: %s", ex.getMethod(), supported);
+        return createProblemDetail(HttpStatus.METHOD_NOT_ALLOWED, detail, request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleRuntimeException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception at {}: ", request.getRequestURI(), ex);

@@ -48,9 +48,9 @@ class TestGenerateValue(unittest.TestCase):
         self.assertGreaterEqual(parsed, self.start)
         self.assertLessEqual(parsed, self.end)
 
-    def test_type_is_credit_or_debit(self):
+    def test_type_is_income_or_expense(self):
         value = gmt.generate_value(col("type"), 1, None, None, self.start, self.end)
-        self.assertIn(value, ("CREDIT", "DEBIT"))
+        self.assertIn(value, ("EXPENSE", "INCOME"))
 
     def test_description_is_from_the_word_list(self):
         value = gmt.generate_value(col("description"), 1, None, None, self.start, self.end)

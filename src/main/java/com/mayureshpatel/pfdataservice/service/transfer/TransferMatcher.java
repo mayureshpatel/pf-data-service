@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,15 +16,23 @@ import java.util.Set;
 public class TransferMatcher {
 
     public List<TransferSuggestionDto> findMatches(List<Transaction> transactions) {
+        // the inner loop's early break below is only correct if transactions are ordered by
+        // date - it assumes daysDiff is non-decreasing as j increases. the real caller's query
+        // happens to sort that way, but nothing enforced it, so unsorted input silently dropped
+        // valid matches. sort defensively instead of relying on the caller's contract.
+        List<Transaction> sorted = transactions.stream()
+                .sorted(Comparator.comparing(Transaction::getTransactionDate))
+                .toList();
+
         List<TransferSuggestionDto> suggestions = new ArrayList<>();
         Set<Long> matchedIds = new HashSet<>();
 
-        for (int i = 0; i < transactions.size(); i++) {
-            Transaction t1 = transactions.get(i);
+        for (int i = 0; i < sorted.size(); i++) {
+            Transaction t1 = sorted.get(i);
             if (matchedIds.contains(t1.getId())) continue;
 
-            for (int j = i + 1; j < transactions.size(); j++) {
-                Transaction t2 = transactions.get(j);
+            for (int j = i + 1; j < sorted.size(); j++) {
+                Transaction t2 = sorted.get(j);
                 if (matchedIds.contains(t2.getId())) continue;
 
                 long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getTransactionDate(), t2.getTransactionDate()));

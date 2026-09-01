@@ -90,7 +90,10 @@ def generate_value(col, account_id, category_id, merchant_id, start_date, end_da
     if name == "description":
         return random.choice(DESCRIPTIONS)
     if name == "type":
-        return random.choice(["CREDIT", "DEBIT"])
+        # matches the real chk_transaction_type constraint (V25) -- EXPENSE/INCOME are the two
+        # everyday transaction types; TRANSFER* and ADJUSTMENT represent already-resolved
+        # transfers/manual corrections, not the kind of volume this generator is for.
+        return random.choices(["EXPENSE", "INCOME"], weights=[85, 15])[0]
     if name in ("created_at", "updated_at"):
         return None if col["nullable"] else "CURRENT_TIMESTAMP"
     if name == "deleted_at":

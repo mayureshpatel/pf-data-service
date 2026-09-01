@@ -1,5 +1,8 @@
 package com.mayureshpatel.pfdataservice.exception;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -7,19 +10,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DisplayName("GlobalExceptionHandler Unit Tests")
 class GlobalExceptionHandlerTest {
@@ -190,6 +199,71 @@ class GlobalExceptionHandlerTest {
             // Assert
             assertEquals(HttpStatus.BAD_REQUEST.value(), detail.getStatus());
             assertTrue(detail.getDetail().contains("Database constraint violation"));
+        }
+
+        @Test
+        @DisplayName("should handle ConstraintViolationException with field errors")
+        void handleConstraintViolation() {
+            // Arrange
+            ConstraintViolation<?> violation = mock(ConstraintViolation.class);
+            Path path = mock(Path.class);
+            when(path.toString()).thenReturn("month");
+            when(violation.getPropertyPath()).thenReturn(path);
+            when(violation.getMessage()).thenReturn("must be less than or equal to 12");
+            ConstraintViolationException ex = new ConstraintViolationException(Set.of(violation));
+
+            // Act
+            ProblemDetail detail = handler.handleConstraintViolation(ex, request);
+
+            // Assert
+            assertEquals(HttpStatus.BAD_REQUEST.value(), detail.getStatus());
+            assertEquals("Validation failed for one or more parameters", detail.getDetail());
+
+            List<Map<String, String>> errors = (List<Map<String, String>>) detail.getProperties().get("validationErrors");
+            assertNotNull(errors);
+            assertEquals(1, errors.size());
+            assertEquals("month", errors.get(0).get("field"));
+            assertEquals("must be less than or equal to 12", errors.get(0).get("message"));
+        }
+
+        @Test
+        @DisplayName("should handle HttpMessageNotReadableException")
+        void handleMessageNotReadable() {
+            // Act
+            ProblemDetail detail = handler.handleMessageNotReadable(new HttpMessageNotReadableException("bad json"), request);
+
+            // Assert
+            assertEquals(HttpStatus.BAD_REQUEST.value(), detail.getStatus());
+            assertTrue(detail.getDetail().contains("malformed"));
+        }
+
+        @Test
+        @DisplayName("should handle MissingServletRequestParameterException")
+        void handleMissingRequestParameter() {
+            // Arrange
+            MissingServletRequestParameterException ex = new MissingServletRequestParameterException("bankName", "String");
+
+            // Act
+            ProblemDetail detail = handler.handleMissingRequestParameter(ex, request);
+
+            // Assert
+            assertEquals(HttpStatus.BAD_REQUEST.value(), detail.getStatus());
+            assertTrue(detail.getDetail().contains("'bankName'"));
+        }
+
+        @Test
+        @DisplayName("should handle HttpRequestMethodNotSupportedException")
+        void handleMethodNotSupported() {
+            // Arrange
+            HttpRequestMethodNotSupportedException ex = new HttpRequestMethodNotSupportedException("POST", List.of("GET", "PUT"));
+
+            // Act
+            ProblemDetail detail = handler.handleMethodNotSupported(ex, request);
+
+            // Assert
+            assertEquals(HttpStatus.METHOD_NOT_ALLOWED.value(), detail.getStatus());
+            assertTrue(detail.getDetail().contains("'POST'"));
+            assertTrue(detail.getDetail().contains("GET, PUT"));
         }
 
         @Test
