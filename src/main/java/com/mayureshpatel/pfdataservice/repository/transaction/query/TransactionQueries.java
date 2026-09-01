@@ -381,6 +381,7 @@ public final class TransactionQueries {
             left join merchants on transactions.merchant_id = merchants.id
             where accounts.user_id = :userId
                 and transactions.deleted_at is null
+                and merchants.id is not null
             order by merchants.clean_name
             """;
 }

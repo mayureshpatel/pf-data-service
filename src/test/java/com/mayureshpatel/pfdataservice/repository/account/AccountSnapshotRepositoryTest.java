@@ -117,5 +117,26 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
         void shouldHandleNoIdDelete() {
             assertEquals(0, repository.delete(AccountSnapshot.builder().build()));
         }
+
+        @Test
+        @DisplayName("should delete snapshot by ID directly")
+        void shouldDeleteById() {
+            // Arrange
+            LocalDate date = LocalDate.of(2026, 7, 31);
+            AccountSnapshot snapshot = AccountSnapshot.builder()
+                    .accountId(ACCOUNT_1)
+                    .snapshotDate(date)
+                    .balance(new BigDecimal("300.00"))
+                    .build();
+            repository.insert(snapshot);
+            AccountSnapshot existing = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date).orElseThrow();
+
+            // Act
+            int rows = repository.deleteById(existing.getId());
+
+            // Assert
+            assertEquals(1, rows);
+            assertTrue(repository.findById(existing.getId()).isEmpty());
+        }
     }
 }

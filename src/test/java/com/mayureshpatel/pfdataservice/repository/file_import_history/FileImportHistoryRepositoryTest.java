@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.file_import_history;
 
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.dto.transaction.fileimport.FileImportCreateRequest;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
@@ -106,6 +107,27 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
             // Assert
             assertEquals(1, rows);
             assertTrue(repository.findById(id).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should save a file import history built from a domain object")
+        void shouldSave() {
+            // Arrange
+            FileImportHistory history = FileImportHistory.builder()
+                    .account(Account.builder().id(ACCOUNT_1).build())
+                    .fileHash("h5")
+                    .fileName("5.csv")
+                    .transactionCount(3)
+                    .build();
+
+            // Act
+            int rows = repository.save(history);
+
+            // Assert
+            assertEquals(1, rows);
+            FileImportHistory saved = repository.findByFileHash("h5").orElseThrow();
+            assertEquals("5.csv", saved.getFileName());
+            assertEquals(3, saved.getTransactionCount());
         }
     }
 }

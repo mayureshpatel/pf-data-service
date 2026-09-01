@@ -79,6 +79,49 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             assertFalse(result.isEmpty());
             assertTrue(result.stream().anyMatch(m -> m.getCleanName().contains("Whole")));
         }
+
+        @Test
+        @DisplayName("should find a user-scoped merchant by original name and user ID")
+        void shouldFindByOriginalNameAndUserId() {
+            // Act
+            Optional<Merchant> result = repository.findByOriginalNameAndUserId("LOCAL CAFE", USER_1);
+
+            // Assert
+            assertTrue(result.isPresent());
+            assertEquals("My Favorite Cafe", result.get().getCleanName());
+        }
+
+        @Test
+        @DisplayName("should not find a global merchant via findByOriginalNameAndUserId (user_id column doesn't match NULL)")
+        void shouldNotFindGlobalMerchantByOriginalNameAndUserId() {
+            // Act
+            Optional<Merchant> result = repository.findByOriginalNameAndUserId("WHOLEFDS 1234", USER_1);
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should find merchants matching any of a list of original names, scoped to user")
+        void shouldFindAllByOriginalNamesAndUserId() {
+            // Act
+            List<Merchant> result = repository.findAllByOriginalNamesAndUserId(
+                    List.of("LOCAL CAFE", "SOME NAME THAT DOES NOT EXIST"), USER_1);
+
+            // Assert
+            assertEquals(1, result.size());
+            assertEquals("LOCAL CAFE", result.get(0).getOriginalName());
+        }
+
+        @Test
+        @DisplayName("should return empty list for an empty original names list")
+        void shouldReturnEmptyForEmptyOriginalNamesList() {
+            // Act
+            List<Merchant> result = repository.findAllByOriginalNamesAndUserId(List.of(), USER_1);
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
     }
 
     @Nested
@@ -161,6 +204,35 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             // Assert
             assertEquals(1, rows);
             assertTrue(repository.findById(custom.getId()).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should insert multiple merchants in one call and return them with generated IDs")
+        void shouldInsertAllAndReturn() {
+            // Arrange
+            List<MerchantCreateRequest> requests = List.of(
+                    MerchantCreateRequest.builder().userId(USER_1).originalName("NEW SHOP A").cleanName("Shop A").build(),
+                    MerchantCreateRequest.builder().userId(USER_1).originalName("NEW SHOP B").cleanName("Shop B").build()
+            );
+
+            // Act
+            List<Merchant> result = repository.insertAllAndReturn(requests);
+
+            // Assert
+            assertEquals(2, result.size());
+            assertTrue(result.stream().allMatch(m -> m.getId() != null && m.getId() > 0));
+            assertTrue(result.stream().anyMatch(m -> m.getOriginalName().equals("NEW SHOP A") && m.getCleanName().equals("Shop A")));
+            assertTrue(result.stream().anyMatch(m -> m.getOriginalName().equals("NEW SHOP B") && m.getCleanName().equals("Shop B")));
+        }
+
+        @Test
+        @DisplayName("should return empty list when inserting an empty request list")
+        void shouldHandleEmptyInsertAllAndReturn() {
+            // Act
+            List<Merchant> result = repository.insertAllAndReturn(List.of());
+
+            // Assert
+            assertTrue(result.isEmpty());
         }
     }
 }
