@@ -202,6 +202,18 @@ class GlobalExceptionHandlerTest {
         }
 
         @Test
+        @DisplayName("should handle BadCredentialsException as 401, not the generic 500")
+        void handleBadCredentials() {
+            // Act
+            ProblemDetail detail = handler.handleBadCredentials(
+                    new org.springframework.security.authentication.BadCredentialsException("Bad credentials"), request);
+
+            // Assert
+            assertEquals(HttpStatus.UNAUTHORIZED.value(), detail.getStatus());
+            assertEquals("Invalid username or password.", detail.getDetail());
+        }
+
+        @Test
         @DisplayName("should handle OptimisticLockingFailureException")
         void handleOptimisticLockingFailure() {
             // Act

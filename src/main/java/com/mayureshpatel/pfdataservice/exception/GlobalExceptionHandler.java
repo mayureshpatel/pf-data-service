@@ -96,6 +96,12 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.BAD_REQUEST, "Database constraint violation. Please check your input data.", request);
     }
 
+    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+    public ProblemDetail handleBadCredentials(org.springframework.security.authentication.BadCredentialsException ex, HttpServletRequest request) {
+        log.warn("Bad Credentials at {}", request.getRequestURI());
+        return createProblemDetail(HttpStatus.UNAUTHORIZED, "Invalid username or password.", request);
+    }
+
     @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
     public ProblemDetail handleOptimisticLockingFailure(org.springframework.dao.OptimisticLockingFailureException ex, HttpServletRequest request) {
         log.warn("Optimistic Locking Failure: {} at {}", ex.getMessage(), request.getRequestURI());
