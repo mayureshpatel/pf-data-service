@@ -20,6 +20,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+/**
+ * Parser for Capital One credit card CSV exports ({@code Transaction Date}, {@code Description},
+ * separate {@code Debit}/{@code Credit} columns). A malformed row is collected as an error rather
+ * than failing immediately, so the whole file's errors can be reported together; if any row
+ * fails, the whole parse throws rather than returning a partial result.
+ */
 @Component
 public class CapitalOneCsvParser implements TransactionParser {
     private static final String HEADER_DATE = "Transaction Date";
@@ -43,16 +49,25 @@ public class CapitalOneCsvParser implements TransactionParser {
             .setIgnoreSurroundingSpaces(true)
             .get();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BankName getBankName() {
         return BankName.CAPITAL_ONE;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isCreditCard() {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));

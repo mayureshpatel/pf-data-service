@@ -202,6 +202,18 @@ class GlobalExceptionHandlerTest {
         }
 
         @Test
+        @DisplayName("should handle OptimisticLockingFailureException")
+        void handleOptimisticLockingFailure() {
+            // Act
+            ProblemDetail detail = handler.handleOptimisticLockingFailure(
+                    new org.springframework.dao.OptimisticLockingFailureException("Version mismatch"), request);
+
+            // Assert
+            assertEquals(HttpStatus.CONFLICT.value(), detail.getStatus());
+            assertTrue(detail.getDetail().contains("modified by another request"));
+        }
+
+        @Test
         @DisplayName("should handle ConstraintViolationException with field errors")
         void handleConstraintViolation() {
             // Arrange

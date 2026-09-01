@@ -38,6 +38,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Parses and saves bank CSV imports. {@link #previewTransactions} parses a file into a preview
+ * (with a best-guess category per row) without touching the database; {@link #saveTransactions}
+ * and {@link #saveBulkTransactions} commit a previously previewed batch, de-duplicating against
+ * both already-saved transactions and the rest of the same batch by a
+ * (date, amount, description, type) signature.
+ */
 @Service
 @Slf4j
 public class TransactionImportService {
@@ -72,6 +79,20 @@ public class TransactionImportService {
         this.self = self;
     }
 
+    /**
+     * Parses an uploaded file into a preview of the transactions it contains, with a best-guess
+     * category applied to each row via the user's existing rules and categories. Nothing is
+     * saved.
+     *
+     * @param userId      the user id
+     * @param accountId   the account the file will be imported into
+     * @param bankName    the bank format to parse the file as
+     * @param fileContent the file's contents
+     * @param fileName    the original filename, used only for logging
+     * @return the previewed transactions
+     * @throws AccessDeniedException if the account belongs to a different user
+     * @throws CsvParsingException   if the file can't be parsed
+     */
     @Transactional(readOnly = true)
     public List<TransactionPreviewDto> previewTransactions(Long userId, Long accountId, String bankName, InputStream fileContent, String fileName) {
         log.info("Starting transaction preview for User: {}, Account ID: {}, Bank: {}, File: {}", userId, accountId, bankName, fileName);
@@ -116,6 +137,15 @@ public class TransactionImportService {
         }
     }
 
+    /**
+     * Saves multiple previewed batches, possibly across different accounts, by calling
+     * {@link #saveTransactions} once per request. Goes through {@code self} rather than a direct
+     * call so each iteration's {@code @Transactional} applies independently.
+     *
+     * @param userId   the user id
+     * @param requests the batches to save
+     * @return the total number of transactions saved across all requests
+     */
     @Transactional
     public int saveBulkTransactions(Long userId, List<SaveTransactionRequest> requests) {
         int totalSaved = 0;
@@ -125,6 +155,21 @@ public class TransactionImportService {
         return totalSaved;
     }
 
+    /**
+     * Saves a previewed batch of transactions to an account, skipping any that match either an
+     * already-saved transaction or another row earlier in the same batch by a
+     * (date, amount, description, type) signature. Also rejects the whole batch outright if its
+     * file hash matches a previously imported file, when a hash is provided.
+     *
+     * @param userId       the user id
+     * @param accountId    the account to save the transactions to
+     * @param approvedDtos the previewed transactions to save
+     * @param fileName     the source filename, recorded for duplicate-import history (optional)
+     * @param fileHash     the source file's hash, used for whole-file duplicate detection (optional)
+     * @return the number of transactions actually saved (excludes skipped duplicates)
+     * @throws AccessDeniedException      if the account belongs to a different user
+     * @throws DuplicateImportException   if this exact file was already imported
+     */
     @Transactional
     public int saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash) {
         log.info("Saving {} transactions for User: {}, Account ID: {}", approvedDtos.size(), userId, accountId);
@@ -170,7 +215,7 @@ public class TransactionImportService {
             if (!existsInDb && !existsInBatch) {
                 Long merchantId = merchantMap.get(dto.description());
                 if (merchantId == null) {
-                    // Fallback for edge cases
+                    // fallback for edge cases
                     merchantId = merchantService.findOrCreateMerchant(userId, dto.description());
                     merchantMap.put(dto.description(), merchantId);
                 }
@@ -210,6 +255,12 @@ public class TransactionImportService {
         return uniqueTransactions.size();
     }
 
+    /**
+     * Converts a previewed transaction back into the request shape the repository layer expects.
+     *
+     * @param dto the previewed transaction
+     * @return the equivalent create request
+     */
     private TransactionCreateRequest mapToEntity(TransactionDto dto) {
         return TransactionCreateRequest.builder()
                 .transactionDate(dto.date())
@@ -221,6 +272,15 @@ public class TransactionImportService {
                 .build();
     }
 
+    /**
+     * Applies a batch of newly imported transactions to an account's running balance in one
+     * optimistic-locked update.
+     *
+     * @param account         the account to update
+     * @param newTransactions the transactions to apply
+     * @throws org.springframework.dao.OptimisticLockingFailureException if the account was
+     *                                                                    concurrently modified
+     */
     private void updateAccountBalance(Account account, List<TransactionCreateRequest> newTransactions) {
         BigDecimal oldBalance = account.getCurrentBalance();
 

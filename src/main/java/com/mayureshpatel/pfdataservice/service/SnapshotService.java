@@ -15,6 +15,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/**
+ * Records historical month-end account balances. Snapshots are computed backward from the
+ * account's current balance by subtracting everything that happened after the snapshot date,
+ * rather than replaying transactions forward from account creation.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -41,7 +46,7 @@ public class SnapshotService {
 
         BigDecimal currentBalance = account.getCurrentBalance();
 
-        // Calculate transactions that happened AFTER the snapshot date up to NOW
+        // calculate transactions that happened after the snapshot date up to now
         BigDecimal changesAfterDate = transactionRepository.getNetFlowAfterDate(accountId, endOfMonth);
 
         if (changesAfterDate == null) {

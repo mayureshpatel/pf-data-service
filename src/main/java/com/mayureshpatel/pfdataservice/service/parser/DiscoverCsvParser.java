@@ -23,6 +23,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+/**
+ * Parser for Discover credit card CSV exports ({@code Trans. Date}, {@code Description},
+ * {@code Amount} columns). A malformed row is collected as an error rather than failing
+ * immediately, so the whole file's errors can be reported together; if any row fails, the whole
+ * parse throws rather than returning a partial result.
+ */
 @Component
 @Slf4j
 public class DiscoverCsvParser implements TransactionParser {
@@ -44,16 +50,25 @@ public class DiscoverCsvParser implements TransactionParser {
             .setIgnoreSurroundingSpaces(true)
             .get();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BankName getBankName() {
         return BankName.DISCOVER;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isCreditCard() {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));

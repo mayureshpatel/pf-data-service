@@ -9,6 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Read access to the shared currency reference data. {@link CurrencyController} only exposes
+ * these read operations; the repository layer has write methods too, but no controller currently
+ * calls them.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

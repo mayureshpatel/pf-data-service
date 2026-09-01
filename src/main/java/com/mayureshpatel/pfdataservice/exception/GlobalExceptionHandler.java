@@ -96,6 +96,12 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.BAD_REQUEST, "Database constraint violation. Please check your input data.", request);
     }
 
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ProblemDetail handleOptimisticLockingFailure(org.springframework.dao.OptimisticLockingFailureException ex, HttpServletRequest request) {
+        log.warn("Optimistic Locking Failure: {} at {}", ex.getMessage(), request.getRequestURI());
+        return createProblemDetail(HttpStatus.CONFLICT, "This record was modified by another request. Please refresh and try again.", request);
+    }
+
     @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(jakarta.validation.ConstraintViolationException ex, HttpServletRequest request) {
         log.warn("Constraint Violation at {}: {}", request.getRequestURI(), ex.getMessage());

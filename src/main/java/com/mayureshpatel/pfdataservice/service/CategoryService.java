@@ -16,6 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * CRUD for a user's category hierarchy (parent categories with optional subcategories). A
+ * category can't be deleted while transactions still reference it, and can't be assigned to
+ * itself as its own parent.
+ */
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
@@ -24,12 +29,25 @@ public class CategoryService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
 
+    /**
+     * Returns all categories for a user, flat (not grouped by parent).
+     *
+     * @param userId the user id
+     * @return the user's categories
+     */
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesByUserId(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
                 .map(CategoryDtoMapper::toDto).toList();
     }
 
+    /**
+     * Creates a new category, verifying the parent (if given) exists and belongs to the user.
+     *
+     * @param userId  the user id
+     * @param request the category to create
+     * @return the new category's generated id
+     */
     @Transactional
     public int createCategory(Long userId, CategoryCreateRequest request) {
         userRepository.findById(userId)
@@ -51,6 +69,14 @@ public class CategoryService {
         return categoryRepository.insert(securedRequest);
     }
 
+    /**
+     * Updates an existing category owned by the user. A category can't be made its own parent,
+     * and a given parent (if changed) must exist and belong to the user.
+     *
+     * @param userId  the user id
+     * @param request the category to update, including its id
+     * @return the number of rows updated
+     */
     @Transactional
     public int updateCategory(Long userId, CategoryUpdateRequest request) {
         Category category = categoryRepository.findById(request.getId())
@@ -83,6 +109,15 @@ public class CategoryService {
         return this.categoryRepository.update(securedRequest);
     }
 
+    /**
+     * Deletes a category owned by the user. Refuses to delete a category that still has
+     * transactions assigned to it.
+     *
+     * @param userId     the user id
+     * @param categoryId the category id to delete
+     * @return the number of rows deleted
+     * @throws IllegalStateException if the category still has transactions assigned to it
+     */
     @Transactional
     public int deleteCategory(Long userId, Long categoryId) {
         Category category = this.categoryRepository.findById(categoryId)

@@ -34,7 +34,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Only rate limit authentication and registration endpoints
+        // only rate limit authentication and registration endpoints
         if (path.startsWith("/api/v1/auth/")) {
             String clientIp = getClientIp(request);
             TokenBucket bucket = buckets.get(clientIp, k -> new TokenBucket());

@@ -23,6 +23,13 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+/**
+ * Fallback parser for banks without a dedicated implementation. Rather than fixed header names,
+ * it fuzzy-matches common header name variants (e.g. "Trans Date", "Transaction Date", "Date" all
+ * resolve to the date column) via {@link #identifyColumns}, and supports either a single signed
+ * amount column or separate debit/credit columns. Rows that parse to a zero amount (often pending
+ * or auth-hold entries) are silently skipped rather than treated as an error.
+ */
 @Component
 @Slf4j
 public class UniversalCsvParser implements TransactionParser {
@@ -34,7 +41,7 @@ public class UniversalCsvParser implements TransactionParser {
     private static final Pattern DEBIT_PATTERN = Pattern.compile("^(debit|debit\\s*\\(?\\$\\)?)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern CREDIT_PATTERN = Pattern.compile("^(credit|credit\\s*\\(?\\$\\)?)$", Pattern.CASE_INSENSITIVE);
 
-    // Common date formats to try
+    // common date formats to try
     private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
             DateTimeFormatter.ofPattern("M/d/yyyy"),
             DateTimeFormatter.ofPattern("MM/dd/yyyy"),
@@ -43,16 +50,25 @@ public class UniversalCsvParser implements TransactionParser {
             DateTimeFormatter.ofPattern("dd/MM/yyyy")
     );
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BankName getBankName() {
         return BankName.UNIVERSAL;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws com.mayureshpatel.pfdataservice.exception.CsvParsingException if any row fails to
+     *                                                                       parse, or if required columns can't be identified
+     */
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
         try {
-            // First, just parse the header to find columns
+            // first, just parse the header to find columns
             CSVParser parser = CSVFormat.DEFAULT.builder()
                     .setHeader()
                     .setSkipHeaderRecord(true)
@@ -134,7 +150,7 @@ public class UniversalCsvParser implements TransactionParser {
             }
         }
 
-        // fallback: if "Date" not found but "Post Date" is, use Post Date as Date
+        // fallback: if "date" not found but "post date" is, use post date as date
         if (dateCol == null && postDateCol != null) {
             dateCol = postDateCol;
         }
@@ -146,7 +162,7 @@ public class UniversalCsvParser implements TransactionParser {
             throw new IllegalArgumentException("Could not find a valid 'Description' column in CSV headers.");
         }
         if (amountCol == null && (debitCol == null || creditCol == null)) {
-            // need either Amount OR (Debit AND Credit)
+            // need either amount or (debit and credit)
             if (debitCol == null && creditCol == null) {
                 throw new IllegalArgumentException("Could not find valid 'Amount' or 'Debit/Credit' columns.");
             }
@@ -184,7 +200,7 @@ public class UniversalCsvParser implements TransactionParser {
 
         // parse amount and transaction type
         BigDecimal amount = BigDecimal.ZERO;
-        TransactionType type = TransactionType.EXPENSE; // Default
+        TransactionType type = TransactionType.EXPENSE; // default
 
         if (mapping.debitCol != null && mapping.creditCol != null) {
             // two column strategy
@@ -283,6 +299,11 @@ public class UniversalCsvParser implements TransactionParser {
         throw new IllegalArgumentException("Unknown date format: " + dateStr);
     }
 
+    /**
+     * The resolved header names for a parsed file's columns, as identified by
+     * {@link #identifyColumns}. Any field may be null except {@code dateCol} and {@code descCol},
+     * which {@link #identifyColumns} guarantees are set before returning.
+     */
     private record ColumnMapping(
             String dateCol,
             String postDateCol,

@@ -13,9 +13,30 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
+/**
+ * Parses a bank-specific CSV export into a stream of transactions. Each implementing bank format
+ * (Standard, Discover, Capital One, Synovus, Universal) provides its own header names, date
+ * formats, and amount-sign conventions; {@link TransactionParserFactory} selects the right one by
+ * {@link #getBankName()}. The default methods here are shared parsing helpers implementations can
+ * reuse, not requirements every format needs.
+ */
 public interface TransactionParser {
+    /**
+     * Parses a CSV file into a stream of transactions. {@code accountId} is accepted for
+     * interface-uniformity but individual implementations may not use it, since the transactions
+     * they build aren't yet attached to an account at parse time.
+     *
+     * @param accountId   the account the parsed transactions will belong to
+     * @param inputStream the CSV file's contents
+     * @return the parsed transactions
+     */
     Stream<Transaction> parse(Long accountId, InputStream inputStream);
 
+    /**
+     * The bank format this parser handles.
+     *
+     * @return the bank name
+     */
     BankName getBankName();
 
     /**
@@ -71,13 +92,13 @@ public interface TransactionParser {
      */
     default Transaction configureCreditCardTransactionTypeAndAmount(Transaction transaction, BigDecimal netAmount) {
         if (netAmount.compareTo(BigDecimal.ZERO) >= 0) {
-            // Charges are positive in Discover/CapitalOne(debit-credit)
+            // charges are positive in Discover/CapitalOne(debit-credit)
             return transaction.toBuilder()
                     .type(TransactionType.EXPENSE)
                     .amount(netAmount)
                     .build();
         } else {
-            // Payments are negative in Discover/CapitalOne(debit-credit)
+            // payments are negative in Discover/CapitalOne(debit-credit)
             return transaction.toBuilder()
                     .type(TransactionType.TRANSFER_IN)
                     .amount(netAmount.abs())

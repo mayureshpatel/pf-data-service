@@ -22,12 +22,12 @@ public class LoggingAspect {
             " || (within(@org.springframework.stereotype.Service *) && !within(com.mayureshpatel.pfdataservice.security..*))" +
             " || (within(@org.springframework.web.bind.annotation.RestController *) && !within(com.mayureshpatel.pfdataservice.controller.AuthenticationController))")
     public void springBeanPointcut() {
-        // empty as this is just a Pointcut; the implementations are in the advices
+        // empty as this is just a pointcut; the implementations are in the advices
     }
 
     @Pointcut("within(com.mayureshpatel.pfdataservice..*)")
     public void applicationPackagePointcut() {
-        // Method is empty as this is just a Pointcut; the implementations are in the advices.
+        // method is empty as this is just a pointcut; the implementations are in the advices.
     }
 
     @Around("applicationPackagePointcut() && springBeanPointcut()")

@@ -14,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Creates new user accounts. Called only from the admin-only registration endpoint -- there is
+ * no public self-service sign-up flow in this application.
+ */
 @Service
 @RequiredArgsConstructor
 public class RegistrationService {
@@ -22,29 +26,37 @@ public class RegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    /**
+     * Registers a new user: checks the username and email are both unused, hashes the password,
+     * persists the user, and returns a JWT for the newly created account.
+     *
+     * @param request the new user's details
+     * @return a token for the newly created user
+     * @throws UserAlreadyExistsException if the username or email is already taken
+     */
     @Transactional
     public AuthenticationResponse register(RegistrationRequest request) {
-        // Check if username already exists
+        // check if username already exists
         if (userService.isUserExistsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Username already exists");
         }
 
-        // Check if email already exists
+        // check if email already exists
         if (userService.isUserExistsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already exists");
         }
 
-        // Create new user
+        // create new user
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .build();
 
-        // Save user to database
+        // save user to database
         int userId = userService.insert(user);
 
-        // Generate JWT token with userId and email claims
+        // generate jwt token with userId and email claims
         User savedUser = user.toBuilder().id((long) userId).build();
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
         Map<String, Object> extraClaims = new HashMap<>();

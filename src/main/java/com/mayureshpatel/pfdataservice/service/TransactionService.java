@@ -32,6 +32,12 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * CRUD and querying for transactions. Every mutation that changes a transaction's amount or type
+ * keeps the owning account's running balance in sync: it undoes the transaction's old effect (if
+ * any), applies the new one, and persists the balance with an optimistic-locking check so a
+ * concurrent update can't silently overwrite another one.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -44,6 +50,13 @@ public class TransactionService {
     private final TransferMatcher transferMatcher;
     private final MerchantService merchantService;
 
+    /**
+     * Finds transaction pairs in the last 5 years that look like transfers between the user's
+     * own accounts.
+     *
+     * @param userId the user id
+     * @return candidate transfer pairs, empty if none found
+     */
     public List<TransferSuggestionDto> findPotentialTransfers(Long userId) {
         LocalDate startDate = LocalDate.now().minusYears(5);
         List<Transaction> transactions = transactionRepository.findRecentNonTransferTransactions(userId, startDate);
@@ -51,6 +64,16 @@ public class TransactionService {
         return transferMatcher.findMatches(transactions);
     }
 
+    /**
+     * Confirms a list of transactions as transfers: each one's type is switched to
+     * {@code TRANSFER_IN} (if it was income) or {@code TRANSFER_OUT} (otherwise), so it's
+     * excluded from income/expense aggregates going forward.
+     *
+     * @param userId         the user id
+     * @param transactionIds the transaction ids to mark
+     * @throws AccessDeniedException     if any transaction belongs to a different user
+     * @throws ResourceNotFoundException if any transaction id doesn't exist
+     */
     @Transactional
     public void markAsTransfer(Long userId, List<Long> transactionIds) {
         List<Transaction> transactions = transactionRepository.findAllById(userId, transactionIds);
@@ -90,16 +113,41 @@ public class TransactionService {
         transactionRepository.updateAll(userId, updatedTransactions);
     }
 
+    /**
+     * Returns a paginated page of transactions filtered only by type.
+     *
+     * @param userId   the user id
+     * @param type     the transaction type to filter by
+     * @param pageable page number/size/sort
+     * @return the matching page of transactions
+     */
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
         TransactionFilter filter = new TransactionFilter(null, type, null, null, null, null, null, null, null);
         return getTransactions(userId, filter, pageable);
     }
 
+    /**
+     * Returns a paginated page of transactions matching an arbitrary filter.
+     *
+     * @param userId   the user id
+     * @param filter   the filter criteria to apply
+     * @param pageable page number/size/sort
+     * @return the matching page of transactions
+     */
     public Page<TransactionDto> getTransactions(Long userId, TransactionFilter filter, Pageable pageable) {
         return transactionRepository.findAll(TransactionSpecification.withFilter(userId, filter), pageable)
                 .map(TransactionDtoMapper::toDto);
     }
 
+    /**
+     * Deletes multiple transactions, reverting each one's effect on its account's balance first.
+     * A no-op if {@code transactionIds} is null or empty.
+     *
+     * @param userId         the user id
+     * @param transactionIds the transaction ids to delete
+     * @throws ResourceNotFoundException if any transaction id doesn't exist
+     * @throws AccessDeniedException     if any transaction belongs to a different user
+     */
     @Transactional
     public void deleteTransactions(Long userId, List<Long> transactionIds) {
         if (transactionIds == null || transactionIds.isEmpty()) return;
@@ -129,6 +177,16 @@ public class TransactionService {
         transactionRepository.deleteAll(userId, transactions);
     }
 
+    /**
+     * Creates a new transaction, resolving its merchant and category (explicit if given,
+     * otherwise auto-guessed from the user's rules) and applying it to the account's balance.
+     *
+     * @param userId  the user id
+     * @param request the transaction to create
+     * @return the new transaction's generated id
+     * @throws ResourceNotFoundException if the account doesn't exist
+     * @throws AccessDeniedException     if the account belongs to a different user
+     */
     @Transactional
     public int createTransaction(Long userId, TransactionCreateRequest request) {
         Account account = accountRepository.findById(request.getAccountId())
@@ -161,6 +219,13 @@ public class TransactionService {
         return transactionRepository.insert(transaction);
     }
 
+    /**
+     * Updates multiple transactions by calling {@link #updateTransaction} once per request.
+     *
+     * @param userId   the user id
+     * @param requests the transactions to update, each including its id
+     * @return the total number of transactions updated
+     */
     @Transactional
     public Integer updateTransactionsBulk(Long userId, List<TransactionUpdateRequest> requests) {
         if (requests == null || requests.isEmpty()) return 0;
@@ -170,6 +235,16 @@ public class TransactionService {
                 .toList().stream().mapToInt(Integer::intValue).sum();
     }
 
+    /**
+     * Updates a single transaction: reverts its old effect on the account balance, re-resolves
+     * its merchant and category, then reapplies the updated transaction to the balance.
+     *
+     * @param userId  the user id
+     * @param request the transaction to update, including its id
+     * @return the number of rows updated (0 or 1)
+     * @throws ResourceNotFoundException if the transaction doesn't exist
+     * @throws AccessDeniedException     if the transaction belongs to a different user
+     */
     @Transactional
     public int updateTransaction(Long userId, TransactionUpdateRequest request) {
         Transaction transaction = transactionRepository.findById(request.getId(), userId)
@@ -204,6 +279,20 @@ public class TransactionService {
         return transactionRepository.update(userId, updatedT);
     }
 
+    /**
+     * Resolves a transaction's category: uses the explicit category if one was requested
+     * (verifying it belongs to the user and is a subcategory, since only subcategories can be
+     * assigned directly), otherwise auto-guesses one from the user's category rules, otherwise
+     * leaves it uncategorized.
+     *
+     * @param userId              the user id
+     * @param transaction         the transaction to categorize
+     * @param requestedCategoryId an explicit category id, or {@code null} to auto-guess
+     * @return the transaction with its category set (possibly to {@code null})
+     * @throws ResourceNotFoundException if the requested category doesn't exist
+     * @throws AccessDeniedException     if the requested category belongs to a different user
+     * @throws IllegalArgumentException  if the requested category isn't a subcategory
+     */
     private Transaction resolveCategory(Long userId, Transaction transaction, Long requestedCategoryId) {
         if (requestedCategoryId != null) {
             Category category = categoryRepository.findById(requestedCategoryId)
@@ -235,6 +324,14 @@ public class TransactionService {
         return transaction.toBuilder().category(null).build();
     }
 
+    /**
+     * Deletes a single transaction, reverting its effect on the account's balance.
+     *
+     * @param userId        the user id
+     * @param transactionId the transaction id to delete
+     * @throws ResourceNotFoundException if the transaction doesn't exist
+     * @throws AccessDeniedException     if the transaction belongs to a different user
+     */
     @Transactional
     public void deleteTransaction(Long userId, Long transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId, userId)
@@ -253,15 +350,33 @@ public class TransactionService {
         transactionRepository.deleteById(transactionId, userId);
     }
 
+    /**
+     * Returns the user's transaction count grouped by category.
+     *
+     * @param userId the user id
+     * @return per-category transaction counts
+     */
     public List<CategoryTransactionsDto> getCountByCategory(Long userId) {
         return transactionRepository.getCountByCategory(userId);
     }
 
+    /**
+     * Returns only the categories that have at least one of the user's transactions assigned.
+     *
+     * @param userId the user id
+     * @return categories with at least one transaction
+     */
     public List<CategoryDto> getCategoriesWithTransactions(Long userId) {
         List<Category> categories = transactionRepository.getCategoriesWithTransactions(userId);
         return categories.stream().map(CategoryDtoMapper::toDto).toList();
     }
 
+    /**
+     * Returns only the merchants that have at least one of the user's transactions assigned.
+     *
+     * @param userId the user id
+     * @return merchants with at least one transaction
+     */
     public List<MerchantDto> getMerchantsWithTransactions(Long userId) {
         return transactionRepository.getMerchantsWithTransactions(userId)
                 .stream()

@@ -71,7 +71,7 @@ public final class CategoryQueries {
             where categories.user_id = :userId
             """;
 
-    // language=SQl
+    // language=SQL
     public static final String FIND_ALL_SUB_CATEGORIES = """
             select
                 categories.id,

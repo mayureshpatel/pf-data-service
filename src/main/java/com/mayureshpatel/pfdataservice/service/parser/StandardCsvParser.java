@@ -16,13 +16,25 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.stream.Stream;
 
+/**
+ * Parser for the application's own generic CSV format: {@code description}, {@code amount}
+ * (negative for expenses, positive for income), and {@code date} columns, case-insensitively
+ * matched by exact header name (unlike {@link UniversalCsvParser}, which fuzzy-matches header
+ * name variants).
+ */
 @Component
 public class StandardCsvParser implements TransactionParser {
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BankName getBankName() {
         return BankName.STANDARD;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
@@ -54,6 +66,13 @@ public class StandardCsvParser implements TransactionParser {
         }
     }
 
+    /**
+     * Maps one CSV row to a transaction. The amount's sign determines the transaction type
+     * (negative -> expense, non-negative -> income) and is normalized to an absolute value.
+     *
+     * @param csvRecord the CSV record to map
+     * @return the parsed transaction
+     */
     private Transaction mapToTransaction(CSVRecord csvRecord) {
         Transaction t = Transaction.builder()
                 .description(csvRecord.get("description"))

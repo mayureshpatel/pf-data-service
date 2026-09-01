@@ -18,6 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * CRUD and status tracking for a user's per-category, per-month budgets. A budget is unique per
+ * (user, category, month, year); {@link #create} enforces that directly rather than relying on a
+ * database constraint.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -67,6 +72,15 @@ public class BudgetService {
         return this.budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(userId, month, year);
     }
 
+    /**
+     * Creates a budget for a category and period, after verifying the user and category exist,
+     * the category belongs to the user, and no budget already exists for that (category, month,
+     * year) combination.
+     *
+     * @param userId  the user id
+     * @param request the budget to create
+     * @return the new budget's generated id
+     */
     @Transactional
     public int create(Long userId, BudgetCreateRequest request) {
         // get the user; throw exception if not found
@@ -96,6 +110,15 @@ public class BudgetService {
         return budgetRepository.insert(securedRequest);
     }
 
+    /**
+     * Updates an existing budget owned by the user.
+     *
+     * @param userId  the user id
+     * @param request the budget to update, including its id
+     * @return the number of rows updated
+     * @throws ResourceNotFoundException if no budget with that id exists
+     * @throws AccessDeniedException     if the budget belongs to a different user
+     */
     @Transactional
     public int update(Long userId, BudgetUpdateRequest request) {
         // check if the budget exists
@@ -110,6 +133,14 @@ public class BudgetService {
         return budgetRepository.update(request);
     }
 
+    /**
+     * Deletes a budget owned by the user.
+     *
+     * @param userId   the user id
+     * @param budgetId the budget id to delete
+     * @throws ResourceNotFoundException if no budget with that id exists
+     * @throws AccessDeniedException     if the budget belongs to a different user
+     */
     @Transactional
     public void delete(Long userId, Long budgetId) {
         Budget budget = budgetRepository.findById(budgetId)

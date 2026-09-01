@@ -26,6 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * CRUD for keyword-based auto-categorization rules, plus {@link #previewApply} and
+ * {@link #applyRules} for running the current rule set against a user's uncategorized
+ * transactions. Delegates the actual matching logic to {@link TransactionCategorizer}.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -130,6 +135,13 @@ public class CategoryRuleService {
         categoryRuleRepository.deleteById(ruleId, userId);
     }
 
+    /**
+     * Previews which currently-uncategorized transactions would be recategorized if the user's
+     * rule set were applied, without changing anything.
+     *
+     * @param userId the user id
+     * @return the transactions that would change, and what category they'd get
+     */
     public List<RuleChangePreviewDto> previewApply(Long userId) {
         List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
         List<Category> categories = categoryRepository.findByUserId(userId);
@@ -167,6 +179,13 @@ public class CategoryRuleService {
         return previews;
     }
 
+    /**
+     * Applies the user's rule set to their currently-uncategorized transactions, assigning a
+     * category to each one a rule matches.
+     *
+     * @param userId the user id
+     * @return the number of transactions recategorized
+     */
     @Transactional
     public int applyRules(Long userId) {
         List<CategoryRule> rules = this.categoryRuleRepository.findByUserId(userId);
