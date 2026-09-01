@@ -14,11 +14,20 @@ This skill guides the creation of structural database changes.
 - **Immutability**: NEVER modify an existing, committed Flyway script. Always create a new script (e.g., `V2`, `V3`) to alter tables.
 
 ## 🛠 Procedural Workflow
-1. **Types**: Use `UUID`, `VARCHAR`, `TIMESTAMPTZ`, and `NUMERIC(19,2)` for financial math.
+1. **Types**: Use `BIGSERIAL` for primary keys (not `UUID` — see Gotchas), `VARCHAR`, `TIMESTAMPTZ`, and `NUMERIC(19,2)` for financial math.
 2. **Constraints**: Always define explicit `FOREIGN KEY`, `UNIQUE`, and `CHECK` constraints to enforce data integrity at the lowest level.
 3. **Indices**: Add `CREATE INDEX` statements for any foreign key or heavily filtered column.
 
+## 📚 References
+See `references/migration-gold-source.sql` for a real, complete migration demonstrating naming
+convention, `FOREIGN KEY` constraints, `CREATE INDEX` (including partial indexes), and table
+documentation via `COMMENT ON TABLE`.
+
 ## ⚠️ Gotchas
+- **No table in this schema uses `UUID` anywhere.** Every primary key is `BIGSERIAL`; lookup
+  tables use a natural key instead (`account_types.code VARCHAR(20) PRIMARY KEY`,
+  `currencies.code CHAR(3) PRIMARY KEY`). Confirmed by direct search across every real migration —
+  don't introduce `UUID` on the assumption it's a modern-Postgres default this project follows.
 - **Money columns are `NUMERIC(19,2)` or `DECIMAL(19,2)` everywhere in this schema — two decimal
   places, not four.** Every real migration from `V1__init_schema.sql` onward uses `(19, 2)`;
   `DECIMAL(19,4)` would be a real, live inconsistency with every existing money column, not a

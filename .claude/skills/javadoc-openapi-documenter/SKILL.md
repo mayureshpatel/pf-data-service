@@ -17,3 +17,8 @@ This skill enforces the strict documentation formatting rules across the backend
 1. **Scan**: Identify undocumented public methods or uppercase inline comments.
 2. **Refactor**: Rewrite `//` comments to lowercase.
 3. **Annotate**: Inject Swagger and Javadoc blocks.
+
+## 📚 References
+See `references/documented-service-gold-source.java` — a real service class (`AccountService`)
+with class-level and method-level Javadoc (`@param`/`@return`/`@throws`) and lowercase inline
+comments throughout.
