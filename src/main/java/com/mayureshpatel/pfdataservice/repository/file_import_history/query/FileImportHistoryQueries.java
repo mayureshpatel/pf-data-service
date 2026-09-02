@@ -96,9 +96,4 @@ public final class FileImportHistoryQueries {
             values (:accountId, :fileHash, :fileName, :transactionCount, current_timestamp)
             returning id
             """;
-
-    // language=SQL
-    public static final String DELETE = """
-            delete from file_import_history where id = :id
-            """;
 }

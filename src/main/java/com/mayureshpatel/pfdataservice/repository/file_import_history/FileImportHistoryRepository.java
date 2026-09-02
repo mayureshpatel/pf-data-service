@@ -71,10 +71,4 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
                 .param("transactionCount", history.getTransactionCount())
                 .update(keyHolder);
     }
-
-    public int deleteById(Long id) {
-        return jdbcClient.sql(FileImportHistoryQueries.DELETE)
-                .param("id", id)
-                .update();
-    }
 }

@@ -95,21 +95,6 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should delete by ID")
-        void shouldDeleteById() {
-            // Arrange
-            repository.insert(FileImportCreateRequest.builder().accountId(String.valueOf(ACCOUNT_1)).fileHash("h4").fileName("4.csv").build());
-            Long id = repository.findByFileHash("h4").get().getId();
-
-            // Act
-            int rows = repository.deleteById(id);
-
-            // Assert
-            assertEquals(1, rows);
-            assertTrue(repository.findById(id).isEmpty());
-        }
-
-        @Test
         @DisplayName("should save a file import history built from a domain object")
         void shouldSave() {
             // Arrange
