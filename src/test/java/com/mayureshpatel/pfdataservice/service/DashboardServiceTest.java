@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 
@@ -128,6 +129,55 @@ class DashboardServiceTest {
             // Assert
             assertNotNull(result);
             verify(transactionRepository, times(4)).getSumByDateRange(anyLong(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("should compute the previous period as exactly the prior calendar month, with no overlap (PF-195)")
+        void shouldComputePreviousPeriodWithNoOverlap() {
+            // Arrange -- March 2026: previous period must be exactly [Feb 1, Feb 28], not
+            // [Feb 1, Mar 30] -- the bug anchored endPrevious to endCurrent instead of startCurrent
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should compute the previous period correctly across a year boundary (PF-195)")
+        void shouldComputePreviousPeriodAcrossYearBoundary() {
+            // Arrange -- January 2026: previous period must be exactly December 2025
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2025, 12, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2025, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, 1, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should compute a non-overlapping, same-length previous period for the explicit date-range overload (PF-195)")
+        void shouldComputePreviousPeriodWithNoOverlapForExplicitRange() {
+            // Arrange -- a 31-day range; the immediately preceding 31-day period must end the day
+            // before startDate, not the day before endDate
+            OffsetDateTime startDate = OffsetDateTime.of(2026, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime endDate = OffsetDateTime.of(2026, 3, 31, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 1, 29, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, startDate, endDate);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
         }
     }
 

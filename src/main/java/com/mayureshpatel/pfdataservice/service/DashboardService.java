@@ -132,7 +132,7 @@ public class DashboardService {
 
         // previous month
         OffsetDateTime startPrevious = startCurrent.minusMonths(1);
-        OffsetDateTime endPrevious = endCurrent.minusDays(1);
+        OffsetDateTime endPrevious = startCurrent.minusDays(1);
 
         return calculatePulse(userId, startCurrent, endCurrent, startPrevious, endPrevious);
     }
@@ -150,7 +150,7 @@ public class DashboardService {
         // calculate duration to find equivalent previous period
         long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         OffsetDateTime startPrevious = startDate.minusDays(days);
-        OffsetDateTime endPrevious = endDate.minusDays(1);
+        OffsetDateTime endPrevious = startDate.minusDays(1);
 
         return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
     }
