@@ -29,6 +29,7 @@ class TransactionUpdateRequestTest {
     private TransactionUpdateRequest.TransactionUpdateRequestBuilder createValidBuilder() {
         return TransactionUpdateRequest.builder()
                 .id(1L)
+                .accountId(4L)
                 .categoryId(2L)
                 .amount(new BigDecimal("100.00"))
                 .transactionDate(OffsetDateTime.now())
@@ -64,6 +65,28 @@ class TransactionUpdateRequestTest {
             Set<ConstraintViolation<TransactionUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Transaction ID must be a positive number.")));
+        }
+    }
+
+    @Nested
+    @DisplayName("Field: accountId")
+    class AccountIdValidationTests {
+        @Test
+        @DisplayName("should fail when accountId is null (PF-194)")
+        void shouldFailWhenAccountIdIsNull() {
+            TransactionUpdateRequest request = createValidBuilder().accountId(null).build();
+            Set<ConstraintViolation<TransactionUpdateRequest>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account ID cannot be null.")));
+        }
+
+        @Test
+        @DisplayName("should fail when accountId is not positive (PF-194)")
+        void shouldFailWhenAccountIdIsNotPositive() {
+            TransactionUpdateRequest request = createValidBuilder().accountId(0L).build();
+            Set<ConstraintViolation<TransactionUpdateRequest>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account ID must be a positive number.")));
         }
     }
 

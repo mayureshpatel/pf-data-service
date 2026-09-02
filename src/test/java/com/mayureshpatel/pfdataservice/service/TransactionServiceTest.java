@@ -69,6 +69,7 @@ class TransactionServiceTest {
 
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 10L;
+    private static final Long NEW_ACCOUNT_ID = 11L;
     private static final Long TRANSACTION_ID = 100L;
 
     private Account createMockAccount(Long uid) {
@@ -353,6 +354,7 @@ class TransactionServiceTest {
 
             TransactionUpdateRequest request = TransactionUpdateRequest.builder()
                     .id(TRANSACTION_ID)
+                    .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
                     .type("INCOME")
                     .description("Updated Description")
@@ -368,6 +370,86 @@ class TransactionServiceTest {
             assertEquals(1, result);
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
             verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getAmount().equals(BigDecimal.TEN)));
+        }
+
+        @Test
+        @DisplayName("should move a transaction to a different account and update both balances (PF-194)")
+        void shouldUpdateAccountWhenChanged() {
+            // Arrange -- a $10 EXPENSE moving from the old account to a new one
+            Account oldAccount = createMockAccount(USER_ID); // id=ACCOUNT_ID, balance=1000.00
+            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(oldAccount).amount(BigDecimal.TEN).type(TransactionType.EXPENSE).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
+
+            Account newAccount = Account.builder().id(NEW_ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("500.00")).version(1L).build();
+            when(accountRepository.findById(NEW_ACCOUNT_ID)).thenReturn(Optional.of(newAccount));
+
+            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
+                    .id(TRANSACTION_ID)
+                    .accountId(NEW_ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("EXPENSE")
+                    .description("Moved transaction")
+                    .build();
+
+            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Moved transaction"))).thenReturn(1001L);
+            when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
+
+            // Act
+            int result = transactionService.updateTransaction(USER_ID, request);
+
+            // Assert
+            assertEquals(1, result);
+            // old account loses the transaction's effect: undoing a $10 EXPENSE raises its balance (1000 -> 1010)
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), eq(new BigDecimal("1010.00")), anyLong());
+            // new account gains the transaction's effect: applying a $10 EXPENSE lowers its balance (500 -> 490)
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(NEW_ACCOUNT_ID), eq(new BigDecimal("490.00")), anyLong());
+            verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getAccount().getId().equals(NEW_ACCOUNT_ID)));
+        }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException if the target account doesn't exist (PF-194)")
+        void shouldThrowOnTargetAccountNotFound() {
+            // Arrange
+            Account oldAccount = createMockAccount(USER_ID);
+            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(oldAccount).amount(BigDecimal.TEN).type(TransactionType.EXPENSE).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
+            when(accountRepository.findById(NEW_ACCOUNT_ID)).thenReturn(Optional.empty());
+
+            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
+                    .id(TRANSACTION_ID)
+                    .accountId(NEW_ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("EXPENSE")
+                    .description("Moved transaction")
+                    .build();
+
+            // Act & Assert
+            assertThrows(ResourceNotFoundException.class, () -> transactionService.updateTransaction(USER_ID, request));
+            verify(transactionRepository, never()).update(anyLong(), any(Transaction.class));
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException if the target account belongs to a different user (PF-194)")
+        void shouldThrowOnTargetAccountNotOwned() {
+            // Arrange
+            Account oldAccount = createMockAccount(USER_ID);
+            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(oldAccount).amount(BigDecimal.TEN).type(TransactionType.EXPENSE).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
+
+            Account othersAccount = Account.builder().id(NEW_ACCOUNT_ID).userId(999L).currentBalance(BigDecimal.ZERO).version(1L).build();
+            when(accountRepository.findById(NEW_ACCOUNT_ID)).thenReturn(Optional.of(othersAccount));
+
+            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
+                    .id(TRANSACTION_ID)
+                    .accountId(NEW_ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("EXPENSE")
+                    .description("Moved transaction")
+                    .build();
+
+            // Act & Assert
+            assertThrows(AccessDeniedException.class, () -> transactionService.updateTransaction(USER_ID, request));
+            verify(transactionRepository, never()).update(anyLong(), any(Transaction.class));
         }
     }
 

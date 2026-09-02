@@ -237,13 +237,17 @@ public class TransactionService {
 
     /**
      * Updates a single transaction: reverts its old effect on the account balance, re-resolves
-     * its merchant and category, then reapplies the updated transaction to the balance.
+     * its merchant and category, then reapplies the updated transaction to the balance. If the
+     * request moves the transaction to a different account, the old account's balance is
+     * corrected to remove the transaction's effect and the new account's balance is corrected to
+     * add it, rather than netting both changes against a single account.
      *
      * @param userId  the user id
      * @param request the transaction to update, including its id
      * @return the number of rows updated (0 or 1)
-     * @throws ResourceNotFoundException if the transaction doesn't exist
-     * @throws AccessDeniedException     if the transaction belongs to a different user
+     * @throws ResourceNotFoundException if the transaction or the target account doesn't exist
+     * @throws AccessDeniedException     if the transaction or the target account belongs to a
+     *                                    different user
      */
     @Transactional
     public int updateTransaction(Long userId, TransactionUpdateRequest request) {
@@ -254,12 +258,21 @@ public class TransactionService {
             throw new AccessDeniedException("You do not own this transaction");
         }
 
-        Account account = transaction.getAccount();
-        Account accountAfterUndo = account.undoTransaction(transaction);
+        Account currentAccount = transaction.getAccount();
+        Account targetAccount = currentAccount;
+        if (!currentAccount.getId().equals(request.getAccountId())) {
+            targetAccount = accountRepository.findById(request.getAccountId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+            if (!targetAccount.getUserId().equals(userId)) {
+                throw new AccessDeniedException("You do not own this account");
+            }
+        }
 
         Long merchantId = merchantService.findOrCreateMerchant(userId, request.getDescription());
 
         Transaction updatedT = transaction.toBuilder()
+                .account(targetAccount)
                 .amount(request.getAmount())
                 .transactionDate(request.getTransactionDate())
                 .postDate(request.getPostDate())
@@ -270,10 +283,24 @@ public class TransactionService {
 
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());
 
-        Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
-        int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
-        if (updatedRows == 0) {
-            throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+        if (currentAccount.getId().equals(targetAccount.getId())) {
+            Account finalAccount = currentAccount.undoTransaction(transaction).applyTransaction(updatedT);
+            int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), currentAccount.getVersion());
+            if (updatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
+        } else {
+            Account oldAccountAfterUndo = currentAccount.undoTransaction(transaction);
+            int oldUpdatedRows = accountRepository.updateBalance(userId, oldAccountAfterUndo.getId(), oldAccountAfterUndo.getCurrentBalance(), currentAccount.getVersion());
+            if (oldUpdatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
+
+            Account newAccountAfterApply = targetAccount.applyTransaction(updatedT);
+            int newUpdatedRows = accountRepository.updateBalance(userId, newAccountAfterApply.getId(), newAccountAfterApply.getCurrentBalance(), targetAccount.getVersion());
+            if (newUpdatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
         }
 
         return transactionRepository.update(userId, updatedT);
