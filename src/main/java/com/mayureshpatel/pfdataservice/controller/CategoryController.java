@@ -23,7 +23,7 @@ import java.util.List;
  */
 @Tag(name = "Categories", description = "The authenticated user's category hierarchy")
 @RestController
-@RequestMapping({"/api/v1/categories", "/api/categories"})
+@RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
 public class CategoryController {
 

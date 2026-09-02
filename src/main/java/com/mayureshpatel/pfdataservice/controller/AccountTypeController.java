@@ -22,7 +22,7 @@ import java.util.List;
  */
 @Tag(name = "Account Types", description = "Shared reference data for account types; admin-only writes")
 @RestController
-@RequestMapping({"/api/v1/account-types", "/api/account-types"})
+@RequestMapping("/api/v1/account-types")
 @RequiredArgsConstructor
 public class AccountTypeController {
 
