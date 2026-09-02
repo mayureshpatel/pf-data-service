@@ -44,7 +44,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
             // Note: BaseControllerTest has authenticationService mocked as 'authenticationService'
             when(authenticationService.authenticate(any(AuthenticationRequest.class))).thenReturn(response);
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/authenticate")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -64,7 +64,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
                     .password("secure_password")
                     .build();
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/authenticate")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -95,7 +95,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
 
             when(registrationService.register(any(RegistrationRequest.class))).thenReturn(response);
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/register")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -117,7 +117,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
                     .password("Pass123!@")
                     .build();
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/register")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -140,7 +140,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
             when(registrationService.register(any(RegistrationRequest.class)))
                     .thenThrow(new IllegalArgumentException("Registration failed. Please try again."));
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/register")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -166,7 +166,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
             when(authenticationService.authenticate(any(AuthenticationRequest.class)))
                     .thenThrow(new RuntimeException("Authentication backend down"));
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/authenticate")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)

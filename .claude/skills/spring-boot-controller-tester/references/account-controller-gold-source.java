@@ -66,7 +66,7 @@ class AccountControllerTest extends BaseControllerTest {
 
             when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(List.of(accountDto));
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(get(url))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -85,7 +85,7 @@ class AccountControllerTest extends BaseControllerTest {
             // arrange
             when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(get("/api/v1/accounts"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -114,7 +114,7 @@ class AccountControllerTest extends BaseControllerTest {
 
             when(accountService.createAccount(eq(USER_ID), any(AccountCreateRequest.class))).thenReturn(ACCOUNT_ID.intValue());
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -137,7 +137,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .currencyCode("INVALID")
                     .build();
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -169,7 +169,7 @@ class AccountControllerTest extends BaseControllerTest {
 
             when(accountService.updateAccount(eq(USER_ID), any(AccountUpdateRequest.class))).thenReturn(1);
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(put("/api/v1/accounts") // No ID in path
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -188,7 +188,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should remove the account and return 204 No Content")
         void deleteAccount_shouldDeleteAccount() throws Exception {
-            // act & Assert
+            // act & assert
             mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
                             .with(csrf()))
                     .andExpect(status().isNoContent());
@@ -208,7 +208,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.getAllAccountsByUserId(USER_ID))
                     .thenThrow(new RuntimeException("Database connection failure"));
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(get("/api/v1/accounts"))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.title").value("Internal Server Error"))
@@ -223,7 +223,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.deleteAccount(USER_ID, ACCOUNT_ID))
                     .thenThrow(new ResourceNotFoundException("Account with ID " + ACCOUNT_ID + " not found"));
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound())
@@ -246,7 +246,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.updateAccount(eq(USER_ID), any(AccountUpdateRequest.class)))
                     .thenThrow(new AccessDeniedException("You do not have permission to access this resource."));
 
-            // act & Assert
+            // act & assert
             mockMvc.perform(put("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)

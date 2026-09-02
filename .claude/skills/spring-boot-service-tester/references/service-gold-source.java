@@ -67,7 +67,7 @@ class ServiceGoldStandardTest {
             when(accountRepository.findById(10L)).thenReturn(Optional.of(otherAccount));
             TransactionCreateRequest request = TransactionCreateRequest.builder().accountId(10L).build();
 
-            // act & Assert
+            // act & assert
             assertThrows(AccessDeniedException.class, () -> transactionService.createTransaction(userId, request));
         }
     }

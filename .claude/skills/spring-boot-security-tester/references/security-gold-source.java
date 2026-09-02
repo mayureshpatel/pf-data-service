@@ -76,7 +76,7 @@ class SecurityGoldStandardTest {
             UserDetails user = User.builder().username("u").password("p").authorities(Collections.emptyList()).build();
             String token = jwtService.generateToken(user);
 
-            // act & Assert
+            // act & assert
             assertThrows(ExpiredJwtException.class, () -> jwtService.isTokenValid(token, user));
         }
     }

@@ -14,8 +14,18 @@ This skill dictates how to write robust, side-effect-free business logic in Spri
 
 ## 🛠 Procedural Workflow
 1. **Validation**: Perform business rule validation (e.g., "Cannot delete an account with a non-zero balance").
-2. **Orchestration**: Call multiple repositories if necessary (e.g., fetching a Category before saving a Transaction).
-3. **Events**: Publish Spring `@DomainEvents` if side-effects are required (e.g., notifying the SnapshotService when a Transaction changes).
+2. **Orchestration**: Call multiple repositories or other Services directly via constructor
+   injection if necessary (e.g., fetching a Category before saving a Transaction). This codebase
+   does not use a Spring Application Events / `@DomainEvents` pattern anywhere — cross-cutting
+   side effects are wired as direct calls, not published events. Don't invent an event-bus
+   mechanism that isn't actually configured.
+
+## 🚨 Gotchas
+- There is no domain-events or pub-sub mechanism in this codebase — `grep -rn "@DomainEvents"
+  src/main/java` returns zero hits. If a Service needs to trigger a side effect elsewhere (e.g. an
+  account balance change that should update a snapshot), call the collaborating Service/Repository
+  directly, the same way `TransactionImportService` directly injects every collaborator it needs
+  rather than publishing an event.
 
 ## 📚 References
 - [Service Gold-Source](references/service-gold-source.java)

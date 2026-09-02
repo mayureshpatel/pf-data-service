@@ -40,6 +40,7 @@ class DtoGoldStandardTest {
         @Test
         @DisplayName("should pass when all fields are valid")
         void shouldPassWithValidData() {
+            // arrange
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name("Savings")
                     .type("SAVINGS")
@@ -47,7 +48,10 @@ class DtoGoldStandardTest {
                     .startingBalance(BigDecimal.ZERO)
                     .build();
 
+            // act
             Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+
+            // assert & verify
             assertTrue(violations.isEmpty(), "Should have no violations");
         }
 
@@ -57,9 +61,13 @@ class DtoGoldStandardTest {
             @Test
             @DisplayName("should fail when name is blank")
             void shouldFailWhenNameIsBlank() {
+                // arrange
                 AccountCreateRequest request = AccountCreateRequest.builder().name("").build();
+
+                // act
                 Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
-                
+
+                // assert & verify
                 assertFalse(violations.isEmpty());
                 assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("name")));
             }
@@ -67,11 +75,15 @@ class DtoGoldStandardTest {
             @Test
             @DisplayName("should fail when name exceeds 100 characters (Schema Limit)")
             void shouldFailWhenNameIsTooLong() {
+                // arrange
                 AccountCreateRequest request = AccountCreateRequest.builder()
                         .name("A".repeat(101))
                         .build();
+
+                // act
                 Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
-                
+
+                // assert & verify
                 assertFalse(violations.isEmpty());
             }
         }
@@ -84,13 +96,18 @@ class DtoGoldStandardTest {
         @Test
         @DisplayName("should correctly map all fields")
         void shouldPopulateFields() {
+            // arrange & act
+            // AccountDto has 8 components (id, user, name, type, currentBalance, currency, bank,
+            // version) -- all 8 positional args are required, or use the Lombok @Builder instead.
             AccountDto dto = new AccountDto(
-                    1L, null, "Account Name", null, BigDecimal.TEN, null, null
+                    1L, null, "Account Name", null, BigDecimal.TEN, null, null, 0L
             );
 
+            // assert & verify
             assertEquals(1L, dto.id());
             assertEquals("Account Name", dto.name());
             assertEquals(BigDecimal.TEN, dto.currentBalance());
+            assertEquals(0L, dto.version());
         }
     }
 }
