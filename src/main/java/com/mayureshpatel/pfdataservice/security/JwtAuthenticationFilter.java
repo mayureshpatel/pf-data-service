@@ -68,7 +68,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             response.getWriter().write("{\"detail\": \"JWT token expired\", \"status\": 401}");
             return;
         } catch (Exception e) {
+            log.warn("JWT token invalid: {}", e.getMessage());
+
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"detail\": \"Invalid or malformed JWT token\", \"status\": 401}");
             return;
         }
 
