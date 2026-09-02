@@ -23,10 +23,13 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Parser for Discover credit card CSV exports ({@code Trans. Date}, {@code Description},
- * {@code Amount} columns). A malformed row is collected as an error rather than failing
- * immediately, so the whole file's errors can be reported together; if any row fails, the whole
- * parse throws rather than returning a partial result.
+ * Parser for Discover credit card CSV exports. Handles two formats: the current one
+ * ({@code Trans. Date}, {@code Description}, {@code Amount}) and the legacy, pre-July-2022 one
+ * ({@code Trans. Date}, {@code Description}, {@code Debit}, {@code Credit}) that Discover's export
+ * used before switching to a single signed {@code Amount} column -- see PF-198. A malformed row is
+ * collected as an error rather than failing immediately, so the whole file's errors can be
+ * reported together; if any row fails, the whole parse throws rather than returning a partial
+ * result.
  */
 @Component
 @Slf4j
@@ -34,6 +37,8 @@ public class DiscoverCsvParser implements TransactionParser {
     private static final String HEADER_DATE = "Trans. Date";
     private static final String HEADER_DESC = "Description";
     private static final String HEADER_AMOUNT = "Amount";
+    private static final String HEADER_DEBIT = "Debit";
+    private static final String HEADER_CREDIT = "Credit";
 
     private static final DateTimeFormatter DATE_FORMATTER = new DateTimeFormatterBuilder()
             .appendPattern("[M/d/yyyy][MM/dd/yyyy][yyyy-MM-dd]")
@@ -124,9 +129,26 @@ public class DiscoverCsvParser implements TransactionParser {
                         .build())
                 .build();
 
-        BigDecimal rawAmount = parseAmount(csvRecord, HEADER_AMOUNT);
+        BigDecimal rawAmount = csvRecord.isMapped(HEADER_AMOUNT)
+                ? parseAmount(csvRecord, HEADER_AMOUNT)
+                : parseLegacyDebitCreditAmount(csvRecord);
         transaction = configureCreditCardTransactionTypeAndAmount(transaction, rawAmount);
 
         return transaction;
+    }
+
+    /**
+     * Resolves the net amount for the legacy, pre-July-2022 export format, which splits the
+     * amount into separate {@code Debit}/{@code Credit} columns instead of one signed
+     * {@code Amount} column -- see PF-198. Mirrors {@code CapitalOneCsvParser}'s and
+     * {@code SynovusCsvParser}'s existing two-column handling.
+     *
+     * @param csvRecord the CSV record to parse
+     * @return the net amount (debit minus credit)
+     */
+    private BigDecimal parseLegacyDebitCreditAmount(CSVRecord csvRecord) {
+        BigDecimal debit = parseAmount(csvRecord, HEADER_DEBIT);
+        BigDecimal credit = parseAmount(csvRecord, HEADER_CREDIT);
+        return debit.subtract(credit);
     }
 }

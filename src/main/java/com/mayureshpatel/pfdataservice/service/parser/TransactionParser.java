@@ -123,15 +123,23 @@ public interface TransactionParser {
     }
 
     /**
-     * Parses an amount string from a CSV record into a {@link BigDecimal}.
+     * Parses an amount string from a CSV record into a {@link BigDecimal}. A header entirely
+     * absent from the file's own header row is a structural problem with the file -- e.g. a bank
+     * changing its export format to rename or split a required column, as happened to
+     * {@code DiscoverCsvParser} pre-July-2022 (PF-198) -- and throws, rather than silently
+     * resolving to zero and losing every affected transaction's amount without any error. A
+     * header that exists but is blank for this specific row is a legitimately empty value and
+     * still resolves to zero.
      *
      * @param csvRecord the CSV record containing the amount
      * @param header    the header key for the amount
-     * @return the parsed {@link BigDecimal} amount or zero if not found or invalid
+     * @return the parsed {@link BigDecimal} amount, or zero if the column is blank for this row
+     * @throws IllegalArgumentException if the column doesn't exist in the file at all, or its
+     *                                   value can't be parsed as a number
      */
     default BigDecimal parseAmount(CSVRecord csvRecord, String header) {
         if (!csvRecord.isMapped(header)) {
-            return BigDecimal.ZERO;
+            throw new IllegalArgumentException("Required column '" + header + "' is missing from this file.");
         }
 
         String stringVal = csvRecord.get(header);

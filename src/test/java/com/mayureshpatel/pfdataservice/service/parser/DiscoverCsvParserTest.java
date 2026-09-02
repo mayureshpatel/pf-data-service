@@ -212,5 +212,47 @@ class DiscoverCsvParserTest {
 
             assertThat(result).hasSize(38);
         }
+
+        @Test
+        @DisplayName("should parse the pre-July-2022 Debit/Credit-column format with correct, non-zero amounts (PF-198)")
+        void parse_preJuly2022DiscoverFormat_parsesNonZeroAmounts() {
+            InputStream csvStream = getClass().getResourceAsStream("/sample-imports/Discover-2022-06.csv");
+            assertThat(csvStream).isNotNull();
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, csvStream)) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(23);
+            assertThat(result).allSatisfy(t -> assertThat(t.getAmount()).isNotEqualByComparingTo(BigDecimal.ZERO));
+
+            Transaction first = result.get(0);
+            assertThat(first.getDescription()).isEqualTo("BEST BUY 00005165295 ALPHARETTA GA");
+            assertThat(first.getType()).isEqualTo(TransactionType.EXPENSE);
+            assertThat(first.getAmount()).isEqualByComparingTo(new BigDecimal("70.03"));
+        }
+    }
+
+    @Nested
+    @DisplayName("parse() — legacy Debit/Credit format")
+    class LegacyDebitCreditFormatTests {
+
+        @Test
+        @DisplayName("should return TRANSFER_IN for a Credit-only legacy row (PF-198)")
+        void parse_legacyCreditOnlyRow_returnsTransferIn() {
+            String csv = "Trans. Date,Description,Debit,Credit,Category\n" +
+                    "6/15/2022,PAYMENT - THANK YOU,,500.00,Payment\n";
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(1);
+            Transaction t = result.get(0);
+            assertThat(t.getType()).isEqualTo(TransactionType.TRANSFER_IN);
+            assertThat(t.getAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
+        }
     }
 }

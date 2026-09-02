@@ -86,6 +86,19 @@ class TransactionParserDefaultMethodsTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid amount format");
         assertThat(parser.parseAmount(records.get(3), "Amount")).isEqualByComparingTo("0"); // Empty string case
-        assertThat(parser.parseAmount(records.get(0), "NonExistent")).isEqualByComparingTo("0");
+    }
+
+    @Test
+    @DisplayName("parseAmount() should throw, not return zero, when the column is entirely missing from the file (PF-198)")
+    void parseAmount_columnEntirelyMissing_throws() throws Exception {
+        String csv = "Amount,Other\n" +
+                "50.00,x\n";
+        CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv));
+        CSVRecord record = csvParser.iterator().next();
+
+        // "NonExistent" isn't a real column in this file at all -- distinct from being blank
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(record, "NonExistent"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("missing from this file");
     }
 }

@@ -147,5 +147,19 @@ class CapitalOneCsvParserTest {
             assertThatThrownBy(() -> parser.parse(ACCOUNT_ID, null))
                     .isInstanceOf(NullPointerException.class);
         }
+
+        @Test
+        @DisplayName("should reject the whole file when a required amount column is entirely missing, not silently zero it (PF-198)")
+        void parse_requiredColumnEntirelyMissing_throwsInsteadOfSilentlyZeroing() {
+            // "Credit" isn't present in the header at all -- distinct from being present-but-blank
+            String csv = "Transaction Date,Description,Debit\n" +
+                    "2025-01-15,Coffee Shop,50.00\n";
+
+            assertThatThrownBy(() -> {
+                try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
+                    stream.toList();
+                }
+            }).isInstanceOf(com.mayureshpatel.pfdataservice.exception.CsvParsingException.class);
+        }
     }
 }
