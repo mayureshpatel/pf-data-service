@@ -137,10 +137,17 @@ public class RecurringTransactionService {
     /**
      * Determines whether a date-sorted group of transactions recurs at a stable interval.
      * "Stable" means every consecutive gap stays within 5 days of the group's average gap.
+     * <br><br>
+     * Classifies the average interval into one bucket per {@link Frequency} value (WEEKLY,
+     * BI_WEEKLY, MONTHLY, QUARTERLY, YEARLY) -- there is deliberately no bucket for every possible
+     * interval. A stable ~9-12 or ~17-24 day average returns {@code null}, same as an unstable
+     * group: no {@link Frequency} value corresponds to those cadences, so there's nothing to
+     * classify it as (PF-205). Add a new bucket here only if a new {@link Frequency} value is
+     * added to model it.
      *
      * @param group the transactions to check, already sorted by date
      * @return the detected frequency, or {@code null} if the intervals aren't stable enough to
-     * call recurring
+     * call recurring, or are stable but don't correspond to any supported frequency
      */
     private Frequency detectFrequency(List<Transaction> group) {
         List<Long> intervals = new ArrayList<>();
@@ -159,6 +166,7 @@ public class RecurringTransactionService {
         if (avgInterval >= 25 && avgInterval <= 35) return Frequency.MONTHLY;
         if (avgInterval >= 6 && avgInterval <= 8) return Frequency.WEEKLY;
         if (avgInterval >= 13 && avgInterval <= 16) return Frequency.BI_WEEKLY;
+        if (avgInterval >= 85 && avgInterval <= 95) return Frequency.QUARTERLY;
         if (avgInterval >= 360 && avgInterval <= 370) return Frequency.YEARLY;
 
         return null;
