@@ -75,12 +75,8 @@ public class AccountService {
         this.userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        Account account = accountRepository.findByIdAndUserId(request.getId(), userId)
+        accountRepository.findByIdAndUserId(request.getId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        if (!account.getUserId().equals(userId)) {
-            throw new AccessDeniedException("Access denied");
-        }
 
         return accountRepository.update(userId, request);
     }
@@ -109,8 +105,6 @@ public class AccountService {
         TransactionCreateRequest adjustmentTransaction = createAdjustmentTransaction(account, diff);
         this.transactionRepository.insert(adjustmentTransaction);
 
-        // update account balance
-        account.applyTransaction(adjustmentTransaction);
         return accountRepository.reconcile(userId, request.getAccountId(), request.getNewBalance(), request.getVersion());
     }
 

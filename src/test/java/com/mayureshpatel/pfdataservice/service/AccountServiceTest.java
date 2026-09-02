@@ -127,18 +127,6 @@ class AccountServiceTest {
             assertThrows(ResourceNotFoundException.class, () -> accountService.updateAccount(USER_ID, AccountUpdateRequest.builder().id(ACCOUNT_ID).build()));
         }
 
-        @Test
-        @DisplayName("should throw AccessDeniedException if user doesn't own account during update")
-        void shouldThrowOnAccessDenied() {
-            // Arrange
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().build()));
-            // Account repo returns account but somehow userId doesn't match (extra safety check in service)
-            Account otherAccount = Account.builder().id(ACCOUNT_ID).userId(999L).build();
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(otherAccount));
-
-            // Act & Assert
-            assertThrows(AccessDeniedException.class, () -> accountService.updateAccount(USER_ID, AccountUpdateRequest.builder().id(ACCOUNT_ID).build()));
-        }
     }
 
     @Nested
