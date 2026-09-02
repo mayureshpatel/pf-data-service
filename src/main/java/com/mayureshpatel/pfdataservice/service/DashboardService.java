@@ -49,7 +49,7 @@ public class DashboardService {
      */
     public DashboardData getDashboardData(Long userId, int month, int year) {
         OffsetDateTime startOfMonth = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
+        OffsetDateTime endOfMonth = endOfMonth(startOfMonth);
 
         BigDecimal totalIncome = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.INCOME);
         BigDecimal totalExpenses = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.EXPENSE);
@@ -74,7 +74,7 @@ public class DashboardService {
      */
     public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, int month, int year) {
         OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
+        OffsetDateTime endDate = endOfMonth(startDate);
 
         return getCategoryBreakdown(userId, startDate, endDate);
     }
@@ -101,7 +101,7 @@ public class DashboardService {
      */
     public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, int month, int year) {
         OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
+        OffsetDateTime endDate = endOfMonth(startDate);
 
         return getMerchantBreakdown(userId, startDate, endDate);
     }
@@ -128,7 +128,7 @@ public class DashboardService {
      */
     public DashboardPulseDto getPulse(Long userId, int month, int year) {
         OffsetDateTime startCurrent = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endCurrent = startCurrent.plusMonths(1).minusDays(1);
+        OffsetDateTime endCurrent = endOfMonth(startCurrent);
 
         // previous month
         OffsetDateTime startPrevious = startCurrent.minusMonths(1);
@@ -295,6 +295,19 @@ public class DashboardService {
         }
 
         return actions;
+    }
+
+    /**
+     * The last moment of the calendar month a given month-start instant belongs to (23:59:59, not
+     * midnight). {@code startOfMonth.plusMonths(1)} alone lands on next month's first midnight,
+     * which silently excludes any transaction timestamped later in the day on the month's actual
+     * last day when used as an inclusive range's end bound -- see PF-196.
+     *
+     * @param startOfMonth midnight on the first day of the month
+     * @return the last second of that same month
+     */
+    private OffsetDateTime endOfMonth(OffsetDateTime startOfMonth) {
+        return startOfMonth.plusMonths(1).minusSeconds(1);
     }
 
     /**

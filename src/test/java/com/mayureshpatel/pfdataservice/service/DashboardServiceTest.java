@@ -61,6 +61,24 @@ class DashboardServiceTest {
             assertEquals(new BigDecimal("2000.00"), result.netSavings());
             assertEquals(1, result.categoryBreakdown().size());
         }
+
+        @Test
+        @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryThroughEndOfMonth() {
+            // Arrange -- a transaction timestamped later in the day on Mar 31 must still be
+            // included; a midnight endDate would silently exclude it
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+            when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
+            OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getDashboardData(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEnd), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEnd), eq(TransactionType.EXPENSE));
+            verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), eq(expectedEnd));
+        }
     }
 
     @Nested
@@ -79,6 +97,20 @@ class DashboardServiceTest {
             assertNotNull(result);
             verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), any());
         }
+
+        @Test
+        @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryThroughEndOfMonth() {
+            // Arrange
+            when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
+            OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getCategoryBreakdown(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), eq(expectedEnd));
+        }
     }
 
     @Nested
@@ -96,6 +128,20 @@ class DashboardServiceTest {
             // Assert
             assertNotNull(result);
             verify(merchantRepository).findMerchantTotals(eq(USER_ID), any(), any());
+        }
+
+        @Test
+        @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryThroughEndOfMonth() {
+            // Arrange
+            when(merchantRepository.findMerchantTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
+            OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getMerchantBreakdown(USER_ID, 3, 2026);
+
+            // Assert
+            verify(merchantRepository).findMerchantTotals(eq(USER_ID), any(), eq(expectedEnd));
         }
     }
 
@@ -178,6 +224,21 @@ class DashboardServiceTest {
             // Assert
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should query the current period through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryCurrentPeriodThroughEndOfMonth() {
+            // Arrange
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+            OffsetDateTime expectedEndCurrent = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEndCurrent), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEndCurrent), eq(TransactionType.EXPENSE));
         }
     }
 
