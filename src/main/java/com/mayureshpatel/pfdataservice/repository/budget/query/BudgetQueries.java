@@ -177,4 +177,12 @@ public class BudgetQueries {
             
             ORDER BY category_name;
             """;
+
+    // language=SQL
+    public static final String COUNT_BY_CATEGORY_ID = """
+            select count(*)
+            from budgets
+            where category_id = :categoryId
+              and deleted_at is null
+            """;
 }

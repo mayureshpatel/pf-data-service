@@ -103,4 +103,11 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .query(budgetStatusRowMapper)
                 .list();
     }
+
+    public long countByCategoryIdAndDeletedAtIsNull(Long categoryId) {
+        return jdbcClient.sql(BudgetQueries.COUNT_BY_CATEGORY_ID)
+                .param("categoryId", categoryId)
+                .query(Long.class)
+                .single();
+    }
 }

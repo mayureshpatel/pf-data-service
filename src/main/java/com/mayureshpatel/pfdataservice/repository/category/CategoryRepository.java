@@ -104,4 +104,11 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .query(Long.class)
                 .single();
     }
+
+    public long countByParentId(Long parentId) {
+        return jdbcClient.sql(CategoryQueries.COUNT_BY_PARENT_ID)
+                .param("parentId", parentId)
+                .query(Long.class)
+                .single();
+    }
 }

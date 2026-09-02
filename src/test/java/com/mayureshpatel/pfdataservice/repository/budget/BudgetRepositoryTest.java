@@ -138,6 +138,33 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
             // Assert
             assertEquals(1, result.size());
         }
+
+        @Test
+        @DisplayName("should count active budgets for a category, excluding soft-deleted ones")
+        void shouldCountByCategoryIdExcludingDeleted() {
+            // Arrange
+            budgetRepository.insert(BudgetCreateRequest.builder().userId(USER_1).categoryId(CAT_RENT).amount(BigDecimal.TEN).month(7).year(2026).build());
+            Budget budget = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(USER_1, CAT_RENT, 7, 2026).orElseThrow();
+
+            // Act
+            long countBeforeDelete = budgetRepository.countByCategoryIdAndDeletedAtIsNull(CAT_RENT);
+            budgetRepository.delete(budget);
+            long countAfterDelete = budgetRepository.countByCategoryIdAndDeletedAtIsNull(CAT_RENT);
+
+            // Assert
+            assertEquals(1, countBeforeDelete);
+            assertEquals(0, countAfterDelete);
+        }
+
+        @Test
+        @DisplayName("should count zero budgets for a category with none")
+        void shouldCountByCategoryIdZeroWhenNoBudget() {
+            // Act -- category 2 (Food) has no budget inserted anywhere in this test class
+            long count = budgetRepository.countByCategoryIdAndDeletedAtIsNull(2L);
+
+            // Assert
+            assertEquals(0, count);
+        }
     }
 
     @Nested

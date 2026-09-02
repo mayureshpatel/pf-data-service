@@ -6,7 +6,9 @@ import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
+import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,8 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final CategoryRuleRepository categoryRuleRepository;
+    private final BudgetRepository budgetRepository;
 
     /**
      * Returns all categories for a user, flat (not grouped by parent).
@@ -111,12 +115,14 @@ public class CategoryService {
 
     /**
      * Deletes a category owned by the user. Refuses to delete a category that still has
-     * transactions assigned to it.
+     * subcategories, transactions, category rules, or a budget assigned to it — each is a
+     * dependent record that would otherwise be left pointing at a deleted category.
      *
      * @param userId     the user id
      * @param categoryId the category id to delete
      * @return the number of rows deleted
-     * @throws IllegalStateException if the category still has transactions assigned to it
+     * @throws IllegalStateException if the category still has subcategories, transactions,
+     *                                category rules, or a budget assigned to it
      */
     @Transactional
     public int deleteCategory(Long userId, Long categoryId) {
@@ -127,9 +133,24 @@ public class CategoryService {
             throw new AccessDeniedException("Access denied");
         }
 
+        long subcategoryCount = this.categoryRepository.countByParentId(categoryId);
+        if (subcategoryCount > 0) {
+            throw new IllegalStateException("Cannot delete category with subcategories. Please reassign or delete subcategories first.");
+        }
+
         long transactionCount = this.transactionRepository.countByCategoryId(categoryId);
         if (transactionCount > 0) {
             throw new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first.");
+        }
+
+        long categoryRuleCount = this.categoryRuleRepository.countByCategoryId(categoryId);
+        if (categoryRuleCount > 0) {
+            throw new IllegalStateException("Cannot delete category with associated category rules. Please reassign or delete those rules first.");
+        }
+
+        long budgetCount = this.budgetRepository.countByCategoryIdAndDeletedAtIsNull(categoryId);
+        if (budgetCount > 0) {
+            throw new IllegalStateException("Cannot delete category with an associated budget. Please delete the budget first.");
         }
 
         return categoryRepository.delete(category);

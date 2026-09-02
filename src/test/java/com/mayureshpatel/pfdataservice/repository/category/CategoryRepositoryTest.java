@@ -87,6 +87,30 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
     }
 
     @Nested
+    @DisplayName("Status & Counts")
+    class StatusTests {
+        @Test
+        @DisplayName("should count subcategories for a parent category")
+        void shouldCountByParentId() {
+            // Act -- category 1 (Housing) has exactly one baseline subcategory (Rent, id 6)
+            long count = categoryRepository.countByParentId(1L);
+
+            // Assert
+            assertEquals(1, count);
+        }
+
+        @Test
+        @DisplayName("should count zero subcategories for a category with none")
+        void shouldCountByParentIdZeroWhenNoSubcategories() {
+            // Act -- category 6 (Rent) is itself a subcategory with no children of its own
+            long count = categoryRepository.countByParentId(6L);
+
+            // Assert
+            assertEquals(0, count);
+        }
+    }
+
+    @Nested
     @DisplayName("Write Operations")
     class WriteTests {
         @Test

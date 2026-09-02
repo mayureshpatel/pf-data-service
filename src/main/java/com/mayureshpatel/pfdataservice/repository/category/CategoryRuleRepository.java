@@ -55,4 +55,11 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
     public int deleteById(Long id) {
         throw new UnsupportedOperationException("Use deleteById with userId");
     }
+
+    public long countByCategoryId(Long categoryId) {
+        return this.jdbcClient.sql(CategoryRuleQueries.COUNT_BY_CATEGORY_ID)
+                .param("categoryId", categoryId)
+                .query(Long.class)
+                .single();
+    }
 }

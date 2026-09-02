@@ -113,6 +113,13 @@ public final class CategoryQueries {
             """;
 
     // language=SQL
+    public static final String COUNT_BY_PARENT_ID = """
+            select count(*)
+            from categories
+            where parent_id = :parentId
+            """;
+
+    // language=SQL
     public static final String EXISTS_BY_ID = """
             select count(*)
             from categories
