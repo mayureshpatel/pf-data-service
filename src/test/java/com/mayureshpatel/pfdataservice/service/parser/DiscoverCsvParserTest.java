@@ -11,6 +11,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -159,6 +161,22 @@ class DiscoverCsvParserTest {
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getDescription()).isEqualTo("Valid Date");
+        }
+
+        @Test
+        @DisplayName("should parse the transaction date as UTC midnight, not shifted by a hardcoded timezone (PF-197)")
+        void parse_transactionDate_isUtcMidnight() {
+            String csv = "Trans. Date,Description,Amount\n" +
+                    "3/15/2025,Coffee,5.00\n";
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTransactionDate())
+                    .isEqualTo(OffsetDateTime.of(2025, 3, 15, 0, 0, 0, 0, ZoneOffset.UTC));
         }
 
         @Test

@@ -51,10 +51,17 @@ public interface TransactionParser {
     }
 
     /**
-     * Parses a date string into an {@link OffsetDateTime}.
+     * Parses a date string into an {@link OffsetDateTime}. The resulting offset comes entirely
+     * from {@code dateTimeFormatter} -- this method applies no zone of its own. Every
+     * implementation's formatter must resolve to UTC (e.g. via
+     * {@code parseDefaulting(ChronoField.OFFSET_SECONDS, 0)}), matching this app's UTC-normalized
+     * storage convention; a formatter with a real {@code .withZone(...)} override (a specific
+     * timezone rather than a fixed UTC offset) will silently shift every date it parses, as
+     * happened in {@code DiscoverCsvParser} (PF-197) -- confirm any new or changed formatter
+     * resolves to UTC before relying on this method.
      *
      * @param dateStr           the date string to parse
-     * @param dateTimeFormatter the date format to use
+     * @param dateTimeFormatter the date format to use; must resolve to UTC
      * @return the parsed {@link OffsetDateTime}
      */
     default OffsetDateTime parseDate(String dateStr, DateTimeFormatter dateTimeFormatter) {
