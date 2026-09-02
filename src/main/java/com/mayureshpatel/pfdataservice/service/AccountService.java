@@ -10,6 +10,7 @@ import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.AccountDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final RecurringTransactionRepository recurringTransactionRepository;
 
     /**
      * Retrieves all accounts for a user.
@@ -132,12 +134,13 @@ public class AccountService {
     /**
      * Deletes an account.
      * <br><br>
-     * Accounts cannot be deleted if they have any transactions associated with them.
+     * Accounts cannot be deleted if they have any transactions or recurring transactions
+     * associated with them.
      *
      * @param userId    the user id
      * @param accountId the account id
      * @throws AccessDeniedException if the user does not own the account
-     * @throws IllegalStateException if the account has any transactions
+     * @throws IllegalStateException if the account has any transactions or recurring transactions
      */
     @Transactional
     public int deleteAccount(Long userId, Long accountId) throws AccessDeniedException, IllegalStateException {
@@ -157,6 +160,15 @@ public class AccountService {
             throw new IllegalStateException(
                     "Cannot delete account with existing transactions. " +
                             "Please delete or move the " + transactionCount + " transaction(s) first."
+            );
+        }
+
+        // check if an account has any recurring transaction templates
+        long recurringCount = recurringTransactionRepository.countByAccountId(accountId);
+        if (recurringCount > 0) {
+            throw new IllegalStateException(
+                    "Cannot delete account with existing recurring transactions. " +
+                            "Please delete or reassign the " + recurringCount + " recurring transaction(s) first."
             );
         }
 

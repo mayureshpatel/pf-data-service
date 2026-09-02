@@ -159,4 +159,43 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
             assertThrows(UnsupportedOperationException.class, () -> repository.deleteById(1L));
         }
     }
+
+    @Nested
+    @DisplayName("Status & Counts")
+    class StatusTests {
+        @Test
+        @DisplayName("should count recurring transactions for an account")
+        void shouldCountByAccountId() {
+            // Act -- account 1 (Main Checking) has exactly one baseline recurring transaction (id 1)
+            long count = repository.countByAccountId(ACCOUNT_1);
+
+            // Assert
+            assertEquals(1, count);
+        }
+
+        @Test
+        @DisplayName("should count zero recurring transactions for an account with none")
+        void shouldCountByAccountIdZeroWhenNone() {
+            // Act -- account 2 (Rainy Day Savings) has no baseline recurring transaction
+            long count = repository.countByAccountId(2L);
+
+            // Assert
+            assertEquals(0, count);
+        }
+
+        @Test
+        @DisplayName("should exclude soft-deleted recurring transactions from the count")
+        void shouldCountByAccountIdExcludingDeleted() {
+            // Arrange -- baseline recurring transaction id 1 belongs to account 1
+
+            // Act
+            long countBeforeDelete = repository.countByAccountId(ACCOUNT_1);
+            repository.delete(1L, USER_1);
+            long countAfterDelete = repository.countByAccountId(ACCOUNT_1);
+
+            // Assert
+            assertEquals(1, countBeforeDelete);
+            assertEquals(0, countAfterDelete);
+        }
+    }
 }

@@ -90,4 +90,11 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .param("userId", userId)
                 .update();
     }
+
+    public long countByAccountId(Long accountId) {
+        return jdbcClient.sql(RecurringTransactionQueries.COUNT_BY_ACCOUNT_ID)
+                .param("accountId", accountId)
+                .query(Long.class)
+                .single();
+    }
 }
