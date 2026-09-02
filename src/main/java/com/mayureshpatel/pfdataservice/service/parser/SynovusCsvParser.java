@@ -35,7 +35,7 @@ public class SynovusCsvParser implements TransactionParser {
     private static final String HEADER_DEBIT = "Debit";
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = new DateTimeFormatterBuilder()
-            .appendPattern("[M/d/yyyy][MM/dd/yyyy][MMdd/yyyy][M/d/yy][MM/dd/yy]")
+            .appendPattern("[M/d/yyyy][MM/dd/yyyy][M/d/yy][MM/dd/yy]")
             .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
             .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
             .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)

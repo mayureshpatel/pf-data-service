@@ -11,6 +11,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -170,6 +171,23 @@ class SynovusCsvParserTest {
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getDescription()).isEqualTo("BOM Test");
+        }
+
+        @Test
+        @DisplayName("should correctly parse the 2-digit-year date format (PF-214)")
+        void parse_twoDigitYearDate_parsesCorrectDate() {
+            // the pattern list's [M/d/yy] alternative was only ever incidentally exercised by
+            // the tab-separated test above, which never asserted the actual parsed date value
+            String csv = "Date,Description,Credit,Debit\n" +
+                    "3/5/25,Two-Digit Year,10.00,0\n";
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTransactionDate().toLocalDate()).isEqualTo(LocalDate.of(2025, 3, 5));
         }
     }
 
