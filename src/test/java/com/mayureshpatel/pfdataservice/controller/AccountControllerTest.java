@@ -260,6 +260,20 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$.title").value("Not Found"))
                     .andExpect(jsonPath("$.detail").value("Account with ID " + ACCOUNT_ID + " not found"));
         }
+
+        @Test
+        @DisplayName("DELETE should return 409 Conflict, not 500, when account has existing transactions (PF-193)")
+        void deleteAccount_shouldReturn409WhenTransactionsExist() throws Exception {
+            // Arrange
+            when(accountService.deleteAccount(USER_ID, ACCOUNT_ID))
+                    .thenThrow(new IllegalStateException("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."));
+
+            // Act & Assert
+            mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.detail").value("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."));
+        }
     }
 
     @Nested

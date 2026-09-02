@@ -29,6 +29,12 @@ public class GlobalExceptionHandler {
         return createProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ProblemDetail handleIllegalState(IllegalStateException ex, HttpServletRequest request) {
+        log.warn("Illegal State: {} at {}", ex.getMessage(), request.getRequestURI());
+        return createProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(CsvParsingException.class)
     public ProblemDetail handleCsvParsingException(CsvParsingException ex, HttpServletRequest request) {
         log.warn("CSV Parsing Error: {} at {}", ex.getMessage(), request.getRequestURI());

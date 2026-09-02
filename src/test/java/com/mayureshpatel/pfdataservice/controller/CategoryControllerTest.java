@@ -216,6 +216,20 @@ class CategoryControllerTest extends BaseControllerTest {
         }
 
         @Test
+        @DisplayName("DELETE should return 409 Conflict, not 500, when category has existing transactions (PF-193)")
+        void deleteCategory_shouldReturn409WhenTransactionsExist() throws Exception {
+            // Arrange
+            when(categoryService.deleteCategory(USER_ID, CATEGORY_ID))
+                    .thenThrow(new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first."));
+
+            // Act & Assert
+            mockMvc.perform(delete("/api/v1/categories/{id}", CATEGORY_ID)
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.detail").value("Cannot delete category with associated transactions. Please reassign or delete transactions first."));
+        }
+
+        @Test
         @DisplayName("DELETE should return 404 Not Found when category does not exist")
         void deleteCategory_shouldReturn404() throws Exception {
             // Arrange

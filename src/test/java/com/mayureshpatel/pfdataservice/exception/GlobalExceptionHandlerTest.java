@@ -112,6 +112,18 @@ class GlobalExceptionHandlerTest {
         }
 
         @Test
+        @DisplayName("should handle IllegalStateException as 409, not the generic 500 (PF-193)")
+        void handleIllegalState() {
+            // Act
+            ProblemDetail detail = handler.handleIllegalState(
+                    new IllegalStateException("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."), request);
+
+            // Assert
+            assertEquals(HttpStatus.CONFLICT.value(), detail.getStatus());
+            assertEquals("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first.", detail.getDetail());
+        }
+
+        @Test
         @DisplayName("should handle MethodArgumentNotValidException with field errors")
         void handleValidationErrors() {
             // Arrange
