@@ -37,12 +37,16 @@ public class TransactionCategorizer {
     }
 
     /**
-     * Analyzes the transaction description and returns a best-guess category name using multiple strategies.
+     * Analyzes the transaction description and returns a best-guess category id using multiple
+     * strategies.
      *
      * @param transaction The transaction to categorize
      * @param rules       The category rules to match against
      * @param categories  Optional list of categories to validate against
-     * @return The suggested category name, or "Uncategorized" if no match found
+     * @return The suggested category id, or the sentinel {@code -1L} if no strategy matched --
+     *         never {@code null}. Callers must guard on {@code <= 0}, not on {@code == null}
+     *         (PF-204 found two call sites doing exactly that, silently harmless only by
+     *         coincidence).
      */
     public Long guessCategory(Transaction transaction, List<CategoryRule> rules, List<Category> categories) {
         CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()

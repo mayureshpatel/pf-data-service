@@ -269,9 +269,11 @@ class CategoryRuleServiceTest {
         }
 
         @Test
-        @DisplayName("should handle null guess or missing category in map")
-        void shouldHandleNoMatch() {
-            // Arrange
+        @DisplayName("should defensively handle a null guess, even though the real categorizer never returns one")
+        void shouldHandleDefensiveNullGuess() {
+            // Arrange -- TransactionCategorizer.guessCategory() is documented and implemented to
+            // never return null (it returns the sentinel -1L on no match); this exercises the
+            // guard's defensive null-check anyway, since it's still part of the fixed condition
             Transaction t1 = Transaction.builder().description("Unknown").category(null).type(TransactionType.EXPENSE).build();
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
@@ -283,11 +285,46 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertTrue(result.isEmpty());
+        }
 
-            // Case: Guessed ID not in category map
-            reset(categorizer);
+        @Test
+        @DisplayName("should skip when the guessed category id no longer exists (e.g. deleted after the rule was created)")
+        void shouldHandleGuessNotInMap() {
+            // Arrange -- a real, non-sentinel id that simply isn't in the user's current categories
+            Transaction t1 = Transaction.builder().description("Unknown").category(null).type(TransactionType.EXPENSE).build();
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(999L);
-            result = ruleService.previewApply(USER_ID);
+
+            // Act
+            List<RuleChangePreviewDto> result = ruleService.previewApply(USER_ID);
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should skip the no-match sentinel via its own guard, even if categoryMap happens to have a -1-keyed entry (PF-204)")
+        void shouldSkipSentinelEvenIfCategoryMapHasEntryForIt() {
+            // Arrange -- the real bug this guards against: if a future "Uncategorized" pseudo
+            // -category is ever added with id -1 (the app already has this exact sentinel pattern
+            // elsewhere, e.g. bulk-edit-dialog's "Uncategorized" item), categoryMap.get(-1L) would
+            // stop returning null -- so this deliberately engineers that exact scenario. Only the
+            // guessedCategory <= 0 guard itself can correctly skip this; the second check
+            // (categoryMap.get(...) == null) would NOT catch it here.
+            Transaction t1 = Transaction.builder().description("Unknown").category(null).type(TransactionType.EXPENSE).build();
+            Category sentinelCategory = Category.builder().id(-1L).name("Should Never Match").build();
+
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(sentinelCategory));
+            when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
+            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(-1L);
+
+            // Act
+            List<RuleChangePreviewDto> result = ruleService.previewApply(USER_ID);
+
+            // Assert
             assertTrue(result.isEmpty());
         }
 
@@ -338,7 +375,7 @@ class CategoryRuleServiceTest {
         }
 
         @Test
-        @DisplayName("should skip transaction if guess is null or category not in map during apply")
+        @DisplayName("should skip transaction if guess is defensively null or category not in map during apply")
         void shouldSkipOnNoMatch() {
             // Arrange
             Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
@@ -346,14 +383,36 @@ class CategoryRuleServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
 
-            // Case 1: guess is null
+            // Case 1: guess is defensively null -- the real categorizer never actually does this
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(null);
             assertEquals(0, ruleService.applyRules(USER_ID));
 
-            // Case 2: matched category is null
+            // Case 2: guessed id is a real, non-sentinel id that isn't in the user's categories
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(999L);
             assertEquals(0, ruleService.applyRules(USER_ID));
 
+            verify(transactionRepository, never()).updateAll(eq(USER_ID), anyList());
+        }
+
+        @Test
+        @DisplayName("should skip the no-match sentinel via its own guard, even if categoryMap happens to have a -1-keyed entry (PF-204)")
+        void shouldSkipSentinelEvenIfCategoryMapHasEntryForIt() {
+            // Arrange -- same isolation as previewApply's equivalent test: engineers categoryMap
+            // to contain a -1L-keyed category so only the guessedCategory <= 0 guard itself (not
+            // the coincidental categoryMap.get(...) == null check) can correctly skip this
+            Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
+            Category sentinelCategory = Category.builder().id(-1L).name("Should Never Match").build();
+
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(sentinelCategory));
+            when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
+            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(-1L);
+
+            // Act
+            int result = ruleService.applyRules(USER_ID);
+
+            // Assert
+            assertEquals(0, result);
             verify(transactionRepository, never()).updateAll(eq(USER_ID), anyList());
         }
 

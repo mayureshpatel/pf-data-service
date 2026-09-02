@@ -160,7 +160,7 @@ public class CategoryRuleService {
             }
 
             Long guessedCategory = this.categorizer.guessCategory(transaction, rules, categories);
-            if (guessedCategory == null) {
+            if (guessedCategory == null || guessedCategory <= 0) {
                 continue;
             }
 
@@ -205,7 +205,7 @@ public class CategoryRuleService {
             }
 
             Long guessedCategory = this.categorizer.guessCategory(transaction, rules, categories);
-            if (null == guessedCategory) {
+            if (guessedCategory == null || guessedCategory <= 0) {
                 continue;
             }
 
