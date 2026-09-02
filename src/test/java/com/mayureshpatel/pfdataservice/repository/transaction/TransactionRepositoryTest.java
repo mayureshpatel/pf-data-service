@@ -391,18 +391,6 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should find transactions with account and user details by id list (currently an alias for findAllById)")
-        void shouldFindAllByIdWithAccountAndUser() {
-            // Act
-            List<Transaction> result = transactionRepository.findAllByIdWithAccountAndUser(USER_ID, List.of(1000L));
-
-            // Assert
-            assertEquals(1, result.size());
-            assertEquals(1000L, result.get(0).getId());
-            assertNotNull(result.get(0).getAccount());
-        }
-
-        @Test
         @DisplayName("should find categories that have at least one transaction (subcategories only)")
         void shouldGetCategoriesWithTransactions() {
             // Act
@@ -549,21 +537,6 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertTrue(result.stream()
                     .filter(c -> c.category() != null)
                     .anyMatch(c -> c.category().name().equals("Groceries")));
-        }
-
-        @Test
-        @DisplayName("should check if transaction exists by specific fields")
-        void shouldCheckExistence() {
-            // Arrange
-            OffsetDateTime date = OffsetDateTime.parse("2026-03-01T10:00:00Z");
-
-            // Act
-            boolean exists = transactionRepository.existsByAccountIdAndDateAndAmountAndDescriptionAndType(
-                    1L, date, new BigDecimal("25.50"), "Morning Coffee", TransactionType.EXPENSE
-            );
-
-            // Assert
-            assertTrue(exists);
         }
 
         @Test

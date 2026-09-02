@@ -97,17 +97,6 @@ public final class TransactionQueries {
             " order by transactions.date desc";
 
     // language=SQL
-    public static final String FIND_BY_ACCOUNT_ID_AND_DATE_AND_AMOUNT_AND_DESCRIPTION_AND_TYPE = """
-            select *
-            from transactions
-            where account_id = :accountId
-                and date = :transactionDate
-                and amount = :amount
-                and description = :description
-                and type = :type
-            """;
-
-    // language=SQL
     public static final String FIND_EXISTING_FOR_DUPLICATE_CHECK = """
             select *
             from transactions

@@ -70,17 +70,6 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should find merchants by name pattern")
-        void shouldFindByCleanNameLike() {
-            // Act
-            List<Merchant> result = repository.findAllByCleanNameLike("%Whole%");
-
-            // Assert
-            assertFalse(result.isEmpty());
-            assertTrue(result.stream().anyMatch(m -> m.getCleanName().contains("Whole")));
-        }
-
-        @Test
         @DisplayName("should find a user-scoped merchant by original name and user ID")
         void shouldFindByOriginalNameAndUserId() {
             // Act

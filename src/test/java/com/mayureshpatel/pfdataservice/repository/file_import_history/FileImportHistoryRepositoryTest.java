@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,43 +47,11 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should find by file hash")
-        void shouldFindByFileHash() {
-            // Arrange
-            FileImportCreateRequest request = FileImportCreateRequest.builder()
-                    .accountId(String.valueOf(ACCOUNT_1))
-                    .fileHash("hash456")
-                    .fileName("test2.csv")
-                    .build();
-            repository.insert(request);
-
-            // Act
-            Optional<FileImportHistory> result = repository.findByFileHash("hash456");
-
-            // Assert
-            assertTrue(result.isPresent());
-        }
-
-        @Test
-        @DisplayName("should find all by account ID")
-        void shouldFindAllByAccountId() {
-            // Arrange
-            repository.insert(FileImportCreateRequest.builder().accountId(String.valueOf(ACCOUNT_1)).fileHash("h1").fileName("1.csv").build());
-            repository.insert(FileImportCreateRequest.builder().accountId(String.valueOf(ACCOUNT_1)).fileHash("h2").fileName("2.csv").build());
-
-            // Act
-            List<FileImportHistory> result = repository.findAllByAccountId(ACCOUNT_1);
-
-            // Assert
-            assertTrue(result.size() >= 2);
-        }
-
-        @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
             // Arrange
             repository.insert(FileImportCreateRequest.builder().accountId(String.valueOf(ACCOUNT_1)).fileHash("h3").fileName("3.csv").build());
-            Long id = repository.findByFileHash("h3").get().getId();
+            Long id = repository.findByAccountIdAndFileHash(ACCOUNT_1, "h3").get().getId();
 
             // Act
             Optional<FileImportHistory> result = repository.findById(id);
@@ -110,7 +77,7 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
 
             // Assert
             assertEquals(1, rows);
-            FileImportHistory saved = repository.findByFileHash("h5").orElseThrow();
+            FileImportHistory saved = repository.findByAccountIdAndFileHash(ACCOUNT_1, "h5").orElseThrow();
             assertEquals("5.csv", saved.getFileName());
             assertEquals(3, saved.getTransactionCount());
         }

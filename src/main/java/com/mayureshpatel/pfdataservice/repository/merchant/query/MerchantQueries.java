@@ -27,13 +27,6 @@ public final class MerchantQueries {
             """;
 
     // language=SQL
-    public static final String FIND_ALL_BY_CLEAN_NAME_LIKE = """
-            select *
-            from merchants
-            where clean_name like :cleanName
-            """;
-
-    // language=SQL
     public static final String FIND_BY_ORIGINAL_NAME_AND_USER_ID = """
             select *
             from merchants

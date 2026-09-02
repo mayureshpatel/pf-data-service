@@ -11,7 +11,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -29,23 +28,9 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
                 .optional();
     }
 
-    public List<FileImportHistory> findAllByAccountId(Long id) {
-        return jdbcClient.sql(FileImportHistoryQueries.FIND_ALL_BY_ACCOUNT_ID)
-                .param("accountId", id)
-                .query(rowMapper)
-                .list();
-    }
-
     public Optional<FileImportHistory> findByAccountIdAndFileHash(Long accountId, String fileHash) {
         return jdbcClient.sql(FileImportHistoryQueries.FIND_BY_ACCOUNT_ID_AND_FILE_HASH)
                 .param("accountId", accountId)
-                .param("fileHash", fileHash)
-                .query(rowMapper)
-                .optional();
-    }
-
-    public Optional<FileImportHistory> findByFileHash(String fileHash) {
-        return jdbcClient.sql(FileImportHistoryQueries.FIND_BY_FILE_HASH)
                 .param("fileHash", fileHash)
                 .query(rowMapper)
                 .optional();
