@@ -24,4 +24,8 @@
 ## Testing (Backend)
 - **Tools:** JUnit5, Mockito, Testcontainers, AssertJ.
 - **Structure:** Follow the AAA pattern with exact lowercase comments: `// arrange`, `// act`, `// assert & verify`.
-- **Quality:** Use **PiTest** for mutation testing to validate test quality. Adhere to Test-Driven Development (TDD) for bugs.
+- **Quality:** PiTest is configured in `pom.xml` for mutation testing, but is not currently bound
+  to any Maven lifecycle phase and is not run by `verify.sh` — running it today requires the
+  manual `mvn org.pitest:pitest-maven:mutationCoverage` invocation (see PF-EPIC-015, preliminary,
+  for wiring this in for real). Don't cite mutation-testing results as a passed quality bar until
+  that's true. Adhere to Test-Driven Development (TDD) for bugs.
