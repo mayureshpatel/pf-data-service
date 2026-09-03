@@ -45,5 +45,6 @@ before writing anything non-trivial, but these are the parts easy to miss on a s
   switch is the injection guard for `ORDER BY`, which can't be parameterized the normal way.
 
 ## 📚 References
-Agents must refer to the `references/` directory (if populated) for gold-standard implementations of batch inserts, paginated queries, and `pg_trgm` fuzzy searches.
+Agents must refer to the `references/` directory for gold-standard implementations of batch
+inserts, paginated queries, and `pg_trgm` fuzzy searches.
 - [Repository Gold-Source](references/repository-gold-source.java)
