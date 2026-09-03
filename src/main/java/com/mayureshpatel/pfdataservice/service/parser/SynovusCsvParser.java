@@ -137,7 +137,7 @@ public class SynovusCsvParser implements TransactionParser {
         } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Synovus CSV", e);
+            throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse Synovus CSV", e);
         }
     }
 

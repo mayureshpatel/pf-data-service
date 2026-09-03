@@ -91,7 +91,7 @@ public class CapitalOneCsvParser implements TransactionParser {
                 csvParser.close();
                 reader.close();
             } catch (Exception e) {
-                throw new RuntimeException("Failed to close CSV parser resources", e);
+                throw new CsvParsingException("Failed to close CSV parser resources", e);
             }
 
             if (!errors.isEmpty()) {
@@ -106,7 +106,7 @@ public class CapitalOneCsvParser implements TransactionParser {
                 reader.close();
             } catch (Exception ignored) {
             }
-            throw new RuntimeException("Failed to parse Capital One CSV", e);
+            throw new CsvParsingException("Failed to parse Capital One CSV", e);
         }
     }
 

@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.service.parser;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -54,7 +55,7 @@ public class StandardCsvParser implements TransactionParser {
                             csvParser.close();
                             reader.close();
                         } catch (Exception e) {
-                            throw new RuntimeException("Failed to close CSV parser resources", e);
+                            throw new CsvParsingException("Failed to close CSV parser resources", e);
                         }
                     });
         } catch (Exception e) {
@@ -62,7 +63,7 @@ public class StandardCsvParser implements TransactionParser {
                 reader.close();
             } catch (Exception ignored) {
             }
-            throw new RuntimeException("Failed to parse Standard CSV", e);
+            throw new CsvParsingException("Failed to parse Standard CSV", e);
         }
     }
 

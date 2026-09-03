@@ -95,7 +95,7 @@ public class DiscoverCsvParser implements TransactionParser {
                 csvParser.close();
                 reader.close();
             } catch (Exception e) {
-                throw new RuntimeException("Failed to close CSV parser resources", e);
+                throw new CsvParsingException("Failed to close CSV parser resources", e);
             }
 
             if (!errors.isEmpty()) {
@@ -110,7 +110,7 @@ public class DiscoverCsvParser implements TransactionParser {
                 reader.close();
             } catch (Exception ignored) {
             }
-            throw new RuntimeException("Failed to parse Discover CSV", e);
+            throw new CsvParsingException("Failed to parse Discover CSV", e);
         }
     }
 
