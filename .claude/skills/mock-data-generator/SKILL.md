@@ -48,7 +48,10 @@ This skill ensures the local developer environment can handle production-scale v
 - **`generate_mock_transactions.py` needs `psql` on `PATH`**, not `psycopg2` (also not a project
   dependency). It shells out to `psql` for both schema introspection and (with `--execute`)
   running the generated inserts.
-- **The `postgres` MCP server is not reliably available** — it's shown `status: failed` on init in
-  live sessions this migration epic tested against. Don't treat an MCP schema query as guaranteed;
+- **The `postgres` MCP server needs a one-time interactive approval and isn't guaranteed connected
+  even then.** It previously showed `status: failed` on init — that root cause (missing `uvx`, a
+  Python-3.14/`pglast` build failure, an `mcp`-package version mismatch) was fixed under PF-179;
+  current sessions show `status: pending` instead (normal — awaiting the one-time approval, not a
+  failure). Still, don't treat an MCP schema query as guaranteed available in any given session;
   fall back to reading the Flyway migrations directly (they're the actual source of truth for the
   schema regardless of MCP availability).
