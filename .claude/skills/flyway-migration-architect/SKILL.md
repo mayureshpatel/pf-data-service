@@ -34,9 +34,10 @@ documentation via `COMMENT ON TABLE`.
   stricter version of the same thing. `NUMERIC` and `DECIMAL` are interchangeable in Postgres —
   both spellings appear in real migrations — but the precision must match.
 - **The next version number is not always "count the files plus one."** Check the actual highest
-  `V{n}` in `src/main/resources/db/migration/` directly (currently `V33`) — don't infer it from a
-  stale reference or from `target/classes/db/migration/` (build output; can be stale/duplicated
-  relative to the real source directory).
+  `V{n}` in `src/main/resources/db/migration/` directly (currently `V34` — this number moves with
+  every new migration; treat it as a snapshot, not a fact) — don't infer it from a stale reference
+  or from `target/classes/db/migration/` (build output; can be stale/duplicated relative to the
+  real source directory).
 - **Timestamps were migrated to `TIMESTAMPTZ` in `V28`.** If copying a pattern from a migration
   older than `V28`, check whether it still uses a plain `TIMESTAMP` — that's the pre-migration
   convention, not the current one.
