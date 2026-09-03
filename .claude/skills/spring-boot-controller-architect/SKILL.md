@@ -25,3 +25,11 @@ Ensure endpoints are protected via `@PreAuthorize` where tenant isolation is req
 
 ## 📚 References
 - [Controller Gold-Source](references/controller-gold-source.java)
+
+## ⚠️ Gotchas
+- **One real controller already violates the plural-noun rule: `CurrencyController` maps
+  `/api/v1/currency` (singular).** Confirmed by direct check against all 13 controllers' real
+  `@RequestMapping` values — every other one is plural. Don't copy this one as precedent for a new
+  endpoint; it's a live, uncorrected exception, not an accepted alternate style. Renaming it is a
+  breaking API change (existing callers depend on the current path), so it's a deliberate fix for
+  someone to schedule, not something to silently correct as a side effect of an unrelated task.
