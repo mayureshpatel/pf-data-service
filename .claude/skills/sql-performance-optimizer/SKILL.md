@@ -34,8 +34,9 @@ This skill dictates how to optimize raw PostgreSQL queries.
   transactional by default (`postgresql.transactional.lock`, defaults to `true`, per Flyway's own
   docs) — so both the migration's own transaction *and* Flyway's locking mechanism need addressing,
   not just one. This project sets neither `postgresql.transactional.lock` nor Flyway's general
-  `mixed` option anywhere in `application*.yml`. Confirmed against real history: all 30 real
-  migrations that add an index use plain `CREATE INDEX`; none has ever used `CONCURRENTLY`. Don't
+  `mixed` option anywhere in `application*.yml`. Confirmed against real history: every real
+  `CREATE INDEX` statement across every migration (28 as of this check — that count only grows, so
+  treat it as a snapshot, not a fact) is plain; none has ever used `CONCURRENTLY`. Don't
   trust a same-turn claim that Flyway "detects and handles this automatically" without a citation —
   verify against Flyway's own docs first; a model reasoning from general Postgres knowledge alone
   produced exactly that confident, wrong claim while this Gotcha was being written. Only reach for
