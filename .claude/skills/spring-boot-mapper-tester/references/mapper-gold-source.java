@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
+import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -56,9 +58,9 @@ class MapperGoldStandardTest {
                     .id(1L)
                     .userId(100L)
                     .name("Checking")
-                    .typeCode("CHECKING")
+                    .type(AccountType.builder().code("CHECKING").label("Checking").build())
                     .currentBalance(new BigDecimal("1500.00"))
-                    .currencyCode("USD")
+                    .currency(Currency.builder().code("USD").name("US Dollar").build())
                     .bankCode("CAPITAL_ONE")
                     .build();
 
