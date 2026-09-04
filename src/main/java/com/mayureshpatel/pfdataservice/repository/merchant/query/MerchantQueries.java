@@ -27,18 +27,19 @@ public final class MerchantQueries {
             """;
 
     // language=SQL
-    public static final String FIND_BY_ORIGINAL_NAME_AND_USER_ID = """
+    public static final String FIND_ALL_BY_CLEAN_NAME_AND_USER_ID = """
             select *
             from merchants
-            where original_name = :originalName
+            where clean_name = :cleanName
               and user_id = :userId
+            order by id
             """;
 
     // language=SQL
-    public static final String FIND_ALL_BY_ORIGINAL_NAMES_AND_USER_ID = """
+    public static final String FIND_ALL_BY_CLEAN_NAMES_AND_USER_ID = """
             select *
             from merchants
-            where original_name in (:originalNames)
+            where clean_name in (:cleanNames)
               and user_id = :userId
             """;
 

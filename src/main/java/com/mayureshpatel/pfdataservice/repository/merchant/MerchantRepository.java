@@ -48,20 +48,27 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
-    public Optional<Merchant> findByOriginalNameAndUserId(String originalName, Long userId) {
-        return jdbcClient.sql(MerchantQueries.FIND_BY_ORIGINAL_NAME_AND_USER_ID)
-                .param("originalName", originalName)
+    /**
+     * User-scoped clean-name lookup. Ordered by {@code id} so that if a user somehow already has
+     * more than one merchant sharing a clean name (no DB uniqueness constraint on
+     * {@code (user_id, clean_name)} -- only on {@code (user_id, original_name)}), callers picking
+     * the first result get a stable, deterministic choice rather than whatever order Postgres
+     * happens to return.
+     */
+    public List<Merchant> findAllByCleanNameAndUserId(String cleanName, Long userId) {
+        return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_CLEAN_NAME_AND_USER_ID)
+                .param("cleanName", cleanName)
                 .param("userId", userId)
                 .query(rowMapper)
-                .optional();
+                .list();
     }
 
-    public List<Merchant> findAllByOriginalNamesAndUserId(List<String> originalNames, Long userId) {
-        if (originalNames == null || originalNames.isEmpty()) {
+    public List<Merchant> findAllByCleanNamesAndUserId(List<String> cleanNames, Long userId) {
+        if (cleanNames == null || cleanNames.isEmpty()) {
             return List.of();
         }
-        return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_ORIGINAL_NAMES_AND_USER_ID)
-                .param("originalNames", originalNames)
+        return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_CLEAN_NAMES_AND_USER_ID)
+                .param("cleanNames", cleanNames)
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
