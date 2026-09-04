@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
@@ -75,7 +76,8 @@ public class CategoryRuleService {
 
         CategoryRule rule = CategoryRule.builder()
                 .user(user)
-                .keyword(request.getKeyword())
+                .keywords(request.getKeywords())
+                .matchType(request.getMatchType() != null ? request.getMatchType() : MatchType.OR)
                 .priority(request.getPriority() != null ? request.getPriority() : 0)
                 .category(category)
                 .minAmount(request.getMinAmount())
@@ -110,7 +112,8 @@ public class CategoryRuleService {
         }
 
         CategoryRule updatedRule = rule.toBuilder()
-                .keyword(request.getKeyword())
+                .keywords(request.getKeywords())
+                .matchType(request.getMatchType() != null ? request.getMatchType() : MatchType.OR)
                 .category(category)
                 .priority(request.getPriority())
                 .minAmount(request.getMinAmount())

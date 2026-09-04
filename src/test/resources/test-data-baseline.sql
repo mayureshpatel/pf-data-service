@@ -2,7 +2,7 @@
 -- This script provides a rich dataset for meaningful repository layer testing with Testcontainers.
 
 -- 1. CLEANUP
-TRUNCATE TABLE transaction_tags, tags, transactions, recurring_transactions, budgets, category_rules, categories, file_import_history, accounts, merchants, account_types, currencies, users RESTART IDENTITY CASCADE;
+TRUNCATE TABLE transaction_tags, tags, transactions, recurring_transactions, budgets, category_rule_keywords, category_rules, categories, file_import_history, accounts, merchants, account_types, currencies, users RESTART IDENTITY CASCADE;
 
 -- 2. USERS
 INSERT INTO users (id, username, password_hash, email, role, last_updated_by, last_updated_timestamp)
@@ -78,10 +78,15 @@ VALUES (1000, 1, 8, 4, 25.50, '2026-03-01 10:00:00+00', 'Morning Coffee', 'EXPEN
        (1002, 1, NULL, NULL, 500.00, '2026-03-03 12:00:00+00', 'ATM Deposit', 'INCOME');
 
 -- 8. CATEGORY RULES
-INSERT INTO category_rules (id, user_id, keyword, category_id, priority)
-VALUES (1, 1, 'WHOLEFDS', 7, 10),
-       (2, 1, 'SHELL', 9, 5),
-       (3, 1, 'CAFE', 8, 1);
+INSERT INTO category_rules (id, user_id, category_id, priority)
+VALUES (1, 1, 7, 10),
+       (2, 1, 9, 5),
+       (3, 1, 8, 1);
+
+INSERT INTO category_rule_keywords (id, rule_id, keyword)
+VALUES (1, 1, 'WHOLEFDS'),
+       (2, 2, 'SHELL'),
+       (3, 3, 'CAFE');
 
 -- 9. RECURRING TRANSACTIONS
 INSERT INTO recurring_transactions (id, user_id, account_id, merchant_id, amount, frequency, next_date, active)
@@ -104,4 +109,5 @@ SELECT setval('merchants_id_seq', (SELECT MAX(id) FROM merchants));
 SELECT setval('transactions_id_seq', (SELECT MAX(id) FROM transactions));
 SELECT setval('tags_id_seq', (SELECT MAX(id) FROM tags));
 SELECT setval('category_rules_id_seq', (SELECT MAX(id) FROM category_rules));
+SELECT setval('category_rule_keywords_id_seq', (SELECT MAX(id) FROM category_rule_keywords));
 SELECT setval('recurring_transactions_id_seq', (SELECT MAX(id) FROM recurring_transactions));

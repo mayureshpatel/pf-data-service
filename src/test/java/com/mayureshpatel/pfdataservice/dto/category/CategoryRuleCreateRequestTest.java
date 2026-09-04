@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,7 +32,7 @@ class CategoryRuleCreateRequestTest {
         CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                 .userId(1L)
                 .categoryId(1L)
-                .keyword("PUBLIX")
+                .keywords(List.of("PUBLIX"))
                 .priority(1)
                 .build();
 
@@ -48,7 +49,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(null)
                     .categoryId(1L)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
@@ -61,7 +62,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(0L)
                     .categoryId(1L)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
@@ -78,7 +79,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(null)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
@@ -91,7 +92,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(0L)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
@@ -100,15 +101,28 @@ class CategoryRuleCreateRequestTest {
     }
 
     @Nested
-    @DisplayName("Field: keyword")
-    class KeywordValidationTests {
+    @DisplayName("Field: keywords (PF-315)")
+    class KeywordsValidationTests {
         @Test
-        @DisplayName("should fail when keyword is blank")
-        void shouldFailWhenKeywordIsBlank() {
+        @DisplayName("should fail when keywords is empty")
+        void shouldFailWhenKeywordsIsEmpty() {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keyword("")
+                    .keywords(List.of())
+                    .build();
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("At least one keyword is required.")));
+        }
+
+        @Test
+        @DisplayName("should fail when a keyword in the list is blank")
+        void shouldFailWhenAKeywordIsBlank() {
+            CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
+                    .userId(1L)
+                    .categoryId(1L)
+                    .keywords(List.of("PUBLIX", ""))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
@@ -116,16 +130,28 @@ class CategoryRuleCreateRequestTest {
         }
 
         @Test
-        @DisplayName("should fail when keyword exceeds 255 characters")
-        void shouldFailWhenKeywordIsTooLong() {
+        @DisplayName("should fail when a keyword in the list exceeds 255 characters")
+        void shouldFailWhenAKeywordIsTooLong() {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keyword("a".repeat(256))
+                    .keywords(List.of("a".repeat(256)))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Keyword cannot exceed 255 characters.")));
+        }
+
+        @Test
+        @DisplayName("should pass with multiple valid keywords")
+        void shouldPassWithMultipleKeywords() {
+            CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
+                    .userId(1L)
+                    .categoryId(1L)
+                    .keywords(List.of("AMZN", "MKTP"))
+                    .build();
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            assertTrue(violations.isEmpty());
         }
     }
 
@@ -138,7 +164,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .priority(-1)
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
@@ -156,7 +182,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .minAmount(null)
                     .maxAmount(null)
                     .build();
@@ -170,7 +196,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .minAmount(new java.math.BigDecimal("-0.01"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
@@ -184,7 +210,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keyword("PUBLIX")
+                    .keywords(List.of("PUBLIX"))
                     .maxAmount(new java.math.BigDecimal("-0.01"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);

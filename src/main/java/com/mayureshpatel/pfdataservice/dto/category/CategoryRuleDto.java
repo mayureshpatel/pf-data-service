@@ -1,14 +1,17 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import lombok.Builder;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Builder
 public record CategoryRuleDto(
         Long id,
         Long userId,
-        String keyword,
+        List<String> keywords,
+        MatchType matchType,
         Integer priority,
         CategoryDto category,
         BigDecimal minAmount,

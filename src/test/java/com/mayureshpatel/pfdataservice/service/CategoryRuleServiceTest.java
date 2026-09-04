@@ -60,7 +60,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should return list of rule DTOs")
         void shouldReturnRules() {
             // Arrange
-            CategoryRule rule = CategoryRule.builder().id(RULE_ID).keyword("Amazon").build();
+            CategoryRule rule = CategoryRule.builder().id(RULE_ID).keywords(List.of("Amazon")).build();
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of(rule));
 
             // Act
@@ -68,7 +68,7 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(1, result.size());
-            assertEquals("Amazon", result.get(0).keyword());
+            assertEquals(List.of("Amazon"), result.get(0).keywords());
         }
     }
 
@@ -88,7 +88,7 @@ class CategoryRuleServiceTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(CATEGORY_ID)
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .priority(1)
                     .build();
 
@@ -97,7 +97,7 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(42L, result);
-            verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getKeyword().equals("Amazon")));
+            verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getKeywords().equals(List.of("Amazon"))));
         }
 
         @Test
@@ -113,7 +113,7 @@ class CategoryRuleServiceTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(CATEGORY_ID)
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .priority(null)
                     .build();
 
@@ -137,7 +137,7 @@ class CategoryRuleServiceTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(CATEGORY_ID)
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .priority(1)
                     .minAmount(new java.math.BigDecimal("5.00"))
                     .maxAmount(new java.math.BigDecimal("20.00"))
@@ -150,6 +150,57 @@ class CategoryRuleServiceTest {
             verify(categoryRuleRepository).insertAndReturnId(argThat(r ->
                     r.getMinAmount().equals(new java.math.BigDecimal("5.00"))
                             && r.getMaxAmount().equals(new java.math.BigDecimal("20.00"))));
+        }
+
+        @Test
+        @DisplayName("PF-315: should pass multiple keywords and matchType through to the inserted rule")
+        void shouldCreateWithMultipleKeywordsAndMatchType() {
+            // arrange
+            User user = User.builder().id(USER_ID).build();
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRuleRepository.insertAndReturnId(any())).thenReturn(1L);
+
+            CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
+                    .userId(USER_ID)
+                    .categoryId(CATEGORY_ID)
+                    .keywords(List.of("AMZN", "MKTP"))
+                    .matchType(com.mayureshpatel.pfdataservice.domain.category.MatchType.AND)
+                    .build();
+
+            // act
+            ruleService.createRule(USER_ID, request);
+
+            // assert & verify
+            verify(categoryRuleRepository).insertAndReturnId(argThat(r ->
+                    r.getKeywords().equals(List.of("AMZN", "MKTP"))
+                            && r.getMatchType() == com.mayureshpatel.pfdataservice.domain.category.MatchType.AND));
+        }
+
+        @Test
+        @DisplayName("PF-315: should default matchType to OR when not provided")
+        void shouldCreateWithDefaultMatchType() {
+            // arrange
+            User user = User.builder().id(USER_ID).build();
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRuleRepository.insertAndReturnId(any())).thenReturn(1L);
+
+            CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
+                    .userId(USER_ID)
+                    .categoryId(CATEGORY_ID)
+                    .keywords(List.of("Amazon"))
+                    .matchType(null)
+                    .build();
+
+            // act
+            ruleService.createRule(USER_ID, request);
+
+            // assert & verify
+            verify(categoryRuleRepository).insertAndReturnId(argThat(r ->
+                    r.getMatchType() == com.mayureshpatel.pfdataservice.domain.category.MatchType.OR));
         }
 
         @Test
@@ -188,7 +239,7 @@ class CategoryRuleServiceTest {
             when(categoryRuleRepository.update(any())).thenReturn(1);
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .id(RULE_ID)
-                    .keyword("NewKW")
+                    .keywords(List.of("NewKW"))
                     .categoryId(CATEGORY_ID)
                     .priority(5)
                     .minAmount(new java.math.BigDecimal("5.00"))
@@ -200,7 +251,7 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(1, result);
-            verify(categoryRuleRepository).update(argThat(r -> r.getKeyword().equals("NewKW")
+            verify(categoryRuleRepository).update(argThat(r -> r.getKeywords().equals(List.of("NewKW"))
                     && r.getPriority() == 5
                     && r.getMinAmount().equals(new java.math.BigDecimal("5.00"))
                     && r.getMaxAmount().equals(new java.math.BigDecimal("20.00"))));

@@ -42,7 +42,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             // Arrange
             CategoryRuleDto ruleDto = CategoryRuleDto.builder()
                     .id(RULE_ID)
-                    .keyword("AMZN")
+                    .keywords(List.of("AMZN"))
                     .priority(1)
                     .build();
 
@@ -54,7 +54,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].id").value(RULE_ID))
-                    .andExpect(jsonPath("$[0].keyword").value("AMZN"));
+                    .andExpect(jsonPath("$[0].keywords[0]").value("AMZN"));
 
             verify(categoryRuleService).getRules(USER_ID);
         }
@@ -82,7 +82,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             // Arrange
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
-                    .keyword("Starbucks")
+                    .keywords(List.of("Starbucks"))
                     .priority(5)
                     .categoryId(10L)
                     .build();
@@ -103,7 +103,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createRule_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - missing keyword and categoryId
+            // Arrange - missing keywords and categoryId
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .priority(5)
@@ -115,7 +115,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("keyword", "categoryId")));
+                    .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("keywords", "categoryId")));
         }
     }
 
@@ -129,7 +129,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             // Arrange
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .id(RULE_ID)
-                    .keyword("Updated Keyword")
+                    .keywords(List.of("Updated Keyword"))
                     .categoryId(20L)
                     .priority(10)
                     .build();
@@ -161,7 +161,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("id", "categoryId", "keyword")));
+                    .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("id", "categoryId", "keywords")));
         }
     }
 

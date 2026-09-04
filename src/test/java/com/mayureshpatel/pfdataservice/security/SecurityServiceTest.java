@@ -103,7 +103,7 @@ class SecurityServiceTest {
         return CategoryRule.builder()
                 .id(RULE_ID)
                 .user(User.builder().id(userId).build())
-                .keyword("Coffee")
+                .keywords(java.util.List.of("Coffee"))
                 .build();
     }
 

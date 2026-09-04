@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,12 @@ import java.util.Optional;
  * condition on each individual rule, not a separate {@link CategorizationStrategy}, since the
  * range only ever narrows a specific rule's own keyword match rather than acting as an
  * independent, keyword-free matching mechanism.
+ * <p>
+ * A rule's single {@code keyword} became a {@code keywords} set with an explicit {@link MatchType}
+ * (PF-315): {@code AND} requires every keyword present in the description, {@code OR} requires at
+ * least one. A single-keyword rule (the common case, and every rule that existed before PF-315)
+ * behaves identically under either match type, so nothing about the original single-keyword
+ * behavior changed for those rules.
  */
 @Component
 @Slf4j
@@ -46,7 +53,7 @@ public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
 
         // search for a matching rule on the transaction
         for (CategoryRule rule : context.getRules()) {
-            if (transaction.getDescription().toLowerCase().contains(rule.getKeyword().toLowerCase())
+            if (matchesKeywords(transaction.getDescription(), rule)
                     && matchesAmountRange(transaction.getAmount(), rule)) {
                 return Optional.of(rule.getCategory().getId());
             }
@@ -67,13 +74,35 @@ public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
 
         // search for a matching rule on the transaction
         for (CategoryRule rule : context.getRules()) {
-            if (transaction.getDescription().toLowerCase().contains(rule.getKeyword().toLowerCase())
+            if (matchesKeywords(transaction.getDescription(), rule)
                     && matchesAmountRange(transaction.getAmount(), rule)) {
                 return Optional.of(rule.getCategory().getId());
             }
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Checks a rule's keyword set against a description (PF-315), case-insensitively, combining
+     * per the rule's {@link MatchType}. A rule with no keywords never matches -- deliberately not
+     * left to fall out of {@code allMatch}'s vacuous truth on an empty stream, which would
+     * otherwise make an empty-keyword {@code AND} rule match every transaction.
+     *
+     * @param description the transaction description to match against
+     * @param rule        the rule whose keyword set to check
+     * @return true if the rule's keyword set matches the description
+     */
+    private boolean matchesKeywords(String description, CategoryRule rule) {
+        if (rule.getKeywords() == null || rule.getKeywords().isEmpty()) {
+            return false;
+        }
+
+        String lowerDescription = description.toLowerCase();
+        if (rule.getMatchType() == MatchType.AND) {
+            return rule.getKeywords().stream().allMatch(keyword -> lowerDescription.contains(keyword.toLowerCase()));
+        }
+        return rule.getKeywords().stream().anyMatch(keyword -> lowerDescription.contains(keyword.toLowerCase()));
     }
 
     /**
