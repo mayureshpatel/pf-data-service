@@ -48,7 +48,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldFilterByType() {
             // Arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, TransactionType.INCOME, null, null, null, null, null, null, null
+                    null, TransactionType.INCOME, null, null, null, null, null, null, null, null
             );
 
             // Act
@@ -66,7 +66,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldFilterByAmount() {
             // Arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, null, null, null, null, new BigDecimal("1000.00"), new BigDecimal("2000.00"), null, null
+                    null, null, null, null, null, new BigDecimal("1000.00"), new BigDecimal("2000.00"), null, null, null
             );
 
             // Act
@@ -89,7 +89,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // 2026-03-01/02/03; 1002 is timestamped 12:00:00, well after midnight on the end date
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, null, null,
-                    LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 3)
+                    LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 3), null
             );
 
             // Act
@@ -110,7 +110,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // Arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, null, null,
-                    LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 2)
+                    LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 2), null
             );
 
             // Act
@@ -130,7 +130,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldFilterByCategoryName() {
             // Arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, null, null, "gas", null, null, null, null, null
+                    null, null, null, "gas", null, null, null, null, null, null
             );
 
             // Act
@@ -148,7 +148,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldFilterByNullCategorySentinel() {
             // Arrange -- 1002 (ATM Deposit) has no category in the baseline
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, null, null, "null", null, null, null, null, null
+                    null, null, null, "null", null, null, null, null, null, null
             );
 
             // Act
@@ -166,7 +166,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldFilterByDescription() {
             // Arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, null, "morning", null, null, null, null, null, null
+                    null, null, "morning", null, null, null, null, null, null, null
             );
 
             // Act
@@ -184,7 +184,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldFilterByMerchantCleanName() {
             // Arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, null, null, null, "whole", null, null, null, null
+                    null, null, null, null, "whole", null, null, null, null, null
             );
 
             // Act
@@ -203,7 +203,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldFilterByAccountId() {
             // Arrange -- account 3 (Credit Card) has exactly one transaction (1001)
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    3L, null, null, null, null, null, null, null, null
+                    3L, null, null, null, null, null, null, null, null, null
             );
 
             // Act
@@ -217,6 +217,89 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("PF-308: should filter by tag id")
+        void shouldFilterByTagId() {
+            // Arrange -- baseline transaction_tags assigns tag 1 to transaction 1001 only
+            TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
+                    null, null, null, null, null, null, null, null, null, 1L
+            );
+
+            // Act
+            Page<Transaction> result = transactionRepository.findAll(
+                    TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
+            );
+
+            // Assert
+            assertEquals(1, result.getTotalElements());
+            assertEquals(1001L, result.getContent().get(0).getId());
+        }
+
+        @Test
+        @DisplayName("PF-308: a tag filter should not duplicate a transaction that also carries "
+                + "other tags -- EXISTS, not a JOIN that could multiply rows")
+        void shouldNotDuplicateRowsWhenTransactionHasMultipleTags() {
+            // arrange -- assign a second tag to the same transaction (1001) already carrying tag 1
+            jdbcClient.sql("insert into tags (id, user_id, name) values (999, :userId, 'Second Tag')")
+                    .param("userId", USER_ID)
+                    .update();
+            jdbcClient.sql("insert into transaction_tags (transaction_id, tag_id) values (1001, 999)")
+                    .update();
+
+            TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
+                    null, null, null, null, null, null, null, null, null, 1L
+            );
+
+            // act
+            Page<Transaction> result = transactionRepository.findAll(
+                    TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
+            );
+
+            // assert & verify -- transaction 1001 appears exactly once despite carrying two tags
+            assertEquals(1, result.getTotalElements());
+        }
+
+        @Test
+        @DisplayName("PF-308: results should include each transaction's assigned tags")
+        void shouldIncludeTagsInResults() {
+            // Arrange -- account 3 (Credit Card) has exactly one transaction (1001), which the
+            // baseline assigns tag id 1 to
+            TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
+                    3L, null, null, null, null, null, null, null, null, null
+            );
+
+            // Act
+            Page<Transaction> result = transactionRepository.findAll(
+                    TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
+            );
+
+            // Assert
+            Transaction transaction = result.getContent().get(0);
+            assertNotNull(transaction.getTags());
+            assertTrue(transaction.getTags().stream().anyMatch(t -> t.getId().equals(1L)));
+        }
+
+        @Test
+        @DisplayName("PF-308: a transaction with no assigned tags should return an empty list, not null")
+        void shouldReturnEmptyTagsListWhenNoneAssigned() {
+            // Arrange -- transaction 1000 carries no tags in the baseline
+            TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
+                    1L, null, null, null, null, null, null, null, null, null
+            );
+
+            // Act
+            Page<Transaction> result = transactionRepository.findAll(
+                    TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
+            );
+
+            // Assert
+            Transaction transaction1000 = result.getContent().stream()
+                    .filter(t -> t.getId().equals(1000L))
+                    .findFirst().orElseThrow();
+            assertNotNull(transaction1000.getTags());
+            assertTrue(transaction1000.getTags().isEmpty());
+        }
+
+        @Test
         @DisplayName("should expand the TRANSFER pseudo-type into an IN clause matching all transfer directions")
         void shouldExpandTransferTypeToInClause() {
             // Arrange -- mark 1000 and 1002 as a confirmed transfer pair
@@ -226,7 +309,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             transactionRepository.update(USER_ID, t1002.toBuilder().type(TransactionType.TRANSFER_IN).build());
 
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, TransactionType.TRANSFER, null, null, null, null, null, null, null
+                    null, TransactionType.TRANSFER, null, null, null, null, null, null, null, null
             );
 
             // Act
@@ -246,7 +329,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // Act -- baseline has ~39 transactions for user 1; request only 5
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, new TransactionSpecification.TransactionFilter(
-                            null, null, null, null, null, null, null, null, null)),
+                            null, null, null, null, null, null, null, null, null, null)),
                     PageRequest.of(0, 5)
             );
 
@@ -261,7 +344,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // Arrange
             TransactionSpecification.FilterResult spec = TransactionSpecification.withFilter(
                     USER_ID, new TransactionSpecification.TransactionFilter(
-                            null, null, null, null, null, null, null, null, null));
+                            null, null, null, null, null, null, null, null, null, null));
 
             // Act
             Page<Transaction> page0 = transactionRepository.findAll(spec, PageRequest.of(0, 10));
@@ -289,7 +372,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // Act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, new TransactionSpecification.TransactionFilter(
-                            null, null, null, null, null, null, null, null, null)),
+                            null, null, null, null, null, null, null, null, null, null)),
                     PageRequest.of(0, 100)
             );
 
@@ -302,7 +385,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         void shouldHandleInvalidSort() {
             // Arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    null, null, null, null, null, null, null, null, null
+                    null, null, null, null, null, null, null, null, null, null
             );
             // Try to inject SQL in Sort direction and property
             Sort maliciousSort = Sort.by(Sort.Order.desc("date; DROP TABLE transactions; --"));

@@ -82,6 +82,22 @@ class TransactionCrudControllerTest extends BaseControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content", hasSize(0)));
         }
+
+        @Test
+        @DisplayName("PF-308: GET should pass the tagId query param through to the filter")
+        void getTransactions_shouldPassThroughTagId() throws Exception {
+            Page<TransactionDto> page = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+            when(transactionService.getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class))).thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/transactions")
+                            .param("tagId", "42"))
+                    .andExpect(status().isOk());
+
+            verify(transactionService).getTransactions(
+                    eq(USER_ID),
+                    argThat((TransactionFilter filter) -> filter.tagId() != null && filter.tagId().equals(42L)),
+                    any(Pageable.class));
+        }
     }
 
     @Nested

@@ -4,10 +4,12 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.tags.TagDto;
 import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Builder
 public record TransactionDto(
@@ -19,6 +21,7 @@ public record TransactionDto(
         String description,
         TransactionType type,
         OffsetDateTime postDate,
-        MerchantDto merchant
+        MerchantDto merchant,
+        List<TagDto> tags
 ) {
 }

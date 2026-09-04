@@ -171,7 +171,7 @@ class TransactionServiceTest {
             Page<Transaction> page = new PageImpl<>(List.of());
             when(transactionRepository.findAll(any(), any(Pageable.class))).thenReturn(page);
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
-                    10L, TransactionType.EXPENSE, "Desc", "Cat", "Vendor", BigDecimal.ONE, BigDecimal.TEN, LocalDate.now(), LocalDate.now()
+                    10L, TransactionType.EXPENSE, "Desc", "Cat", "Vendor", BigDecimal.ONE, BigDecimal.TEN, LocalDate.now(), LocalDate.now(), null
             );
 
             // Act

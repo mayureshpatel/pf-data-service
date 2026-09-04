@@ -80,6 +80,16 @@ public class TransactionSpecification {
                 conditions.add("transactions.date < :endDate");
                 parameters.put("endDate", filter.endDate().plusDays(1));
             }
+
+            if (filter.tagId() != null) {
+                // PF-308: EXISTS rather than a JOIN -- transaction_tags is many-to-many, and a
+                // transaction can carry other tags besides the one being filtered on. A JOIN
+                // filtered to one tag_id wouldn't duplicate rows here (at most one match per
+                // transaction), but EXISTS keeps this condition self-contained in the WHERE-clause
+                // list without touching ENRICHED_JOINS/baseFrom construction at all.
+                conditions.add("EXISTS (SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = transactions.id AND tt.tag_id = :tagId)");
+                parameters.put("tagId", filter.tagId());
+            }
         }
 
         // always filter out deleted transactions
@@ -107,7 +117,8 @@ public class TransactionSpecification {
             BigDecimal minAmount,
             BigDecimal maxAmount,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            Long tagId
     ) {
     }
 }

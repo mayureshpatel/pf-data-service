@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
+import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
@@ -11,6 +12,7 @@ import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
+import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryTransactionsRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionDetailRowMapper;
@@ -33,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository("jdbcTransactionRepository")
 @RequiredArgsConstructor
@@ -348,7 +351,33 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .query(rowMapper)
                 .list();
 
+        Map<Long, List<Tag>> tagsByTransactionId = findTagsByTransactionIds(
+                content.stream().map(Transaction::getId).toList());
+        // plain loop, not stream().map() -- Transaction's @SuperBuilder toBuilder() return type
+        // doesn't unify cleanly through a method-reference/lambda type witness in a stream here
+        List<Transaction> withTags = new java.util.ArrayList<>(content.size());
+        for (Transaction t : content) {
+            withTags.add(t.toBuilder().tags(tagsByTransactionId.getOrDefault(t.getId(), List.of())).build());
+        }
+        content = withTags;
+
         return new PageImpl<>(content, pageable, total);
+    }
+
+    /**
+     * PF-308: one query for a whole page of transactions, not one per row -- grouped by
+     * transaction_id in Java afterward.
+     */
+    private Map<Long, List<Tag>> findTagsByTransactionIds(List<Long> transactionIds) {
+        if (transactionIds.isEmpty()) {
+            return Map.of();
+        }
+        return jdbcClient.sql(TransactionQueries.FIND_TAGS_BY_TRANSACTION_IDS)
+                .param("transactionIds", transactionIds)
+                .query((rs, rowNum) -> Map.entry(rs.getLong("transaction_id"), TagRowMapper.mapRow(rs, "")))
+                .list()
+                .stream()
+                .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
     }
 
     public BigDecimal getSumByDateRange(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {

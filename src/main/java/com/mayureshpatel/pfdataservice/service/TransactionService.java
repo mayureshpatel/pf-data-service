@@ -122,7 +122,7 @@ public class TransactionService {
      * @return the matching page of transactions
      */
     public Page<TransactionDto> getTransactions(Long userId, TransactionType type, Pageable pageable) {
-        TransactionFilter filter = new TransactionFilter(null, type, null, null, null, null, null, null, null);
+        TransactionFilter filter = new TransactionFilter(null, type, null, null, null, null, null, null, null, null);
         return getTransactions(userId, filter, pageable);
     }
 
