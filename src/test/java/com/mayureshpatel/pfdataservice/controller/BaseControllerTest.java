@@ -79,6 +79,7 @@ public abstract class BaseControllerTest {
         org.mockito.Mockito.when(securityService.isRuleOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isBudgetOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isRecurringTransactionOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(securityService.isMerchantOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
     }
 
     // User ID constant for convenience

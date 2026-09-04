@@ -3,6 +3,8 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,28 @@ public class MerchantService {
                 .stream()
                 .map(MerchantDtoMapper::toDto)
                 .toList();
+    }
+
+    /**
+     * Manually corrects a merchant's display name (PF-220) -- for fixing names automatic
+     * normalization gets wrong, or merchants that predate it. Ownership is checked here in
+     * addition to the Controller's {@code @PreAuthorize}, matching this project's established
+     * defense-in-depth pattern for owned-resource updates (see {@code AccountService.updateAccount}):
+     * the {@code @PreAuthorize} gate keeps a non-owner's request from ever reaching this method,
+     * this lookup keeps the method itself safe to call from anywhere else in the codebase without
+     * relying on that gate, and the repository's own {@code UPDATE ... WHERE id = ? AND user_id = ?}
+     * keeps the write itself scoped even if both of those were somehow bypassed.
+     *
+     * @param userId  the authenticated user id
+     * @param request the correction: the merchant id and its new clean name
+     * @return the number of rows updated (0 or 1)
+     * @throws ResourceNotFoundException if the merchant doesn't exist or isn't owned by {@code userId}
+     */
+    @Transactional
+    public int updateMerchant(Long userId, MerchantUpdateRequest request) {
+        merchantRepository.findByIdAndUserId(request.getId(), userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+        return merchantRepository.update(request, userId);
     }
 
     /**

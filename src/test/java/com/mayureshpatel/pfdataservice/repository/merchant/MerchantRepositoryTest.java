@@ -28,6 +28,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
     private MerchantRepository repository;
 
     private static final Long USER_1 = 1L;
+    private static final Long USER_2 = 2L;
     private static final Long MERCHANT_WHOLEFOODS = 1L; // Global
 
     @Nested
@@ -111,6 +112,43 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertTrue(result.isEmpty());
         }
+
+        @Test
+        @DisplayName("PF-220: should find a merchant by id when the requesting user owns it")
+        void shouldFindByIdAndUserId() {
+            // arrange
+            Long ownedMerchantId = repository.findAllByUserId(USER_1).get(0).getId();
+
+            // act
+            Optional<Merchant> result = repository.findByIdAndUserId(ownedMerchantId, USER_1);
+
+            // assert & verify
+            assertTrue(result.isPresent());
+            assertEquals("My Favorite Cafe", result.get().getCleanName());
+        }
+
+        @Test
+        @DisplayName("PF-220: should not find another user's merchant via findByIdAndUserId")
+        void shouldNotFindAnotherUsersMerchantByIdAndUserId() {
+            // arrange -- USER_1's own merchant, looked up as USER_2
+            Long user1MerchantId = repository.findAllByUserId(USER_1).get(0).getId();
+
+            // act
+            Optional<Merchant> result = repository.findByIdAndUserId(user1MerchantId, USER_2);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-220: should not find a global merchant via findByIdAndUserId (user_id column doesn't match NULL)")
+        void shouldNotFindGlobalMerchantByIdAndUserId() {
+            // arrange & act
+            Optional<Merchant> result = repository.findByIdAndUserId(MERCHANT_WHOLEFOODS, USER_1);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
     }
 
     @Nested
@@ -179,6 +217,27 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             Merchant updated = repository.findById(custom.getId()).orElseThrow();
             assertEquals("Updated Cafe", updated.getCleanName());
             assertEquals("LOCAL CAFE", updated.getOriginalName()); // Should remain unchanged
+        }
+
+        @Test
+        @DisplayName("PF-220: should affect 0 rows, and not modify the record, when called with a userId that "
+                + "doesn't own the merchant -- this is the actual fix for the IDOR (the SQL previously accepted "
+                + "a userId parameter but never used it in the WHERE clause)")
+        void shouldNotUpdateAnotherUsersMerchant() {
+            // arrange
+            Merchant custom = repository.findAllByUserId(USER_1).get(0);
+            MerchantUpdateRequest request = MerchantUpdateRequest.builder()
+                    .id(custom.getId())
+                    .cleanName("Malicious Rename")
+                    .build();
+
+            // act
+            int rows = repository.update(request, USER_2);
+
+            // assert & verify
+            assertEquals(0, rows);
+            Merchant unchanged = repository.findById(custom.getId()).orElseThrow();
+            assertEquals("My Favorite Cafe", unchanged.getCleanName());
         }
 
         @Test
