@@ -125,9 +125,16 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .update();
     }
 
-    public int delete(Long id) {
+    /**
+     * Deletes a merchant. User-scoped: unlike {@link #update}, which had a real, exposed IDOR
+     * before PF-220 fixed it, nothing called this method at all until PF-222 (merchant merge)
+     * became its first real caller -- scoping the SQL here from the start, rather than exposing
+     * the same class of gap PF-220 had to fix after the fact.
+     */
+    public int delete(Long id, Long userId) {
         return jdbcClient.sql(MerchantQueries.DELETE)
                 .param("id", id)
+                .param("userId", userId)
                 .update();
     }
 }

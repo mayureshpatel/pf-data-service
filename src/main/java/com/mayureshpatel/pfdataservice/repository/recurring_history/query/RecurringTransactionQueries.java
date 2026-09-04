@@ -132,6 +132,15 @@ public final class RecurringTransactionQueries {
             """;
 
     // language=SQL
+    public static final String REASSIGN_MERCHANT = """
+            update recurring_transactions
+            set merchant_id = :toMerchantId,
+                updated_at = CURRENT_TIMESTAMP
+            where merchant_id = :fromMerchantId
+                and user_id = :userId
+            """;
+
+    // language=SQL
     public static final String COUNT_BY_ACCOUNT_ID = """
             select count(*)
             from recurring_transactions

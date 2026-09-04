@@ -149,6 +149,14 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
+    public static final String REASSIGN_MERCHANT = """
+            update transactions
+            set merchant_id = :toMerchantId
+            where merchant_id = :fromMerchantId
+              and account_id in (select id from accounts where user_id = :userId)
+            """;
+
+    // language=SQL
     public static final String COUNT = """
             select count(*)
             from transactions

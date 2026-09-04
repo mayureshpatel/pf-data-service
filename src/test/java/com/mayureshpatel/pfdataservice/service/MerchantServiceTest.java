@@ -3,13 +3,17 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -25,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +41,12 @@ class MerchantServiceTest {
 
     @Mock
     private MerchantRepository merchantRepository;
+
+    @Mock
+    private TransactionRepository transactionRepository;
+
+    @Mock
+    private RecurringTransactionRepository recurringTransactionRepository;
 
     @InjectMocks
     private MerchantService merchantService;
@@ -279,6 +291,93 @@ class MerchantServiceTest {
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> merchantService.updateMerchant(USER_ID, request));
             verify(merchantRepository, never()).update(any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("mergeMerchants")
+    class MergeMerchantsTests {
+
+        private static final Long SURVIVING_ID = 7L;
+        private static final Long MERGED_AWAY_ID = 8L;
+
+        @Test
+        @DisplayName("PF-222: should reassign transactions, reassign recurring transactions, then delete the "
+                + "merged-away merchant, in that order -- reassignment must happen before delete or the "
+                + "recurring_transactions NOT NULL constraint would be violated")
+        void shouldReassignThenDelete() {
+            // arrange
+            Merchant surviving = Merchant.builder().id(SURVIVING_ID).userId(USER_ID).cleanName("Starbucks").build();
+            Merchant mergedAway = Merchant.builder().id(MERGED_AWAY_ID).userId(USER_ID).cleanName("Starbucks Coffee").build();
+            when(merchantRepository.findByIdAndUserId(SURVIVING_ID, USER_ID)).thenReturn(Optional.of(surviving));
+            when(merchantRepository.findByIdAndUserId(MERGED_AWAY_ID, USER_ID)).thenReturn(Optional.of(mergedAway));
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(MERGED_AWAY_ID)
+                    .build();
+
+            // act
+            merchantService.mergeMerchants(USER_ID, request);
+
+            // assert & verify
+            verify(transactionRepository).reassignMerchant(MERGED_AWAY_ID, SURVIVING_ID, USER_ID);
+            verify(recurringTransactionRepository).reassignMerchant(MERGED_AWAY_ID, SURVIVING_ID, USER_ID);
+            verify(merchantRepository).delete(MERGED_AWAY_ID, USER_ID);
+
+            InOrder order = inOrder(transactionRepository, recurringTransactionRepository, merchantRepository);
+            order.verify(transactionRepository).reassignMerchant(eq(MERGED_AWAY_ID), eq(SURVIVING_ID), eq(USER_ID));
+            order.verify(recurringTransactionRepository).reassignMerchant(eq(MERGED_AWAY_ID), eq(SURVIVING_ID), eq(USER_ID));
+            order.verify(merchantRepository).delete(eq(MERGED_AWAY_ID), eq(USER_ID));
+        }
+
+        @Test
+        @DisplayName("PF-222: should throw and touch nothing else when the surviving merchant isn't owned")
+        void shouldThrowWhenSurvivingMerchantNotOwned() {
+            // arrange
+            when(merchantRepository.findByIdAndUserId(SURVIVING_ID, USER_ID)).thenReturn(Optional.empty());
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(MERGED_AWAY_ID)
+                    .build();
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> merchantService.mergeMerchants(USER_ID, request));
+            verify(transactionRepository, never()).reassignMerchant(any(), any(), any());
+            verify(recurringTransactionRepository, never()).reassignMerchant(any(), any(), any());
+            verify(merchantRepository, never()).delete(any(), any());
+        }
+
+        @Test
+        @DisplayName("PF-222: should throw and touch nothing else when the merged-away merchant isn't owned")
+        void shouldThrowWhenMergedAwayMerchantNotOwned() {
+            // arrange
+            Merchant surviving = Merchant.builder().id(SURVIVING_ID).userId(USER_ID).cleanName("Starbucks").build();
+            when(merchantRepository.findByIdAndUserId(SURVIVING_ID, USER_ID)).thenReturn(Optional.of(surviving));
+            when(merchantRepository.findByIdAndUserId(MERGED_AWAY_ID, USER_ID)).thenReturn(Optional.empty());
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(MERGED_AWAY_ID)
+                    .build();
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> merchantService.mergeMerchants(USER_ID, request));
+            verify(transactionRepository, never()).reassignMerchant(any(), any(), any());
+            verify(recurringTransactionRepository, never()).reassignMerchant(any(), any(), any());
+            verify(merchantRepository, never()).delete(any(), any());
+        }
+
+        @Test
+        @DisplayName("PF-222: should throw for a self-merge without even checking ownership")
+        void shouldThrowForSelfMerge() {
+            // arrange
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(SURVIVING_ID)
+                    .build();
+
+            // act & assert & verify
+            assertThrows(IllegalArgumentException.class, () -> merchantService.mergeMerchants(USER_ID, request));
+            verify(merchantRepository, never()).findByIdAndUserId(any(), any());
         }
     }
 }

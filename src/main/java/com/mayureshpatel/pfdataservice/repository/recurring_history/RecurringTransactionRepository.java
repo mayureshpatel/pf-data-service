@@ -91,6 +91,22 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .update();
     }
 
+    /**
+     * Reassigns every recurring transaction pointing at {@code fromMerchantId} to
+     * {@code toMerchantId} instead. Used by merchant merge (PF-222) -- must run before the
+     * merged-away merchant is deleted, since {@code merchant_id} is {@code NOT NULL} here and the
+     * column's {@code ON DELETE SET NULL} foreign key would otherwise violate that constraint.
+     *
+     * @return the number of rows reassigned
+     */
+    public int reassignMerchant(Long fromMerchantId, Long toMerchantId, Long userId) {
+        return jdbcClient.sql(RecurringTransactionQueries.REASSIGN_MERCHANT)
+                .param("fromMerchantId", fromMerchantId)
+                .param("toMerchantId", toMerchantId)
+                .param("userId", userId)
+                .update();
+    }
+
     public long countByAccountId(Long accountId) {
         return jdbcClient.sql(RecurringTransactionQueries.COUNT_BY_ACCOUNT_ID)
                 .param("accountId", accountId)

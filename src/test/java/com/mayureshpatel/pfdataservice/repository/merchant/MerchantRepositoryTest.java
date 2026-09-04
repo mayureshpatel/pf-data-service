@@ -247,11 +247,28 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             Merchant custom = repository.findAllByUserId(USER_1).get(0);
 
             // Act
-            int rows = repository.delete(custom.getId());
+            int rows = repository.delete(custom.getId(), USER_1);
 
             // Assert
             assertEquals(1, rows);
             assertTrue(repository.findById(custom.getId()).isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-222: should affect 0 rows, and not delete the record, when called with a userId "
+                + "that doesn't own the merchant -- this method had no caller anywhere until merchant merge "
+                + "became its first, so it's scoped by user_id from the start rather than exposing the same "
+                + "class of gap PF-220 had to fix on update() after the fact")
+        void shouldNotDeleteAnotherUsersMerchant() {
+            // arrange
+            Merchant custom = repository.findAllByUserId(USER_1).get(0);
+
+            // act
+            int rows = repository.delete(custom.getId(), USER_2);
+
+            // assert & verify
+            assertEquals(0, rows);
+            assertTrue(repository.findById(custom.getId()).isPresent());
         }
 
         @Test
