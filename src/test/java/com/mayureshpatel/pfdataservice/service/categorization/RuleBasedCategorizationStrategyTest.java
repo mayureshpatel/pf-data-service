@@ -79,6 +79,64 @@ class RuleBasedCategorizationStrategyTest {
             // Assert
             assertTrue(result.isEmpty());
         }
+
+        @Test
+        @DisplayName("PF-313: when two rules both match, the FIRST one in the rules list wins -- this "
+                + "strategy trusts list order as priority order rather than re-sorting itself, since "
+                + "CategoryRuleQueries.FIND_ALL_BY_USER_ID already delivers rules in priority order")
+        void shouldTakeFirstMatchingRuleWhenMultipleMatch() {
+            // arrange -- both rules match "WHOLEFDS #1234"; higher-priority rule listed first,
+            // matching how the real query already orders them (priority desc)
+            Transaction t = Transaction.builder().description("WHOLEFDS #1234").build();
+            CategoryRule higherPriorityRule = CategoryRule.builder()
+                    .keyword("WHOLEFDS")
+                    .category(Category.builder().id(7L).build()) // Groceries
+                    .priority(10)
+                    .build();
+            CategoryRule lowerPriorityRule = CategoryRule.builder()
+                    .keyword("FDS")
+                    .category(Category.builder().id(99L).build()) // some unrelated category
+                    .priority(1)
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(higherPriorityRule, lowerPriorityRule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(t, context);
+
+            // assert & verify
+            assertTrue(result.isPresent());
+            assertEquals(7L, result.get());
+        }
+
+        @Test
+        @DisplayName("PF-313: genuinely list-order-dependent, not coincidence -- reversing the same "
+                + "two rules flips which category wins")
+        void shouldFollowListOrderNotSomeOtherImplicitRule() {
+            // arrange -- identical rules to the previous test, but reversed
+            Transaction t = Transaction.builder().description("WHOLEFDS #1234").build();
+            CategoryRule higherPriorityRule = CategoryRule.builder()
+                    .keyword("WHOLEFDS")
+                    .category(Category.builder().id(7L).build())
+                    .priority(10)
+                    .build();
+            CategoryRule lowerPriorityRule = CategoryRule.builder()
+                    .keyword("FDS")
+                    .category(Category.builder().id(99L).build())
+                    .priority(1)
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(lowerPriorityRule, higherPriorityRule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(t, context);
+
+            // assert & verify
+            assertTrue(result.isPresent());
+            assertEquals(99L, result.get());
+        }
     }
 
     @Nested
