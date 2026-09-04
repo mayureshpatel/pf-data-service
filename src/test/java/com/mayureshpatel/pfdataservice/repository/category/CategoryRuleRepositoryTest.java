@@ -38,9 +38,45 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
             assertEquals("WHOLEFDS", result.get(0).getKeyword());
             assertEquals("SHELL", result.get(1).getKeyword());
             assertEquals("CAFE", result.get(2).getKeyword());
-            
+
             // Check enriched category data
             assertNotNull(result.get(0).getCategory().getName());
+        }
+
+        @Test
+        @DisplayName("PF-313: should break a full tie (same priority AND same keyword length) by id "
+                + "ascending, so ordering stays deterministic rather than falling to whatever order "
+                + "Postgres happens to return")
+        void shouldBreakFullTieByIdAscending() {
+            // arrange -- two new rules, same priority, same keyword length ("AAAA" / "ZZZZ"),
+            // inserted in a known id order
+            CategoryRule firstInserted = CategoryRule.builder()
+                    .id(9001L)
+                    .keyword("AAAA")
+                    .priority(5)
+                    .category(Category.builder().id(7L).build())
+                    .user(User.builder().id(USER_1).build())
+                    .build();
+            CategoryRule secondInserted = CategoryRule.builder()
+                    .id(9002L)
+                    .keyword("ZZZZ")
+                    .priority(5)
+                    .category(Category.builder().id(7L).build())
+                    .user(User.builder().id(USER_1).build())
+                    .build();
+            repository.insert(secondInserted); // inserted out of id order on purpose
+            repository.insert(firstInserted);
+
+            // act
+            List<CategoryRule> result = repository.findByUserId(USER_1);
+
+            // assert & verify -- both tied rules land consecutively, lower id first
+            List<CategoryRule> tied = result.stream()
+                    .filter(r -> r.getId().equals(9001L) || r.getId().equals(9002L))
+                    .toList();
+            assertEquals(2, tied.size());
+            assertEquals(9001L, tied.get(0).getId());
+            assertEquals(9002L, tied.get(1).getId());
         }
     }
 

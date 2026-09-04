@@ -6,6 +6,9 @@ import lombok.NoArgsConstructor;
 public final class CategoryRuleQueries {
 
     // language=SQL
+    // PF-313: order is priority desc (higher priority wins), then keyword length desc (more
+    // specific match first), then id asc as a final tie-breaker -- without it, two rules sharing
+    // both the same priority and the same keyword length would have no deterministic order at all.
     public static final String FIND_ALL_BY_USER_ID = """
                 select cr.*,
                        c.name as category_name,
@@ -15,7 +18,7 @@ public final class CategoryRuleQueries {
                 from category_rules cr
                     left join categories c on cr.category_id = c.id
                 where cr.user_id = :userId
-                order by cr.priority desc, length(cr.keyword) desc
+                order by cr.priority desc, length(cr.keyword) desc, cr.id asc
             """;
 
     // language=SQL
