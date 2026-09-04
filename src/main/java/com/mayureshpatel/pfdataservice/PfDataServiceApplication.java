@@ -9,7 +9,7 @@ import java.util.TimeZone;
 public class PfDataServiceApplication {
 
     public static void main(String[] args) {
-        TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"));
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         SpringApplication.run(PfDataServiceApplication.class, args);
     }
 

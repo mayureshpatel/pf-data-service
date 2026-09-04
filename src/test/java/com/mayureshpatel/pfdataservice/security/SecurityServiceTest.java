@@ -5,9 +5,13 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.domain.budget.Budget;
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -38,6 +42,12 @@ class SecurityServiceTest {
     @Mock
     private CategoryRuleRepository categoryRuleRepository;
 
+    @Mock
+    private BudgetRepository budgetRepository;
+
+    @Mock
+    private RecurringTransactionRepository recurringTransactionRepository;
+
     @InjectMocks
     private SecurityService securityService;
 
@@ -47,6 +57,8 @@ class SecurityServiceTest {
     private static final Long TRANSACTION_ID = 100L;
     private static final Long CATEGORY_ID = 200L;
     private static final Long RULE_ID = 300L;
+    private static final Long BUDGET_ID = 400L;
+    private static final Long RECURRING_ID = 500L;
 
     private CustomUserDetails buildUserDetails(Long userId) {
         User user = User.builder()
@@ -86,6 +98,20 @@ class SecurityServiceTest {
                 .id(RULE_ID)
                 .user(User.builder().id(userId).build())
                 .keyword("Coffee")
+                .build();
+    }
+
+    private Budget buildBudget(Long userId) {
+        return Budget.builder()
+                .id(BUDGET_ID)
+                .userId(userId)
+                .build();
+    }
+
+    private RecurringTransaction buildRecurringTransaction(Long userId) {
+        return RecurringTransaction.builder()
+                .id(RECURRING_ID)
+                .userId(userId)
                 .build();
     }
 
@@ -271,6 +297,100 @@ class SecurityServiceTest {
             boolean result = securityService.isRuleOwner(RULE_ID, userDetails);
 
             assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("isBudgetOwner")
+    class IsBudgetOwnerTest {
+        @Test
+        @DisplayName("should return true when user owns the budget")
+        void isBudgetOwner_matchingId_returnsTrue() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Budget budget = buildBudget(USER_ID);
+            when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.of(budget));
+
+            boolean result = securityService.isBudgetOwner(BUDGET_ID, userDetails);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when mismatched userId")
+        void isBudgetOwner_mismatchedId_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Budget budget = buildBudget(ANOTHER_USER_ID);
+            when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.of(budget));
+
+            boolean result = securityService.isBudgetOwner(BUDGET_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when budget not found")
+        void isBudgetOwner_notFound_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.empty());
+
+            boolean result = securityService.isBudgetOwner(BUDGET_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when args are null")
+        void isBudgetOwner_nullArgs_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            assertThat(securityService.isBudgetOwner(null, userDetails)).isFalse();
+            assertThat(securityService.isBudgetOwner(BUDGET_ID, null)).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("isRecurringTransactionOwner")
+    class IsRecurringTransactionOwnerTest {
+        @Test
+        @DisplayName("should return true when user owns the recurring transaction")
+        void isRecurringTransactionOwner_matchingId_returnsTrue() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            RecurringTransaction recurringTransaction = buildRecurringTransaction(USER_ID);
+            when(recurringTransactionRepository.findById(RECURRING_ID)).thenReturn(Optional.of(recurringTransaction));
+
+            boolean result = securityService.isRecurringTransactionOwner(RECURRING_ID, userDetails);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when mismatched userId")
+        void isRecurringTransactionOwner_mismatchedId_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            RecurringTransaction recurringTransaction = buildRecurringTransaction(ANOTHER_USER_ID);
+            when(recurringTransactionRepository.findById(RECURRING_ID)).thenReturn(Optional.of(recurringTransaction));
+
+            boolean result = securityService.isRecurringTransactionOwner(RECURRING_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when recurring transaction not found")
+        void isRecurringTransactionOwner_notFound_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            when(recurringTransactionRepository.findById(RECURRING_ID)).thenReturn(Optional.empty());
+
+            boolean result = securityService.isRecurringTransactionOwner(RECURRING_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when args are null")
+        void isRecurringTransactionOwner_nullArgs_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            assertThat(securityService.isRecurringTransactionOwner(null, userDetails)).isFalse();
+            assertThat(securityService.isRecurringTransactionOwner(RECURRING_ID, null)).isFalse();
         }
     }
 }

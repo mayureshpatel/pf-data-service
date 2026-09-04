@@ -8,8 +8,6 @@ import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 
 import java.util.Collections;
@@ -37,16 +35,15 @@ class CategoryControllerTest extends BaseControllerTest {
     @DisplayName("getCategories")
     class GetCategoriesTests {
 
-        @ParameterizedTest
-        @ValueSource(strings = {"/api/v1/categories", "/api/categories"})
-        @DisplayName("GET should return list of categories for both URL versions")
-        void getCategories_shouldReturnList(String url) throws Exception {
+        @Test
+        @DisplayName("GET should return list of categories")
+        void getCategories_shouldReturnList() throws Exception {
             // Arrange
             CategoryDto categoryDto = new CategoryDto(CATEGORY_ID, USER_ID, "Groceries", null, null, "shopping_cart", "#FF5722");
             when(categoryService.getCategoriesByUserId(USER_ID)).thenReturn(List.of(categoryDto));
 
             // Act & Assert
-            mockMvc.perform(get(url))
+            mockMvc.perform(get("/api/v1/categories"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -54,6 +51,14 @@ class CategoryControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$[0].name").value("Groceries"));
 
             verify(categoryService).getCategoriesByUserId(USER_ID);
+        }
+
+        @Test
+        @DisplayName("GET should return 404 for the unversioned /api/categories path (PF-200)")
+        void getCategories_unversionedPath_shouldReturn404() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get("/api/categories"))
+                    .andExpect(status().isNotFound());
         }
 
         @Test
@@ -70,17 +75,17 @@ class CategoryControllerTest extends BaseControllerTest {
     }
 
     @Nested
-    @DisplayName("getCategoriesGrouped")
-    class GetCategoriesGroupedTests {
+    @DisplayName("getParentCategories")
+    class GetParentCategoriesTests {
 
         @Test
-        @DisplayName("GET /grouped should return grouped categories")
-        void getCategoriesGrouped_shouldReturnList() throws Exception {
+        @DisplayName("GET /parents should return parent categories")
+        void getParentCategories_shouldReturnList() throws Exception {
             // Arrange
             when(categoryService.getParentCategories(USER_ID)).thenReturn(List.of());
 
             // Act & Assert
-            mockMvc.perform(get("/api/v1/categories/grouped"))
+            mockMvc.perform(get("/api/v1/categories/parents"))
                     .andExpect(status().isOk());
 
             verify(categoryService).getParentCategories(USER_ID);
@@ -213,6 +218,20 @@ class CategoryControllerTest extends BaseControllerTest {
             // Act & Assert
             mockMvc.perform(get("/api/v1/categories"))
                     .andExpect(status().isInternalServerError());
+        }
+
+        @Test
+        @DisplayName("DELETE should return 409 Conflict, not 500, when category has existing transactions (PF-193)")
+        void deleteCategory_shouldReturn409WhenTransactionsExist() throws Exception {
+            // Arrange
+            when(categoryService.deleteCategory(USER_ID, CATEGORY_ID))
+                    .thenThrow(new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first."));
+
+            // Act & Assert
+            mockMvc.perform(delete("/api/v1/categories/{id}", CATEGORY_ID)
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.detail").value("Cannot delete category with associated transactions. Please reassign or delete transactions first."));
         }
 
         @Test

@@ -6,7 +6,9 @@ import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
+import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * CRUD for a user's category hierarchy (parent categories with optional subcategories). A
+ * category can't be deleted while transactions still reference it, and can't be assigned to
+ * itself as its own parent.
+ */
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
@@ -23,13 +30,28 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final CategoryRuleRepository categoryRuleRepository;
+    private final BudgetRepository budgetRepository;
 
+    /**
+     * Returns all categories for a user, flat (not grouped by parent).
+     *
+     * @param userId the user id
+     * @return the user's categories
+     */
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesByUserId(Long userId) {
         return categoryRepository.findByUserId(userId).stream()
                 .map(CategoryDtoMapper::toDto).toList();
     }
 
+    /**
+     * Creates a new category, verifying the parent (if given) exists and belongs to the user.
+     *
+     * @param userId  the user id
+     * @param request the category to create
+     * @return the new category's generated id
+     */
     @Transactional
     public int createCategory(Long userId, CategoryCreateRequest request) {
         userRepository.findById(userId)
@@ -51,6 +73,14 @@ public class CategoryService {
         return categoryRepository.insert(securedRequest);
     }
 
+    /**
+     * Updates an existing category owned by the user. A category can't be made its own parent,
+     * and a given parent (if changed) must exist and belong to the user.
+     *
+     * @param userId  the user id
+     * @param request the category to update, including its id
+     * @return the number of rows updated
+     */
     @Transactional
     public int updateCategory(Long userId, CategoryUpdateRequest request) {
         Category category = categoryRepository.findById(request.getId())
@@ -83,6 +113,17 @@ public class CategoryService {
         return this.categoryRepository.update(securedRequest);
     }
 
+    /**
+     * Deletes a category owned by the user. Refuses to delete a category that still has
+     * subcategories, transactions, category rules, or a budget assigned to it — each is a
+     * dependent record that would otherwise be left pointing at a deleted category.
+     *
+     * @param userId     the user id
+     * @param categoryId the category id to delete
+     * @return the number of rows deleted
+     * @throws IllegalStateException if the category still has subcategories, transactions,
+     *                                category rules, or a budget assigned to it
+     */
     @Transactional
     public int deleteCategory(Long userId, Long categoryId) {
         Category category = this.categoryRepository.findById(categoryId)
@@ -92,9 +133,24 @@ public class CategoryService {
             throw new AccessDeniedException("Access denied");
         }
 
+        long subcategoryCount = this.categoryRepository.countByParentId(categoryId);
+        if (subcategoryCount > 0) {
+            throw new IllegalStateException("Cannot delete category with subcategories. Please reassign or delete subcategories first.");
+        }
+
         long transactionCount = this.transactionRepository.countByCategoryId(categoryId);
         if (transactionCount > 0) {
             throw new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first.");
+        }
+
+        long categoryRuleCount = this.categoryRuleRepository.countByCategoryId(categoryId);
+        if (categoryRuleCount > 0) {
+            throw new IllegalStateException("Cannot delete category with associated category rules. Please reassign or delete those rules first.");
+        }
+
+        long budgetCount = this.budgetRepository.countByCategoryIdAndDeletedAtIsNull(categoryId);
+        if (budgetCount > 0) {
+            throw new IllegalStateException("Cannot delete category with an associated budget. Please delete the budget first.");
         }
 
         return categoryRepository.delete(category);

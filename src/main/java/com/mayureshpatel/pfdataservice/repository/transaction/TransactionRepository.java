@@ -82,23 +82,6 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
-    public boolean existsByAccountIdAndDateAndAmountAndDescriptionAndType(
-            Long accountId,
-            OffsetDateTime transactionDate,
-            BigDecimal amount,
-            String description,
-            TransactionType type
-    ) {
-        return jdbcClient.sql(TransactionQueries.FIND_BY_ACCOUNT_ID_AND_DATE_AND_AMOUNT_AND_DESCRIPTION_AND_TYPE)
-                .param("accountId", accountId)
-                .param("transactionDate", transactionDate)
-                .param("amount", amount)
-                .param("description", description)
-                .param("type", type.name())
-                .query(rowMapper)
-                .optional().isPresent();
-    }
-
     public List<Transaction> findExistingForDuplicateCheck(Long accountId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(TransactionQueries.FIND_EXISTING_FOR_DUPLICATE_CHECK)
                 .param("accountId", accountId)
@@ -286,10 +269,6 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
-    }
-
-    public List<Transaction> findAllByIdWithAccountAndUser(Long userId, List<Long> ids) {
-        return findAllById(userId, ids);
     }
 
     public void deleteAll(Long userId, List<Transaction> transactions) {

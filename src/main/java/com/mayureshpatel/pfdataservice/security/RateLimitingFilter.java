@@ -16,13 +16,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Simple in-memory rate limiting filter for authentication endpoints.
- * Limits requests per IP address to prevent brute-force attacks.
+ * Limits requests per IP address, per endpoint, to prevent brute-force attacks and registration
+ * abuse -- each endpoint under {@code /api/v1/auth/} gets its own independent bucket per IP, so
+ * traffic against one (e.g. login attempts) can't consume another's (e.g. registration) budget.
  */
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
 
     private static final int MAX_REQUESTS_PER_MINUTE = 10;
-    
+    private static final int MAX_REGISTER_REQUESTS_PER_MINUTE = 5;
+    private static final String REGISTER_PATH = "/api/v1/auth/register";
+
     private final Cache<String, TokenBucket> buckets = Caffeine.newBuilder()
             .expireAfterAccess(5, TimeUnit.MINUTES)
             .maximumSize(10000)
@@ -34,10 +38,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Only rate limit authentication and registration endpoints
+        // only rate limit authentication and registration endpoints
         if (path.startsWith("/api/v1/auth/")) {
-            String clientIp = getClientIp(request);
-            TokenBucket bucket = buckets.get(clientIp, k -> new TokenBucket());
+            String bucketKey = getClientIp(request) + ":" + path;
+            int limit = REGISTER_PATH.equals(path) ? MAX_REGISTER_REQUESTS_PER_MINUTE : MAX_REQUESTS_PER_MINUTE;
+            TokenBucket bucket = buckets.get(bucketKey, k -> new TokenBucket(limit));
 
             if (!bucket.tryConsume()) {
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
@@ -50,16 +55,18 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader != null && !xfHeader.isEmpty()) {
-            return xfHeader.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
     }
 
     private static class TokenBucket {
-        private final AtomicInteger tokens = new AtomicInteger(MAX_REQUESTS_PER_MINUTE);
+        private final int maxRequests;
+        private final AtomicInteger tokens;
         private long lastRefill = System.currentTimeMillis();
+
+        TokenBucket(int maxRequests) {
+            this.maxRequests = maxRequests;
+            this.tokens = new AtomicInteger(maxRequests);
+        }
 
         public synchronized boolean tryConsume() {
             refill();
@@ -73,7 +80,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         private void refill() {
             long now = System.currentTimeMillis();
             if (now - lastRefill > TimeUnit.MINUTES.toMillis(1)) {
-                tokens.set(MAX_REQUESTS_PER_MINUTE);
+                tokens.set(maxRequests);
                 lastRefill = now;
             }
         }

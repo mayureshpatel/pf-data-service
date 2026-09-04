@@ -57,15 +57,15 @@ class TransactionParserDefaultMethodsTest {
     @Test
     @DisplayName("configureTransactionTypeAndAmount() should handle positive and negative amounts")
     void configureTransactionTypeAndAmount_variousAmounts() {
-        Transaction income = new Transaction();
-        parser.configureTransactionTypeAndAmount(income, new BigDecimal("100.50"));
-        assertThat(income.getType()).isEqualTo(TransactionType.INCOME);
-        assertThat(income.getAmount()).isEqualByComparingTo("100.50");
+        Transaction income = Transaction.builder().build();
+        Transaction updatedIncome = parser.configureTransactionTypeAndAmount(income, new BigDecimal("100.50"));
+        assertThat(updatedIncome.getType()).isEqualTo(TransactionType.INCOME);
+        assertThat(updatedIncome.getAmount()).isEqualByComparingTo("100.50");
 
-        Transaction expense = new Transaction();
-        parser.configureTransactionTypeAndAmount(expense, new BigDecimal("-50.25"));
-        assertThat(expense.getType()).isEqualTo(TransactionType.EXPENSE);
-        assertThat(expense.getAmount()).isEqualByComparingTo("50.25");
+        Transaction expense = Transaction.builder().build();
+        Transaction updatedExpense = parser.configureTransactionTypeAndAmount(expense, new BigDecimal("-50.25"));
+        assertThat(updatedExpense.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(updatedExpense.getAmount()).isEqualByComparingTo("50.25");
     }
 
     @Test
@@ -77,13 +77,28 @@ class TransactionParserDefaultMethodsTest {
                 "invalid,x\n" +
                 ",x\n";
         CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv));
-        
+
         List<CSVRecord> records = csvParser.getRecords();
-        
+
         assertThat(parser.parseAmount(records.get(0), "Amount")).isEqualByComparingTo("1234.56");
         assertThat(parser.parseAmount(records.get(1), "Amount")).isEqualByComparingTo("-100.00");
-        assertThat(parser.parseAmount(records.get(2), "Amount")).isEqualByComparingTo("0");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(records.get(2), "Amount"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid amount format");
         assertThat(parser.parseAmount(records.get(3), "Amount")).isEqualByComparingTo("0"); // Empty string case
-        assertThat(parser.parseAmount(records.get(0), "NonExistent")).isEqualByComparingTo("0");
+    }
+
+    @Test
+    @DisplayName("parseAmount() should throw, not return zero, when the column is entirely missing from the file (PF-198)")
+    void parseAmount_columnEntirelyMissing_throws() throws Exception {
+        String csv = "Amount,Other\n" +
+                "50.00,x\n";
+        CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv));
+        CSVRecord record = csvParser.iterator().next();
+
+        // "NonExistent" isn't a real column in this file at all -- distinct from being blank
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(record, "NonExistent"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("missing from this file");
     }
 }

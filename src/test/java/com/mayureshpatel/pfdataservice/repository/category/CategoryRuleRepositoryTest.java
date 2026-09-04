@@ -45,6 +45,30 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
     }
 
     @Nested
+    @DisplayName("Status & Counts")
+    class StatusTests {
+        @Test
+        @DisplayName("should count rules for a specific category")
+        void shouldCountByCategoryId() {
+            // Act -- category 7 (Groceries) has exactly one baseline rule (WHOLEFDS)
+            long count = repository.countByCategoryId(7L);
+
+            // Assert
+            assertEquals(1, count);
+        }
+
+        @Test
+        @DisplayName("should count zero rules for a category with none")
+        void shouldCountByCategoryIdZeroWhenNoRules() {
+            // Act -- category 6 (Rent) has no baseline category rule
+            long count = repository.countByCategoryId(6L);
+
+            // Assert
+            assertEquals(0, count);
+        }
+    }
+
+    @Nested
     @DisplayName("Write Operations")
     class WriteTests {
         @Test

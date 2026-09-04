@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 
@@ -60,6 +61,24 @@ class DashboardServiceTest {
             assertEquals(new BigDecimal("2000.00"), result.netSavings());
             assertEquals(1, result.categoryBreakdown().size());
         }
+
+        @Test
+        @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryThroughEndOfMonth() {
+            // Arrange -- a transaction timestamped later in the day on Mar 31 must still be
+            // included; a midnight endDate would silently exclude it
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+            when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
+            OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getDashboardData(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEnd), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEnd), eq(TransactionType.EXPENSE));
+            verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), eq(expectedEnd));
+        }
     }
 
     @Nested
@@ -78,6 +97,20 @@ class DashboardServiceTest {
             assertNotNull(result);
             verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), any());
         }
+
+        @Test
+        @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryThroughEndOfMonth() {
+            // Arrange
+            when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
+            OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getCategoryBreakdown(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), eq(expectedEnd));
+        }
     }
 
     @Nested
@@ -95,6 +128,20 @@ class DashboardServiceTest {
             // Assert
             assertNotNull(result);
             verify(merchantRepository).findMerchantTotals(eq(USER_ID), any(), any());
+        }
+
+        @Test
+        @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryThroughEndOfMonth() {
+            // Arrange
+            when(merchantRepository.findMerchantTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
+            OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getMerchantBreakdown(USER_ID, 3, 2026);
+
+            // Assert
+            verify(merchantRepository).findMerchantTotals(eq(USER_ID), any(), eq(expectedEnd));
         }
     }
 
@@ -128,6 +175,70 @@ class DashboardServiceTest {
             // Assert
             assertNotNull(result);
             verify(transactionRepository, times(4)).getSumByDateRange(anyLong(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("should compute the previous period as exactly the prior calendar month, with no overlap (PF-195)")
+        void shouldComputePreviousPeriodWithNoOverlap() {
+            // Arrange -- March 2026: previous period must be exactly [Feb 1, Feb 28], not
+            // [Feb 1, Mar 30] -- the bug anchored endPrevious to endCurrent instead of startCurrent
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should compute the previous period correctly across a year boundary (PF-195)")
+        void shouldComputePreviousPeriodAcrossYearBoundary() {
+            // Arrange -- January 2026: previous period must be exactly December 2025
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2025, 12, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2025, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, 1, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should compute a non-overlapping, same-length previous period for the explicit date-range overload (PF-195)")
+        void shouldComputePreviousPeriodWithNoOverlapForExplicitRange() {
+            // Arrange -- a 31-day range; the immediately preceding 31-day period must end the day
+            // before startDate, not the day before endDate
+            OffsetDateTime startDate = OffsetDateTime.of(2026, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime endDate = OffsetDateTime.of(2026, 3, 31, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 1, 29, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, startDate, endDate);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should query the current period through the end of the month's last day, not midnight (PF-196)")
+        void shouldQueryCurrentPeriodThroughEndOfMonth() {
+            // Arrange
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+            OffsetDateTime expectedEndCurrent = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // Act
+            dashboardService.getPulse(USER_ID, 3, 2026);
+
+            // Assert
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEndCurrent), eq(TransactionType.INCOME));
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEndCurrent), eq(TransactionType.EXPENSE));
         }
     }
 

@@ -20,7 +20,7 @@ public record DashboardPulseDto(
         BigDecimal previousIncome,
         BigDecimal currentExpense,
         BigDecimal previousExpense,
-        BigDecimal currentSavingsRate, // Percentage 0-100
+        BigDecimal currentSavingsRate, // percentage 0-100
         BigDecimal previousSavingsRate
 ) {
 }

@@ -41,4 +41,11 @@ public final class CategoryRuleQueries {
     public static final String DELETE = """
             delete from category_rules where id = :id and user_id = :userId
             """;
+
+    // language=SQL
+    public static final String COUNT_BY_CATEGORY_ID = """
+            select count(*)
+            from category_rules
+            where category_id = :categoryId
+            """;
 }

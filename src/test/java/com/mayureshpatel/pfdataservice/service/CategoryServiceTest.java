@@ -6,7 +6,9 @@ import com.mayureshpatel.pfdataservice.dto.category.CategoryCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
+import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +39,10 @@ class CategoryServiceTest {
     private UserRepository userRepository;
     @Mock
     private TransactionRepository transactionRepository;
+    @Mock
+    private CategoryRuleRepository categoryRuleRepository;
+    @Mock
+    private BudgetRepository budgetRepository;
 
     @InjectMocks
     private CategoryService categoryService;
@@ -285,12 +291,15 @@ class CategoryServiceTest {
     @DisplayName("deleteCategory")
     class DeleteCategoryTests {
         @Test
-        @DisplayName("should delete category if owned and has no transactions")
+        @DisplayName("should delete category if owned and has no transactions, subcategories, rules, or budgets")
         void shouldDeleteSuccessfully() {
             // Arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
             when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
+            when(categoryRuleRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
+            when(budgetRepository.countByCategoryIdAndDeletedAtIsNull(CATEGORY_ID)).thenReturn(0L);
             when(categoryRepository.delete(category)).thenReturn(1);
 
             // Act
@@ -318,10 +327,60 @@ class CategoryServiceTest {
             // Arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
             when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(5L);
 
             // Act & Assert
             assertThrows(IllegalStateException.class, () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException if category has subcategories (PF-191)")
+        void shouldThrowOnExistingSubcategories() {
+            // Arrange
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(2L);
+
+            // Act & Assert
+            IllegalStateException ex = assertThrows(IllegalStateException.class,
+                    () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
+            assertTrue(ex.getMessage().contains("subcategor"));
+            // Should short-circuit before ever checking transactions/rules/budgets on this category.
+            verify(transactionRepository, org.mockito.Mockito.never()).countByCategoryId(any());
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException if category has dependent category rules (PF-191)")
+        void shouldThrowOnExistingCategoryRules() {
+            // Arrange
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
+            when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
+            when(categoryRuleRepository.countByCategoryId(CATEGORY_ID)).thenReturn(1L);
+
+            // Act & Assert
+            IllegalStateException ex = assertThrows(IllegalStateException.class,
+                    () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
+            assertTrue(ex.getMessage().contains("rule"));
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException if category has a dependent budget (PF-191)")
+        void shouldThrowOnExistingBudget() {
+            // Arrange
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
+            when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
+            when(categoryRuleRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
+            when(budgetRepository.countByCategoryIdAndDeletedAtIsNull(CATEGORY_ID)).thenReturn(1L);
+
+            // Act & Assert
+            IllegalStateException ex = assertThrows(IllegalStateException.class,
+                    () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
+            assertTrue(ex.getMessage().contains("budget"));
         }
 
         @Test

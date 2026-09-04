@@ -165,6 +165,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         void updateTransactionsBulk_shouldReturnOk() throws Exception {
             TransactionUpdateRequest request = TransactionUpdateRequest.builder()
                     .id(1L)
+                    .accountId(1L)
                     .amount(BigDecimal.ONE)
                     .transactionDate(OffsetDateTime.now())
                     .description("T")
@@ -207,6 +208,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         void updateTransaction_shouldReturnOk() throws Exception {
             TransactionUpdateRequest request = TransactionUpdateRequest.builder()
                     .id(TRANSACTION_ID)
+                    .accountId(1L)
                     .amount(new BigDecimal("150.00"))
                     .transactionDate(OffsetDateTime.now())
                     .description("Updated")

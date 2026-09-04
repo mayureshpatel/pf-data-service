@@ -8,6 +8,12 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Looks up the right {@link TransactionParser} implementation for a given bank name. Each
+ * concrete parser declares its own {@link TransactionParser#getBankName()}; this factory indexes
+ * all of them by that name at startup, via constructor injection of every
+ * {@code TransactionParser} bean Spring finds.
+ */
 @Component
 public class TransactionParserFactory {
     private final Map<BankName, TransactionParser> transactionParsers;

@@ -6,8 +6,6 @@ import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 
 import java.util.Collections;
@@ -35,10 +33,9 @@ class AccountTypeControllerTest extends BaseControllerTest {
     @DisplayName("getAccountTypes")
     class GetAccountTypesTests {
 
-        @ParameterizedTest
-        @ValueSource(strings = {"/api/v1/account-types", "/api/account-types"})
-        @DisplayName("GET should return list of active account types for both URL versions")
-        void getAccountTypes_shouldReturnListOfAccountTypes(String url) throws Exception {
+        @Test
+        @DisplayName("GET should return list of active account types")
+        void getAccountTypes_shouldReturnListOfAccountTypes() throws Exception {
             // Arrange
             AccountType type = AccountType.builder()
                     .code(TYPE_CODE)
@@ -53,7 +50,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
             when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(List.of(type));
 
             // Act & Assert
-            mockMvc.perform(get(url))
+            mockMvc.perform(get("/api/v1/account-types"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -63,6 +60,14 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$[0].sortOrder").value(1));
 
             verify(accountTypeRepository).findByIsActiveTrueOrderBySortOrder();
+        }
+
+        @Test
+        @DisplayName("GET should return 404 for the unversioned /api/account-types path (PF-200)")
+        void getAccountTypes_unversionedPath_shouldReturn404() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get("/api/account-types"))
+                    .andExpect(status().isNotFound());
         }
 
         @Test

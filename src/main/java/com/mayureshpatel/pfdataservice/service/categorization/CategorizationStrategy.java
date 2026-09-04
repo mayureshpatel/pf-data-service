@@ -10,6 +10,12 @@ import lombok.Getter;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * A pluggable rule for guessing a transaction's category. {@link TransactionCategorizer} runs
+ * every registered strategy in {@link #getOrder()} order and takes the first match; implementing
+ * this interface and registering the implementation as a Spring bean is enough to add a new
+ * strategy without changing the categorizer itself.
+ */
 public interface CategorizationStrategy {
 
     @Getter
@@ -27,6 +33,12 @@ public interface CategorizationStrategy {
      */
     Optional<Long> categorize(Transaction transaction, CategorizationContext context);
 
+    /**
+     * Same as {@link #categorize(Transaction, CategorizationContext)}, for a transaction that's
+     * being edited rather than one already persisted as a {@link Transaction}.
+     *
+     * @return Optional containing the category id if matched, or empty if not matched.
+     */
     Optional<Long> categorize(TransactionUpdateRequest transaction, CategorizationContext context);
 
     /**

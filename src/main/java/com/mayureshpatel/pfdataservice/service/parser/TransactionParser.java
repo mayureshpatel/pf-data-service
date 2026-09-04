@@ -13,9 +13,30 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
+/**
+ * Parses a bank-specific CSV export into a stream of transactions. Each implementing bank format
+ * (Standard, Discover, Capital One, Synovus, Universal) provides its own header names, date
+ * formats, and amount-sign conventions; {@link TransactionParserFactory} selects the right one by
+ * {@link #getBankName()}. The default methods here are shared parsing helpers implementations can
+ * reuse, not requirements every format needs.
+ */
 public interface TransactionParser {
+    /**
+     * Parses a CSV file into a stream of transactions. {@code accountId} is accepted for
+     * interface-uniformity but individual implementations may not use it, since the transactions
+     * they build aren't yet attached to an account at parse time.
+     *
+     * @param accountId   the account the parsed transactions will belong to
+     * @param inputStream the CSV file's contents
+     * @return the parsed transactions
+     */
     Stream<Transaction> parse(Long accountId, InputStream inputStream);
 
+    /**
+     * The bank format this parser handles.
+     *
+     * @return the bank name
+     */
     BankName getBankName();
 
     /**
@@ -30,10 +51,17 @@ public interface TransactionParser {
     }
 
     /**
-     * Parses a date string into an {@link OffsetDateTime}.
+     * Parses a date string into an {@link OffsetDateTime}. The resulting offset comes entirely
+     * from {@code dateTimeFormatter} -- this method applies no zone of its own. Every
+     * implementation's formatter must resolve to UTC (e.g. via
+     * {@code parseDefaulting(ChronoField.OFFSET_SECONDS, 0)}), matching this app's UTC-normalized
+     * storage convention; a formatter with a real {@code .withZone(...)} override (a specific
+     * timezone rather than a fixed UTC offset) will silently shift every date it parses, as
+     * happened in {@code DiscoverCsvParser} (PF-197) -- confirm any new or changed formatter
+     * resolves to UTC before relying on this method.
      *
      * @param dateStr           the date string to parse
-     * @param dateTimeFormatter the date format to use
+     * @param dateTimeFormatter the date format to use; must resolve to UTC
      * @return the parsed {@link OffsetDateTime}
      */
     default OffsetDateTime parseDate(String dateStr, DateTimeFormatter dateTimeFormatter) {
@@ -71,13 +99,13 @@ public interface TransactionParser {
      */
     default Transaction configureCreditCardTransactionTypeAndAmount(Transaction transaction, BigDecimal netAmount) {
         if (netAmount.compareTo(BigDecimal.ZERO) >= 0) {
-            // Charges are positive in Discover/CapitalOne(debit-credit)
+            // charges are positive in Discover/CapitalOne(debit-credit)
             return transaction.toBuilder()
                     .type(TransactionType.EXPENSE)
                     .amount(netAmount)
                     .build();
         } else {
-            // Payments are negative in Discover/CapitalOne(debit-credit)
+            // payments are negative in Discover/CapitalOne(debit-credit)
             return transaction.toBuilder()
                     .type(TransactionType.TRANSFER_IN)
                     .amount(netAmount.abs())
@@ -95,15 +123,23 @@ public interface TransactionParser {
     }
 
     /**
-     * Parses an amount string from a CSV record into a {@link BigDecimal}.
+     * Parses an amount string from a CSV record into a {@link BigDecimal}. A header entirely
+     * absent from the file's own header row is a structural problem with the file -- e.g. a bank
+     * changing its export format to rename or split a required column, as happened to
+     * {@code DiscoverCsvParser} pre-July-2022 (PF-198) -- and throws, rather than silently
+     * resolving to zero and losing every affected transaction's amount without any error. A
+     * header that exists but is blank for this specific row is a legitimately empty value and
+     * still resolves to zero.
      *
      * @param csvRecord the CSV record containing the amount
      * @param header    the header key for the amount
-     * @return the parsed {@link BigDecimal} amount or zero if not found or invalid
+     * @return the parsed {@link BigDecimal} amount, or zero if the column is blank for this row
+     * @throws IllegalArgumentException if the column doesn't exist in the file at all, or its
+     *                                   value can't be parsed as a number
      */
     default BigDecimal parseAmount(CSVRecord csvRecord, String header) {
         if (!csvRecord.isMapped(header)) {
-            return BigDecimal.ZERO;
+            throw new IllegalArgumentException("Required column '" + header + "' is missing from this file.");
         }
 
         String stringVal = csvRecord.get(header);

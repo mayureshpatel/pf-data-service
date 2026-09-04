@@ -22,6 +22,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Aggregated data for the dashboard: spending breakdowns, income/expense pulse, cash-flow trend,
+ * year-to-date summary, and actionable items. Most methods come in a (userId, month, year)
+ * overload that resolves to a calendar month, and a (userId, startDate, endDate) overload for an
+ * arbitrary explicit range -- the month/year overloads just compute the range and delegate.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -43,7 +49,7 @@ public class DashboardService {
      */
     public DashboardData getDashboardData(Long userId, int month, int year) {
         OffsetDateTime startOfMonth = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
+        OffsetDateTime endOfMonth = endOfMonth(startOfMonth);
 
         BigDecimal totalIncome = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.INCOME);
         BigDecimal totalExpenses = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.EXPENSE);
@@ -58,48 +64,107 @@ public class DashboardService {
                 .build();
     }
 
+    /**
+     * Spending grouped by category for a calendar month.
+     *
+     * @param userId the user id
+     * @param month  the month
+     * @param year   the year
+     * @return the category breakdown for that month
+     */
     public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, int month, int year) {
         OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
+        OffsetDateTime endDate = endOfMonth(startDate);
 
         return getCategoryBreakdown(userId, startDate, endDate);
     }
 
+    /**
+     * Spending grouped by category for an explicit date range.
+     *
+     * @param userId    the user id
+     * @param startDate the range start (inclusive)
+     * @param endDate   the range end (inclusive)
+     * @return the category breakdown for that range
+     */
     public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return transactionRepository.findCategoryTotals(userId, startDate, endDate);
     }
 
+    /**
+     * Spending grouped by merchant for a calendar month.
+     *
+     * @param userId the user id
+     * @param month  the month
+     * @param year   the year
+     * @return the merchant breakdown for that month
+     */
     public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, int month, int year) {
         OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endDate = startDate.plusMonths(1).minusDays(1);
+        OffsetDateTime endDate = endOfMonth(startDate);
 
         return getMerchantBreakdown(userId, startDate, endDate);
     }
 
+    /**
+     * Spending grouped by merchant for an explicit date range.
+     *
+     * @param userId    the user id
+     * @param startDate the range start (inclusive)
+     * @param endDate   the range end (inclusive)
+     * @return the merchant breakdown for that range
+     */
     public List<MerchantBreakdownDto> getMerchantBreakdown(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return this.merchantRepository.findMerchantTotals(userId, startDate, endDate);
     }
 
+    /**
+     * Income/expense pulse for a calendar month, compared against the prior month.
+     *
+     * @param userId the user id
+     * @param month  the month
+     * @param year   the year
+     * @return current vs. previous month income, expense, and savings rate
+     */
     public DashboardPulseDto getPulse(Long userId, int month, int year) {
         OffsetDateTime startCurrent = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endCurrent = startCurrent.plusMonths(1).minusDays(1);
+        OffsetDateTime endCurrent = endOfMonth(startCurrent);
 
         // previous month
         OffsetDateTime startPrevious = startCurrent.minusMonths(1);
-        OffsetDateTime endPrevious = endCurrent.minusDays(1);
+        OffsetDateTime endPrevious = startCurrent.minusDays(1);
 
         return calculatePulse(userId, startCurrent, endCurrent, startPrevious, endPrevious);
     }
 
+    /**
+     * Income/expense pulse for an explicit date range, compared against the immediately
+     * preceding period of the same length.
+     *
+     * @param userId    the user id
+     * @param startDate the range start (inclusive)
+     * @param endDate   the range end (inclusive)
+     * @return current vs. previous period income, expense, and savings rate
+     */
     public DashboardPulseDto getPulse(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
-        // Calculate duration to find equivalent previous period
+        // calculate duration to find equivalent previous period
         long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         OffsetDateTime startPrevious = startDate.minusDays(days);
-        OffsetDateTime endPrevious = endDate.minusDays(1);
+        OffsetDateTime endPrevious = startDate.minusDays(1);
 
         return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
     }
 
+    /**
+     * Computes income, expense, and savings rate for a current and a previous period.
+     *
+     * @param userId        the user id
+     * @param startCurrent  the current period's start
+     * @param endCurrent    the current period's end
+     * @param startPrevious the previous period's start
+     * @param endPrevious   the previous period's end
+     * @return the combined current-vs-previous pulse data
+     */
     private DashboardPulseDto calculatePulse(
             Long userId,
             OffsetDateTime startCurrent, OffsetDateTime endCurrent,
@@ -121,12 +186,19 @@ public class DashboardService {
         );
     }
 
+    /**
+     * Monthly income/expense totals for the trailing 12 months, with any month that has no
+     * transactions filled in as zero so the series has no gaps.
+     *
+     * @param userId the user id
+     * @return the 12-month cash-flow trend, oldest month first
+     */
     public List<CashFlowTrendDto> getCashFlowTrend(Long userId) {
-        LocalDate startDate = LocalDate.now().minusMonths(11).withDayOfMonth(1); // Last 12 months
+        LocalDate startDate = LocalDate.now().minusMonths(11).withDayOfMonth(1); // last 12 months
         List<Object[]> results = transactionRepository.findMonthlySums(userId, startDate);
 
         Map<String, CashFlowTrendDto> trendMap = results.stream().collect(Collectors.toMap(
-                row -> ((Number) row[0]).intValue() + "-" + ((Number) row[1]).intValue(), // Key: "2025-11"
+                row -> ((Number) row[0]).intValue() + "-" + ((Number) row[1]).intValue(), // key: "2025-11"
                 row -> new CashFlowTrendDto(
                         ((Number) row[1]).intValue(),
                         ((Number) row[0]).intValue(),
@@ -141,7 +213,7 @@ public class DashboardService {
                 )
         ));
 
-        // Fill last 12 months to ensure continuity
+        // fill last 12 months to ensure continuity
         List<CashFlowTrendDto> trendList = new ArrayList<>();
         LocalDate iterator = startDate;
         LocalDate now = LocalDate.now();
@@ -160,6 +232,14 @@ public class DashboardService {
         return trendList;
     }
 
+    /**
+     * Year-to-date income, expense, and savings for a year. A future year returns all zeros
+     * rather than an error.
+     *
+     * @param userId the user id
+     * @param year   the year to summarize
+     * @return the year-to-date summary
+     */
     public YtdSummaryDto getYtdSummary(Long userId, int year) {
 //        LocalDate startYtd = LocalDate.of(year, 1, 1);
 //        LocalDate endYtd = LocalDate.now();
@@ -181,6 +261,14 @@ public class DashboardService {
         return new YtdSummaryDto(year, income, expense, netSavings, savingsRate);
     }
 
+    /**
+     * Suggested follow-up actions for the user: potential transfers awaiting confirmation, and
+     * uncategorized expenses worth reviewing. Either category is omitted if there's nothing to
+     * report.
+     *
+     * @param userId the user id
+     * @return the current action items
+     */
     public List<ActionItemDto> getActionItems(Long userId) {
         List<ActionItemDto> actions = new ArrayList<>();
 
@@ -209,11 +297,41 @@ public class DashboardService {
         return actions;
     }
 
+    /**
+     * The last moment of the calendar month a given month-start instant belongs to (23:59:59, not
+     * midnight). {@code startOfMonth.plusMonths(1)} alone lands on next month's first midnight,
+     * which silently excludes any transaction timestamped later in the day on the month's actual
+     * last day when used as an inclusive range's end bound -- see PF-196.
+     *
+     * @param startOfMonth midnight on the first day of the month
+     * @return the last second of that same month
+     */
+    private OffsetDateTime endOfMonth(OffsetDateTime startOfMonth) {
+        return startOfMonth.plusMonths(1).minusSeconds(1);
+    }
+
+    /**
+     * Sums transactions of one type over a date range, treating a null repository result as zero.
+     *
+     * @param userId the user id
+     * @param start  the range start (inclusive)
+     * @param end    the range end (inclusive)
+     * @param type   the transaction type to sum
+     * @return the sum, or zero if there were no matching transactions
+     */
     private BigDecimal getSum(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
         BigDecimal sum = transactionRepository.getSumByDateRange(userId, start, end, type);
         return sum != null ? sum : BigDecimal.ZERO;
     }
 
+    /**
+     * Computes savings rate as a percentage of income. Returns zero rather than dividing by zero
+     * when income is zero.
+     *
+     * @param income  the period's income
+     * @param expense the period's expense
+     * @return the savings rate as a percentage (e.g. 25.0000 for 25%)
+     */
     private BigDecimal calculateSavingsRate(BigDecimal income, BigDecimal expense) {
         if (income.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;

@@ -16,6 +16,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import java.util.List;
 import java.util.Optional;
 
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import org.mockito.ArgumentCaptor;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
@@ -100,18 +103,44 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("should update user successfully")
-        void shouldUpdateUser() {
+        @DisplayName("should update profile successfully and preserve existing role")
+        void shouldUpdateProfileAndPreserveRole() {
             // Arrange
-            User user = User.builder().id(USER_ID).username(USERNAME).build();
-            when(userRepository.update(user)).thenReturn(1);
+            String originalRole = "ADMIN";
+            String newUsername = "newusername";
+            String newEmail = "new@example.com";
+            User existingUser = User.builder()
+                    .id(USER_ID)
+                    .username(USERNAME)
+                    .email(EMAIL)
+                    .role(originalRole)
+                    .build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(existingUser));
+            when(userRepository.update(org.mockito.ArgumentMatchers.any(User.class))).thenReturn(1);
 
             // Act
-            int result = userService.update(user);
+            int result = userService.updateProfile(USER_ID, newUsername, newEmail);
 
             // Assert
             assertEquals(1, result);
-            verify(userRepository).update(user);
+            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).update(userCaptor.capture());
+            
+            User capturedUser = userCaptor.getValue();
+            assertEquals(USER_ID, capturedUser.getId());
+            assertEquals(newUsername, capturedUser.getUsername());
+            assertEquals(newEmail, capturedUser.getEmail());
+            assertEquals(originalRole, capturedUser.getRole()); // Role preserved
+        }
+
+        @Test
+        @DisplayName("updateProfile should throw ResourceNotFoundException when user not found")
+        void updateProfileShouldThrowException() {
+            // Arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThrows(ResourceNotFoundException.class, () -> userService.updateProfile(USER_ID, "newname", "new@example.com"));
         }
     }
 

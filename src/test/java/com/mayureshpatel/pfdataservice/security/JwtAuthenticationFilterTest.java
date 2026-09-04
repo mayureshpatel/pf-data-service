@@ -1,6 +1,9 @@
 package com.mayureshpatel.pfdataservice.security;
 
 import com.mayureshpatel.pfdataservice.service.UserService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Header;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +21,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,6 +44,10 @@ class JwtAuthenticationFilterTest {
     private FilterChain filterChain;
     @Mock
     private UserDetails userDetails;
+    @Mock
+    private Header jwtHeader;
+    @Mock
+    private Claims claims;
 
     @InjectMocks
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -166,6 +175,53 @@ class JwtAuthenticationFilterTest {
             // Assert
             verify(filterChain).doFilter(request, response);
             assertNull(SecurityContextHolder.getContext().getAuthentication());
+        }
+    }
+
+    @Nested
+    @DisplayName("Rejection Response Bodies (PF-211)")
+    class RejectionResponseBodyTests {
+
+        private StringWriter capturedBody;
+
+        @BeforeEach
+        void captureResponseBody() throws IOException {
+            capturedBody = new StringWriter();
+            when(response.getWriter()).thenReturn(new PrintWriter(capturedBody));
+        }
+
+        @Test
+        @DisplayName("should return a JSON body with a detail field when the token has expired")
+        void shouldReturnDetailedBodyOnExpiredToken() throws ServletException, IOException {
+            // Arrange
+            String token = "expired.jwt.token";
+            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(jwtService.extractUsername(token)).thenThrow(new ExpiredJwtException(jwtHeader, claims, "Token expired"));
+
+            // Act
+            jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+            // Assert
+            verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            verify(filterChain, never()).doFilter(request, response);
+            assertTrue(capturedBody.toString().contains("\"detail\""));
+        }
+
+        @Test
+        @DisplayName("should return a JSON body with a detail field when the token is malformed or otherwise invalid (PF-211)")
+        void shouldReturnDetailedBodyOnMalformedToken() throws ServletException, IOException {
+            // Arrange
+            String token = "garbage";
+            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(jwtService.extractUsername(token)).thenThrow(new RuntimeException("Malformed JWT"));
+
+            // Act
+            jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+            // Assert
+            verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            verify(filterChain, never()).doFilter(request, response);
+            assertTrue(capturedBody.toString().contains("\"detail\""));
         }
     }
 }

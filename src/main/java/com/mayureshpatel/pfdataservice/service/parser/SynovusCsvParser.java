@@ -19,6 +19,13 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.stream.Stream;
 
+/**
+ * Parser for Synovus bank CSV exports. Unlike the other bank-specific parsers, the header row
+ * isn't necessarily the first line -- some exports prepend extra lines before it -- so
+ * {@link #parse} scans forward line-by-line for the first row starting with "date"
+ * (case-insensitive, quotes/BOM-tolerant) before handing the rest off to a real CSV parser. Also
+ * detects and skips a trailing "Totals:" footer row, and tolerates tab- or comma-separated files.
+ */
 @Component
 @Slf4j
 public class SynovusCsvParser implements TransactionParser {
@@ -28,7 +35,7 @@ public class SynovusCsvParser implements TransactionParser {
     private static final String HEADER_DEBIT = "Debit";
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = new DateTimeFormatterBuilder()
-            .appendPattern("[M/d/yyyy][MM/dd/yyyy][MMdd/yyyy][M/d/yy][MM/dd/yy]")
+            .appendPattern("[M/d/yyyy][MM/dd/yyyy][M/d/yy][MM/dd/yy]")
             .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
             .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
             .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
@@ -43,18 +50,28 @@ public class SynovusCsvParser implements TransactionParser {
             .setIgnoreSurroundingSpaces(true)
             .get();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BankName getBankName() {
         return BankName.SYNOVUS;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException if {@code inputStream} is null
+     * @throws com.mayureshpatel.pfdataservice.exception.CsvParsingException if no header row
+     *                                                                       starting with "date" is found
+     */
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         if (inputStream == null) {
             throw new NullPointerException("InputStream cannot be null");
         }
         try {
-            // Read until we find the header row starting with "Date"
+            // read until we find the header row starting with "date"
             BufferedReader lineReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             String line;
             StringBuilder csvContent = new StringBuilder();
@@ -67,8 +84,8 @@ public class SynovusCsvParser implements TransactionParser {
                 }
                 String trimmedLine = line.trim();
                 if (!headerFound) {
-                    // Check if line starts with Date (handling potential quotes or BOM)
-                    // We remove leading quotes to check for "Date"
+                    // check if line starts with date (handling potential quotes or bom)
+                    // we remove leading quotes to check for "date"
                     String headerCheck = trimmedLine.replace("\"", "");
                     if (headerCheck.toLowerCase().startsWith("date")) {
                         headerFound = true;
@@ -77,7 +94,7 @@ public class SynovusCsvParser implements TransactionParser {
                     }
                     continue;
                 }
-                // Skip the totals footer
+                // skip the totals footer
                 if (trimmedLine.contains("Totals:")) {
                     continue;
                 }
@@ -120,7 +137,7 @@ public class SynovusCsvParser implements TransactionParser {
         } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Synovus CSV", e);
+            throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse Synovus CSV", e);
         }
     }
 

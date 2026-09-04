@@ -74,9 +74,17 @@ class CategoryDtoMapperTest {
         @DisplayName("should map parent ID when parentId is present")
         void toDto_shouldMapParentId() {
             // Arrange
+            Category parentCategory = Category.builder()
+                    .id(1L)
+                    .userId(100L)
+                    .name("Food")
+                    .type("EXPENSE")
+                    .build();
+
             Category category = Category.builder()
                     .id(2L)
                     .parentId(1L)
+                    .parent(parentCategory)
                     .name("Restaurants")
                     .type("EXPENSE")
                     .build();

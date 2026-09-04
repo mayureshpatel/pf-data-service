@@ -9,13 +9,13 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${DB_URL:jdbc:postgresql://aws-0-us-west-2.pooler.supabase.com:6543/postgres?prepareThreshold=0}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/personal_finance}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
-      connection-init-sql: SET timezone='America/New_York'
+      connection-init-sql: SET timezone='UTC'
 
   flyway:
     enabled: true
@@ -25,7 +25,7 @@ spring:
   security:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
-      expiration: ${JWT_EXPIRATION:86400000} # 1 day
+      expiration: ${JWT_EXPIRATION:3600000}
 
 cors:
   allowed-origins: "http://localhost:4200"

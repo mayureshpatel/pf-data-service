@@ -14,6 +14,10 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Verifies login credentials and issues JWTs. Distinct from {@link RegistrationService}, which
+ * creates the user account this service later authenticates against.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {

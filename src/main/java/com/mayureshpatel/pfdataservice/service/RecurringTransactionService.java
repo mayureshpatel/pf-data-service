@@ -27,6 +27,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * CRUD for a user's confirmed recurring transactions, plus {@link #findSuggestions}, which
+ * detects candidate recurring patterns in the user's transaction history for them to confirm.
+ * Detection groups the last 12 months of expenses by merchant/description + amount, then checks
+ * whether a group's inter-transaction intervals are stable enough to call weekly, bi-weekly,
+ * monthly, or yearly.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -38,25 +45,39 @@ public class RecurringTransactionService {
     private final UserRepository userRepository;
     private final MerchantRepository merchantRepository;
 
+    /**
+     * Returns the user's active confirmed recurring transactions, next-occurrence first.
+     *
+     * @param userId the user id
+     * @return the user's recurring transactions
+     */
     public List<RecurringTransactionDto> getRecurringTransactions(Long userId) {
         return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
                 .map(RecurringTransactionDtoMapper::toDto)
                 .toList();
     }
 
+    /**
+     * Detects candidate recurring transaction patterns in the last 12 months of the user's
+     * expenses that aren't already confirmed as recurring, ranked by confidence (higher
+     * occurrence counts score higher).
+     *
+     * @param userId the user id
+     * @return the detected suggestions, highest confidence first
+     */
     public List<RecurringSuggestionDto> findSuggestions(Long userId) {
-        // 1. Get existing recurring items to exclude duplicates
+        // 1. get existing recurring items to exclude duplicates
         Set<String> existingMerchants = recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
                 .map(r -> r.getMerchant() != null && r.getMerchant().getCleanName() != null
                         ? r.getMerchant().getCleanName().toLowerCase()
                         : "")
                 .collect(Collectors.toSet());
 
-        // 2. Fetch expenses from last 12 months
+        // 2. fetch expenses from last 12 months
         LocalDate oneYearAgo = LocalDate.now().minusYears(1);
         List<Transaction> transactions = transactionRepository.findExpensesSince(userId, oneYearAgo);
 
-        // 3. Group by Merchant Name (or Description) + Amount
+        // 3. group by merchant name (or description) + amount
         Map<String, List<Transaction>> groups = new HashMap<>();
 
         for (Transaction t : transactions) {
@@ -74,13 +95,13 @@ public class RecurringTransactionService {
 
         List<RecurringSuggestionDto> suggestions = new ArrayList<>();
 
-        // 4. Analyze groups
+        // 4. analyze groups
         for (Map.Entry<String, List<Transaction>> entry : groups.entrySet()) {
             List<Transaction> group = entry.getValue();
 
             if (group.size() < 3) continue;
 
-            // Filter out any transactions with null dates to prevent NPE during sort
+            // filter out any transactions with null dates to prevent npe during sort
             group = group.stream()
                     .filter(t -> t.getTransactionDate() != null)
                     .collect(Collectors.toList());
@@ -113,6 +134,21 @@ public class RecurringTransactionService {
                 .toList();
     }
 
+    /**
+     * Determines whether a date-sorted group of transactions recurs at a stable interval.
+     * "Stable" means every consecutive gap stays within 5 days of the group's average gap.
+     * <br><br>
+     * Classifies the average interval into one bucket per {@link Frequency} value (WEEKLY,
+     * BI_WEEKLY, MONTHLY, QUARTERLY, YEARLY) -- there is deliberately no bucket for every possible
+     * interval. A stable ~9-12 or ~17-24 day average returns {@code null}, same as an unstable
+     * group: no {@link Frequency} value corresponds to those cadences, so there's nothing to
+     * classify it as (PF-205). Add a new bucket here only if a new {@link Frequency} value is
+     * added to model it.
+     *
+     * @param group the transactions to check, already sorted by date
+     * @return the detected frequency, or {@code null} if the intervals aren't stable enough to
+     * call recurring, or are stable but don't correspond to any supported frequency
+     */
     private Frequency detectFrequency(List<Transaction> group) {
         List<Long> intervals = new ArrayList<>();
         for (int i = 1; i < group.size(); i++) {
@@ -130,11 +166,19 @@ public class RecurringTransactionService {
         if (avgInterval >= 25 && avgInterval <= 35) return Frequency.MONTHLY;
         if (avgInterval >= 6 && avgInterval <= 8) return Frequency.WEEKLY;
         if (avgInterval >= 13 && avgInterval <= 16) return Frequency.BI_WEEKLY;
+        if (avgInterval >= 85 && avgInterval <= 95) return Frequency.QUARTERLY;
         if (avgInterval >= 360 && avgInterval <= 370) return Frequency.YEARLY;
 
         return null;
     }
 
+    /**
+     * Projects the next expected occurrence date from the last known one and a frequency.
+     *
+     * @param lastDate  the most recent occurrence
+     * @param frequency how often it recurs
+     * @return the projected next occurrence date
+     */
     private LocalDate calculateNextDate(LocalDate lastDate, Frequency frequency) {
         return switch (frequency) {
             case MONTHLY -> lastDate.plusMonths(1);
@@ -145,6 +189,14 @@ public class RecurringTransactionService {
         };
     }
 
+    /**
+     * Confirms a new recurring transaction, verifying the account (if given) and merchant (if
+     * given) both exist and, for the account, belong to the user.
+     *
+     * @param userId  the user id
+     * @param request the recurring transaction to create
+     * @return the new record's generated id
+     */
     @Transactional
     public int createRecurringTransaction(Long userId, RecurringTransactionCreateRequest request) {
         userRepository.findById(userId)
@@ -166,6 +218,16 @@ public class RecurringTransactionService {
         return recurringRepository.insert(request, userId);
     }
 
+    /**
+     * Updates an existing recurring transaction owned by the user, re-verifying the account (if
+     * given) and merchant (if given) the same way {@link #createRecurringTransaction} does.
+     *
+     * @param userId  the user id
+     * @param request the recurring transaction to update, including its id
+     * @return the number of rows updated
+     * @throws ResourceNotFoundException if no recurring transaction with that id exists
+     * @throws AccessDeniedException     if it belongs to a different user
+     */
     @Transactional
     public int updateRecurringTransaction(Long userId, RecurringTransactionUpdateRequest request) {
         RecurringTransaction recurring = recurringRepository.findById(request.getId())
@@ -192,6 +254,15 @@ public class RecurringTransactionService {
         return recurringRepository.update(request, userId);
     }
 
+    /**
+     * Deletes a recurring transaction owned by the user.
+     *
+     * @param userId the user id
+     * @param id     the recurring transaction id to delete
+     * @return the number of rows deleted
+     * @throws ResourceNotFoundException if no recurring transaction with that id exists
+     * @throws AccessDeniedException     if it belongs to a different user
+     */
     @Transactional
     public int deleteRecurringTransaction(Long userId, Long id) {
         RecurringTransaction recurring = recurringRepository.findById(id)

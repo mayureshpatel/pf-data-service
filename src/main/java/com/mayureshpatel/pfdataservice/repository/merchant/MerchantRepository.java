@@ -48,13 +48,6 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
-    public List<Merchant> findAllByCleanNameLike(String cleanName) {
-        return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_CLEAN_NAME_LIKE)
-                .param("cleanName", cleanName)
-                .query(rowMapper)
-                .list();
-    }
-
     public Optional<Merchant> findByOriginalNameAndUserId(String originalName, Long userId) {
         return jdbcClient.sql(MerchantQueries.FIND_BY_ORIGINAL_NAME_AND_USER_ID)
                 .param("originalName", originalName)

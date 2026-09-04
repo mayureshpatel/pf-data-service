@@ -130,4 +130,12 @@ public final class RecurringTransactionQueries {
                 and user_id = :userId
                 and deleted_at is null
             """;
+
+    // language=SQL
+    public static final String COUNT_BY_ACCOUNT_ID = """
+            select count(*)
+            from recurring_transactions
+            where account_id = :accountId
+              and deleted_at is null
+            """;
 }

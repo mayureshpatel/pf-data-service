@@ -71,7 +71,7 @@ public final class CategoryQueries {
             where categories.user_id = :userId
             """;
 
-    // language=SQl
+    // language=SQL
     public static final String FIND_ALL_SUB_CATEGORIES = """
             select
                 categories.id,
@@ -110,6 +110,13 @@ public final class CategoryQueries {
             WHERE categories.user_id = :userId
                 and parent_category.id is null
             ORDER BY parent_category.id nulls first
+            """;
+
+    // language=SQL
+    public static final String COUNT_BY_PARENT_ID = """
+            select count(*)
+            from categories
+            where parent_id = :parentId
             """;
 
     // language=SQL

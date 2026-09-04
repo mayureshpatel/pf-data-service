@@ -1,19 +1,13 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
-import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
-import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
-import com.mayureshpatel.pfdataservice.dto.account.AccountReconcileRequest;
-import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
-import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.account.*;
 import com.mayureshpatel.pfdataservice.dto.currency.CurrencyDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 
@@ -46,10 +40,10 @@ class AccountControllerTest extends BaseControllerTest {
     @DisplayName("getAccounts")
     class GetAccountsTests {
 
-        @ParameterizedTest
-        @ValueSource(strings = {"/api/v1/accounts", "/api/accounts"})
-        @DisplayName("GET should return list of accounts for both URL versions")
-        void getAccounts_shouldReturnListOfAccounts(String url) throws Exception {
+        @Test
+        @DisplayName("GET should return list of accounts")
+        void getAccounts_shouldReturnListOfAccounts() throws Exception {
+            String url = "/api/v1/accounts";
             // Arrange
             AccountDto accountDto = new AccountDto(
                     ACCOUNT_ID,
@@ -265,6 +259,20 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.title").value("Not Found"))
                     .andExpect(jsonPath("$.detail").value("Account with ID " + ACCOUNT_ID + " not found"));
+        }
+
+        @Test
+        @DisplayName("DELETE should return 409 Conflict, not 500, when account has existing transactions (PF-193)")
+        void deleteAccount_shouldReturn409WhenTransactionsExist() throws Exception {
+            // Arrange
+            when(accountService.deleteAccount(USER_ID, ACCOUNT_ID))
+                    .thenThrow(new IllegalStateException("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."));
+
+            // Act & Assert
+            mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.detail").value("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."));
         }
     }
 

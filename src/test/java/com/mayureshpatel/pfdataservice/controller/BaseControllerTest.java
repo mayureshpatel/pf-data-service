@@ -68,6 +68,8 @@ public abstract class BaseControllerTest {
     protected SnapshotService snapshotService;
     @MockitoBean
     protected CurrencyService currencyService;
+    @MockitoBean
+    protected MerchantService merchantService;
 
     @BeforeEach
     void setUpSecurityMocks() {
@@ -75,6 +77,8 @@ public abstract class BaseControllerTest {
         org.mockito.Mockito.when(securityService.isTransactionOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isCategoryOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isRuleOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(securityService.isBudgetOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(securityService.isRecurringTransactionOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
     }
 
     // User ID constant for convenience

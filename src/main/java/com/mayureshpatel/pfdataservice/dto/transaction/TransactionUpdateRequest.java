@@ -19,6 +19,10 @@ public class TransactionUpdateRequest {
     @Positive(message = "Transaction ID must be a positive number.")
     private final Long id;
 
+    @NotNull(message = "Account ID cannot be null.")
+    @Positive(message = "Account ID must be a positive number.")
+    private final Long accountId;
+
     @Positive(message = "Category ID must be a positive number.")
     private final Long categoryId;
 
@@ -46,6 +50,7 @@ public class TransactionUpdateRequest {
     public static TransactionUpdateRequest fromDomain(Transaction transaction) {
         return TransactionUpdateRequest.builder()
                 .id(transaction.getId())
+                .accountId(transaction.getAccount() != null ? transaction.getAccount().getId() : null)
                 .categoryId(transaction.getCategory() != null ? transaction.getCategory().getId() : null)
                 .amount(transaction.getAmount())
                 .transactionDate(transaction.getTransactionDate())

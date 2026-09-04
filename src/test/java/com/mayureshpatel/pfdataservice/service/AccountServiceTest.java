@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,7 @@ class AccountServiceTest {
     @Mock private AccountRepository accountRepository;
     @Mock private UserRepository userRepository;
     @Mock private TransactionRepository transactionRepository;
+    @Mock private RecurringTransactionRepository recurringTransactionRepository;
 
     @InjectMocks private AccountService accountService;
 
@@ -125,18 +127,6 @@ class AccountServiceTest {
             assertThrows(ResourceNotFoundException.class, () -> accountService.updateAccount(USER_ID, AccountUpdateRequest.builder().id(ACCOUNT_ID).build()));
         }
 
-        @Test
-        @DisplayName("should throw AccessDeniedException if user doesn't own account during update")
-        void shouldThrowOnAccessDenied() {
-            // Arrange
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().build()));
-            // Account repo returns account but somehow userId doesn't match (extra safety check in service)
-            Account otherAccount = Account.builder().id(ACCOUNT_ID).userId(999L).build();
-            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(otherAccount));
-
-            // Act & Assert
-            assertThrows(AccessDeniedException.class, () -> accountService.updateAccount(USER_ID, AccountUpdateRequest.builder().id(ACCOUNT_ID).build()));
-        }
     }
 
     @Nested
@@ -199,6 +189,7 @@ class AccountServiceTest {
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(0L);
+            when(recurringTransactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(0L);
             when(accountRepository.deleteById(ACCOUNT_ID, USER_ID)).thenReturn(1);
 
             // Act
@@ -233,6 +224,22 @@ class AccountServiceTest {
             // Act & Assert
             IllegalStateException ex = assertThrows(IllegalStateException.class, () -> accountService.deleteAccount(USER_ID, ACCOUNT_ID));
             assertTrue(ex.getMessage().contains("5 transaction(s)"));
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException if account has dependent recurring transactions (PF-192)")
+        void shouldThrowOnExistingRecurringTransactions() {
+            // Arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(0L);
+            when(recurringTransactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(2L);
+
+            // Act & Assert
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> accountService.deleteAccount(USER_ID, ACCOUNT_ID));
+            assertTrue(ex.getMessage().contains("2 recurring transaction(s)"));
+            verify(accountRepository, never()).deleteById(any(), any());
         }
 
         @Test

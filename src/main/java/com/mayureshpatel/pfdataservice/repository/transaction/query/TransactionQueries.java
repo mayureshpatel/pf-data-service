@@ -24,7 +24,8 @@ public final class TransactionQueries {
                     transactions.updated_at,
                     transactions.deleted_at,
                     accounts.name as account_name,
-                    accounts.current_balance as account_balance,
+                    accounts.type as account_type,
+                    accounts.current_balance as account_current_balance,
                     accounts.currency_code as account_currency_code,
                     accounts.bank_name as account_bank_name,
                     accounts.user_id as account_user_id,
@@ -94,17 +95,6 @@ public final class TransactionQueries {
             " where accounts.user_id = :userId" +
             "   and transactions.deleted_at is null" +
             " order by transactions.date desc";
-
-    // language=SQL
-    public static final String FIND_BY_ACCOUNT_ID_AND_DATE_AND_AMOUNT_AND_DESCRIPTION_AND_TYPE = """
-            select *
-            from transactions
-            where account_id = :accountId
-                and date = :transactionDate
-                and amount = :amount
-                and description = :description
-                and type = :type
-            """;
 
     // language=SQL
     public static final String FIND_EXISTING_FOR_DUPLICATE_CHECK = """
@@ -381,6 +371,7 @@ public final class TransactionQueries {
             left join merchants on transactions.merchant_id = merchants.id
             where accounts.user_id = :userId
                 and transactions.deleted_at is null
+                and merchants.id is not null
             order by merchants.clean_name
             """;
 }

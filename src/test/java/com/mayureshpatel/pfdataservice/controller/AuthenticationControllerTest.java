@@ -44,7 +44,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
             // Note: BaseControllerTest has authenticationService mocked as 'authenticationService'
             when(authenticationService.authenticate(any(AuthenticationRequest.class))).thenReturn(response);
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/authenticate")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -64,7 +64,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
                     .password("secure_password")
                     .build();
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/authenticate")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -79,9 +79,10 @@ class AuthenticationControllerTest extends BaseControllerTest {
     class RegisterTests {
 
         @Test
-        @DisplayName("POST /register should return token on valid registration")
-        void register_shouldReturnToken() throws Exception {
-            // Arrange
+        @DisplayName("POST /register should succeed for an anonymous, unauthenticated caller (PF-183)")
+        void register_anonymousCallerSucceeds() throws Exception {
+            // Arrange -- no @WithCustomMockUser here: this is the whole point of PF-183, an
+            // anonymous caller with no principal at all must be able to register.
             RegistrationRequest request = RegistrationRequest.builder()
                     .username("new_user")
                     .email("new@example.com")
@@ -94,7 +95,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
 
             when(registrationService.register(any(RegistrationRequest.class))).thenReturn(response);
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/register")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -116,13 +117,36 @@ class AuthenticationControllerTest extends BaseControllerTest {
                     .password("Pass123!@")
                     .build();
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/register")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validationErrors[0].field").value("email"));
+        }
+
+        @Test
+        @DisplayName("POST /register should return 400 Bad Request when the honeypot field is filled")
+        void register_shouldReturn400OnHoneypotFilled() throws Exception {
+            // Arrange
+            RegistrationRequest request = RegistrationRequest.builder()
+                    .username("new_user")
+                    .email("new@example.com")
+                    .password("Pass123!@")
+                    .website("http://spam.example.com")
+                    .build();
+
+            when(registrationService.register(any(RegistrationRequest.class)))
+                    .thenThrow(new IllegalArgumentException("Registration failed. Please try again."));
+
+            // act & assert
+            mockMvc.perform(post("/api/v1/auth/register")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("Registration failed. Please try again."));
         }
     }
 
@@ -142,7 +166,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
             when(authenticationService.authenticate(any(AuthenticationRequest.class)))
                     .thenThrow(new RuntimeException("Authentication backend down"));
 
-            // Act & Assert
+            // act & assert
             mockMvc.perform(post("/api/v1/auth/authenticate")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)

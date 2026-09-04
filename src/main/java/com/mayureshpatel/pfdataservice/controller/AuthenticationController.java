@@ -5,6 +5,9 @@ import com.mayureshpatel.pfdataservice.dto.auth.AuthenticationResponse;
 import com.mayureshpatel.pfdataservice.dto.user.RegistrationRequest;
 import com.mayureshpatel.pfdataservice.service.AuthenticationService;
 import com.mayureshpatel.pfdataservice.service.RegistrationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,6 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Login and user-registration endpoints. Both are public, unauthenticated endpoints -- self-service
+ * registration is open to anyone, guarded by {@code RegistrationRequest}'s honeypot field and a
+ * per-IP rate limit on {@code /register} specifically (see {@code RateLimitingFilter}).
+ */
+@Tag(name = "Authentication", description = "Login and self-service user registration")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -22,6 +31,14 @@ public class AuthenticationController {
     private final AuthenticationService service;
     private final RegistrationService registrationService;
 
+    /**
+     * Authenticates a username/password pair and issues a JWT.
+     *
+     * @param request the login credentials
+     * @return the issued token
+     */
+    @Operation(summary = "Authenticate", description = "Authenticates a username/password pair and issues a JWT")
+    @ApiResponse(responseCode = "200", description = "Authenticated, token returned")
     @PostMapping("/authenticate")
     public ResponseEntity<AuthenticationResponse> authenticate(
             @Valid @RequestBody AuthenticationRequest request
@@ -29,6 +46,17 @@ public class AuthenticationController {
         return ResponseEntity.ok(service.authenticate(request));
     }
 
+    /**
+     * Registers a new user. Public and self-service -- no authentication required to call it.
+     *
+     * @param request the new user's details
+     * @return 201 with a token for the newly created user
+     */
+    @Operation(summary = "Register a user", description = "Creates a new user account. Public, self-service.")
+    @ApiResponse(responseCode = "201", description = "User created, token returned")
+    @ApiResponse(responseCode = "400", description = "Validation failed, or the honeypot field was filled")
+    @ApiResponse(responseCode = "409", description = "Username or email already exists")
+    @ApiResponse(responseCode = "429", description = "Too many registration attempts from this IP")
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(
             @Valid @RequestBody RegistrationRequest request

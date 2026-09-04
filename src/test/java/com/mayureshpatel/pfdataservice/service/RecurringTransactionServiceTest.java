@@ -81,17 +81,17 @@ class RecurringTransactionServiceTest {
     class FindSuggestionsTests {
         
         @Test
-        @DisplayName("should detect various stable intervals (Weekly, Monthly, Bi-Weekly, Yearly)")
+        @DisplayName("should detect various stable intervals (Weekly, Monthly, Bi-Weekly, Quarterly, Yearly)")
         void shouldDetectAllFrequencies() {
             // Arrange
             LocalDate now = LocalDate.now();
             OffsetDateTime zone = OffsetDateTime.now();
-            
+
             // Weekly (avg ~7)
             Transaction w1 = Transaction.builder().transactionDate(now.minusDays(14).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("W").build();
             Transaction w2 = Transaction.builder().transactionDate(now.minusDays(7).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("W").build();
             Transaction w3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("W").build();
-            
+
             // Monthly (avg ~30)
             Transaction m1 = Transaction.builder().transactionDate(now.minusMonths(2).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.ONE).description("M").build();
             Transaction m2 = Transaction.builder().transactionDate(now.minusMonths(1).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.ONE).description("M").build();
@@ -102,13 +102,18 @@ class RecurringTransactionServiceTest {
             Transaction b2 = Transaction.builder().transactionDate(now.minusWeeks(2).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.ZERO).description("B").build();
             Transaction b3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.ZERO).description("B").build();
 
+            // Quarterly (avg ~90) -- PF-205
+            Transaction q1 = Transaction.builder().transactionDate(now.minusDays(180).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.valueOf(150)).description("Q").build();
+            Transaction q2 = Transaction.builder().transactionDate(now.minusDays(90).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.valueOf(150)).description("Q").build();
+            Transaction q3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.valueOf(150)).description("Q").build();
+
             // Yearly (avg ~365)
             Transaction y1 = Transaction.builder().transactionDate(now.minusDays(730).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("Y").build();
             Transaction y2 = Transaction.builder().transactionDate(now.minusDays(365).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("Y").build();
             Transaction y3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("Y").build();
 
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
-            when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(w1, w2, w3, m1, m2, m3, b1, b2, b3, y1, y2, y3));
+            when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(w1, w2, w3, m1, m2, m3, b1, b2, b3, q1, q2, q3, y1, y2, y3));
 
             // Act
             List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
@@ -117,6 +122,7 @@ class RecurringTransactionServiceTest {
             assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.WEEKLY));
             assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.MONTHLY));
             assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.BI_WEEKLY));
+            assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.QUARTERLY));
             assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.YEARLY));
         }
 
@@ -177,6 +183,49 @@ class RecurringTransactionServiceTest {
 
             // Assert
             assertTrue(result.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("detectFrequency")
+    class DetectFrequencyTests {
+        @Test
+        @DisplayName("should detect QUARTERLY for a stable ~90-day interval group (PF-205)")
+        void shouldDetectQuarterly() {
+            // Arrange
+            OffsetDateTime zone = OffsetDateTime.now();
+            LocalDate now = LocalDate.now();
+            List<Transaction> group = List.of(
+                    Transaction.builder().transactionDate(now.minusDays(180).atStartOfDay().atOffset(zone.getOffset())).build(),
+                    Transaction.builder().transactionDate(now.minusDays(90).atStartOfDay().atOffset(zone.getOffset())).build(),
+                    Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).build()
+            );
+
+            // Act
+            Frequency result = ReflectionTestUtils.invokeMethod(recurringService, "detectFrequency", group);
+
+            // Assert
+            assertEquals(Frequency.QUARTERLY, result);
+        }
+
+        @Test
+        @DisplayName("should still return null for a stable interval in an intentionally-unclassified gap (e.g. ~20 days) (PF-205)")
+        void shouldReturnNullForIntentionallyUnclassifiedGap() {
+            // Arrange -- ~20 days falls between BI_WEEKLY's (13-16) and MONTHLY's (25-35) buckets;
+            // no Frequency enum value corresponds to a ~20-day cadence, so this must stay null
+            OffsetDateTime zone = OffsetDateTime.now();
+            LocalDate now = LocalDate.now();
+            List<Transaction> group = List.of(
+                    Transaction.builder().transactionDate(now.minusDays(40).atStartOfDay().atOffset(zone.getOffset())).build(),
+                    Transaction.builder().transactionDate(now.minusDays(20).atStartOfDay().atOffset(zone.getOffset())).build(),
+                    Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).build()
+            );
+
+            // Act
+            Frequency result = ReflectionTestUtils.invokeMethod(recurringService, "detectFrequency", group);
+
+            // Assert
+            assertNull(result);
         }
     }
 

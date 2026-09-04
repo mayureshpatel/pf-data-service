@@ -103,5 +103,46 @@ class RegistrationServiceTest {
             assertEquals("Email already exists", ex.getMessage());
             verify(userService, never()).insert(any());
         }
+
+        @Test
+        @DisplayName("should reject registration when the honeypot field is filled")
+        void shouldRejectWhenHoneypotFilled() {
+            // Arrange
+            RegistrationRequest request = RegistrationRequest.builder()
+                    .username(USERNAME)
+                    .email(EMAIL)
+                    .password(PASSWORD)
+                    .website("http://spam.example.com")
+                    .build();
+
+            // Act & Assert
+            assertThrows(IllegalArgumentException.class, () -> registrationService.register(request));
+            verify(userService, never()).isUserExistsByUsername(any());
+            verify(userService, never()).insert(any());
+        }
+
+        @Test
+        @DisplayName("should register successfully when the honeypot field is blank")
+        void shouldRegisterWhenHoneypotBlank() {
+            // Arrange
+            RegistrationRequest request = RegistrationRequest.builder()
+                    .username(USERNAME)
+                    .email(EMAIL)
+                    .password(PASSWORD)
+                    .website("")
+                    .build();
+
+            when(userService.isUserExistsByUsername(USERNAME)).thenReturn(false);
+            when(userService.isUserExistsByEmail(EMAIL)).thenReturn(false);
+            when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
+            when(jwtService.generateToken(anyMap(), any())).thenReturn(TOKEN);
+
+            // Act
+            AuthenticationResponse response = registrationService.register(request);
+
+            // Assert
+            assertNotNull(response);
+            assertEquals(TOKEN, response.token());
+        }
     }
 }

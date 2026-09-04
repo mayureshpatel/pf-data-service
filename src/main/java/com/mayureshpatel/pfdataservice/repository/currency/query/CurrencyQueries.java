@@ -17,7 +17,7 @@ public final class CurrencyQueries {
             select count(*) from currencies
             """;
 
-    // language=SQl
+    // language=SQL
     public static final String DELETE = """
             delete from currencies where code = :code
             """;
@@ -32,7 +32,7 @@ public final class CurrencyQueries {
             select * from currencies where code = :code
             """;
 
-    // language=SQl
+    // language=SQL
     public static final String FIND_BY_IS_ACTIVE = """
             select * from currencies where is_active = true order by code
             """;

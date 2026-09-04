@@ -22,19 +22,22 @@ public class LoggingAspect {
             " || (within(@org.springframework.stereotype.Service *) && !within(com.mayureshpatel.pfdataservice.security..*))" +
             " || (within(@org.springframework.web.bind.annotation.RestController *) && !within(com.mayureshpatel.pfdataservice.controller.AuthenticationController))")
     public void springBeanPointcut() {
-        // empty as this is just a Pointcut; the implementations are in the advices
+        // empty as this is just a pointcut; the implementations are in the advices
     }
 
     @Pointcut("within(com.mayureshpatel.pfdataservice..*)")
     public void applicationPackagePointcut() {
-        // Method is empty as this is just a Pointcut; the implementations are in the advices.
+        // method is empty as this is just a pointcut; the implementations are in the advices.
     }
 
     @Around("applicationPackagePointcut() && springBeanPointcut()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
-        if (log.isDebugEnabled()) {
-            log.debug("Enter: {}.{}() with argument[s] = {}", joinPoint.getSignature().getDeclaringTypeName(),
+        if (log.isTraceEnabled()) {
+            log.trace("Enter: {}.{}() with argument[s] = {}", joinPoint.getSignature().getDeclaringTypeName(),
                     joinPoint.getSignature().getName(), Arrays.toString(joinPoint.getArgs()));
+        } else if (log.isDebugEnabled()) {
+            log.debug("Enter: {}.{}()", joinPoint.getSignature().getDeclaringTypeName(),
+                    joinPoint.getSignature().getName());
         }
 
         StopWatch stopWatch = new StopWatch();
@@ -44,10 +47,14 @@ public class LoggingAspect {
             Object result = joinPoint.proceed();
             stopWatch.stop();
 
-            if (log.isDebugEnabled()) {
-                log.debug("Exit: {}.{}() with result = {} (Execution time: {} ms)",
+            if (log.isTraceEnabled()) {
+                log.trace("Exit: {}.{}() with result = {} (Execution time: {} ms)",
                         joinPoint.getSignature().getDeclaringTypeName(),
                         joinPoint.getSignature().getName(), result, stopWatch.getTotalTimeMillis());
+            } else if (log.isDebugEnabled()) {
+                log.debug("Exit: {}.{}() (Execution time: {} ms)",
+                        joinPoint.getSignature().getDeclaringTypeName(),
+                        joinPoint.getSignature().getName(), stopWatch.getTotalTimeMillis());
             }
             return result;
         } catch (IllegalArgumentException e) {
