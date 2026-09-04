@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.service.categorization;
 
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
 import org.junit.jupiter.api.DisplayName;
@@ -28,7 +29,7 @@ class RuleBasedCategorizationStrategyTest {
             // Arrange
             Transaction t = Transaction.builder().description("AMAZON MARKETPLACE").build();
             CategoryRule rule = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(10L).build())
                     .build();
 
@@ -49,7 +50,7 @@ class RuleBasedCategorizationStrategyTest {
         void shouldNotMatch() {
             // Arrange
             Transaction t = Transaction.builder().description("Unknown").build();
-            CategoryRule rule = CategoryRule.builder().keyword("Amazon").build();
+            CategoryRule rule = CategoryRule.builder().keywords(List.of("Amazon")).build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(rule))
                     .build();
@@ -89,12 +90,12 @@ class RuleBasedCategorizationStrategyTest {
             // matching how the real query already orders them (priority desc)
             Transaction t = Transaction.builder().description("WHOLEFDS #1234").build();
             CategoryRule higherPriorityRule = CategoryRule.builder()
-                    .keyword("WHOLEFDS")
+                    .keywords(List.of("WHOLEFDS"))
                     .category(Category.builder().id(7L).build()) // Groceries
                     .priority(10)
                     .build();
             CategoryRule lowerPriorityRule = CategoryRule.builder()
-                    .keyword("FDS")
+                    .keywords(List.of("FDS"))
                     .category(Category.builder().id(99L).build()) // some unrelated category
                     .priority(1)
                     .build();
@@ -117,12 +118,12 @@ class RuleBasedCategorizationStrategyTest {
             // arrange -- identical rules to the previous test, but reversed
             Transaction t = Transaction.builder().description("WHOLEFDS #1234").build();
             CategoryRule higherPriorityRule = CategoryRule.builder()
-                    .keyword("WHOLEFDS")
+                    .keywords(List.of("WHOLEFDS"))
                     .category(Category.builder().id(7L).build())
                     .priority(10)
                     .build();
             CategoryRule lowerPriorityRule = CategoryRule.builder()
-                    .keyword("FDS")
+                    .keywords(List.of("FDS"))
                     .category(Category.builder().id(99L).build())
                     .priority(1)
                     .build();
@@ -144,13 +145,13 @@ class RuleBasedCategorizationStrategyTest {
         void shouldPickTheRangeThatMatchesTheTransactionAmount() {
             // arrange
             CategoryRule underTwenty = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(1L).build()) // Household
                     .priority(0)
                     .maxAmount(new java.math.BigDecimal("20.00"))
                     .build();
             CategoryRule overOneHundred = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(2L).build()) // Electronics
                     .priority(0)
                     .minAmount(new java.math.BigDecimal("100.00"))
@@ -180,7 +181,7 @@ class RuleBasedCategorizationStrategyTest {
             // arrange
             Transaction t = Transaction.builder().description("Amazon").amount(new java.math.BigDecimal("5.00")).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(10L).build())
                     .minAmount(new java.math.BigDecimal("5.00"))
                     .maxAmount(new java.math.BigDecimal("20.00"))
@@ -203,7 +204,7 @@ class RuleBasedCategorizationStrategyTest {
             // arrange
             Transaction t = Transaction.builder().description("Amazon").amount(new java.math.BigDecimal("20.00")).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(10L).build())
                     .minAmount(new java.math.BigDecimal("5.00"))
                     .maxAmount(new java.math.BigDecimal("20.00"))
@@ -225,7 +226,7 @@ class RuleBasedCategorizationStrategyTest {
             // arrange -- amount is wildly large, but the rule sets no range at all
             Transaction t = Transaction.builder().description("Amazon").amount(new java.math.BigDecimal("99999.00")).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(10L).build())
                     .build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
@@ -246,9 +247,115 @@ class RuleBasedCategorizationStrategyTest {
             // arrange
             Transaction t = Transaction.builder().description("Amazon").amount(null).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(10L).build())
                     .minAmount(new java.math.BigDecimal("5.00"))
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(rule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(t, context);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-315: AND rule only matches when every keyword is present")
+        void shouldMatchAndRuleWhenAllKeywordsPresent() {
+            // arrange
+            Transaction t = Transaction.builder().description("AMZN MKTP US").build();
+            CategoryRule rule = CategoryRule.builder()
+                    .keywords(List.of("AMZN", "MKTP"))
+                    .matchType(MatchType.AND)
+                    .category(Category.builder().id(10L).build())
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(rule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(t, context);
+
+            // assert & verify
+            assertEquals(10L, result.orElseThrow());
+        }
+
+        @Test
+        @DisplayName("PF-315: AND rule does not match when only some keywords are present")
+        void shouldNotMatchAndRuleWhenOnlySomeKeywordsPresent() {
+            // arrange -- "MKTP" is missing
+            Transaction t = Transaction.builder().description("AMZN DIGITAL").build();
+            CategoryRule rule = CategoryRule.builder()
+                    .keywords(List.of("AMZN", "MKTP"))
+                    .matchType(MatchType.AND)
+                    .category(Category.builder().id(10L).build())
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(rule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(t, context);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-315: OR rule matches when at least one keyword is present")
+        void shouldMatchOrRuleWhenAtLeastOneKeywordPresent() {
+            // arrange -- only "UBER" is present, not "LYFT"
+            Transaction t = Transaction.builder().description("UBER TRIP 123").build();
+            CategoryRule rule = CategoryRule.builder()
+                    .keywords(List.of("UBER", "LYFT"))
+                    .matchType(MatchType.OR)
+                    .category(Category.builder().id(10L).build())
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(rule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(t, context);
+
+            // assert & verify
+            assertEquals(10L, result.orElseThrow());
+        }
+
+        @Test
+        @DisplayName("PF-315: OR rule does not match when none of the keywords are present")
+        void shouldNotMatchOrRuleWhenNoKeywordsPresent() {
+            // arrange
+            Transaction t = Transaction.builder().description("TAXI RECEIPT").build();
+            CategoryRule rule = CategoryRule.builder()
+                    .keywords(List.of("UBER", "LYFT"))
+                    .matchType(MatchType.OR)
+                    .category(Category.builder().id(10L).build())
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(rule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(t, context);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-315: a rule with an empty keyword list never matches -- not left to AND's "
+                + "vacuous truth on an empty stream, which would otherwise match every transaction")
+        void shouldNeverMatchEmptyKeywordList() {
+            // arrange
+            Transaction t = Transaction.builder().description("ANYTHING AT ALL").build();
+            CategoryRule rule = CategoryRule.builder()
+                    .keywords(List.of())
+                    .matchType(MatchType.AND)
+                    .category(Category.builder().id(10L).build())
                     .build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(rule))
@@ -271,7 +378,7 @@ class RuleBasedCategorizationStrategyTest {
             // Arrange
             TransactionUpdateRequest req = TransactionUpdateRequest.builder().description("Netflix.com").build();
             CategoryRule rule = CategoryRule.builder()
-                    .keyword("Netflix")
+                    .keywords(List.of("Netflix"))
                     .category(Category.builder().id(20L).build())
                     .build();
 
@@ -304,7 +411,7 @@ class RuleBasedCategorizationStrategyTest {
                     .amount(new java.math.BigDecimal("500.00"))
                     .build();
             CategoryRule tooNarrow = CategoryRule.builder()
-                    .keyword("Amazon")
+                    .keywords(List.of("Amazon"))
                     .category(Category.builder().id(20L).build())
                     .maxAmount(new java.math.BigDecimal("20.00"))
                     .build();
@@ -316,6 +423,27 @@ class RuleBasedCategorizationStrategyTest {
             Optional<Long> result = strategy.categorize(req, context);
 
             // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-315: AND/OR matching also applies to the edited-transaction (request) path")
+        void shouldRespectMatchTypeForRequest() {
+            // arrange
+            TransactionUpdateRequest req = TransactionUpdateRequest.builder().description("AMZN DIGITAL").build();
+            CategoryRule rule = CategoryRule.builder()
+                    .keywords(List.of("AMZN", "MKTP"))
+                    .matchType(MatchType.AND)
+                    .category(Category.builder().id(20L).build())
+                    .build();
+            CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
+                    .rules(List.of(rule))
+                    .build();
+
+            // act
+            Optional<Long> result = strategy.categorize(req, context);
+
+            // assert & verify -- "MKTP" is missing, so the AND rule should not match
             assertTrue(result.isEmpty());
         }
     }

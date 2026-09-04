@@ -13,7 +13,8 @@ public final class CategoryRuleDtoMapper {
         return new CategoryRuleDto(
                 rule.getId(),
                 rule.getUser() != null ? rule.getUser().getId() : null,
-                rule.getKeyword(),
+                rule.getKeywords(),
+                rule.getMatchType(),
                 rule.getPriority(),
                 CategoryDtoMapper.toDto(rule.getCategory()),
                 rule.getMinAmount(),

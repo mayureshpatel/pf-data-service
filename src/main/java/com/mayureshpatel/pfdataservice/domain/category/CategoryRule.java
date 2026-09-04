@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Builder(toBuilder = true)
@@ -18,7 +19,20 @@ public class CategoryRule {
     @EqualsAndHashCode.Include
     private Long id;
     private User user;
-    private String keyword;
+
+    /**
+     * A rule's keyword set (PF-315) -- always at least one keyword in practice (enforced at the
+     * API boundary, not the DB). A single-keyword rule is the degenerate case: one element,
+     * {@link #matchType} {@code OR}, matching the original single-keyword behavior exactly.
+     */
+    private List<String> keywords;
+
+    /**
+     * How {@link #keywords} combine when matching a description (PF-315): {@code AND} requires
+     * every keyword present, {@code OR} requires at least one.
+     */
+    private MatchType matchType;
+
     private Integer priority;
     private Category category;
 

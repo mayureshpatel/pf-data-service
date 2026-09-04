@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.category.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import com.mayureshpatel.pfdataservice.repository.user.mapper.UserRowMapper;
 import org.jspecify.annotations.NonNull;
@@ -39,8 +40,9 @@ public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<
             return null;
         }
 
-        if (availableColumns.contains(safePrefix + "keyword")) {
-            builder.keyword(rs.getString(safePrefix + "keyword"));
+        if (availableColumns.contains(safePrefix + "match_type")) {
+            String matchType = rs.getString(safePrefix + "match_type");
+            builder.matchType(matchType != null ? MatchType.valueOf(matchType) : null);
         }
         if (availableColumns.contains(safePrefix + "priority")) {
             builder.priority(rs.getInt(safePrefix + "priority"));

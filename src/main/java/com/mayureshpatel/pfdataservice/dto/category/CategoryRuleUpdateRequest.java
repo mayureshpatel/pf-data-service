@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -10,6 +12,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Builder(toBuilder = true)
@@ -24,9 +27,11 @@ public class CategoryRuleUpdateRequest {
     @Positive(message = "Category ID must be a positive number.")
     private final Long categoryId;
 
-    @NotBlank(message = "Keyword cannot be blank.")
-    @Size(max = 255, message = "Keyword cannot exceed 255 characters.")
-    private final String keyword;
+    @NotEmpty(message = "At least one keyword is required.")
+    private final List<@NotBlank(message = "Keyword cannot be blank.")
+                        @Size(max = 255, message = "Keyword cannot exceed 255 characters.") String> keywords;
+
+    private final MatchType matchType;
 
     @PositiveOrZero(message = "Priority must be a positive number or zero.")
     private final Integer priority;

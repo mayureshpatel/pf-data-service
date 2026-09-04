@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import org.junit.jupiter.api.DisplayName;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -52,7 +54,8 @@ class CategoryRuleDtoMapperTest {
             CategoryRule rule = CategoryRule.builder()
                     .id(1L)
                     .user(user)
-                    .keyword("MCDONALDS")
+                    .keywords(List.of("MCDONALDS"))
+                    .matchType(MatchType.OR)
                     .priority(1)
                     .category(category)
                     .minAmount(new java.math.BigDecimal("5.00"))
@@ -66,7 +69,8 @@ class CategoryRuleDtoMapperTest {
             assertNotNull(dto);
             assertEquals(rule.getId(), dto.id());
             assertEquals(user.getId(), dto.userId());
-            assertEquals(rule.getKeyword(), dto.keyword());
+            assertEquals(rule.getKeywords(), dto.keywords());
+            assertEquals(rule.getMatchType(), dto.matchType());
             assertEquals(rule.getPriority(), dto.priority());
             assertNotNull(dto.category());
             assertEquals(category.getId(), dto.category().id());
@@ -80,7 +84,7 @@ class CategoryRuleDtoMapperTest {
             // Arrange
             CategoryRule rule = CategoryRule.builder()
                     .id(1L)
-                    .keyword("TEST")
+                    .keywords(List.of("TEST"))
                     .priority(10)
                     .user(null)
                     .category(null)
