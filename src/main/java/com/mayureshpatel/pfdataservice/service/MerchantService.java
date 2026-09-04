@@ -15,15 +15,16 @@ import java.util.stream.Collectors;
 
 /**
  * Resolves the raw description text on an imported transaction to a deduplicated
- * {@code Merchant} record, creating one on first sight. {@code cleanName} is intentionally left
- * blank at creation time -- there's no automatic name-cleanup step yet, so merchants are created
- * with just their original, uncleaned name.
+ * {@code Merchant} record, creating one on first sight. {@code cleanName} is generated at
+ * creation time via {@link MerchantNameNormalizer}, so merchants get a readable display name
+ * immediately instead of the raw, uncleaned bank description.
  */
 @Service
 @RequiredArgsConstructor
 public class MerchantService {
 
     private final MerchantRepository merchantRepository;
+    private final MerchantNameNormalizer nameNormalizer;
 
     /**
      * Returns all merchants for a user.
@@ -78,7 +79,7 @@ public class MerchantService {
                 .map(desc -> MerchantCreateRequest.builder()
                         .userId(userId)
                         .originalName(desc)
-                        .cleanName("")
+                        .cleanName(nameNormalizer.normalize(desc))
                         .build())
                 .toList();
 
@@ -87,8 +88,8 @@ public class MerchantService {
     }
 
     /**
-     * Creates a new merchant for a transaction description, with an empty {@code cleanName}
-     * (there's no automatic name-cleanup step yet).
+     * Creates a new merchant for a transaction description, with a {@code cleanName} generated
+     * by {@link MerchantNameNormalizer}.
      *
      * @param userId      the user id
      * @param description the raw transaction description to create a merchant for
@@ -98,7 +99,7 @@ public class MerchantService {
         MerchantCreateRequest request = MerchantCreateRequest.builder()
                 .userId(userId)
                 .originalName(description)
-                .cleanName("") // non-nullable, so using empty string as requested
+                .cleanName(nameNormalizer.normalize(description))
                 .build();
         return merchantRepository.insert(request);
     }
