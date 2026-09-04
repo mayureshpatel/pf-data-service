@@ -55,6 +55,8 @@ class CategoryRuleDtoMapperTest {
                     .keyword("MCDONALDS")
                     .priority(1)
                     .category(category)
+                    .minAmount(new java.math.BigDecimal("5.00"))
+                    .maxAmount(new java.math.BigDecimal("100.00"))
                     .build();
 
             // Act
@@ -68,6 +70,8 @@ class CategoryRuleDtoMapperTest {
             assertEquals(rule.getPriority(), dto.priority());
             assertNotNull(dto.category());
             assertEquals(category.getId(), dto.category().id());
+            assertEquals(rule.getMinAmount(), dto.minAmount());
+            assertEquals(rule.getMaxAmount(), dto.maxAmount());
         }
 
         @Test

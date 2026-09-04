@@ -15,7 +15,9 @@ public final class CategoryRuleDtoMapper {
                 rule.getUser() != null ? rule.getUser().getId() : null,
                 rule.getKeyword(),
                 rule.getPriority(),
-                CategoryDtoMapper.toDto(rule.getCategory())
+                CategoryDtoMapper.toDto(rule.getCategory()),
+                rule.getMinAmount(),
+                rule.getMaxAmount()
         );
     }
 }

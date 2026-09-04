@@ -59,10 +59,10 @@ public class CategoryRuleService {
      *
      * @param userId  the user id
      * @param request the category rule create request
-     * @return the created {@link CategoryRuleDto}
+     * @return the newly created rule's generated id
      */
     @Transactional
-    public int createRule(Long userId, CategoryRuleCreateRequest request) {
+    public Long createRule(Long userId, CategoryRuleCreateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -78,10 +78,12 @@ public class CategoryRuleService {
                 .keyword(request.getKeyword())
                 .priority(request.getPriority() != null ? request.getPriority() : 0)
                 .category(category)
+                .minAmount(request.getMinAmount())
+                .maxAmount(request.getMaxAmount())
                 .audit(TableAudit.insertAudit(user))
                 .build();
 
-        return categoryRuleRepository.insert(rule);
+        return categoryRuleRepository.insertAndReturnId(rule);
     }
 
     /**
@@ -111,6 +113,8 @@ public class CategoryRuleService {
                 .keyword(request.getKeyword())
                 .category(category)
                 .priority(request.getPriority())
+                .minAmount(request.getMinAmount())
+                .maxAmount(request.getMaxAmount())
                 .audit(TableAudit.updateAudit(rule.getUser()))
                 .build();
 

@@ -77,8 +77,8 @@ class CategoryRuleControllerTest extends BaseControllerTest {
     class CreateRuleTests {
 
         @Test
-        @DisplayName("POST should create a new rule and return rows affected")
-        void createRule_shouldReturnRowsAffected() throws Exception {
+        @DisplayName("POST should create a new rule and return the generated id")
+        void createRule_shouldReturnGeneratedId() throws Exception {
             // Arrange
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
@@ -87,7 +87,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                     .categoryId(10L)
                     .build();
 
-            when(categoryRuleService.createRule(eq(USER_ID), any(CategoryRuleCreateRequest.class))).thenReturn(1);
+            when(categoryRuleService.createRule(eq(USER_ID), any(CategoryRuleCreateRequest.class))).thenReturn(42L);
 
             // Act & Assert
             mockMvc.perform(post("/api/v1/category-rules")
@@ -95,7 +95,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
-                    .andExpect(content().string("1"));
+                    .andExpect(content().string("42"));
 
             verify(categoryRuleService).createRule(eq(USER_ID), any(CategoryRuleCreateRequest.class));
         }

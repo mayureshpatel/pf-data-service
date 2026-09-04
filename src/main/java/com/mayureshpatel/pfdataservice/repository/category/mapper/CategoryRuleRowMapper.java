@@ -51,6 +51,12 @@ public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<
         if (availableColumns.contains(safePrefix + "user_id")) {
             builder.user(UserRowMapper.mapRow(rs, safePrefix + "user"));
         }
+        if (availableColumns.contains(safePrefix + "min_amount")) {
+            builder.minAmount(rs.getBigDecimal(safePrefix + "min_amount"));
+        }
+        if (availableColumns.contains(safePrefix + "max_amount")) {
+            builder.maxAmount(rs.getBigDecimal(safePrefix + "max_amount"));
+        }
         builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
 
         return builder.build();
