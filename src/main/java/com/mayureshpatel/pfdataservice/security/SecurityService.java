@@ -4,10 +4,13 @@ import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 @Service("ss")
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class SecurityService {
     private final CategoryRuleRepository categoryRuleRepository;
     private final BudgetRepository budgetRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
+    private final MerchantRepository merchantRepository;
 
     public boolean isAccountOwner(Long accountId, CustomUserDetails userDetails) {
         if (accountId == null || userDetails == null) return false;
@@ -57,6 +61,19 @@ public class SecurityService {
         if (recurringId == null || userDetails == null) return false;
         return recurringTransactionRepository.findById(recurringId)
                 .map(recurringTransaction -> recurringTransaction.getUserId().equals(userDetails.getId()))
+                .orElse(false);
+    }
+
+    /**
+     * Unlike this class's other owner checks, a merchant's {@code userId} can legitimately be
+     * null (global merchants, e.g. "Whole Foods" -- shared reference data, not owned by any one
+     * user). {@link Objects#equals} rather than {@code .equals()} so that case correctly resolves
+     * to false instead of throwing.
+     */
+    public boolean isMerchantOwner(Long merchantId, CustomUserDetails userDetails) {
+        if (merchantId == null || userDetails == null) return false;
+        return merchantRepository.findById(merchantId)
+                .map(merchant -> Objects.equals(merchant.getUserId(), userDetails.getId()))
                 .orElse(false);
     }
 }

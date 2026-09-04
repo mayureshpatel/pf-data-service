@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.security;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
@@ -11,6 +12,7 @@ import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +50,9 @@ class SecurityServiceTest {
     @Mock
     private RecurringTransactionRepository recurringTransactionRepository;
 
+    @Mock
+    private MerchantRepository merchantRepository;
+
     @InjectMocks
     private SecurityService securityService;
 
@@ -59,6 +64,7 @@ class SecurityServiceTest {
     private static final Long RULE_ID = 300L;
     private static final Long BUDGET_ID = 400L;
     private static final Long RECURRING_ID = 500L;
+    private static final Long MERCHANT_ID = 600L;
 
     private CustomUserDetails buildUserDetails(Long userId) {
         User user = User.builder()
@@ -112,6 +118,15 @@ class SecurityServiceTest {
         return RecurringTransaction.builder()
                 .id(RECURRING_ID)
                 .userId(userId)
+                .build();
+    }
+
+    private Merchant buildMerchant(Long userId) {
+        return Merchant.builder()
+                .id(MERCHANT_ID)
+                .userId(userId)
+                .originalName("STARBUCKS #1")
+                .cleanName("Starbucks")
                 .build();
     }
 
@@ -391,6 +406,66 @@ class SecurityServiceTest {
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             assertThat(securityService.isRecurringTransactionOwner(null, userDetails)).isFalse();
             assertThat(securityService.isRecurringTransactionOwner(RECURRING_ID, null)).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("isMerchantOwner")
+    class IsMerchantOwnerTest {
+
+        @Test
+        @DisplayName("should return true when user owns the merchant")
+        void isMerchantOwner_matchingId_returnsTrue() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Merchant merchant = buildMerchant(USER_ID);
+            when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
+
+            boolean result = securityService.isMerchantOwner(MERCHANT_ID, userDetails);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when mismatched userId")
+        void isMerchantOwner_mismatchedId_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Merchant merchant = buildMerchant(ANOTHER_USER_ID);
+            when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
+
+            boolean result = securityService.isMerchantOwner(MERCHANT_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("PF-220: should return false, not throw, for a global merchant (userId is null)")
+        void isMerchantOwner_globalMerchant_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Merchant globalMerchant = buildMerchant(null);
+            when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(globalMerchant));
+
+            boolean result = securityService.isMerchantOwner(MERCHANT_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when merchant not found")
+        void isMerchantOwner_notFound_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.empty());
+
+            boolean result = securityService.isMerchantOwner(MERCHANT_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when args are null")
+        void isMerchantOwner_nullArgs_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            assertThat(securityService.isMerchantOwner(null, userDetails)).isFalse();
+            assertThat(securityService.isMerchantOwner(MERCHANT_ID, null)).isFalse();
         }
     }
 }

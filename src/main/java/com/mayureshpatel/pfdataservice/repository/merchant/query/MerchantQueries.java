@@ -20,6 +20,14 @@ public final class MerchantQueries {
             """;
 
     // language=SQL
+    public static final String FIND_BY_ID_AND_USER_ID = """
+            select *
+            from merchants
+            where id = :id
+              and user_id = :userId
+            """;
+
+    // language=SQL
     public static final String FIND_ALL_BY_CLEAN_NAME = """
             select *
             from merchants
@@ -70,8 +78,10 @@ public final class MerchantQueries {
     // language=SQL
     public static final String UPDATE = """
             update merchants
-            set clean_name = :name
+            set clean_name = :name,
+                updated_at = CURRENT_TIMESTAMP
             where id = :id
+              and user_id = :userId
             """;
 
     // language=SQL

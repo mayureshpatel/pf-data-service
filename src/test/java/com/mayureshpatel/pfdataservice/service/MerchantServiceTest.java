@@ -3,6 +3,8 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -15,9 +17,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -240,6 +244,41 @@ class MerchantServiceTest {
             assertEquals(1, result.size());
             assertEquals(1L, result.get(0).id());
             assertEquals("Target", result.get(0).cleanName());
+        }
+    }
+
+    @Nested
+    @DisplayName("updateMerchant")
+    class UpdateMerchantTests {
+
+        @Test
+        @DisplayName("should update an owned merchant and return the affected row count")
+        void shouldUpdateOwnedMerchant() {
+            // arrange
+            MerchantUpdateRequest request = MerchantUpdateRequest.builder().id(7L).cleanName("Corrected Name").build();
+            Merchant owned = Merchant.builder().id(7L).userId(USER_ID).originalName("STARBUCKS #1").cleanName("Starbucks").build();
+            when(merchantRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.of(owned));
+            when(merchantRepository.update(request, USER_ID)).thenReturn(1);
+
+            // act
+            int result = merchantService.updateMerchant(USER_ID, request);
+
+            // assert & verify
+            assertEquals(1, result);
+            verify(merchantRepository).update(request, USER_ID);
+        }
+
+        @Test
+        @DisplayName("PF-220: should throw ResourceNotFoundException, and never call update(), for a merchant "
+                + "not owned by the requesting user -- defense-in-depth even if @PreAuthorize is somehow bypassed")
+        void shouldThrowForUnownedMerchant() {
+            // arrange
+            MerchantUpdateRequest request = MerchantUpdateRequest.builder().id(7L).cleanName("Corrected Name").build();
+            when(merchantRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> merchantService.updateMerchant(USER_ID, request));
+            verify(merchantRepository, never()).update(any(), any());
         }
     }
 }
