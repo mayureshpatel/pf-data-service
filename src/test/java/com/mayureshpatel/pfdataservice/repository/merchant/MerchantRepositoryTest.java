@@ -70,45 +70,45 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should find a user-scoped merchant by original name and user ID")
-        void shouldFindByOriginalNameAndUserId() {
-            // Act
-            Optional<Merchant> result = repository.findByOriginalNameAndUserId("LOCAL CAFE", USER_1);
+        @DisplayName("should find a user-scoped merchant by clean name")
+        void shouldFindAllByCleanNameAndUserId() {
+            // arrange & act
+            List<Merchant> result = repository.findAllByCleanNameAndUserId("My Favorite Cafe", USER_1);
 
-            // Assert
-            assertTrue(result.isPresent());
-            assertEquals("My Favorite Cafe", result.get().getCleanName());
-        }
-
-        @Test
-        @DisplayName("should not find a global merchant via findByOriginalNameAndUserId (user_id column doesn't match NULL)")
-        void shouldNotFindGlobalMerchantByOriginalNameAndUserId() {
-            // Act
-            Optional<Merchant> result = repository.findByOriginalNameAndUserId("WHOLEFDS 1234", USER_1);
-
-            // Assert
-            assertTrue(result.isEmpty());
-        }
-
-        @Test
-        @DisplayName("should find merchants matching any of a list of original names, scoped to user")
-        void shouldFindAllByOriginalNamesAndUserId() {
-            // Act
-            List<Merchant> result = repository.findAllByOriginalNamesAndUserId(
-                    List.of("LOCAL CAFE", "SOME NAME THAT DOES NOT EXIST"), USER_1);
-
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("LOCAL CAFE", result.get(0).getOriginalName());
         }
 
         @Test
-        @DisplayName("should return empty list for an empty original names list")
-        void shouldReturnEmptyForEmptyOriginalNamesList() {
-            // Act
-            List<Merchant> result = repository.findAllByOriginalNamesAndUserId(List.of(), USER_1);
+        @DisplayName("should not find a global merchant via findAllByCleanNameAndUserId (user_id column doesn't match NULL)")
+        void shouldNotFindGlobalMerchantByCleanNameAndUserId() {
+            // arrange & act -- "Whole Foods" is a global (user_id NULL) baseline merchant
+            List<Merchant> result = repository.findAllByCleanNameAndUserId("Whole Foods", USER_1);
 
-            // Assert
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should find merchants matching any of a list of clean names, scoped to user")
+        void shouldFindAllByCleanNamesAndUserId() {
+            // arrange & act
+            List<Merchant> result = repository.findAllByCleanNamesAndUserId(
+                    List.of("My Favorite Cafe", "Some Clean Name That Does Not Exist"), USER_1);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals("My Favorite Cafe", result.get(0).getCleanName());
+        }
+
+        @Test
+        @DisplayName("should return empty list for an empty clean names list")
+        void shouldReturnEmptyForEmptyCleanNamesList() {
+            // arrange & act
+            List<Merchant> result = repository.findAllByCleanNamesAndUserId(List.of(), USER_1);
+
+            // assert & verify
             assertTrue(result.isEmpty());
         }
     }
