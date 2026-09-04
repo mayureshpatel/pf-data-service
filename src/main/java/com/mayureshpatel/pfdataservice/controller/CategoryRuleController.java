@@ -54,7 +54,7 @@ public class CategoryRuleController {
     @Operation(summary = "Create a category rule", description = "Creates a new category rule for the authenticated user")
     @ApiResponse(responseCode = "200", description = "Rule created, id returned")
     @PostMapping
-    public ResponseEntity<Integer> createRule(
+    public ResponseEntity<Long> createRule(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryRuleCreateRequest request) {
         return ResponseEntity.ok(categoryRuleService.createRule(userDetails.getId(), request));

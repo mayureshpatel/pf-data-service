@@ -6,6 +6,8 @@ import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRuleRo
 import com.mayureshpatel.pfdataservice.repository.category.query.CategoryRuleQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -33,12 +35,28 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
                 .list();
     }
 
-    public int insert(CategoryRule categoryRule) {
-        return this.jdbcClient.sql(CategoryRuleQueries.INSERT)
-                .param("id", categoryRule.getId())
+    public Long insertAndReturnId(CategoryRule categoryRule) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        this.jdbcClient.sql(CategoryRuleQueries.INSERT)
                 .param("keyword", categoryRule.getKeyword())
                 .param("categoryId", categoryRule.getCategory().getId())
                 .param("priority", categoryRule.getPriority())
+                .param("minAmount", categoryRule.getMinAmount())
+                .param("maxAmount", categoryRule.getMaxAmount())
+                .param("userId", categoryRule.getUser().getId())
+                .update(keyHolder);
+        return keyHolder.getKey().longValue();
+    }
+
+    @Override
+    public int update(CategoryRule categoryRule) {
+        return this.jdbcClient.sql(CategoryRuleQueries.UPDATE)
+                .param("keyword", categoryRule.getKeyword())
+                .param("categoryId", categoryRule.getCategory().getId())
+                .param("priority", categoryRule.getPriority())
+                .param("minAmount", categoryRule.getMinAmount())
+                .param("maxAmount", categoryRule.getMaxAmount())
+                .param("id", categoryRule.getId())
                 .param("userId", categoryRule.getUser().getId())
                 .update();
     }

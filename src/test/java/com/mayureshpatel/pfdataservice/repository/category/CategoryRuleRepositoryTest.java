@@ -48,35 +48,34 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
                 + "ascending, so ordering stays deterministic rather than falling to whatever order "
                 + "Postgres happens to return")
         void shouldBreakFullTieByIdAscending() {
-            // arrange -- two new rules, same priority, same keyword length ("AAAA" / "ZZZZ"),
-            // inserted in a known id order
-            CategoryRule firstInserted = CategoryRule.builder()
-                    .id(9001L)
+            // arrange -- two new rules, same priority, same keyword length ("AAAA" / "ZZZZ").
+            // PF-314: ids are no longer caller-supplied (insertAndReturnId generates them), so the
+            // tie-break is exercised via real insertion order instead of hand-picked literals.
+            CategoryRule ruleA = CategoryRule.builder()
                     .keyword("AAAA")
                     .priority(5)
                     .category(Category.builder().id(7L).build())
                     .user(User.builder().id(USER_1).build())
                     .build();
-            CategoryRule secondInserted = CategoryRule.builder()
-                    .id(9002L)
+            CategoryRule ruleB = CategoryRule.builder()
                     .keyword("ZZZZ")
                     .priority(5)
                     .category(Category.builder().id(7L).build())
                     .user(User.builder().id(USER_1).build())
                     .build();
-            repository.insert(secondInserted); // inserted out of id order on purpose
-            repository.insert(firstInserted);
+            Long firstInsertedId = repository.insertAndReturnId(ruleA);
+            Long secondInsertedId = repository.insertAndReturnId(ruleB);
 
             // act
             List<CategoryRule> result = repository.findByUserId(USER_1);
 
-            // assert & verify -- both tied rules land consecutively, lower id first
+            // assert & verify -- both tied rules land consecutively, earlier-inserted (lower) id first
             List<CategoryRule> tied = result.stream()
-                    .filter(r -> r.getId().equals(9001L) || r.getId().equals(9002L))
+                    .filter(r -> r.getId().equals(firstInsertedId) || r.getId().equals(secondInsertedId))
                     .toList();
             assertEquals(2, tied.size());
-            assertEquals(9001L, tied.get(0).getId());
-            assertEquals(9002L, tied.get(1).getId());
+            assertEquals(firstInsertedId, tied.get(0).getId());
+            assertEquals(secondInsertedId, tied.get(1).getId());
         }
     }
 
@@ -108,31 +107,95 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
     @DisplayName("Write Operations")
     class WriteTests {
         @Test
-        @DisplayName("should insert a new category rule or update on conflict")
-        void shouldInsertOrUpdate() {
-            // Arrange
+        @DisplayName("PF-314: should insert a new category rule and return a real generated id "
+                + "(previously threw DataIntegrityViolationException on every call -- the caller "
+                + "never supplied an id, and explicit NULL bypasses a BIGSERIAL column's default "
+                + "instead of triggering it)")
+        void shouldInsert() {
+            // arrange -- amount range included to prove it round-trips through real NUMERIC(19,2)
+            // columns, not just through in-memory objects
             CategoryRule rule = CategoryRule.builder()
-                    .id(999L) // manual ID to test conflict
                     .keyword("TEST")
                     .priority(1)
                     .category(Category.builder().id(7L).build()) // Groceries
                     .user(User.builder().id(USER_1).build())
+                    .minAmount(new java.math.BigDecimal("5.00"))
+                    .maxAmount(new java.math.BigDecimal("20.00"))
                     .build();
 
-            // Act - Insert
-            int insertRows = repository.insert(rule);
+            // act
+            Long generatedId = repository.insertAndReturnId(rule);
 
-            // Assert - Insert
-            assertEquals(1, insertRows);
+            // assert & verify
+            assertNotNull(generatedId);
+            assertTrue(generatedId > 0);
+            CategoryRule persisted = repository.findById(generatedId).orElseThrow();
+            assertEquals("TEST", persisted.getKeyword());
+            assertEquals(1, persisted.getPriority());
+            assertEquals(new java.math.BigDecimal("5.00"), persisted.getMinAmount());
+            assertEquals(new java.math.BigDecimal("20.00"), persisted.getMaxAmount());
+        }
 
-            // Act - Update (Conflict)
-            CategoryRule updatedRule = rule.toBuilder().keyword("UPDATED_TEST").priority(99).build();
-            int updateRows = repository.insert(updatedRule);
+        @Test
+        @DisplayName("PF-314: should actually persist an update (previously threw "
+                + "UnsupportedOperationException on every call -- the repository never overrode "
+                + "the interface's default, unconditionally-throwing update())")
+        void shouldUpdate() {
+            // arrange
+            CategoryRule rule = CategoryRule.builder()
+                    .keyword("ORIGINAL")
+                    .priority(1)
+                    .category(Category.builder().id(7L).build())
+                    .user(User.builder().id(USER_1).build())
+                    .build();
+            Long id = repository.insertAndReturnId(rule);
+            CategoryRule updated = rule.toBuilder()
+                    .id(id)
+                    .keyword("UPDATED")
+                    .priority(99)
+                    .minAmount(new java.math.BigDecimal("10.00"))
+                    .maxAmount(new java.math.BigDecimal("50.00"))
+                    .build();
 
-            // Assert - Update
-            assertEquals(1, updateRows);
-            List<CategoryRule> rules = repository.findByUserId(USER_1);
-            assertTrue(rules.stream().anyMatch(r -> r.getKeyword().equals("UPDATED_TEST") && r.getPriority() == 99));
+            // act
+            int rows = repository.update(updated);
+
+            // assert & verify
+            assertEquals(1, rows);
+            CategoryRule persisted = repository.findById(id).orElseThrow();
+            assertEquals("UPDATED", persisted.getKeyword());
+            assertEquals(99, persisted.getPriority());
+            assertEquals(new java.math.BigDecimal("10.00"), persisted.getMinAmount());
+            assertEquals(new java.math.BigDecimal("50.00"), persisted.getMaxAmount());
+        }
+
+        @Test
+        @DisplayName("PF-314: update should affect zero rows when the userId doesn't match -- the "
+                + "SQL-level ownership scope (defense-in-depth's last layer, matching the pattern "
+                + "already established for accounts and merchants), not just the Controller's "
+                + "@PreAuthorize or the Service's own findById+equals check")
+        void shouldNotUpdateWhenUserIdDoesNotMatch() {
+            // arrange
+            CategoryRule rule = CategoryRule.builder()
+                    .keyword("ORIGINAL")
+                    .priority(1)
+                    .category(Category.builder().id(7L).build())
+                    .user(User.builder().id(USER_1).build())
+                    .build();
+            Long id = repository.insertAndReturnId(rule);
+            CategoryRule updateAttempt = rule.toBuilder()
+                    .id(id)
+                    .keyword("SHOULD_NOT_APPLY")
+                    .user(User.builder().id(999L).build()) // wrong user
+                    .build();
+
+            // act
+            int rows = repository.update(updateAttempt);
+
+            // assert & verify -- no rows affected, original data untouched
+            assertEquals(0, rows);
+            CategoryRule persisted = repository.findById(id).orElseThrow();
+            assertEquals("ORIGINAL", persisted.getKeyword());
         }
 
         @Test

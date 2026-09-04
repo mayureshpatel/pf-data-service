@@ -5,6 +5,8 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("CategoryRule Domain Object Tests")
@@ -16,13 +18,15 @@ class CategoryRuleTest {
         TableAudit audit = TableAudit.insertAudit(null);
         User user = User.builder().id(100L).build();
         Category category = Category.builder().id(50L).build();
-        
+
         CategoryRule rule = CategoryRule.builder()
                 .id(1L)
                 .user(user)
                 .keyword("AMZN")
                 .priority(10)
                 .category(category)
+                .minAmount(new BigDecimal("5.00"))
+                .maxAmount(new BigDecimal("100.00"))
                 .audit(audit)
                 .build();
 
@@ -31,6 +35,8 @@ class CategoryRuleTest {
         assertEquals("AMZN", rule.getKeyword());
         assertEquals(10, rule.getPriority());
         assertEquals(category, rule.getCategory());
+        assertEquals(new BigDecimal("5.00"), rule.getMinAmount());
+        assertEquals(new BigDecimal("100.00"), rule.getMaxAmount());
         assertEquals(audit, rule.getAudit());
     }
 

@@ -83,7 +83,7 @@ class CategoryRuleServiceTest {
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-            when(categoryRuleRepository.insert(any())).thenReturn(1);
+            when(categoryRuleRepository.insertAndReturnId(any())).thenReturn(42L);
 
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
@@ -93,11 +93,11 @@ class CategoryRuleServiceTest {
                     .build();
 
             // Act
-            int result = ruleService.createRule(USER_ID, request);
+            Long result = ruleService.createRule(USER_ID, request);
 
             // Assert
-            assertEquals(1, result);
-            verify(categoryRuleRepository).insert(argThat(r -> r.getKeyword().equals("Amazon")));
+            assertEquals(42L, result);
+            verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getKeyword().equals("Amazon")));
         }
 
         @Test
@@ -108,7 +108,7 @@ class CategoryRuleServiceTest {
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-            when(categoryRuleRepository.insert(any())).thenReturn(1);
+            when(categoryRuleRepository.insertAndReturnId(any())).thenReturn(1L);
 
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
@@ -121,7 +121,35 @@ class CategoryRuleServiceTest {
             ruleService.createRule(USER_ID, request);
 
             // Assert
-            verify(categoryRuleRepository).insert(argThat(r -> r.getPriority() == 0));
+            verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getPriority() == 0));
+        }
+
+        @Test
+        @DisplayName("PF-314: should pass minAmount/maxAmount through to the inserted rule")
+        void shouldCreateWithAmountRange() {
+            // arrange
+            User user = User.builder().id(USER_ID).build();
+            Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+            when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+            when(categoryRuleRepository.insertAndReturnId(any())).thenReturn(1L);
+
+            CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
+                    .userId(USER_ID)
+                    .categoryId(CATEGORY_ID)
+                    .keyword("Amazon")
+                    .priority(1)
+                    .minAmount(new java.math.BigDecimal("5.00"))
+                    .maxAmount(new java.math.BigDecimal("20.00"))
+                    .build();
+
+            // act
+            ruleService.createRule(USER_ID, request);
+
+            // assert & verify
+            verify(categoryRuleRepository).insertAndReturnId(argThat(r ->
+                    r.getMinAmount().equals(new java.math.BigDecimal("5.00"))
+                            && r.getMaxAmount().equals(new java.math.BigDecimal("20.00"))));
         }
 
         @Test
@@ -163,6 +191,8 @@ class CategoryRuleServiceTest {
                     .keyword("NewKW")
                     .categoryId(CATEGORY_ID)
                     .priority(5)
+                    .minAmount(new java.math.BigDecimal("5.00"))
+                    .maxAmount(new java.math.BigDecimal("20.00"))
                     .build();
 
             // Act
@@ -170,7 +200,10 @@ class CategoryRuleServiceTest {
 
             // Assert
             assertEquals(1, result);
-            verify(categoryRuleRepository).update(argThat(r -> r.getKeyword().equals("NewKW") && r.getPriority() == 5));
+            verify(categoryRuleRepository).update(argThat(r -> r.getKeyword().equals("NewKW")
+                    && r.getPriority() == 5
+                    && r.getMinAmount().equals(new java.math.BigDecimal("5.00"))
+                    && r.getMaxAmount().equals(new java.math.BigDecimal("20.00"))));
         }
 
         @Test

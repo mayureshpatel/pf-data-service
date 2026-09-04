@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
+
 @Getter
 @Builder(toBuilder = true)
 @ToString
@@ -24,4 +26,10 @@ public class CategoryRuleCreateRequest {
 
     @PositiveOrZero(message = "Priority must be a positive number or zero.")
     private final Integer priority;
+
+    @PositiveOrZero(message = "Minimum amount must be a positive number or zero.")
+    private final BigDecimal minAmount;
+
+    @PositiveOrZero(message = "Maximum amount must be a positive number or zero.")
+    private final BigDecimal maxAmount;
 }

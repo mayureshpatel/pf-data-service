@@ -146,4 +146,50 @@ class CategoryRuleUpdateRequestTest {
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Priority must be a positive number or zero.")));
         }
     }
+
+    @Nested
+    @DisplayName("Field: minAmount / maxAmount (PF-314)")
+    class AmountRangeValidationTests {
+        @Test
+        @DisplayName("should pass when both are null (no range set)")
+        void shouldPassWhenBothAmountsAreNull() {
+            CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
+                    .id(1L)
+                    .categoryId(1L)
+                    .keyword("PUBLIX")
+                    .minAmount(null)
+                    .maxAmount(null)
+                    .build();
+            Set<ConstraintViolation<CategoryRuleUpdateRequest>> violations = validator.validate(request);
+            assertTrue(violations.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should fail when minAmount is negative")
+        void shouldFailWhenMinAmountIsNegative() {
+            CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
+                    .id(1L)
+                    .categoryId(1L)
+                    .keyword("PUBLIX")
+                    .minAmount(new java.math.BigDecimal("-0.01"))
+                    .build();
+            Set<ConstraintViolation<CategoryRuleUpdateRequest>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Minimum amount must be a positive number or zero.")));
+        }
+
+        @Test
+        @DisplayName("should fail when maxAmount is negative")
+        void shouldFailWhenMaxAmountIsNegative() {
+            CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
+                    .id(1L)
+                    .categoryId(1L)
+                    .keyword("PUBLIX")
+                    .maxAmount(new java.math.BigDecimal("-0.01"))
+                    .build();
+            Set<ConstraintViolation<CategoryRuleUpdateRequest>> violations = validator.validate(request);
+            assertFalse(violations.isEmpty());
+            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Maximum amount must be a positive number or zero.")));
+        }
+    }
 }
