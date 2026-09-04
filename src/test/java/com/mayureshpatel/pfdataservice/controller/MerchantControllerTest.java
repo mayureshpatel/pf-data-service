@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
@@ -15,11 +16,13 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -126,6 +129,110 @@ class MerchantControllerTest extends BaseControllerTest {
 
             // the request never reached the service -- @PreAuthorize denied it first
             verify(merchantService, never()).updateMerchant(anyLong(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("mergeMerchants")
+    class MergeMerchantsTests {
+
+        private static final Long SURVIVING_ID = 101L;
+        private static final Long MERGED_AWAY_ID = 102L;
+
+        @Test
+        @DisplayName("POST /merge should merge the two merchants and return 204")
+        void mergeMerchants_shouldMerge() throws Exception {
+            // arrange
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(MERGED_AWAY_ID)
+                    .build();
+
+            // act & assert & verify
+            mockMvc.perform(post("/api/v1/merchants/merge")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNoContent());
+
+            verify(merchantService).mergeMerchants(eq(USER_ID), any(MerchantMergeRequest.class));
+        }
+
+        @Test
+        @DisplayName("POST /merge should return 400 Bad Request when either id is missing")
+        void mergeMerchants_shouldReturn400WhenIdMissing() throws Exception {
+            // arrange
+            MerchantMergeRequest request = MerchantMergeRequest.builder().survivingMerchantId(SURVIVING_ID).build();
+
+            // act & assert & verify
+            mockMvc.perform(post("/api/v1/merchants/merge")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.validationErrors[0].field").value("mergedAwayMerchantId"));
+        }
+
+        @Test
+        @DisplayName("POST /merge should return 400 Bad Request when merging a merchant into itself")
+        void mergeMerchants_shouldReturn400ForSelfMerge() throws Exception {
+            // arrange
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(SURVIVING_ID)
+                    .build();
+            doThrow(new IllegalArgumentException("Cannot merge a merchant into itself."))
+                    .when(merchantService).mergeMerchants(eq(USER_ID), any(MerchantMergeRequest.class));
+
+            // act & assert & verify
+            mockMvc.perform(post("/api/v1/merchants/merge")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.detail").value("Cannot merge a merchant into itself."));
+        }
+
+        @Test
+        @DisplayName("PF-222: POST /merge should return 403 Forbidden when the user doesn't own the surviving merchant")
+        void mergeMerchants_shouldReturn403WhenSurvivingNotOwned() throws Exception {
+            // arrange -- overrides BaseControllerTest's default (permissive) stub for this one test
+            when(securityService.isMerchantOwner(eq(SURVIVING_ID), any())).thenReturn(false);
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(MERGED_AWAY_ID)
+                    .build();
+
+            // act & assert & verify
+            mockMvc.perform(post("/api/v1/merchants/merge")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+
+            verify(merchantService, never()).mergeMerchants(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("PF-222: POST /merge should return 403 Forbidden when the user doesn't own the "
+                + "merged-away merchant, even though they DO own the surviving one -- both must be owned")
+        void mergeMerchants_shouldReturn403WhenMergedAwayNotOwned() throws Exception {
+            // arrange
+            when(securityService.isMerchantOwner(eq(SURVIVING_ID), any())).thenReturn(true);
+            when(securityService.isMerchantOwner(eq(MERGED_AWAY_ID), any())).thenReturn(false);
+            MerchantMergeRequest request = MerchantMergeRequest.builder()
+                    .survivingMerchantId(SURVIVING_ID)
+                    .mergedAwayMerchantId(MERGED_AWAY_ID)
+                    .build();
+
+            // act & assert & verify
+            mockMvc.perform(post("/api/v1/merchants/merge")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+
+            verify(merchantService, never()).mergeMerchants(anyLong(), any());
         }
     }
 }

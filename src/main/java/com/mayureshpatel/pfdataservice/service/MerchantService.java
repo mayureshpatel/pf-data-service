@@ -3,10 +3,13 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +35,8 @@ public class MerchantService {
 
     private final MerchantRepository merchantRepository;
     private final MerchantNameNormalizer nameNormalizer;
+    private final TransactionRepository transactionRepository;
+    private final RecurringTransactionRepository recurringTransactionRepository;
 
     /**
      * Returns all merchants for a user.
@@ -146,6 +151,42 @@ public class MerchantService {
                 .collect(Collectors.toMap(
                         desc -> desc,
                         desc -> cleanNameToMerchantId.get(descriptionToCleanName.get(desc))));
+    }
+
+    /**
+     * Merges {@code mergedAwayMerchantId} into {@code survivingMerchantId} (PF-222): reassigns
+     * every transaction and recurring transaction pointing at the merged-away merchant to the
+     * survivor, then deletes the merged-away record. All in one transaction -- a partial failure
+     * must never leave a transaction or recurring rule pointing at a merchant that's been deleted.
+     * <p>
+     * Order matters: reassignment happens before deletion, not after. If the delete ran first and
+     * relied on {@code recurring_transactions_merchant_id_fkey}'s {@code ON DELETE SET NULL} to
+     * clean up, it would immediately violate that column's {@code NOT NULL} constraint and roll
+     * the whole operation back -- the exact edge case this story exists to actually exercise for
+     * the first time (nothing has ever deleted a merchant before this).
+     *
+     * @param userId                the authenticated user id
+     * @param request               which merchant survives and which gets merged away
+     * @throws ResourceNotFoundException if either merchant doesn't exist or isn't owned by {@code userId}
+     * @throws IllegalArgumentException  if both ids are the same merchant
+     */
+    @Transactional
+    public void mergeMerchants(Long userId, MerchantMergeRequest request) {
+        Long survivingId = request.getSurvivingMerchantId();
+        Long mergedAwayId = request.getMergedAwayMerchantId();
+
+        if (survivingId.equals(mergedAwayId)) {
+            throw new IllegalArgumentException("Cannot merge a merchant into itself.");
+        }
+
+        merchantRepository.findByIdAndUserId(survivingId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Surviving merchant not found."));
+        merchantRepository.findByIdAndUserId(mergedAwayId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Merged-away merchant not found."));
+
+        transactionRepository.reassignMerchant(mergedAwayId, survivingId, userId);
+        recurringTransactionRepository.reassignMerchant(mergedAwayId, survivingId, userId);
+        merchantRepository.delete(mergedAwayId, userId);
     }
 
     /**

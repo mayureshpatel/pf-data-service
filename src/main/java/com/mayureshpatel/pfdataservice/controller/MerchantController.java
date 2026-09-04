@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.MerchantService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -66,5 +68,28 @@ public class MerchantController {
             @RequestBody @Valid MerchantUpdateRequest request
     ) {
         return ResponseEntity.ok(merchantService.updateMerchant(userDetails.getId(), request));
+    }
+
+    /**
+     * Merges one merchant into another: the merged-away merchant's transactions and recurring
+     * transactions move to the survivor, and the merged-away record is deleted. Ownership-guarded
+     * on both merchants -- a caller who owns the survivor but not the merged-away record (or vice
+     * versa) is still forbidden.
+     *
+     * @param userDetails the authenticated user
+     * @param request     which merchant survives and which gets merged away
+     * @return 204 once the merge completes
+     */
+    @Operation(summary = "Merge two merchants", description = "Reassigns the merged-away merchant's transactions and recurring transactions to the survivor, then deletes it")
+    @ApiResponse(responseCode = "204", description = "Merchants merged")
+    @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own both merchants")
+    @PostMapping("/merge")
+    @PreAuthorize("@ss.isMerchantOwner(#request.survivingMerchantId, principal) and @ss.isMerchantOwner(#request.mergedAwayMerchantId, principal)")
+    public ResponseEntity<Void> mergeMerchants(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid MerchantMergeRequest request
+    ) {
+        merchantService.mergeMerchants(userDetails.getId(), request);
+        return ResponseEntity.noContent().build();
     }
 }

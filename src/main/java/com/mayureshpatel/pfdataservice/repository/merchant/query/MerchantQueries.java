@@ -88,5 +88,6 @@ public final class MerchantQueries {
     public static final String DELETE = """
             delete from merchants
             where id = :id
+              and user_id = :userId
             """;
 }
