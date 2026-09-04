@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.tag.TagRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class SecurityService {
     private final BudgetRepository budgetRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
     private final MerchantRepository merchantRepository;
+    private final TagRepository tagRepository;
 
     public boolean isAccountOwner(Long accountId, CustomUserDetails userDetails) {
         if (accountId == null || userDetails == null) return false;
@@ -74,6 +76,13 @@ public class SecurityService {
         if (merchantId == null || userDetails == null) return false;
         return merchantRepository.findById(merchantId)
                 .map(merchant -> Objects.equals(merchant.getUserId(), userDetails.getId()))
+                .orElse(false);
+    }
+
+    public boolean isTagOwner(Long tagId, CustomUserDetails userDetails) {
+        if (tagId == null || userDetails == null) return false;
+        return tagRepository.findById(tagId)
+                .map(tag -> tag.getUserId().equals(userDetails.getId()))
                 .orElse(false);
     }
 }

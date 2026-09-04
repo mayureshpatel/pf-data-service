@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
+import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.domain.budget.Budget;
@@ -14,6 +15,7 @@ import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.tag.TagRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -53,6 +55,9 @@ class SecurityServiceTest {
     @Mock
     private MerchantRepository merchantRepository;
 
+    @Mock
+    private TagRepository tagRepository;
+
     @InjectMocks
     private SecurityService securityService;
 
@@ -65,6 +70,7 @@ class SecurityServiceTest {
     private static final Long BUDGET_ID = 400L;
     private static final Long RECURRING_ID = 500L;
     private static final Long MERCHANT_ID = 600L;
+    private static final Long TAG_ID = 700L;
 
     private CustomUserDetails buildUserDetails(Long userId) {
         User user = User.builder()
@@ -127,6 +133,14 @@ class SecurityServiceTest {
                 .userId(userId)
                 .originalName("STARBUCKS #1")
                 .cleanName("Starbucks")
+                .build();
+    }
+
+    private Tag buildTag(Long userId) {
+        return Tag.builder()
+                .id(TAG_ID)
+                .userId(userId)
+                .name("Travel")
                 .build();
     }
 
@@ -466,6 +480,54 @@ class SecurityServiceTest {
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             assertThat(securityService.isMerchantOwner(null, userDetails)).isFalse();
             assertThat(securityService.isMerchantOwner(MERCHANT_ID, null)).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("isTagOwner")
+    class IsTagOwnerTest {
+
+        @Test
+        @DisplayName("should return true when user owns the tag")
+        void isTagOwner_matchingId_returnsTrue() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Tag tag = buildTag(USER_ID);
+            when(tagRepository.findById(TAG_ID)).thenReturn(Optional.of(tag));
+
+            boolean result = securityService.isTagOwner(TAG_ID, userDetails);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when mismatched userId")
+        void isTagOwner_mismatchedId_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            Tag tag = buildTag(ANOTHER_USER_ID);
+            when(tagRepository.findById(TAG_ID)).thenReturn(Optional.of(tag));
+
+            boolean result = securityService.isTagOwner(TAG_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when tag not found")
+        void isTagOwner_notFound_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            when(tagRepository.findById(TAG_ID)).thenReturn(Optional.empty());
+
+            boolean result = securityService.isTagOwner(TAG_ID, userDetails);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when args are null")
+        void isTagOwner_nullArgs_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            assertThat(securityService.isTagOwner(null, userDetails)).isFalse();
+            assertThat(securityService.isTagOwner(TAG_ID, null)).isFalse();
         }
     }
 }
