@@ -188,30 +188,6 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String FIND_TAGS_BY_TRANSACTION_ID = """
-            select tags.*
-            from transaction_tags
-                left join tags on transaction_tags.tag_id = tags.id
-                left join transactions on transaction_tags.transaction_id = transactions.id
-            where transaction_tags.transaction_id = :transactionId
-            """;
-
-    // language=SQL
-    public static final String INSERT_TRANSACTION_TAG = """
-            insert into transaction_tags
-                (transaction_id, tag_id)
-            values (
-                    :transactionId,
-                    :tagId)
-            """;
-
-    // language=SQL
-    public static final String DELETE_TRANSACTION_TAGS = """
-            delete from transaction_tags
-            where transaction_id = :transactionId
-            """;
-
-    // language=SQL
     public static final String FIND_CATEGORY_TOTALS = """
             select categories.id as category_id,
                    categories.name as category_name,
