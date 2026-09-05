@@ -164,6 +164,21 @@ class TagRepositoryTest extends BaseRepositoryTest {
             // Assert
             assertTrue(count >= 2); // Baseline has 2 tags
         }
+
+        @Test
+        @DisplayName("PF-307: inserting a duplicate (user_id, name) violates the schema's own "
+                + "unique constraint -- confirmed live against real Postgres, not assumed, since "
+                + "GlobalExceptionHandler's DataIntegrityViolationException handler (400, not a "
+                + "generic 500) only actually satisfies this ticket's AC if the constraint really "
+                + "fires and Spring translates it to that exception type")
+        void shouldViolateUniqueConstraintOnDuplicateName() {
+            // arrange
+            repository.insertAndReturnId(Tag.builder().userId(USER_1).name("Duplicate Name").color("#000").build());
+
+            // act & assert
+            assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () ->
+                    repository.insertAndReturnId(Tag.builder().userId(USER_1).name("Duplicate Name").color("#111").build()));
+        }
     }
 
     @Nested
