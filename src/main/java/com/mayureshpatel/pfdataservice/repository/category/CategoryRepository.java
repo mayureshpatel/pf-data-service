@@ -60,7 +60,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
 
     public int insert(CategoryCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        return jdbcClient.sql(CategoryQueries.INSERT)
+        jdbcClient.sql(CategoryQueries.INSERT)
                 .param("name", request.getName())
                 .param("color", request.getColor())
                 .param("icon", request.getIcon())
@@ -68,6 +68,8 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .param("userId", request.getUserId())
                 .param("parentId", request.getParentId() != null ? request.getParentId() : null)
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 
     public int update(CategoryUpdateRequest request) {

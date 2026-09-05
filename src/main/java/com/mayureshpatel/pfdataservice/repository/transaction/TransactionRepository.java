@@ -97,7 +97,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public int insert(TransactionCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        return jdbcClient.sql(TransactionQueries.INSERT)
+        jdbcClient.sql(TransactionQueries.INSERT)
                 .param("accountId", request.getAccountId())
                 .param("categoryId", request.getCategoryId())
                 .param("amount", request.getAmount())
@@ -107,6 +107,36 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("type", request.getType())
                 .param("merchantId", request.getMerchantId())
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
+    }
+
+    /**
+     * Inserts a fully-resolved transaction (account, auto-guessed/explicit category, and
+     * auto-matched merchant already set by the service layer). The {@code T}-typed
+     * {@code JdbcRepository.insert(T)} default can't be overridden by {@link
+     * #insert(TransactionCreateRequest)} above -- that's a different, unrelated overload, not an
+     * override -- so callers passing a {@link Transaction} were silently hitting the interface's
+     * throwing default instead of ever reaching real SQL.
+     *
+     * @param transaction the resolved transaction to insert
+     * @return the newly inserted transaction's generated id
+     */
+    public int insert(Transaction transaction) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        jdbcClient.sql(TransactionQueries.INSERT)
+                .param("accountId", transaction.getAccount().getId())
+                .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
+                .param("amount", transaction.getAmount())
+                .param("date", transaction.getTransactionDate())
+                .param("postDate", transaction.getPostDate())
+                .param("description", transaction.getDescription())
+                .param("type", transaction.getType().name())
+                .param("merchantId", transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
+                .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 
     public int update(Long userId, Transaction transaction) {

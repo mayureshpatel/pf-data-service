@@ -102,12 +102,16 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = accountRepository.insert(USER_1, request);
+            int newId = accountRepository.insert(USER_1, request);
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count (which
+            // is always 1 on a successful single-row insert and would coincidentally collide with
+            // baseline account 1, "Main Checking", masking the bug this regresses against)
             long count = accountRepository.count();
             assertEquals(5, count);
+            Account inserted = accountRepository.findById((long) newId).orElseThrow();
+            assertEquals("New Savings", inserted.getName());
+            assertEquals(USER_1, inserted.getUserId());
         }
 
         @Test

@@ -126,11 +126,15 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = categoryRepository.insert(request);
+            int newId = categoryRepository.insert(request);
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count (always
+            // 1 on a successful single-row insert, which would coincidentally collide with
+            // baseline category 1 and mask the bug this regresses against)
             assertEquals(11, categoryRepository.count(USER_1));
+            Category inserted = categoryRepository.findById((long) newId).orElseThrow();
+            assertEquals("Subscriptions", inserted.getName());
+            assertEquals(USER_1, inserted.getUserId());
         }
 
         @Test
@@ -145,10 +149,12 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = categoryRepository.insert(request);
+            int newId = categoryRepository.insert(request);
 
             // Assert
-            assertEquals(1, rows);
+            Category inserted = categoryRepository.findById((long) newId).orElseThrow();
+            assertEquals("Streaming", inserted.getName());
+            assertEquals(CAT_FOOD, inserted.getParentId());
             List<Category> subs = categoryRepository.findAllSubCategories(USER_1);
             assertTrue(subs.stream().anyMatch(c -> c.getName().equals("Streaming")));
         }

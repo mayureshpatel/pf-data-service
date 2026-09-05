@@ -765,5 +765,49 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // Act & Assert -- must not throw
             assertDoesNotThrow(() -> transactionRepository.deleteAll(USER_ID, List.of(noId)));
         }
+
+        @Test
+        @DisplayName("bug regression: insert(Transaction) must persist a fully-resolved transaction "
+                + "and return its real generated id -- this overload is unrelated to "
+                + "insert(TransactionCreateRequest) (different parameter type, not an override), so "
+                + "TransactionService.createTransaction's call was previously binding to "
+                + "JdbcRepository's throwing default and failing every single-transaction create")
+        void shouldInsertResolvedTransaction() {
+            // arrange -- mirrors what TransactionService.createTransaction builds: a fully-resolved
+            // Transaction with account/category/merchant already set, not the raw create request
+            Transaction transaction = Transaction.builder()
+                    .account(com.mayureshpatel.pfdataservice.domain.account.Account.builder().id(1L).build())
+                    .category(Category.builder().id(9L).build())
+                    .amount(new BigDecimal("15.00"))
+                    .transactionDate(OffsetDateTime.parse("2026-03-10T00:00:00Z"))
+                    .description("New Resolved Transaction")
+                    .type(TransactionType.EXPENSE)
+                    .merchant(Merchant.builder().id(1L).build())
+                    .build();
+
+            // act
+            int newId = transactionRepository.insert(transaction);
+
+            // assert & verify -- the returned id must resolve back to the row just inserted
+            Transaction persisted = transactionRepository.findById((long) newId, USER_ID).orElseThrow();
+            assertEquals("New Resolved Transaction", persisted.getDescription());
+            assertEquals(0, new BigDecimal("15.00").compareTo(persisted.getAmount()));
+        }
+
+        @Test
+        @DisplayName("insert(Transaction) must not throw when category or merchant is unset")
+        void shouldInsertResolvedTransactionWithoutCategoryOrMerchant() {
+            // arrange
+            Transaction transaction = Transaction.builder()
+                    .account(com.mayureshpatel.pfdataservice.domain.account.Account.builder().id(1L).build())
+                    .amount(new BigDecimal("20.00"))
+                    .transactionDate(OffsetDateTime.parse("2026-03-10T00:00:00Z"))
+                    .description("No Category Or Merchant")
+                    .type(TransactionType.INCOME)
+                    .build();
+
+            // act & assert -- must not throw
+            assertDoesNotThrow(() -> transactionRepository.insert(transaction));
+        }
     }
 }
