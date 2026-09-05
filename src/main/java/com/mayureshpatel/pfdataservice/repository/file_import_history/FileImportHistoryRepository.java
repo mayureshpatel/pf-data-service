@@ -39,21 +39,25 @@ public class FileImportHistoryRepository implements JdbcRepository<FileImportHis
     public int insert(FileImportCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         Long accountId = Long.parseLong(request.getAccountId());
-        return jdbcClient.sql(FileImportHistoryQueries.INSERT)
+        jdbcClient.sql(FileImportHistoryQueries.INSERT)
                 .param("accountId", accountId)
                 .param("fileHash", request.getFileHash())
                 .param("fileName", request.getFileName())
                 .param("transactionCount", 0)
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 
     public int save(FileImportHistory history) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        return jdbcClient.sql(FileImportHistoryQueries.INSERT)
+        jdbcClient.sql(FileImportHistoryQueries.INSERT)
                 .param("accountId", history.getAccount().getId())
                 .param("fileHash", history.getFileHash())
                 .param("fileName", history.getFileName())
                 .param("transactionCount", history.getTransactionCount())
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 }

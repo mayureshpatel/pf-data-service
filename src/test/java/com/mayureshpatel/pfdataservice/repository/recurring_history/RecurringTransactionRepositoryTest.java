@@ -102,12 +102,16 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = repository.insert(request, USER_1);
+            int newId = repository.insert(request, USER_1);
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count (always
+            // 1 on a successful single-row insert, which would coincidentally collide with
+            // baseline recurring transaction id 1 and mask the bug this regresses against)
             List<RecurringTransaction> all = repository.findAllByUserId(USER_1);
             assertEquals(3, all.size());
+            RecurringTransaction inserted = repository.findById((long) newId).orElseThrow();
+            assertEquals(0, new BigDecimal("99.99").compareTo(inserted.getAmount()));
+            assertEquals("MONTHLY", inserted.getFrequency());
         }
 
         @Test
