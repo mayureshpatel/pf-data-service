@@ -63,6 +63,17 @@ public final class TransactionQueries {
                     "left join merchants ON transactions.merchant_id = merchants.id";
 
     // language=SQL
+    // PF-308: batch-fetches tags for a whole page of transactions in one query (not per-row),
+    // assembled onto each Transaction in Java by TransactionRepository.findAll -- same pattern as
+    // CategoryRuleRepository's keyword-set assembly (PF-315).
+    public static final String FIND_TAGS_BY_TRANSACTION_IDS = """
+            select transaction_tags.transaction_id, tags.*
+            from transaction_tags
+                join tags on transaction_tags.tag_id = tags.id
+            where transaction_tags.transaction_id in (:transactionIds)
+            """;
+
+    // language=SQL
     public static final String FIND_BY_ID_WITH_DETAILS =
             "select " + ENRICHED_COLUMNS + " from transactions " + ENRICHED_JOINS +
                     " where transactions.id = :id and accounts.user_id = :userId and transactions.deleted_at is null";

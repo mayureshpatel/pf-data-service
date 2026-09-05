@@ -3,6 +3,8 @@ package com.mayureshpatel.pfdataservice.mapper;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 
+import java.util.List;
+
 public final class TransactionDtoMapper {
 
     private TransactionDtoMapper() {
@@ -19,7 +21,10 @@ public final class TransactionDtoMapper {
                 transaction.getDescription(),
                 transaction.getType(),
                 transaction.getPostDate(),
-                MerchantDtoMapper.toDto(transaction.getMerchant())
+                MerchantDtoMapper.toDto(transaction.getMerchant()),
+                transaction.getTags() != null
+                        ? transaction.getTags().stream().map(TagDtoMapper::toDto).toList()
+                        : List.of()
         );
     }
 }

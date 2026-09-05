@@ -58,7 +58,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
     public int insert(Long userId, AccountCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        return jdbcClient.sql(AccountQueries.INSERT)
+        jdbcClient.sql(AccountQueries.INSERT)
                 .param("name", request.getName())
                 .param("type", request.getType())
                 .param("currentBalance", request.getStartingBalance())
@@ -68,6 +68,8 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .param("createdBy", userId)
                 .param("updatedBy", userId)
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 
     public int update(Long userId, AccountUpdateRequest request) {

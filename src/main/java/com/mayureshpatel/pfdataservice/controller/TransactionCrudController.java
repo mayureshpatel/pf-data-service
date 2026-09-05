@@ -91,6 +91,7 @@ public class TransactionCrudController {
      * @param maxAmount   upper bound (inclusive) on amount
      * @param startDate   lower bound (inclusive) on transaction date
      * @param endDate     upper bound (inclusive) on transaction date
+     * @param tagId       restrict to transactions carrying this tag
      * @return the matching page of transactions
      */
     @Operation(summary = "List transactions", description = "Paginated, filtered list of the authenticated user's transactions")
@@ -107,11 +108,12 @@ public class TransactionCrudController {
             @RequestParam(required = false) BigDecimal minAmount,
             @RequestParam(required = false) BigDecimal maxAmount,
             @RequestParam(required = false) LocalDate startDate,
-            @RequestParam(required = false) LocalDate endDate
+            @RequestParam(required = false) LocalDate endDate,
+            @RequestParam(required = false) Long tagId
     ) {
 
         TransactionFilter filter = new TransactionFilter(
-                accountId, type, description, categoryName, vendorName, minAmount, maxAmount, startDate, endDate
+                accountId, type, description, categoryName, vendorName, minAmount, maxAmount, startDate, endDate, tagId
         );
 
         return ResponseEntity.ok(transactionService.getTransactions(userDetails.getId(), filter, pageable));

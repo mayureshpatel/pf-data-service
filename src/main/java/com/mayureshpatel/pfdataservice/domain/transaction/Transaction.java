@@ -11,6 +11,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Getter
 @SuperBuilder(toBuilder = true)
@@ -28,6 +29,14 @@ public class Transaction {
     private String description;
     private Merchant merchant;
     private TransactionType type;
+
+    /**
+     * The tags assigned to this transaction (PF-308). Only populated by the paginated list query
+     * path ({@code TransactionRepository.findAll}) -- batch-fetched per page, not per row, and
+     * null/absent on Transaction instances built by other paths (single-transaction fetches,
+     * inserts, CSV import) that don't need it.
+     */
+    private List<Tag> tags;
 
     @ToString.Exclude
     private TableAudit audit;
