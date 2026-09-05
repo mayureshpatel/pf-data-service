@@ -54,7 +54,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
     public int insert(RecurringTransactionCreateRequest request, Long userId) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        return jdbcClient.sql(RecurringTransactionQueries.INSERT)
+        jdbcClient.sql(RecurringTransactionQueries.INSERT)
                 .param("userId", userId)
                 .param("accountId", request.getAccountId())
                 .param("merchantId", request.getMerchantId())
@@ -64,6 +64,8 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .param("nextDate", request.getNextDate())
                 .param("active", request.isActive())
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 
     public int update(RecurringTransactionUpdateRequest request, Long userId) {

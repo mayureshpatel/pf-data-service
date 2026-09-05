@@ -37,13 +37,13 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = repository.insert(request);
+            int newId = repository.insert(request);
             Optional<FileImportHistory> result = repository.findByAccountIdAndFileHash(ACCOUNT_1, "hash123");
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count
             assertTrue(result.isPresent());
             assertEquals("test.csv", result.get().getFileName());
+            assertEquals(result.get().getId(), (long) newId);
         }
 
         @Test
@@ -73,13 +73,13 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = repository.save(history);
+            int newId = repository.save(history);
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count
             FileImportHistory saved = repository.findByAccountIdAndFileHash(ACCOUNT_1, "h5").orElseThrow();
             assertEquals("5.csv", saved.getFileName());
             assertEquals(3, saved.getTransactionCount());
+            assertEquals(saved.getId(), (long) newId);
         }
     }
 }

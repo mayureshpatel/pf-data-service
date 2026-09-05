@@ -43,13 +43,13 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = budgetRepository.insert(request);
+            int newId = budgetRepository.insert(request);
             Optional<Budget> budget = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(USER_1, CAT_RENT, 3, 2026);
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count
             assertTrue(budget.isPresent());
             assertEquals(0, new BigDecimal("1500.00").compareTo(budget.get().getAmount()));
+            assertEquals(budget.get().getId(), (long) newId);
         }
 
         @Test

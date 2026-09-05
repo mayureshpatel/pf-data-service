@@ -51,11 +51,13 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
             accId = entity.getAccount().getId();
         }
 
-        return jdbcClient.sql(AccountSnapshotQueries.INSERT)
+        jdbcClient.sql(AccountSnapshotQueries.INSERT)
                 .param("accountId", accId)
                 .param("snapshotDate", entity.getSnapshotDate())
                 .param("balance", entity.getBalance())
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 
     @Override

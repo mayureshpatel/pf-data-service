@@ -39,13 +39,13 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = repository.insert(snapshot);
+            int newId = repository.insert(snapshot);
             Optional<AccountSnapshot> result = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date);
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count
             assertTrue(result.isPresent());
             assertEquals(0, new BigDecimal("1000.00").compareTo(result.get().getBalance()));
+            assertEquals(result.get().getId(), (long) newId);
         }
 
         @Test
@@ -60,12 +60,12 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
                     .build();
 
             // Act
-            int rows = repository.insert(snapshot);
+            int newId = repository.insert(snapshot);
             Optional<AccountSnapshot> result = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date);
 
-            // Assert
-            assertEquals(1, rows);
+            // Assert -- must be the real generated id, not update()'s rows-affected count
             assertTrue(result.isPresent());
+            assertEquals(result.get().getId(), (long) newId);
         }
 
         @Test

@@ -36,13 +36,15 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
 
     public int insert(BudgetCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        return jdbcClient.sql(BudgetQueries.INSERT)
+        jdbcClient.sql(BudgetQueries.INSERT)
                 .param("userId", request.getUserId())
                 .param("categoryId", request.getCategoryId())
                 .param("amount", request.getAmount())
                 .param("month", request.getMonth())
                 .param("year", request.getYear())
                 .update(keyHolder);
+
+        return keyHolder.getKey().intValue();
     }
 
     public int update(BudgetUpdateRequest request) {
