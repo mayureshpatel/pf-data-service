@@ -46,7 +46,7 @@ public final class AccountDtoMapper {
                     account.getCurrency().isActive());
         }
 
-        if (account.getBankCode() != null) {
+        if (account.getBankCode() != null && !account.getBankCode().isBlank()) {
             bankName = BankName.fromString(account.getBankCode());
         }
 

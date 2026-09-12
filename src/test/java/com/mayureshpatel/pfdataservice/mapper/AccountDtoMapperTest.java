@@ -109,5 +109,29 @@ class AccountDtoMapperTest {
             assertNull(dto.currency());
             assertNull(dto.bank());
         }
+
+        @Test
+        @DisplayName("bug regression: should treat a blank bank code as absent, not throw -- "
+                + "the frontend sends an empty string (not null) when no bank is selected on "
+                + "create (account-form-drawer.component.ts's `rawValue.bankName ?? ''`), which "
+                + "previously slipped past this mapper's null-only guard into BankName.fromString(''),"
+                + " throwing IllegalArgumentException and breaking GET /accounts for the whole user "
+                + "-- every account in the list fails to map, not just the one with a blank bank")
+        void toDto_shouldTreatBlankBankCodeAsAbsent() {
+            // arrange
+            Account account = Account.builder()
+                    .id(1L)
+                    .name("No Bank Account")
+                    .bankCode("")
+                    .build();
+
+            // act
+            AccountDto dto = AccountDtoMapper.toDto(account);
+
+            // assert & verify
+            assertNotNull(dto);
+            assertNull(dto.bank());
+            assertNull(dto.bank());
+        }
     }
 }

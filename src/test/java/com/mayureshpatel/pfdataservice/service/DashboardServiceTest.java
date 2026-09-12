@@ -349,6 +349,28 @@ class DashboardServiceTest {
         }
 
         @Test
+        @DisplayName("bug regression: uncategorized route must use the 'categoryName' query param, "
+                + "not 'category' -- TransactionsComponent.hydrateFromParams() only reads "
+                + "'categoryName' off the URL, so the old route silently failed to filter anything "
+                + "and the component's own URL-sync effect immediately wiped the unrecognized "
+                + "'category=null' param back off the URL on load")
+        void shouldUseCategoryNameQueryParamForUncategorizedRoute() {
+            // arrange
+            when(transactionService.findPotentialTransfers(USER_ID)).thenReturn(Collections.emptyList());
+            when(transactionRepository.getUncategorizedExpenseTotals(USER_ID)).thenReturn(new BigDecimal("150.00"));
+
+            // act
+            List<ActionItemDto> result = dashboardService.getActionItems(USER_ID);
+
+            // assert & verify
+            ActionItemDto uncategorized = result.stream()
+                    .filter(a -> a.type() == ActionItemDto.ActionType.UNCATEGORIZED)
+                    .findFirst()
+                    .orElseThrow();
+            assertEquals("/transactions?categoryName=null", uncategorized.route());
+        }
+
+        @Test
         @DisplayName("should return empty list if no actions needed")
         void shouldReturnEmpty() {
             // Arrange
