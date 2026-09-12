@@ -290,7 +290,7 @@ public class DashboardService {
                     ActionItemDto.ActionType.UNCATEGORIZED,
                     uncategorizedSum.longValue(),
                     "Uncategorized expenses found",
-                    "/transactions?category=null"
+                    "/transactions?categoryName=null"
             ));
         }
 
