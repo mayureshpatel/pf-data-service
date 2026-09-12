@@ -196,7 +196,12 @@ public class TransactionService {
             throw new AccessDeniedException("You do not own this account");
         }
 
-        Long merchantId = merchantService.findOrCreateMerchant(userId, request.getDescription());
+        // an explicit merchantId (the frontend's merchant picker has already resolved one to a
+        // real Merchant) always wins; only auto-derive from the description when none was given,
+        // e.g. a brand-new transaction the user hasn't assigned a merchant to yet.
+        Long merchantId = request.getMerchantId() != null
+                ? request.getMerchantId()
+                : merchantService.findOrCreateMerchant(userId, request.getDescription());
 
         Transaction transaction = Transaction.builder()
                 .account(account)
@@ -269,7 +274,12 @@ public class TransactionService {
             }
         }
 
-        Long merchantId = merchantService.findOrCreateMerchant(userId, request.getDescription());
+        // an explicit merchantId (the frontend's merchant picker has already resolved one to a
+        // real Merchant -- including the bulk-edit dialog's own Reassign Merchant field, PF-395)
+        // always wins; only auto-derive from the description when none was given.
+        Long merchantId = request.getMerchantId() != null
+                ? request.getMerchantId()
+                : merchantService.findOrCreateMerchant(userId, request.getDescription());
 
         Transaction updatedT = transaction.toBuilder()
                 .account(targetAccount)
