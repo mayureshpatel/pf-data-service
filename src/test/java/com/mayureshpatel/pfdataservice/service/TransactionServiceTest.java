@@ -318,6 +318,34 @@ class TransactionServiceTest {
         }
 
         @Test
+        @DisplayName("bug regression: should use the explicitly provided merchantId instead of "
+                + "always auto-deriving from the description (PF-395) -- the frontend's merchant "
+                + "picker already resolves a real Merchant before submitting, so silently "
+                + "overriding it made every merchant selection in the create form a no-op")
+        void shouldUseExplicitMerchantIdWhenProvided() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("INCOME")
+                    .transactionDate(OffsetDateTime.now())
+                    .description("Costco Wholesale #123")
+                    .merchantId(9999L)
+                    .build();
+
+            // act
+            transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getMerchant().getId().equals(9999L)));
+            verify(merchantService, never()).findOrCreateMerchant(anyLong(), anyString());
+        }
+
+        @Test
         @DisplayName("should handle category guessing when ID is null or zero")
         void shouldHandleGuessedCategoryNullOrZero() {
             // Arrange
@@ -426,6 +454,36 @@ class TransactionServiceTest {
             // Act & Assert
             assertThrows(ResourceNotFoundException.class, () -> transactionService.updateTransaction(USER_ID, request));
             verify(transactionRepository, never()).update(anyLong(), any(Transaction.class));
+        }
+
+        @Test
+        @DisplayName("bug regression: should use the explicitly provided merchantId instead of "
+                + "always auto-deriving from the description (PF-395) -- confirmed live via the "
+                + "new bulk-edit dialog's Reassign Merchant field: picking a real, different "
+                + "merchant had zero effect, since this path always silently re-derived one from "
+                + "the (unchanged) description instead of honoring the request's own merchantId")
+        void shouldUseExplicitMerchantIdWhenProvided() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
+            when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
+
+            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
+                    .id(TRANSACTION_ID)
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("INCOME")
+                    .description("Costco Wholesale #123")
+                    .merchantId(9999L)
+                    .build();
+
+            // act
+            transactionService.updateTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getMerchant().getId().equals(9999L)));
+            verify(merchantService, never()).findOrCreateMerchant(anyLong(), anyString());
         }
 
         @Test
