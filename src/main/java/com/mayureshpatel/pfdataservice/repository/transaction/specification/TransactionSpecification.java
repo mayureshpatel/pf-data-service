@@ -7,9 +7,16 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-public class TransactionSpecification {
+public final class TransactionSpecification {
+
+    // sentinel the frontend sends as a literal categoryName value to mean "uncategorized"
+    private static final String UNCATEGORIZED_SENTINEL = "null";
+
+    private TransactionSpecification() {
+    }
 
     public static FilterResult withFilter(Long userId, TransactionFilter filter) {
         return buildWhereClause(userId, filter);
@@ -40,21 +47,21 @@ public class TransactionSpecification {
 
             if (filter.description() != null && !filter.description().isBlank()) {
                 conditions.add("LOWER(transactions.description) LIKE :description ESCAPE '\\'");
-                parameters.put("description", "%" + escapeLike(filter.description().toLowerCase()) + "%");
+                parameters.put("description", "%" + escapeLike(filter.description().toLowerCase(Locale.ROOT)) + "%");
             }
 
             if (filter.categoryName() != null && !filter.categoryName().isBlank()) {
-                if ("null".equalsIgnoreCase(filter.categoryName())) {
+                if (UNCATEGORIZED_SENTINEL.equalsIgnoreCase(filter.categoryName())) {
                     conditions.add("transactions.category_id IS NULL");
                 } else {
                     conditions.add("LOWER(categories.name) LIKE :categoryName ESCAPE '\\'");
-                    parameters.put("categoryName", "%" + escapeLike(filter.categoryName().toLowerCase()) + "%");
+                    parameters.put("categoryName", "%" + escapeLike(filter.categoryName().toLowerCase(Locale.ROOT)) + "%");
                 }
             }
 
             if (filter.merchantCleanName() != null && !filter.merchantCleanName().isBlank()) {
                 conditions.add("LOWER(merchants.clean_name) LIKE :merchantCleanName ESCAPE '\\'");
-                parameters.put("merchantCleanName", "%" + escapeLike(filter.merchantCleanName().toLowerCase()) + "%");
+                parameters.put("merchantCleanName", "%" + escapeLike(filter.merchantCleanName().toLowerCase(Locale.ROOT)) + "%");
             }
 
             if (filter.minAmount() != null) {

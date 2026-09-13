@@ -1,0 +1,240 @@
+<?xml version="1.0"?>
+<ruleset name="pf-data-service"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        pf-data-service's PMD ruleset. Encodes what's lint-checkable from this project's own
+        stated conventions (pf-data-service/CLAUDE.md) plus PMD's standard code-quality and
+        complexity checks (PF-EPIC-025). Deliberately excludes category/java/codestyle.xml
+        wholesale: it's the category most likely to fight this project's own deliberate style
+        choices (e.g. its Lombok-heavy, manual-mapping conventions) rather than catch real issues.
+        Individual rule exclusions below were decided against a real run's actual findings, not
+        guessed in advance: each one is a specific rule that fired on a pattern this project
+        uses deliberately, not a blanket "quiet the noise" pass.
+
+        Some rules are downgraded to priority 4 rather than excluded: these are genuine findings,
+        not false positives, just too large or too risky to fix as a mechanical triage-pass sweep.
+        maven-pmd-plugin's failurePriority is set to 3 (pom.xml), so priority-4 findings still
+        print on every run (verbose=true) but don't fail the build: the same "visible but
+        non-blocking" role ESLint's `warn` severity played for pf-ui's own triage (PF-328). Each
+        one is tracked by a real follow-up ticket, filed during PF-329.
+    </description>
+
+    <rule ref="category/java/bestpractices.xml">
+        <!-- GuardLogStatement fires on every SLF4J call regardless of whether the log level is
+             actually enabled first. This project's own logging convention (CLAUDE.md) doesn't
+             ask for that guard, and enforcing it here would fight a deliberate choice, not catch
+             a real one. -->
+        <exclude name="GuardLogStatement"/>
+        <!-- These 2 assume a JUnit style (one assertion per test, every assertion carries an
+             explanatory message) this project's own AAA convention (CLAUDE.md: "// arrange, // act,
+             // assert & verify") never adopted: a single "assert & verify" step legitimately
+             covers checking several properties of one result. Confirmed by volume, not guessed:
+             these 2 rules alone accounted for 2013 of the first real run's 3483 findings. -->
+        <exclude name="UnitTestContainsTooManyAsserts"/>
+        <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
+        <!-- All 6 instances are in RateLimitingFilterTest, deliberately simulating requests from
+             different client IPs to exercise rate-limiting logic, not a real hardcoded-address
+             concern. -->
+        <exclude name="AvoidUsingHardCodedIP"/>
+        <!-- Fires on this project's own abstract Spring-test base classes (BaseIntegrationTest,
+             BaseControllerTest, BaseRepositoryTest): deliberately abstract with no methods at all,
+             purely to share @SpringBootTest/@ActiveProfiles/etc. configuration via inheritance,
+             not "abstract used to prevent instantiation" the way this rule assumes. Same 3 classes
+             also trip design.xml's AbstractClassWithoutAnyMethod below. -->
+        <exclude name="AbstractClassWithoutAbstractMethod"/>
+        <!-- Doesn't recognize Spring MockMvc's `.andExpect(...)` chain (confirmed directly in
+             AccountControllerTest) or Spring Boot's own generated empty contextLoads() smoke test
+             as real assertions: a gap in this rule's detection against this project's actual
+             test styles, not genuinely un-asserted tests. -->
+        <exclude name="UnitTestShouldIncludeAssert"/>
+        <!-- Safe, uniform, purely mechanical fix (swap operand order on a .equals() call) but at
+             172 instances spread across the codebase, too large a sweep for this triage pass to
+             respectably hand-verify one by one. -->
+        <exclude name="LiteralsFirstInComparisons"/>
+        <!-- All 7 instances are test-helper ResultSet reads immediately after an
+             `INSERT ... RETURNING id`: an unexpectedly-empty ResultSet would already fail the
+             test via the next line's SQLException, so real risk is low, but 7 near-identical call
+             sites across 2 files still deserve their own focused pass rather than a rushed one. -->
+        <exclude name="CheckResultSet"/>
+    </rule>
+    <rule ref="category/java/bestpractices.xml/LiteralsFirstInComparisons">
+        <priority>4</priority>
+    </rule>
+    <rule ref="category/java/bestpractices.xml/CheckResultSet">
+        <priority>4</priority>
+    </rule>
+
+    <rule ref="category/java/errorprone.xml">
+        <!-- Conflicts with this project's own explicit convention (pf-data-service/CLAUDE.md):
+             "Manually map objects; do NOT use mapper libraries." BeanUtils-avoidance rules in
+             this category assume the opposite default. -->
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+        <!-- All 9 instances are Mapper tests (AccountDtoMapperTest, CategoryDtoMapperTest, etc.)
+             using setAccessible() deliberately, to test manually-mapped private members,
+             matching this project's own "manually map objects" convention rather than fighting
+             it. -->
+        <exclude name="AvoidAccessibilityAlteration"/>
+        <!-- TestContainersConfig is a @TestConfiguration class, not a test class: only its name
+             (containing "Test") matches this rule's naming heuristic. -->
+        <exclude name="TestClassWithoutTestCases"/>
+        <!-- The 1 instance is `while ((line = reader.readLine()) != null)`, the standard,
+             universally-idiomatic Java line-reading pattern, not the confused-with-`==`
+             assignment this rule exists to catch. -->
+        <exclude name="AssignmentInOperand"/>
+        <!-- Extracting to named constants is safe in principle but needs a sensible name chosen
+             per call site across roughly 141 instances spanning service/controller/repository/dto
+             code: too large and too judgment-dependent for a mechanical triage-pass sweep. -->
+        <exclude name="AvoidDuplicateLiterals"/>
+        <!-- Mixed bag: the 5 CSV-parser instances are false positives (the CSVParser is actually
+             closed via a `Stream.onClose()` callback that this rule's analysis doesn't follow
+             across the lambda boundary, confirmed directly in StandardCsvParser and
+             CapitalOneCsvParser); the DTO-validation-test instances (ValidatorFactory) may be a
+             genuine, fixable gap. Needs per-instance sorting, not a blanket call either way. -->
+        <exclude name="CloseResource"/>
+    </rule>
+    <rule ref="category/java/errorprone.xml/AvoidDuplicateLiterals">
+        <priority>4</priority>
+    </rule>
+    <rule ref="category/java/errorprone.xml/CloseResource">
+        <priority>4</priority>
+    </rule>
+
+    <rule ref="category/java/design.xml">
+        <!-- This project deliberately uses Lombok-heavy, simple data classes (entities/DTOs):
+             exactly what these 3 rules flag as a "data class" or "too many fields/public members"
+             smell. That's the class's actual job here, not an accident to fix. -->
+        <exclude name="DataClass"/>
+        <exclude name="TooManyFields"/>
+        <exclude name="ExcessivePublicCount"/>
+        <!-- Fires on ordinary, idiomatic method chaining (e.g. a fluent builder, or
+             `getX().getY()` on this project's own manually-mapped DTOs) far more often than it
+             catches a real coupling problem; widely excluded in real-world PMD configs for the
+             same reason. -->
+        <exclude name="LawOfDemeter"/>
+        <!-- Fires on this project's own abstract Spring-test base classes (BaseIntegrationTest,
+             BaseControllerTest, BaseRepositoryTest) for the same reason as
+             bestpractices.xml/AbstractClassWithoutAbstractMethod above: deliberately abstract
+             purely to share test configuration via inheritance. -->
+        <exclude name="AbstractClassWithoutAnyMethod"/>
+        <!-- Dominated by 2 patterns that are both normal here, not "God class" candidates: this
+             project's JDBC-Client-only repositories (CLAUDE.md) naturally accumulate many small
+             query methods, and comprehensive test classes naturally accumulate many @Test methods.
+             More of either is the intended shape, not a smell. -->
+        <exclude name="TooManyMethods"/>
+        <!-- All 11 instances are either Spring Security's own required bean-method signature
+             (`SecurityFilterChain ... throws Exception`, SecurityConfig) or test methods using the
+             common, harmless "declare throws Exception broadly" idiom, where an uncaught exception
+             simply (and correctly) fails the test. -->
+        <exclude name="SignatureDeclareThrowsException"/>
+        <!-- A high import count here mostly reflects 2 deliberate choices, not real coupling: this
+             project's manual-mapping convention (no MapStruct) means services/repositories import
+             DTOs/entities directly, and thorough test fixtures import broadly for mocking. The
+             substantive version of this signal is already captured by CouplingBetweenObjects
+             below, tracked as a real finding on the same 3 main classes. -->
+        <exclude name="ExcessiveImports"/>
+        <!-- All 4 instances declare an unchecked exception in `throws` specifically to pair with
+             this project's own required Javadoc `@throws` documentation (CLAUDE.md): a
+             deliberate documentation choice, not an oversight. -->
+        <exclude name="AvoidUncheckedExceptionsInSignatures"/>
+        <!-- All 4 instances (one per CSV parser class) are `catch (CsvParsingException e) {
+             throw e; }` ahead of a broader `catch (Exception e)`: deliberately shielding an
+             already-correctly-typed exception from being needlessly re-wrapped by the broader
+             catch below it, not a pointless rethrow. -->
+        <exclude name="AvoidRethrowingException"/>
+        <!-- The 1 instance (StandardCsvParser) is a throw inside a `Stream.onClose()` lambda,
+             which runs later/asynchronously relative to the surrounding try/catch: this rule's
+             control-flow analysis treats it as if it were caught synchronously, which it can't be. -->
+        <exclude name="ExceptionAsFlowControl"/>
+        <!-- Real complexity signal, most concentrated in the CSV parser classes (bank-format
+             parsing logic) plus a few Transaction-related service/repository classes: genuine
+             refactoring candidates, not a mechanical fix. -->
+        <exclude name="CyclomaticComplexity"/>
+        <exclude name="NPathComplexity"/>
+        <exclude name="CognitiveComplexity"/>
+        <exclude name="GodClass"/>
+        <!-- Flags the same 3 classes ExcessiveImports did (TransactionRepository,
+             TransactionImportService, TransactionService) with a more substantive metric:
+             genuine split candidates worth a real look. -->
+        <exclude name="CouplingBetweenObjects"/>
+        <!-- The 1 instance (TransactionCrudController) needs a real API-shape change (a
+             filter/request object) to fix properly, not a mechanical edit. -->
+        <exclude name="ExcessiveParameterList"/>
+        <!-- All 19 instances are deliberate boundary catches (JwtAuthenticationFilter's JWT
+             validation, TransactionImportService and all 5 CSV parsers' file-import path): each
+             converts an unpredictable failure into a clean, safe, domain-appropriate response
+             (a 401, or a wrapped CsvParsingException) rather than letting a raw exception escape
+             the boundary. That's the correct, deliberate shape for this kind of boundary, not the
+             silent-swallow anti-pattern this rule exists to catch. -->
+        <exclude name="AvoidCatchingGenericException"/>
+    </rule>
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <priority>4</priority>
+    </rule>
+    <rule ref="category/java/design.xml/NPathComplexity">
+        <priority>4</priority>
+    </rule>
+    <rule ref="category/java/design.xml/CognitiveComplexity">
+        <priority>4</priority>
+    </rule>
+    <rule ref="category/java/design.xml/GodClass">
+        <priority>4</priority>
+    </rule>
+    <rule ref="category/java/design.xml/CouplingBetweenObjects">
+        <priority>4</priority>
+    </rule>
+    <rule ref="category/java/design.xml/ExcessiveParameterList">
+        <priority>4</priority>
+    </rule>
+
+    <!-- pf-data-service/CLAUDE.md: "Provide complete Javadoc at both the class and method
+         levels." CommentRequired is the one documentation rule that maps to an actual stated
+         convention; the rest of this category (comment sizing/formatting) doesn't correspond to
+         anything this project has actually decided, so it's excluded rather than imported
+         wholesale. -->
+    <rule ref="category/java/documentation.xml">
+        <exclude name="CommentRequired"/>
+        <exclude name="CommentSize"/>
+    </rule>
+    <!-- Genuine, large-scale gap (727 findings) confirmed real, not fixable as a triage-pass
+         mechanical sweep: writing meaningful "what and why" Javadoc for hundreds of pre-existing
+         methods is its own dedicated effort. Downgraded to non-blocking and tracked as [PF-807]. -->
+    <rule ref="category/java/documentation.xml/CommentRequired">
+        <priority>4</priority>
+        <properties>
+            <property name="fieldCommentRequirement" value="Ignored"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/security.xml"/>
+
+    <rule ref="category/java/multithreading.xml">
+        <!-- All observed instances are method-local, method-scoped HashMaps (e.g.
+             AuthenticationService's per-call `extraClaims`, TransactionRepository's per-chunk SQL
+             `params`) misflagged purely because their enclosing class is a singleton bean: this
+             rule can't distinguish a thread-confined local variable from genuinely shared instance
+             state, and a local variable inside a method call is never shared across threads
+             regardless of the bean's own scope. -->
+        <exclude name="UseConcurrentHashMap"/>
+        <!-- The 1 instance (TokenBucket.tryConsume()) needs its entire body treated as one atomic
+             unit (refill-then-check-then-decrement); a block-level `synchronized(this)` around
+             the whole method body would be identical in locking semantics to the method modifier,
+             so rewriting it satisfies this rule in letter only, not in any real narrowing of the
+             critical section. Confirmed directly: doing that rewrite instead trips
+             AvoidSynchronizedStatement below, which wants a ReentrantLock instead of `synchronized`
+             in any form: the 2 rules disagree with each other here, and a ReentrantLock rewrite
+             is disproportionate for a single, already-correct, low-stakes rate limiter. -->
+        <exclude name="AvoidSynchronizedAtMethodLevel"/>
+    </rule>
+
+    <rule ref="category/java/performance.xml">
+        <!-- All 5 instances are the standard `Map.computeIfAbsent(key, k -> new ArrayList<>())`
+             grouping idiom: allocation is bounded by the number of distinct keys, not loop
+             iterations, despite being textually inside a loop. A well-known noise pattern for this
+             rule against this specific idiom. -->
+        <exclude name="AvoidInstantiatingObjectsInLoops"/>
+    </rule>
+
+</ruleset>

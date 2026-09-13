@@ -17,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -67,9 +69,7 @@ public class SynovusCsvParser implements TransactionParser {
      */
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
-        if (inputStream == null) {
-            throw new NullPointerException("InputStream cannot be null");
-        }
+        Objects.requireNonNull(inputStream, "InputStream cannot be null");
         try {
             // read until we find the header row starting with "date"
             BufferedReader lineReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
@@ -87,10 +87,10 @@ public class SynovusCsvParser implements TransactionParser {
                     // check if line starts with date (handling potential quotes or bom)
                     // we remove leading quotes to check for "date"
                     String headerCheck = trimmedLine.replace("\"", "");
-                    if (headerCheck.toLowerCase().startsWith("date")) {
+                    if (headerCheck.toLowerCase(Locale.ROOT).startsWith("date")) {
                         headerFound = true;
                         isTabSeparated = line.contains("\t");
-                        csvContent.append(line).append("\n");
+                        csvContent.append(line).append('\n');
                     }
                     continue;
                 }
@@ -98,7 +98,7 @@ public class SynovusCsvParser implements TransactionParser {
                 if (trimmedLine.contains("Totals:")) {
                     continue;
                 }
-                csvContent.append(line).append("\n");
+                csvContent.append(line).append('\n');
             }
 
             if (!headerFound) {

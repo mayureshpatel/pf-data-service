@@ -74,16 +74,6 @@ public class UserService implements UserDetailsService {
     }
 
     /**
-     * Persists changes to an existing user.
-     *
-     * @param user the user to update
-     * @return the number of rows updated
-     */
-    private int update(User user) {
-        return this.repository.update(user);
-    }
-
-    /**
      * Finds a user by username.
      *
      * @param username the username to look up

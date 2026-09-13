@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -42,9 +43,9 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             String logMessage = String.format("User: %s | %s %s - Status: %d (%d ms)",
                     userId, method, uri, status, duration);
 
-            if (status >= 500) {
+            if (status >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
                 log.error(logMessage);
-            } else if (status >= 400) {
+            } else if (status >= HttpStatus.BAD_REQUEST.value()) {
                 log.warn(logMessage);
             } else {
                 log.info(logMessage);

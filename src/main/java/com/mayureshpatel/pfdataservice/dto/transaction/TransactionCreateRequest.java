@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -52,11 +53,11 @@ public class TransactionCreateRequest {
             return BigDecimal.ZERO;
         }
 
-        if ("ADJUSTMENT".equals(type)) {
+        if (TransactionType.ADJUSTMENT.name().equals(type)) {
             return amount;
         }
 
-        if ("INCOME".equals(type) || "TRANSFER_IN".equals(type)) {
+        if (TransactionType.INCOME.name().equals(type) || TransactionType.TRANSFER_IN.name().equals(type)) {
             return amount.abs();
         }
 

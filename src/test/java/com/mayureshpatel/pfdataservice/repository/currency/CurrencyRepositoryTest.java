@@ -57,7 +57,7 @@ class CurrencyRepositoryTest extends BaseRepositoryTest {
 
             // Assert
             assertTrue(all.size() >= 2);
-            assertTrue(active.size() >= 1);
+            assertFalse(active.isEmpty());
             assertTrue(active.stream().allMatch(Currency::isActive));
         }
 

@@ -49,7 +49,7 @@ class CsvImportIntegrationTest extends BaseIntegrationTest {
                 csvContent.getBytes()
         );
 
-        String previewResponse = mockMvc.perform(MockMvcRequestBuilders.multipart("/api/v1/accounts/100/upload")
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/api/v1/accounts/100/upload")
                         .file(file)
                         .param("bankName", "STANDARD")
                         .with(request -> {
@@ -59,8 +59,7 @@ class CsvImportIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].description").value("Test Merchant"))
                 .andExpect(jsonPath("$[0].amount").value(50.00))
-                .andExpect(jsonPath("$[0].type").value("EXPENSE"))
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(jsonPath("$[0].type").value("EXPENSE"));
 
         // 2. Map preview to SaveTransactionRequest
         TransactionDto transactionDto = TransactionDto.builder()

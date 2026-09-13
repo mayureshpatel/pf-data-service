@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
+import java.util.Locale;
+
 public enum Frequency {
     WEEKLY,
     BI_WEEKLY,
@@ -14,6 +16,6 @@ public enum Frequency {
      * @return the Frequency enum
      */
     public static Frequency fromCode(String code) {
-        return Frequency.valueOf(code.toUpperCase());
+        return Frequency.valueOf(code.toUpperCase(Locale.ROOT));
     }
 }

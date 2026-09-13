@@ -335,11 +335,9 @@ class TransactionImportServiceTest {
             importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);
 
             // Assert
-            verify(transactionRepository).insertAll(argThat(list -> {
-                if (list.size() != 1) return false;
-                TransactionCreateRequest req = list.get(0);
-                return Long.valueOf(42L).equals(req.getCategoryId());
-            }));
+            verify(transactionRepository).insertAll(argThat(list ->
+                    list.size() == 1 && Long.valueOf(42L).equals(list.get(0).getCategoryId())
+            ));
         }
     }
 }

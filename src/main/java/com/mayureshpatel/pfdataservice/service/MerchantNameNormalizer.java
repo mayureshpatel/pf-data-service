@@ -105,7 +105,7 @@ public class MerchantNameNormalizer {
                 result.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
             }
             if (i < words.length - 1) {
-                result.append(" ");
+                result.append(' ');
             }
         }
         return result.toString();

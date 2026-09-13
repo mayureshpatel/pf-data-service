@@ -144,7 +144,7 @@ class BudgetCreateRequestTest {
                     .build();
             Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
             // This will have multiple violations: @Positive and @DecimalMin(1)
-            assertTrue(violations.size() >= 1);
+            assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("month")));
         }
 
