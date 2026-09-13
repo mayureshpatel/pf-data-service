@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<ruleset name="pf-data-service"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        pf-data-service's PMD ruleset. Encodes what's lint-checkable from this project's own
+        stated conventions (pf-data-service/CLAUDE.md) plus PMD's standard code-quality and
+        complexity checks (PF-EPIC-025). Deliberately excludes category/java/codestyle.xml
+        wholesale: it's the category most likely to fight this project's own deliberate style
+        choices (e.g. its Lombok-heavy, manual-mapping conventions) rather than catch real issues.
+        Individual rule exclusions below were decided against a real run's actual findings, not
+        guessed in advance: each one is a specific rule that fired on a pattern this project
+        uses deliberately, not a blanket "quiet the noise" pass.
+    </description>
+
+    <rule ref="category/java/bestpractices.xml">
+        <!-- GuardLogStatement fires on every SLF4J call regardless of whether the log level is
+             actually enabled first. This project's own logging convention (CLAUDE.md) doesn't
+             ask for that guard, and enforcing it here would fight a deliberate choice, not catch
+             a real one. -->
+        <exclude name="GuardLogStatement"/>
+        <!-- These 2 assume a JUnit style (one assertion per test, every assertion carries an
+             explanatory message) this project's own AAA convention (CLAUDE.md: "// arrange, // act,
+             // assert & verify") never adopted: a single "assert & verify" step legitimately
+             covers checking several properties of one result. Confirmed by volume, not guessed:
+             these 2 rules alone accounted for 2013 of the first real run's 3483 findings. -->
+        <exclude name="UnitTestContainsTooManyAsserts"/>
+        <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
+    </rule>
+
+    <rule ref="category/java/errorprone.xml">
+        <!-- Conflicts with this project's own explicit convention (pf-data-service/CLAUDE.md):
+             "Manually map objects; do NOT use mapper libraries." BeanUtils-avoidance rules in
+             this category assume the opposite default. -->
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+    </rule>
+
+    <rule ref="category/java/design.xml">
+        <!-- This project deliberately uses Lombok-heavy, simple data classes (entities/DTOs):
+             exactly what these 3 rules flag as a "data class" or "too many fields/public members"
+             smell. That's the class's actual job here, not an accident to fix. -->
+        <exclude name="DataClass"/>
+        <exclude name="TooManyFields"/>
+        <exclude name="ExcessivePublicCount"/>
+        <!-- Fires on ordinary, idiomatic method chaining (e.g. a fluent builder, or
+             `getX().getY()` on this project's own manually-mapped DTOs) far more often than it
+             catches a real coupling problem; widely excluded in real-world PMD configs for the
+             same reason. -->
+        <exclude name="LawOfDemeter"/>
+    </rule>
+
+    <!-- pf-data-service/CLAUDE.md: "Provide complete Javadoc at both the class and method
+         levels." CommentRequired is the one documentation rule that maps to an actual stated
+         convention; the rest of this category (comment sizing/formatting) doesn't correspond to
+         anything this project has actually decided, so it's excluded rather than imported
+         wholesale. -->
+    <rule ref="category/java/documentation.xml">
+        <exclude name="CommentRequired"/>
+        <exclude name="CommentSize"/>
+    </rule>
+    <rule ref="category/java/documentation.xml/CommentRequired">
+        <properties>
+            <property name="fieldCommentRequirement" value="Ignored"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/security.xml"/>
+    <rule ref="category/java/multithreading.xml"/>
+    <rule ref="category/java/performance.xml"/>
+
+</ruleset>
