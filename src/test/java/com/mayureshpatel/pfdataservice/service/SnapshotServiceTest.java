@@ -47,7 +47,7 @@ class SnapshotServiceTest {
         @Test
         @DisplayName("should create new snapshot when none exists and user owns account")
         void shouldCreateNewSnapshot() {
-            // Arrange
+            // arrange
             LocalDate dateInMonth = LocalDate.of(2026, 3, 15);
             LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("1000.00")).build();
@@ -56,10 +56,10 @@ class SnapshotServiceTest {
             when(transactionRepository.getNetFlowAfterDate(eq(ACCOUNT_ID), eq(endOfMonth))).thenReturn(new BigDecimal("100.00"));
             when(snapshotRepository.findByAccountIdAndSnapshotDate(ACCOUNT_ID, endOfMonth)).thenReturn(Optional.empty());
 
-            // Act
+            // act
             snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, dateInMonth);
 
-            // Assert
+            // assert & verify
             verify(snapshotRepository).insert(argThat(s ->
                     s.getBalance().compareTo(new BigDecimal("900.00")) == 0 &&
                             s.getSnapshotDate().equals(endOfMonth) &&
@@ -70,7 +70,7 @@ class SnapshotServiceTest {
         @Test
         @DisplayName("should update existing snapshot when it already exists and user owns account")
         void shouldUpdateExistingSnapshot() {
-            // Arrange
+            // arrange
             LocalDate dateInMonth = LocalDate.of(2026, 3, 15);
             LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("1000.00")).build();
@@ -80,10 +80,10 @@ class SnapshotServiceTest {
             when(transactionRepository.getNetFlowAfterDate(eq(ACCOUNT_ID), eq(endOfMonth))).thenReturn(BigDecimal.ZERO);
             when(snapshotRepository.findByAccountIdAndSnapshotDate(ACCOUNT_ID, endOfMonth)).thenReturn(Optional.of(existing));
 
-            // Act
+            // act
             snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, dateInMonth);
 
-            // Assert
+            // assert & verify
             verify(snapshotRepository).update(argThat(s ->
                     s.getId().equals(1L) &&
                             s.getBalance().compareTo(new BigDecimal("1000.00")) == 0
@@ -93,7 +93,7 @@ class SnapshotServiceTest {
         @Test
         @DisplayName("should handle null net flow as zero")
         void shouldHandleNullNetFlow() {
-            // Arrange
+            // arrange
             LocalDate dateInMonth = LocalDate.of(2026, 3, 15);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("1000.00")).build();
 
@@ -101,31 +101,31 @@ class SnapshotServiceTest {
             when(transactionRepository.getNetFlowAfterDate(anyLong(), any())).thenReturn(null);
             when(snapshotRepository.findByAccountIdAndSnapshotDate(anyLong(), any())).thenReturn(Optional.empty());
 
-            // Act
+            // act
             snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, dateInMonth);
 
-            // Assert
+            // assert & verify
             verify(snapshotRepository).insert(argThat(s -> s.getBalance().compareTo(new BigDecimal("1000.00")) == 0));
         }
 
         @Test
         @DisplayName("should throw IllegalArgumentException if account not found")
         void shouldThrowOnAccountNotFound() {
-            // Arrange
+            // arrange
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(IllegalArgumentException.class, () -> snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, LocalDate.now()));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user does not own account")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(99L).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, LocalDate.now()));
         }
     }

@@ -46,22 +46,22 @@ class TransactionCategorizerTest {
         @Test
         @DisplayName("should return -1L if no strategies match")
         void shouldReturnDefaultIfNoMatches() {
-            // Arrange
+            // arrange
             when(s1.getOrder()).thenReturn(1);
             when(s1.categorize(any(Transaction.class), any())).thenReturn(Optional.empty());
             strategies.add(s1);
 
-            // Act
+            // act
             Long result = categorizer.guessCategory(Transaction.builder().build(), List.of());
 
-            // Assert
+            // assert & verify
             assertEquals(-1L, result);
         }
 
         @Test
         @DisplayName("should call strategies in order and return first match")
         void shouldFollowOrder() {
-            // Arrange
+            // arrange
             when(s1.getOrder()).thenReturn(200);
             when(s2.getOrder()).thenReturn(100);
 
@@ -70,10 +70,10 @@ class TransactionCategorizerTest {
             strategies.add(s1);
             strategies.add(s2);
 
-            // Act
+            // act
             Long result = categorizer.guessCategory(Transaction.builder().build(), List.of());
 
-            // Assert
+            // assert & verify
             assertEquals(10L, result);
             verify(s2).categorize(any(Transaction.class), any());
             verify(s1, never()).categorize(any(Transaction.class), any());
@@ -82,18 +82,18 @@ class TransactionCategorizerTest {
         @Test
         @DisplayName("should handle null account or user in context")
         void shouldHandleNullContextInfo() {
-            // Arrange
+            // arrange
             when(s1.getOrder()).thenReturn(1);
             when(s1.categorize(any(Transaction.class), any())).thenReturn(Optional.empty());
             strategies.add(s1);
 
-            // Act
+            // act
             // Case 1: account is null
             categorizer.guessCategory(Transaction.builder().account(null).build(), List.of());
             // Case 2: userId is null
             categorizer.guessCategory(Transaction.builder().account(Account.builder().userId(null).build()).build(), List.of());
 
-            // Assert
+            // assert & verify
             verify(s1, times(2)).categorize(any(Transaction.class), any());
         }
     }
@@ -104,17 +104,17 @@ class TransactionCategorizerTest {
         @Test
         @DisplayName("should return match for update request")
         void shouldHandleRequest() {
-            // Arrange
+            // arrange
             when(s1.getOrder()).thenReturn(1);
             when(s1.categorize(any(TransactionUpdateRequest.class), any())).thenReturn(Optional.of(50L));
             strategies.add(s1);
 
             TransactionUpdateRequest request = TransactionUpdateRequest.builder().description("Test").build();
 
-            // Act
+            // act
             Long result = categorizer.guessCategory(1L, request, List.of(), List.of());
 
-            // Assert
+            // assert & verify
             assertEquals(50L, result);
             verify(s1).categorize(any(TransactionUpdateRequest.class), any());
         }
@@ -122,15 +122,15 @@ class TransactionCategorizerTest {
         @Test
         @DisplayName("should return -1L for request if no match")
         void shouldReturnDefaultIfNoMatchForRequest() {
-            // Arrange
+            // arrange
             when(s1.getOrder()).thenReturn(1);
             when(s1.categorize(any(TransactionUpdateRequest.class), any())).thenReturn(Optional.empty());
             strategies.add(s1);
 
-            // Act
+            // act
             Long result = categorizer.guessCategory(1L, TransactionUpdateRequest.builder().build(), List.of(), List.of());
 
-            // Assert
+            // assert & verify
             assertEquals(-1L, result);
         }
     }

@@ -19,14 +19,14 @@ class TransactionDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<TransactionDtoMapper> constructor = TransactionDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         TransactionDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -37,17 +37,17 @@ class TransactionDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             TransactionDto result = TransactionDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             OffsetDateTime now = OffsetDateTime.now();
             Transaction transaction = Transaction.builder()
                     .id(1L)
@@ -57,10 +57,10 @@ class TransactionDtoMapperTest {
                     .type(TransactionType.EXPENSE)
                     .build();
 
-            // Act
+            // act
             TransactionDto dto = TransactionDtoMapper.toDto(transaction);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(transaction.getId(), dto.id());
             assertEquals(transaction.getAmount(), dto.amount());

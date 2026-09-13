@@ -17,14 +17,14 @@ class CategoryDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<CategoryDtoMapper> constructor = CategoryDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         CategoryDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -35,17 +35,17 @@ class CategoryDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             CategoryDto result = CategoryDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             Category category = Category.builder()
                     .id(1L)
                     .userId(100L)
@@ -56,10 +56,10 @@ class CategoryDtoMapperTest {
                     .color("#FF0000")
                     .build();
 
-            // Act
+            // act
             CategoryDto dto = CategoryDtoMapper.toDto(category);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(category.getId(), dto.id());
             assertEquals(category.getUserId(), dto.userId());
@@ -73,7 +73,7 @@ class CategoryDtoMapperTest {
         @Test
         @DisplayName("should map parent ID when parentId is present")
         void toDto_shouldMapParentId() {
-            // Arrange
+            // arrange
             Category parentCategory = Category.builder()
                     .id(1L)
                     .userId(100L)
@@ -89,10 +89,10 @@ class CategoryDtoMapperTest {
                     .type("EXPENSE")
                     .build();
 
-            // Act
+            // act
             CategoryDto dto = CategoryDtoMapper.toDto(category);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNotNull(dto.parent());
             assertEquals(1L, dto.parent().id());
@@ -101,7 +101,7 @@ class CategoryDtoMapperTest {
         @Test
         @DisplayName("should handle null optional fields")
         void toDto_shouldHandleNullOptionals() {
-            // Arrange
+            // arrange
             Category category = Category.builder()
                     .id(1L)
                     .name("Minimal")
@@ -112,10 +112,10 @@ class CategoryDtoMapperTest {
                     .parentId(null)
                     .build();
 
-            // Act
+            // act
             CategoryDto dto = CategoryDtoMapper.toDto(category);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.type());
             assertNull(dto.userId());

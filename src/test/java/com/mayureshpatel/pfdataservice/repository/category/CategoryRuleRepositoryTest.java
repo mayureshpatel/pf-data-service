@@ -38,10 +38,10 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all rules by user ID ordered by priority desc and specificity desc")
         void shouldFindByUserId() {
-            // Act
+            // act
             List<CategoryRule> result = repository.findByUserId(USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(3, result.size());
             // baseline priorities: WHOLEFDS=10, SHELL=5, CAFE=1
             assertEquals(List.of("WHOLEFDS"), result.get(0).getKeywords());
@@ -126,20 +126,20 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should count rules for a specific category")
         void shouldCountByCategoryId() {
-            // Act -- category 7 (Groceries) has exactly one baseline rule (WHOLEFDS)
+            // act -- category 7 (Groceries) has exactly one baseline rule (WHOLEFDS)
             long count = repository.countByCategoryId(7L);
 
-            // Assert
+            // assert & verify
             assertEquals(1, count);
         }
 
         @Test
         @DisplayName("should count zero rules for a category with none")
         void shouldCountByCategoryIdZeroWhenNoRules() {
-            // Act -- category 6 (Rent) has no baseline category rule
+            // act -- category 6 (Rent) has no baseline category rule
             long count = repository.countByCategoryId(6L);
 
-            // Assert
+            // assert & verify
             assertEquals(0, count);
         }
     }
@@ -288,14 +288,14 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should delete a category rule by ID and UserID")
         void shouldDeleteById() {
-            // Arrange
+            // arrange
             List<CategoryRule> existing = repository.findByUserId(USER_1);
             Long idToDelete = existing.get(0).getId();
 
-            // Act
+            // act
             int rows = repository.deleteById(idToDelete, USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             List<CategoryRule> afterDelete = repository.findByUserId(USER_1);
             assertEquals(2, afterDelete.size());

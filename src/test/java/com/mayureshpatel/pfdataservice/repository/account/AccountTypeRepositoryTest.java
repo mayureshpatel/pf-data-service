@@ -26,7 +26,7 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert and find active account types ordered by sort order")
         void shouldInsertAndFind() {
-            // Arrange
+            // arrange
             repository.insert(AccountTypeCreateRequest.builder()
                     .code("TST1")
                     .label("Test 1")
@@ -47,10 +47,10 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
                     .isActive(true)
                     .build());
 
-            // Act
+            // act
             List<AccountType> result = repository.findByIsActiveTrueOrderBySortOrder();
 
-            // Assert
+            // assert & verify
             assertTrue(result.size() >= 2);
             // Verify order based on sortOrder
             assertTrue(result.indexOf(result.stream().filter(a -> a.getCode().equals("TST2")).findFirst().get()) <
@@ -60,7 +60,7 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should delete by code")
         void shouldDeleteByCode() {
-            // Arrange
+            // arrange
             repository.insert(AccountTypeCreateRequest.builder()
                     .code("DEL1")
                     .label("Delete Me")
@@ -68,10 +68,10 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
                     .isActive(true)
                     .build());
 
-            // Act
+            // act
             int rows = repository.deleteByCode("DEL1");
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             List<AccountType> types = repository.findByIsActiveTrueOrderBySortOrder();
             assertTrue(types.stream().noneMatch(a -> a.getCode().equals("DEL1")));
@@ -80,7 +80,7 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should delete by entity")
         void shouldDeleteEntity() {
-            // Arrange
+            // arrange
             repository.insert(AccountTypeCreateRequest.builder()
                     .code("DEL2")
                     .label("Delete Me 2")
@@ -89,10 +89,10 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
                     .build());
             AccountType entity = AccountType.builder().code("DEL2").build();
 
-            // Act
+            // act
             int rows = repository.delete(entity);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
         }
 

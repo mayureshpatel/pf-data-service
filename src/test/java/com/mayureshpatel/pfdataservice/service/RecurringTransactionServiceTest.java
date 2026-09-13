@@ -58,7 +58,7 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should return mapped DTOs for active recurring transactions")
         void shouldReturnList() {
-            // Arrange
+            // arrange
             RecurringTransaction rt = RecurringTransaction.builder()
                     .id(RECURRING_ID)
                     .userId(USER_ID)
@@ -67,10 +67,10 @@ class RecurringTransactionServiceTest {
                     .build();
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(List.of(rt));
 
-            // Act
+            // act
             List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals(RECURRING_ID, result.get(0).id());
         }
@@ -83,7 +83,7 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should detect various stable intervals (Weekly, Monthly, Bi-Weekly, Quarterly, Yearly)")
         void shouldDetectAllFrequencies() {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             OffsetDateTime zone = OffsetDateTime.now();
 
@@ -115,10 +115,10 @@ class RecurringTransactionServiceTest {
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(w1, w2, w3, m1, m2, m3, b1, b2, b3, q1, q2, q3, y1, y2, y3));
 
-            // Act
+            // act
             List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.WEEKLY));
             assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.MONTHLY));
             assertTrue(result.stream().anyMatch(s -> s.frequency() == Frequency.BI_WEEKLY));
@@ -129,7 +129,7 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should return empty if intervals are unstable")
         void shouldReturnEmptyForUnstableIntervals() {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             Transaction t1 = Transaction.builder().transactionDate(now.minusDays(40).atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("R").build();
             Transaction t2 = Transaction.builder().transactionDate(now.minusDays(20).atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("R").build();
@@ -138,17 +138,17 @@ class RecurringTransactionServiceTest {
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(t1, t2, t3));
 
-            // Act
+            // act
             List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("should handle null names and empty descriptions and null merchants")
         void shouldHandleNullNames() {
-            // Arrange
+            // arrange
             Transaction t1 = Transaction.builder().description(null).merchant(null).build();
             Transaction t2 = Transaction.builder().description("  ").merchant(null).build();
             Merchant m = Merchant.builder().cleanName(null).build();
@@ -158,17 +158,17 @@ class RecurringTransactionServiceTest {
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(t1, t2, t3, t4, t4, t4));
 
-            // Act
+            // act
             List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("should return null if intervals match no known frequency")
         void shouldHandleNoMatchedFrequency() {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             // Avg interval ~50 (no frequency for this)
             Transaction t1 = Transaction.builder().transactionDate(now.minusDays(100).atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("None").build();
@@ -178,10 +178,10 @@ class RecurringTransactionServiceTest {
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(t1, t2, t3));
 
-            // Act
+            // act
             List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
     }
@@ -192,7 +192,7 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should detect QUARTERLY for a stable ~90-day interval group (PF-205)")
         void shouldDetectQuarterly() {
-            // Arrange
+            // arrange
             OffsetDateTime zone = OffsetDateTime.now();
             LocalDate now = LocalDate.now();
             List<Transaction> group = List.of(
@@ -201,17 +201,17 @@ class RecurringTransactionServiceTest {
                     Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).build()
             );
 
-            // Act
+            // act
             Frequency result = ReflectionTestUtils.invokeMethod(recurringService, "detectFrequency", group);
 
-            // Assert
+            // assert & verify
             assertEquals(Frequency.QUARTERLY, result);
         }
 
         @Test
         @DisplayName("should still return null for a stable interval in an intentionally-unclassified gap (e.g. ~20 days) (PF-205)")
         void shouldReturnNullForIntentionallyUnclassifiedGap() {
-            // Arrange -- ~20 days falls between BI_WEEKLY's (13-16) and MONTHLY's (25-35) buckets;
+            // arrange -- ~20 days falls between BI_WEEKLY's (13-16) and MONTHLY's (25-35) buckets;
             // no Frequency enum value corresponds to a ~20-day cadence, so this must stay null
             OffsetDateTime zone = OffsetDateTime.now();
             LocalDate now = LocalDate.now();
@@ -221,10 +221,10 @@ class RecurringTransactionServiceTest {
                     Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).build()
             );
 
-            // Act
+            // act
             Frequency result = ReflectionTestUtils.invokeMethod(recurringService, "detectFrequency", group);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
     }
@@ -235,10 +235,10 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should calculate correct next dates for all frequencies via reflection")
         void shouldCalculateCorrectly() {
-            // Arrange
+            // arrange
             LocalDate last = LocalDate.of(2026, 3, 1);
 
-            // Act & Assert
+            // act & assert & verify
             assertEquals(last.plusMonths(1), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.MONTHLY));
             assertEquals(last.plusWeeks(1), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.WEEKLY));
             assertEquals(last.plusWeeks(2), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.BI_WEEKLY));
@@ -254,7 +254,7 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should create successfully when everything is valid")
         void shouldCreate() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(accountRepository.findById(10L)).thenReturn(Optional.of(Account.builder().id(10L).userId(USER_ID).build()));
             when(merchantRepository.findById(20L)).thenReturn(Optional.of(Merchant.builder().id(20L).build()));
@@ -263,10 +263,10 @@ class RecurringTransactionServiceTest {
             RecurringTransactionCreateRequest request = RecurringTransactionCreateRequest.builder()
                     .userId(USER_ID).accountId(10L).merchantId(20L).build();
 
-            // Act
+            // act
             int result = recurringService.createRecurringTransaction(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
         }
 
@@ -312,7 +312,7 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should update successfully when ownership and account are valid")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(USER_ID).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
             when(accountRepository.findById(10L)).thenReturn(Optional.of(Account.builder().id(10L).userId(USER_ID).build()));
@@ -322,10 +322,10 @@ class RecurringTransactionServiceTest {
             RecurringTransactionUpdateRequest request = RecurringTransactionUpdateRequest.builder()
                     .id(RECURRING_ID).accountId(10L).merchantId(20L).build();
 
-            // Act
+            // act
             int result = recurringService.updateRecurringTransaction(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
         }
 
@@ -382,15 +382,15 @@ class RecurringTransactionServiceTest {
         @Test
         @DisplayName("should delete successfully if owned")
         void shouldDelete() {
-            // Arrange
+            // arrange
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(USER_ID).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
             when(recurringRepository.delete(RECURRING_ID, USER_ID)).thenReturn(1);
 
-            // Act
+            // act
             int result = recurringService.deleteRecurringTransaction(USER_ID, RECURRING_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
         }
 

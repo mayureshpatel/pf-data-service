@@ -151,67 +151,67 @@ class SecurityServiceTest {
         @Test
         @DisplayName("should return true when user owns the account")
         void isAccountOwner_matchingId_returnsTrue() {
-            // Arrange
+            // arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             Account account = buildAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act
+            // act
             boolean result = securityService.isAccountOwner(ACCOUNT_ID, userDetails);
 
-            // Assert
+            // assert & verify
             assertThat(result).isTrue();
         }
 
         @Test
         @DisplayName("should return false when user does not own the account")
         void isAccountOwner_mismatchedId_returnsFalse() {
-            // Arrange
+            // arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             Account account = buildAccount(ANOTHER_USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act
+            // act
             boolean result = securityService.isAccountOwner(ACCOUNT_ID, userDetails);
 
-            // Assert
+            // assert & verify
             assertThat(result).isFalse();
         }
 
         @Test
         @DisplayName("should return false when account is not found")
         void isAccountOwner_recordNotFound_returnsFalse() {
-            // Arrange
+            // arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
 
-            // Act
+            // act
             boolean result = securityService.isAccountOwner(ACCOUNT_ID, userDetails);
 
-            // Assert
+            // assert & verify
             assertThat(result).isFalse();
         }
 
         @Test
         @DisplayName("should return false when accountId is null")
         void isAccountOwner_nullAccountId_returnsFalse() {
-            // Arrange
+            // arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
 
-            // Act
+            // act
             boolean result = securityService.isAccountOwner(null, userDetails);
 
-            // Assert
+            // assert & verify
             assertThat(result).isFalse();
         }
 
         @Test
         @DisplayName("should return false when userDetails is null")
         void isAccountOwner_nullUserDetails_returnsFalse() {
-            // Act
+            // act
             boolean result = securityService.isAccountOwner(ACCOUNT_ID, null);
 
-            // Assert
+            // assert & verify
             assertThat(result).isFalse();
         }
     }
@@ -223,52 +223,52 @@ class SecurityServiceTest {
         @Test
         @DisplayName("should return true when user owns the transaction")
         void isTransactionOwner_matchingId_returnsTrue() {
-            // Arrange
+            // arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             Transaction transaction = buildTransaction(USER_ID);
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(transaction));
 
-            // Act
+            // act
             boolean result = securityService.isTransactionOwner(TRANSACTION_ID, userDetails);
 
-            // Assert
+            // assert & verify
             assertThat(result).isTrue();
         }
 
         @Test
         @DisplayName("should return false when transaction is not found or not owned")
         void isTransactionOwner_notOwned_returnsFalse() {
-            // Arrange
+            // arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.empty());
 
-            // Act
+            // act
             boolean result = securityService.isTransactionOwner(TRANSACTION_ID, userDetails);
 
-            // Assert
+            // assert & verify
             assertThat(result).isFalse();
         }
 
         @Test
         @DisplayName("should return false when transactionId is null")
         void isTransactionOwner_nullTransactionId_returnsFalse() {
-            // Arrange
+            // arrange
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
 
-            // Act
+            // act
             boolean result = securityService.isTransactionOwner(null, userDetails);
 
-            // Assert
+            // assert & verify
             assertThat(result).isFalse();
         }
 
         @Test
         @DisplayName("should return false when userDetails is null")
         void isTransactionOwner_nullUserDetails_returnsFalse() {
-            // Act
+            // act
             boolean result = securityService.isTransactionOwner(TRANSACTION_ID, null);
 
-            // Assert
+            // assert & verify
             assertThat(result).isFalse();
         }
     }

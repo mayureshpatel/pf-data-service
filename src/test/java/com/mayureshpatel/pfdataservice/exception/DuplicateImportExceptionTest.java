@@ -16,13 +16,13 @@ class DuplicateImportExceptionTest {
         @Test
         @DisplayName("should create exception with provided message")
         void shouldCreateWithProvidedMessage() {
-            // Arrange
+            // arrange
             String message = "File already imported: hash123";
 
-            // Act
+            // act
             DuplicateImportException exception = new DuplicateImportException(message);
 
-            // Assert
+            // assert & verify
             assertEquals(message, exception.getMessage());
         }
     }

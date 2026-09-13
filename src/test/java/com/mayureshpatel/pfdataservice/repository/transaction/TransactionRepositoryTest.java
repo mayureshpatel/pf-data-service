@@ -46,17 +46,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by type and user")
         void shouldFilterByType() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, TransactionType.INCOME, null, null, null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.getContent().stream().allMatch(t -> t.getType() == TransactionType.INCOME));
         }
@@ -64,17 +64,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by amount range")
         void shouldFilterByAmount() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, new BigDecimal("1000.00"), new BigDecimal("2000.00"), null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.getContent().stream().allMatch(t -> 
                 t.getAmount().compareTo(new BigDecimal("1000.00")) >= 0 && 
@@ -85,19 +85,19 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by an inclusive start/end date range")
         void shouldFilterByDateRange() {
-            // Arrange -- baseline's 3 specific transactions (1000, 1001, 1002) fall on
+            // arrange -- baseline's 3 specific transactions (1000, 1001, 1002) fall on
             // 2026-03-01/02/03; 1002 is timestamped 12:00:00, well after midnight on the end date
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, null, null,
                     LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 3), null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             List<Long> ids = result.getContent().stream().map(Transaction::getId).toList();
             assertTrue(ids.containsAll(List.of(1000L, 1001L, 1002L)),
                     "expected all three transactions on or between the start and end dates, including " +
@@ -107,18 +107,18 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should exclude transactions outside the date range")
         void shouldExcludeTransactionsOutsideDateRange() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, null, null,
                     LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 2), null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert -- only 1001 is on 2026-03-02; 1000 and 1002 must not appear
+            // assert & verify -- only 1001 is on 2026-03-02; 1000 and 1002 must not appear
             List<Long> ids = result.getContent().stream().map(Transaction::getId).toList();
             assertTrue(ids.contains(1001L));
             assertFalse(ids.contains(1000L));
@@ -128,17 +128,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by category name substring, case-insensitively")
         void shouldFilterByCategoryName() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, "gas", null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert -- only transaction 1001 is categorized as Gas
+            // assert & verify -- only transaction 1001 is categorized as Gas
             assertEquals(1, result.getTotalElements());
             assertEquals(1001L, result.getContent().get(0).getId());
         }
@@ -146,17 +146,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should treat the literal string \"null\" as a sentinel for uncategorized transactions")
         void shouldFilterByNullCategorySentinel() {
-            // Arrange -- 1002 (ATM Deposit) has no category in the baseline
+            // arrange -- 1002 (ATM Deposit) has no category in the baseline
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, "null", null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertTrue(result.getContent().stream().anyMatch(t -> t.getId().equals(1002L)));
             assertTrue(result.getContent().stream().allMatch(t -> t.getCategory() == null));
         }
@@ -164,17 +164,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by description substring, case-insensitively")
         void shouldFilterByDescription() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, "morning", null, null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.getTotalElements());
             assertEquals("Morning Coffee", result.getContent().get(0).getDescription());
         }
@@ -182,17 +182,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by merchant clean name substring, case-insensitively")
         void shouldFilterByMerchantCleanName() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, "whole", null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 50)
             );
 
-            // Assert -- every grocery-run transaction is linked to the Whole Foods merchant
+            // assert & verify -- every grocery-run transaction is linked to the Whole Foods merchant
             assertFalse(result.getContent().isEmpty());
             assertTrue(result.getContent().stream()
                     .allMatch(t -> t.getMerchant() != null && t.getMerchant().getCleanName().equals("Whole Foods")));
@@ -201,17 +201,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should filter by account id")
         void shouldFilterByAccountId() {
-            // Arrange -- account 3 (Credit Card) has exactly one transaction (1001)
+            // arrange -- account 3 (Credit Card) has exactly one transaction (1001)
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     3L, null, null, null, null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.getTotalElements());
             assertEquals(1001L, result.getContent().get(0).getId());
         }
@@ -219,17 +219,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("PF-308: should filter by tag id")
         void shouldFilterByTagId() {
-            // Arrange -- baseline transaction_tags assigns tag 1 to transaction 1001 only
+            // arrange -- baseline transaction_tags assigns tag 1 to transaction 1001 only
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, null, null, null, null, 1L
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.getTotalElements());
             assertEquals(1001L, result.getContent().get(0).getId());
         }
@@ -261,18 +261,18 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("PF-308: results should include each transaction's assigned tags")
         void shouldIncludeTagsInResults() {
-            // Arrange -- account 3 (Credit Card) has exactly one transaction (1001), which the
+            // arrange -- account 3 (Credit Card) has exactly one transaction (1001), which the
             // baseline assigns tag id 1 to
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     3L, null, null, null, null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             Transaction transaction = result.getContent().get(0);
             assertNotNull(transaction.getTags());
             assertTrue(transaction.getTags().stream().anyMatch(t -> t.getId().equals(1L)));
@@ -281,17 +281,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("PF-308: a transaction with no assigned tags should return an empty list, not null")
         void shouldReturnEmptyTagsListWhenNoneAssigned() {
-            // Arrange -- transaction 1000 carries no tags in the baseline
+            // arrange -- transaction 1000 carries no tags in the baseline
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     1L, null, null, null, null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert
+            // assert & verify
             Transaction transaction1000 = result.getContent().stream()
                     .filter(t -> t.getId().equals(1000L))
                     .findFirst().orElseThrow();
@@ -302,7 +302,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should expand the TRANSFER pseudo-type into an IN clause matching all transfer directions")
         void shouldExpandTransferTypeToInClause() {
-            // Arrange -- mark 1000 and 1002 as a confirmed transfer pair
+            // arrange -- mark 1000 and 1002 as a confirmed transfer pair
             Transaction t1000 = transactionRepository.findById(1000L, USER_ID).orElseThrow();
             Transaction t1002 = transactionRepository.findById(1002L, USER_ID).orElseThrow();
             transactionRepository.update(USER_ID, t1000.toBuilder().type(TransactionType.TRANSFER_OUT).build());
@@ -312,12 +312,12 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     null, TransactionType.TRANSFER, null, null, null, null, null, null, null, null
             );
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 10)
             );
 
-            // Assert -- the TRANSFER filter must match both TRANSFER_IN and TRANSFER_OUT rows
+            // assert & verify -- the TRANSFER filter must match both TRANSFER_IN and TRANSFER_OUT rows
             List<Long> ids = result.getContent().stream().map(Transaction::getId).toList();
             assertTrue(ids.contains(1000L));
             assertTrue(ids.contains(1002L));
@@ -326,14 +326,14 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should cap page content at the requested page size even when more rows match")
         void shouldRespectPageSize() {
-            // Act -- baseline has ~39 transactions for user 1; request only 5
+            // act -- baseline has ~39 transactions for user 1; request only 5
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, new TransactionSpecification.TransactionFilter(
                             null, null, null, null, null, null, null, null, null, null)),
                     PageRequest.of(0, 5)
             );
 
-            // Assert
+            // assert & verify
             assertEquals(5, result.getContent().size());
             assertTrue(result.getTotalElements() > 5);
         }
@@ -341,16 +341,16 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should return distinct, non-overlapping content across consecutive pages")
         void shouldPaginateAcrossPages() {
-            // Arrange
+            // arrange
             TransactionSpecification.FilterResult spec = TransactionSpecification.withFilter(
                     USER_ID, new TransactionSpecification.TransactionFilter(
                             null, null, null, null, null, null, null, null, null, null));
 
-            // Act
+            // act
             Page<Transaction> page0 = transactionRepository.findAll(spec, PageRequest.of(0, 10));
             Page<Transaction> page1 = transactionRepository.findAll(spec, PageRequest.of(1, 10));
 
-            // Assert
+            // assert & verify
             List<Long> page0Ids = page0.getContent().stream().map(Transaction::getId).toList();
             List<Long> page1Ids = page1.getContent().stream().map(Transaction::getId).toList();
             assertEquals(10, page0Ids.size());
@@ -364,49 +364,49 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should exclude soft-deleted transactions from dynamic query results")
         void shouldExcludeSoftDeletedTransactions() {
-            // Arrange
+            // arrange
             jdbcClient.sql("UPDATE transactions SET deleted_at = NOW() WHERE id = :id")
                     .param("id", 1000L)
                     .update();
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, new TransactionSpecification.TransactionFilter(
                             null, null, null, null, null, null, null, null, null, null)),
                     PageRequest.of(0, 100)
             );
 
-            // Assert
+            // assert & verify
             assertTrue(result.getContent().stream().noneMatch(t -> t.getId().equals(1000L)));
         }
 
         @Test
         @DisplayName("should safely handle invalid sort direction and property")
         void shouldHandleInvalidSort() {
-            // Arrange
+            // arrange
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     null, null, null, null, null, null, null, null, null, null
             );
             // Try to inject SQL in Sort direction and property
             Sort maliciousSort = Sort.by(Sort.Order.desc("date; DROP TABLE transactions; --"));
 
-            // Act
+            // act
             Page<Transaction> result = transactionRepository.findAll(
                     TransactionSpecification.withFilter(USER_ID, filter),
                     PageRequest.of(0, 10, maliciousSort)
             );
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty()); // Should not crash and should return data
         }
 
         @Test
         @DisplayName("should find all transactions for a user across all their accounts")
         void shouldFindByUserId() {
-            // Act
+            // act
             List<Transaction> result = transactionRepository.findByUserId(USER_ID);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.stream().allMatch(t -> t.getAccount().getUserId().equals(USER_ID)));
             // account 3 (Credit Card) belongs to user 1 too -- confirms the join isn't scoped to one account
@@ -416,11 +416,11 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find recent non-transfer transactions since a date")
         void shouldFindRecentNonTransferTransactions() {
-            // Act
+            // act
             List<Transaction> result = transactionRepository.findRecentNonTransferTransactions(
                     USER_ID, LocalDate.of(2026, 3, 1));
 
-            // Assert
+            // assert & verify
             assertEquals(3, result.size()); // baseline's 3 specific transactions (1000, 1001, 1002)
             assertTrue(result.stream().noneMatch(t -> t.getType() == TransactionType.TRANSFER
                     || t.getType() == TransactionType.TRANSFER_IN
@@ -430,10 +430,10 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find expenses since a date, excluding income")
         void shouldFindExpensesSince() {
-            // Act
+            // act
             List<Transaction> result = transactionRepository.findExpensesSince(USER_ID, LocalDate.of(2026, 3, 1));
 
-            // Assert
+            // assert & verify
             assertEquals(2, result.size()); // 1000 (Coffee) and 1001 (Gas), not 1002 (INCOME)
             assertTrue(result.stream().allMatch(t -> t.getType() == TransactionType.EXPENSE));
         }
@@ -441,13 +441,13 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find existing transactions in a date range for duplicate-import checks")
         void shouldFindExistingForDuplicateCheck() {
-            // Act
+            // act
             List<Transaction> result = transactionRepository.findExistingForDuplicateCheck(
                     1L,
                     OffsetDateTime.parse("2026-03-01T00:00:00Z"),
                     OffsetDateTime.parse("2026-03-03T23:59:59Z"));
 
-            // Assert -- account 1's transactions 1000 and 1002 fall in range; 1001 belongs to account 3
+            // assert & verify -- account 1's transactions 1000 and 1002 fall in range; 1001 belongs to account 3
             assertEquals(2, result.size());
             assertTrue(result.stream().allMatch(t -> t.getAccount().getId().equals(1L)));
         }
@@ -455,10 +455,10 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find transactions by a list of ids, scoped to the user")
         void shouldFindAllById() {
-            // Act
+            // act
             List<Transaction> result = transactionRepository.findAllById(USER_ID, List.of(1000L, 1002L));
 
-            // Assert
+            // assert & verify
             assertEquals(2, result.size());
             assertTrue(result.stream().map(Transaction::getId).toList().containsAll(List.of(1000L, 1002L)));
         }
@@ -466,20 +466,20 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should return empty list for findAllById with no ids")
         void shouldReturnEmptyForFindAllByIdWithNoIds() {
-            // Act
+            // act
             List<Transaction> result = transactionRepository.findAllById(USER_ID, List.of());
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("should find categories that have at least one transaction (subcategories only)")
         void shouldGetCategoriesWithTransactions() {
-            // Act
+            // act
             List<Category> result = transactionRepository.getCategoriesWithTransactions(USER_ID);
 
-            // Assert -- Rent, Groceries, Dining Out, Gas, Salary all have transactions in the baseline;
+            // assert & verify -- Rent, Groceries, Dining Out, Gas, Salary all have transactions in the baseline;
             // parent categories (e.g. "Food") are excluded by the query's own parent_id filter
             assertEquals(5, result.size());
             assertTrue(result.stream().allMatch(c -> c.getParentId() != null));
@@ -490,10 +490,10 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find merchants that have at least one transaction, excluding null-merchant transactions")
         void shouldGetMerchantsWithTransactions() {
-            // Act
+            // act
             List<Merchant> result = transactionRepository.getMerchantsWithTransactions(USER_ID);
 
-            // Assert -- Whole Foods (groceries), Shell (1001), My Favorite Cafe (1000) all qualify;
+            // assert & verify -- Whole Foods (groceries), Shell (1001), My Favorite Cafe (1000) all qualify;
             // Rent/Salary/1002 have no merchant and must NOT produce a null entry in the list
             // (regression test: MERCHANTS_WITH_TRANSACTIONS previously had no `merchants.id is not
             // null` guard, so a user with any merchant-less transaction got a literal null element
@@ -513,14 +513,14 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should calculate sum for date range and type")
         void shouldCalculateSum() {
-            // Arrange
+            // arrange
             OffsetDateTime start = LocalDate.of(2026, 3, 1).atStartOfDay().atOffset(ZoneOffset.UTC);
             OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
 
-            // Act
+            // act
             BigDecimal sum = transactionRepository.getSumByDateRange(USER_ID, start, end, TransactionType.INCOME);
 
-            // Assert
+            // assert & verify
             // Based on baseline: 1002 is 500.00 INCOME
             assertEquals(0, new BigDecimal("500.00").compareTo(sum));
         }
@@ -528,14 +528,14 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find category totals")
         void shouldFindCategoryTotals() {
-            // Arrange
+            // arrange
             OffsetDateTime start = LocalDate.of(2026, 3, 1).atStartOfDay().atOffset(ZoneOffset.UTC);
             OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
 
-            // Act
+            // act
             List<CategoryBreakdownDto> result = transactionRepository.findCategoryTotals(USER_ID, start, end);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.stream()
                     .filter(b -> b.category() != null)
@@ -545,10 +545,10 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find monthly sums for cash flow trend")
         void shouldFindMonthlySums() {
-            // Act
+            // act
             List<Object[]> result = transactionRepository.findMonthlySums(USER_ID, LocalDate.of(2025, 9, 1));
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             // result is [year, month, type, sum]
             Object[] first = result.get(0);
@@ -558,17 +558,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should return zero for uncategorized expense totals when everything is categorized")
         void shouldGetZeroUncategorizedExpenseTotalsWhenAllCategorized() {
-            // Act -- every EXPENSE transaction in the baseline already has a category
+            // act -- every EXPENSE transaction in the baseline already has a category
             BigDecimal result = transactionRepository.getUncategorizedExpenseTotals(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(0, BigDecimal.ZERO.compareTo(result));
         }
 
         @Test
         @DisplayName("should sum uncategorized expenses once one exists")
         void shouldGetUncategorizedExpenseTotals() {
-            // Arrange
+            // arrange
             TransactionCreateRequest uncategorizedExpense = TransactionCreateRequest.builder()
                     .accountId(1L)
                     .amount(new BigDecimal("42.00"))
@@ -578,30 +578,30 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     .build();
             transactionRepository.insert(uncategorizedExpense);
 
-            // Act
+            // act
             BigDecimal result = transactionRepository.getUncategorizedExpenseTotals(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(0, new BigDecimal("42.00").compareTo(result));
         }
 
         @Test
         @DisplayName("should calculate net flow after a date, income positive and expense negative")
         void shouldGetNetFlowAfterDate() {
-            // Act -- only 1000 (EXPENSE 25.50) and 1002 (INCOME 500.00) on account 1 are after 2026-02-28
+            // act -- only 1000 (EXPENSE 25.50) and 1002 (INCOME 500.00) on account 1 are after 2026-02-28
             BigDecimal result = transactionRepository.getNetFlowAfterDate(1L, LocalDate.of(2026, 2, 28));
 
-            // Assert
+            // assert & verify
             assertEquals(0, new BigDecimal("474.50").compareTo(result));
         }
 
         @Test
         @DisplayName("should return zero net flow after a date with no later transactions")
         void shouldGetZeroNetFlowAfterLatestDate() {
-            // Act
+            // act
             BigDecimal result = transactionRepository.getNetFlowAfterDate(1L, LocalDate.of(2026, 12, 31));
 
-            // Assert
+            // assert & verify
             assertEquals(0, BigDecimal.ZERO.compareTo(result));
         }
     }
@@ -612,10 +612,10 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should get count by category")
         void shouldGetCountByCategory() {
-            // Act
+            // act
             List<CategoryTransactionsDto> result = transactionRepository.getCountByCategory(USER_ID);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.stream()
                     .filter(c -> c.category() != null)
@@ -625,20 +625,20 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should count transactions for a specific account")
         void shouldCountByAccountId() {
-            // Act -- account 3 (Credit Card) has exactly one baseline transaction (1001)
+            // act -- account 3 (Credit Card) has exactly one baseline transaction (1001)
             long count = transactionRepository.countByAccountId(3L);
 
-            // Assert
+            // assert & verify
             assertEquals(1, count);
         }
 
         @Test
         @DisplayName("should count transactions for a specific category")
         void shouldCountByCategoryId() {
-            // Act -- category 9 (Gas) has exactly one baseline transaction (1001)
+            // act -- category 9 (Gas) has exactly one baseline transaction (1001)
             long count = transactionRepository.countByCategoryId(9L);
 
-            // Assert
+            // assert & verify
             assertEquals(1, count);
         }
     }
@@ -746,23 +746,23 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should delete multiple transactions in one call")
         void shouldDeleteAll() {
-            // Arrange
+            // arrange
             List<Transaction> toDelete = transactionRepository.findAllById(USER_ID, List.of(1000L, 1002L));
 
-            // Act
+            // act
             transactionRepository.deleteAll(USER_ID, toDelete);
 
-            // Assert
+            // assert & verify
             assertTrue(transactionRepository.findAllById(USER_ID, List.of(1000L, 1002L)).isEmpty());
         }
 
         @Test
         @DisplayName("should not fail when deleting a list containing a transaction with no ID")
         void shouldSkipNullIdOnDeleteAll() {
-            // Arrange
+            // arrange
             Transaction noId = Transaction.builder().build();
 
-            // Act & Assert -- must not throw
+            // act & assert & verify -- must not throw
             assertDoesNotThrow(() -> transactionRepository.deleteAll(USER_ID, List.of(noId)));
         }
 

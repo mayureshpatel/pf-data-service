@@ -43,13 +43,13 @@ class JwtServiceTest {
         @Test
         @DisplayName("should generate a valid JWT token for a user")
         void shouldGenerateToken() {
-            // Arrange
+            // arrange
             UserDetails user = createMockUser("testuser");
 
-            // Act
+            // act
             String token = jwtService.generateToken(user);
 
-            // Assert
+            // assert & verify
             assertNotNull(token);
             assertFalse(token.isEmpty());
             assertEquals("testuser", jwtService.extractUsername(token));
@@ -58,13 +58,13 @@ class JwtServiceTest {
         @Test
         @DisplayName("should generate a valid JWT token for a user (single arg)")
         void shouldGenerateTokenSingleArg() {
-            // Arrange
+            // arrange
             UserDetails user = createMockUser("testuser2");
 
-            // Act
+            // act
             String token = jwtService.generateToken(user);
 
-            // Assert
+            // assert & verify
             assertNotNull(token);
             assertEquals("testuser2", jwtService.extractUsername(token));
         }
@@ -72,14 +72,14 @@ class JwtServiceTest {
         @Test
         @DisplayName("should generate a token with extra claims")
         void shouldGenerateTokenWithExtraClaims() {
-            // Arrange
+            // arrange
             UserDetails user = createMockUser("testuser");
             Map<String, Object> extraClaims = Map.of("role", "ADMIN", "id", 123);
 
-            // Act
+            // act
             String token = jwtService.generateToken(extraClaims, user);
 
-            // Assert
+            // assert & verify
             assertNotNull(token);
             assertEquals("ADMIN", jwtService.extractClaim(token, claims -> claims.get("role")));
             assertEquals(123, (Integer) jwtService.extractClaim(token, claims -> claims.get("id")));
@@ -93,41 +93,41 @@ class JwtServiceTest {
         @Test
         @DisplayName("should return true for a valid token and matching user")
         void shouldBeValid() {
-            // Arrange
+            // arrange
             UserDetails user = createMockUser("john");
             String token = jwtService.generateToken(user);
 
-            // Act
+            // act
             boolean isValid = jwtService.isTokenValid(token, user);
 
-            // Assert
+            // assert & verify
             assertTrue(isValid);
         }
 
         @Test
         @DisplayName("should return false when username does not match")
         void shouldBeInvalidForDifferentUser() {
-            // Arrange
+            // arrange
             UserDetails user1 = createMockUser("user1");
             UserDetails user2 = createMockUser("user2");
             String token = jwtService.generateToken(user1);
 
-            // Act
+            // act
             boolean isValid = jwtService.isTokenValid(token, user2);
 
-            // Assert
+            // assert & verify
             assertFalse(isValid);
         }
 
         @Test
         @DisplayName("should throw ExpiredJwtException for an expired token")
         void shouldThrowOnExpiredToken() {
-            // Arrange
+            // arrange
             ReflectionTestUtils.setField(jwtService, "jwtExpiration", -1000L); // Expired 1 second ago
             UserDetails user = createMockUser("john");
             String token = jwtService.generateToken(user);
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ExpiredJwtException.class, () -> jwtService.isTokenValid(token, user));
         }
     }
@@ -139,13 +139,13 @@ class JwtServiceTest {
         @Test
         @DisplayName("should extract subject as username")
         void shouldExtractUsername() {
-            // Arrange
+            // arrange
             String token = jwtService.generateToken(createMockUser("bob"));
 
-            // Act
+            // act
             String username = jwtService.extractUsername(token);
 
-            // Assert
+            // assert & verify
             assertEquals("bob", username);
         }
     }

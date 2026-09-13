@@ -44,7 +44,7 @@ class RegistrationServiceTest {
         @Test
         @DisplayName("should register user successfully when inputs are valid and unique")
         void shouldRegisterSuccessfully() {
-            // Arrange
+            // arrange
             RegistrationRequest request = RegistrationRequest.builder()
                     .username(USERNAME)
                     .email(EMAIL)
@@ -56,10 +56,10 @@ class RegistrationServiceTest {
             when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
             when(jwtService.generateToken(anyMap(), any())).thenReturn(TOKEN);
 
-            // Act
+            // act
             AuthenticationResponse response = registrationService.register(request);
 
-            // Assert
+            // assert & verify
             assertNotNull(response);
             assertEquals(TOKEN, response.token());
             verify(userService).insert(argThat(user ->
@@ -75,13 +75,13 @@ class RegistrationServiceTest {
         @Test
         @DisplayName("should throw UserAlreadyExistsException when username already exists")
         void shouldThrowWhenUsernameExists() {
-            // Arrange
+            // arrange
             RegistrationRequest request = RegistrationRequest.builder()
                     .username(USERNAME)
                     .build();
             when(userService.isUserExistsByUsername(USERNAME)).thenReturn(true);
 
-            // Act & Assert
+            // act & assert & verify
             UserAlreadyExistsException ex = assertThrows(UserAlreadyExistsException.class, () -> registrationService.register(request));
             assertEquals("Username already exists", ex.getMessage());
             verify(userService, never()).insert(any());
@@ -90,7 +90,7 @@ class RegistrationServiceTest {
         @Test
         @DisplayName("should throw UserAlreadyExistsException when email already exists")
         void shouldThrowWhenEmailExists() {
-            // Arrange
+            // arrange
             RegistrationRequest request = RegistrationRequest.builder()
                     .username(USERNAME)
                     .email(EMAIL)
@@ -98,7 +98,7 @@ class RegistrationServiceTest {
             when(userService.isUserExistsByUsername(USERNAME)).thenReturn(false);
             when(userService.isUserExistsByEmail(EMAIL)).thenReturn(true);
 
-            // Act & Assert
+            // act & assert & verify
             UserAlreadyExistsException ex = assertThrows(UserAlreadyExistsException.class, () -> registrationService.register(request));
             assertEquals("Email already exists", ex.getMessage());
             verify(userService, never()).insert(any());
@@ -107,7 +107,7 @@ class RegistrationServiceTest {
         @Test
         @DisplayName("should reject registration when the honeypot field is filled")
         void shouldRejectWhenHoneypotFilled() {
-            // Arrange
+            // arrange
             RegistrationRequest request = RegistrationRequest.builder()
                     .username(USERNAME)
                     .email(EMAIL)
@@ -115,7 +115,7 @@ class RegistrationServiceTest {
                     .website("http://spam.example.com")
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(IllegalArgumentException.class, () -> registrationService.register(request));
             verify(userService, never()).isUserExistsByUsername(any());
             verify(userService, never()).insert(any());
@@ -124,7 +124,7 @@ class RegistrationServiceTest {
         @Test
         @DisplayName("should register successfully when the honeypot field is blank")
         void shouldRegisterWhenHoneypotBlank() {
-            // Arrange
+            // arrange
             RegistrationRequest request = RegistrationRequest.builder()
                     .username(USERNAME)
                     .email(EMAIL)
@@ -137,10 +137,10 @@ class RegistrationServiceTest {
             when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
             when(jwtService.generateToken(anyMap(), any())).thenReturn(TOKEN);
 
-            // Act
+            // act
             AuthenticationResponse response = registrationService.register(request);
 
-            // Assert
+            // assert & verify
             assertNotNull(response);
             assertEquals(TOKEN, response.token());
         }

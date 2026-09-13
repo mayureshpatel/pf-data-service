@@ -26,7 +26,7 @@ class CurrencyRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should save and find currency")
         void shouldSaveAndFind() {
-            // Arrange
+            // arrange
             Currency currency = Currency.builder()
                     .code("GBP")
                     .name("British Pound")
@@ -34,11 +34,11 @@ class CurrencyRepositoryTest extends BaseRepositoryTest {
                     .active(true)
                     .build();
 
-            // Act
+            // act
             int rows = repository.save(currency);
             Optional<Currency> result = repository.findById("GBP");
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(result.isPresent());
             assertEquals("British Pound", result.get().getName());
@@ -47,15 +47,15 @@ class CurrencyRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all and active currencies")
         void shouldFindAllAndActive() {
-            // Arrange
+            // arrange
             repository.save(Currency.builder().code("EUR").name("Euro").symbol("€").active(true).build());
             repository.save(Currency.builder().code("JPY").name("Euro").symbol("¥").active(false).build()); // Inactive
 
-            // Act
+            // act
             List<Currency> all = repository.findAll();
             List<Currency> active = repository.findByIsActive();
 
-            // Assert
+            // assert & verify
             assertTrue(all.size() >= 2);
             assertFalse(active.isEmpty());
             assertTrue(active.stream().allMatch(Currency::isActive));
@@ -64,10 +64,10 @@ class CurrencyRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should check existence")
         void shouldCheckExists() {
-            // Arrange
+            // arrange
             repository.save(Currency.builder().code("CAD").name("Canadian Dollar").symbol("$").active(true).build());
 
-            // Act & Assert
+            // act & assert & verify
             assertTrue(repository.existsById("CAD"));
             assertFalse(repository.existsById("XYZ"));
         }
@@ -75,27 +75,27 @@ class CurrencyRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should count currencies")
         void shouldCount() {
-            // Arrange
+            // arrange
             long initial = repository.count();
             repository.save(Currency.builder().code("ZZA").name("Zza Dollar").symbol("$").active(true).build());
 
-            // Act
+            // act
             long count = repository.count();
 
-            // Assert
+            // assert & verify
             assertEquals(initial + 1, count);
         }
 
         @Test
         @DisplayName("should delete by ID")
         void shouldDeleteById() {
-            // Arrange
+            // arrange
             repository.save(Currency.builder().code("CHF").name("Swiss Franc").symbol("Fr").active(true).build());
 
-            // Act
+            // act
             int rows = repository.deleteById("CHF");
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertFalse(repository.existsById("CHF"));
         }

@@ -33,12 +33,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /categories should return breakdown by month and year")
         void getCategoryBreakdown_shouldReturnByMonthAndYear() throws Exception {
-            // Arrange
+            // arrange
             int month = 3;
             int year = 2026;
             when(dashboardService.getCategoryBreakdown(USER_ID, month, year)).thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/categories")
                             .param("month", String.valueOf(month))
                             .param("year", String.valueOf(year)))
@@ -51,13 +51,13 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /categories should return breakdown by date range")
         void getCategoryBreakdown_shouldReturnByDateRange() throws Exception {
-            // Arrange
+            // arrange
             LocalDate start = LocalDate.of(2026, 1, 1);
             LocalDate end = LocalDate.of(2026, 1, 31);
             when(dashboardService.getCategoryBreakdown(eq(USER_ID), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/categories")
                             .param("startDate", start.toString())
                             .param("endDate", end.toString()))
@@ -69,12 +69,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /categories should use defaults if only startDate is provided")
         void getCategoryBreakdown_shouldUseDefaultsIfPartialDates() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getCategoryBreakdown(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/categories")
                             .param("startDate", "2026-01-01"))
                     .andExpect(status().isOk());
@@ -85,12 +85,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /categories should use defaults if only endDate is provided")
         void getCategoryBreakdown_shouldUseDefaultsIfOnlyEndDate() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getCategoryBreakdown(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/categories")
                             .param("endDate", "2026-01-31"))
                     .andExpect(status().isOk());
@@ -106,12 +106,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /merchants should return breakdown by month and year")
         void getMerchantBreakdown_shouldReturnByMonthAndYear() throws Exception {
-            // Arrange
+            // arrange
             int month = 3;
             int year = 2026;
             when(dashboardService.getMerchantBreakdown(USER_ID, month, year)).thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/merchants")
                             .param("month", String.valueOf(month))
                             .param("year", String.valueOf(year)))
@@ -123,13 +123,13 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /merchants should return breakdown by date range")
         void getMerchantBreakdown_shouldReturnByDateRange() throws Exception {
-            // Arrange
+            // arrange
             LocalDate start = LocalDate.of(2026, 1, 1);
             LocalDate end = LocalDate.of(2026, 1, 31);
             when(dashboardService.getMerchantBreakdown(eq(USER_ID), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/merchants")
                             .param("startDate", start.toString())
                             .param("endDate", end.toString()))
@@ -141,12 +141,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /merchants should use defaults if only endDate is provided")
         void getMerchantBreakdown_shouldUseDefaultsIfPartialDates() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getMerchantBreakdown(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/merchants")
                             .param("endDate", "2026-01-31"))
                     .andExpect(status().isOk());
@@ -157,12 +157,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /merchants should use current month/year if no params provided")
         void getMerchantBreakdown_shouldUseDefaults() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getMerchantBreakdown(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/merchants"))
                     .andExpect(status().isOk());
 
@@ -172,12 +172,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /merchants should use defaults if only startDate is provided")
         void getMerchantBreakdown_shouldUseDefaultsIfOnlyStartDate() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getMerchantBreakdown(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/merchants")
                             .param("startDate", "2026-01-01"))
                     .andExpect(status().isOk());
@@ -193,12 +193,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /pulse should return pulse by month and year")
         void getPulse_shouldReturnByMonthAndYear() throws Exception {
-            // Arrange
+            // arrange
             int month = 3;
             int year = 2026;
             when(dashboardService.getPulse(USER_ID, month, year)).thenReturn(DashboardPulseDto.builder().build());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/pulse")
                             .param("month", String.valueOf(month))
                             .param("year", String.valueOf(year)))
@@ -210,13 +210,13 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /pulse should return pulse by date range")
         void getPulse_shouldReturnByDateRange() throws Exception {
-            // Arrange
+            // arrange
             LocalDate start = LocalDate.of(2026, 1, 1);
             LocalDate end = LocalDate.of(2026, 1, 31);
             when(dashboardService.getPulse(eq(USER_ID), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                     .thenReturn(DashboardPulseDto.builder().build());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/pulse")
                             .param("startDate", start.toString())
                             .param("endDate", end.toString()))
@@ -228,12 +228,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /pulse should use defaults if partial dates are provided")
         void getPulse_shouldUseDefaultsIfPartialDates() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getPulse(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(DashboardPulseDto.builder().build());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/pulse")
                             .param("startDate", "2026-01-01"))
                     .andExpect(status().isOk());
@@ -244,12 +244,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /pulse should use defaults if only endDate is provided")
         void getPulse_shouldUseDefaultsIfOnlyEndDate() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getPulse(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(DashboardPulseDto.builder().build());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/pulse")
                             .param("endDate", "2026-01-31"))
                     .andExpect(status().isOk());
@@ -260,12 +260,12 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /pulse should use current month/year if no params provided")
         void getPulse_shouldUseDefaults() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(dashboardService.getPulse(USER_ID, now.getMonthValue(), now.getYear()))
                     .thenReturn(DashboardPulseDto.builder().build());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/pulse"))
                     .andExpect(status().isOk());
 
@@ -280,10 +280,10 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /trend/cashflow should return cash flow trend list")
         void getCashFlowTrend_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             when(dashboardService.getCashFlowTrend(USER_ID)).thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/trend/cashflow"))
                     .andExpect(status().isOk());
 
@@ -298,11 +298,11 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /ytd should return summary for specific year")
         void getYtdSummary_shouldReturnForYear() throws Exception {
-            // Arrange
+            // arrange
             int year = 2025;
             when(dashboardService.getYtdSummary(USER_ID, year)).thenReturn(YtdSummaryDto.builder().build());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/ytd")
                             .param("year", String.valueOf(year)))
                     .andExpect(status().isOk());
@@ -313,11 +313,11 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /ytd should use current year if param is missing")
         void getYtdSummary_shouldUseDefaultYear() throws Exception {
-            // Arrange
+            // arrange
             int currentYear = LocalDate.now().getYear();
             when(dashboardService.getYtdSummary(USER_ID, currentYear)).thenReturn(YtdSummaryDto.builder().build());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/ytd"))
                     .andExpect(status().isOk());
 
@@ -332,10 +332,10 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /actions should return action items list")
         void getActionItems_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             when(dashboardService.getActionItems(USER_ID)).thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/actions"))
                     .andExpect(status().isOk());
 
@@ -350,11 +350,11 @@ class DashboardControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 500 when dashboard service fails unexpectedly")
         void getPulse_shouldReturn500WhenServiceFails() throws Exception {
-            // Arrange
+            // arrange
             when(dashboardService.getPulse(anyLong(), anyInt(), anyInt()))
                     .thenThrow(new RuntimeException("Computation error"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/pulse"))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.title").value("Internal Server Error"));

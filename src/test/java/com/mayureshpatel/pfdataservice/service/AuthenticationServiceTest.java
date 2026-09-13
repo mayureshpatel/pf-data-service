@@ -44,7 +44,7 @@ class AuthenticationServiceTest {
         @Test
         @DisplayName("should return token when user is an instance of CustomUserDetails")
         void shouldAuthenticateCustomUser() {
-            // Arrange
+            // arrange
             String username = "testuser";
             String password = "password";
             String token = "jwt-token";
@@ -60,10 +60,10 @@ class AuthenticationServiceTest {
             when(userDetailsService.loadUserByUsername(username)).thenReturn(userDetails);
             when(jwtService.generateToken(anyMap(), eq(userDetails))).thenReturn(token);
 
-            // Act
+            // act
             AuthenticationResponse response = authenticationService.authenticate(request);
 
-            // Assert
+            // assert & verify
             assertNotNull(response);
             assertEquals(token, response.token());
             verify(authenticationManager).authenticate(any());
@@ -75,7 +75,7 @@ class AuthenticationServiceTest {
         @Test
         @DisplayName("should return token when user is NOT an instance of CustomUserDetails")
         void shouldAuthenticateGenericUser() {
-            // Arrange
+            // arrange
             String username = "testuser";
             String password = "password";
             String token = "jwt-token";
@@ -85,10 +85,10 @@ class AuthenticationServiceTest {
             when(userDetailsService.loadUserByUsername(username)).thenReturn(userDetails);
             when(jwtService.generateToken(anyMap(), eq(userDetails))).thenReturn(token);
 
-            // Act
+            // act
             AuthenticationResponse response = authenticationService.authenticate(request);
 
-            // Assert
+            // assert & verify
             assertNotNull(response);
             assertEquals(token, response.token());
             verify(jwtService).generateToken(argThat(Map::isEmpty), eq(userDetails));
@@ -97,11 +97,11 @@ class AuthenticationServiceTest {
         @Test
         @DisplayName("should throw exception when authentication fails")
         void shouldThrowOnAuthFailure() {
-            // Arrange
+            // arrange
             AuthenticationRequest request = new AuthenticationRequest("user", "wrong");
             when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("Invalid credentials"));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(BadCredentialsException.class, () -> authenticationService.authenticate(request));
             verify(userDetailsService, never()).loadUserByUsername(anyString());
         }

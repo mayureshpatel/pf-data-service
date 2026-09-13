@@ -44,7 +44,7 @@ class AccountControllerTest extends BaseControllerTest {
         @DisplayName("GET should return list of accounts")
         void getAccounts_shouldReturnListOfAccounts() throws Exception {
             String url = "/api/v1/accounts";
-            // Arrange
+            // arrange
             AccountDto accountDto = new AccountDto(
                     ACCOUNT_ID,
                     null,
@@ -58,7 +58,7 @@ class AccountControllerTest extends BaseControllerTest {
 
             when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(List.of(accountDto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get(url))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -74,10 +74,10 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return empty list when no accounts exist")
         void getAccounts_shouldReturnEmptyList() throws Exception {
-            // Arrange
+            // arrange
             when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/accounts"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -89,11 +89,11 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 500 Internal Server Error when service throws an unhandled exception")
         void getAccounts_shouldReturn500WhenServiceFails() throws Exception {
-            // Arrange
+            // arrange
             when(accountService.getAllAccountsByUserId(USER_ID))
                     .thenThrow(new RuntimeException("Database connection failure"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/accounts"))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.title").value("Internal Server Error"))
@@ -109,7 +109,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should create a new account and return its ID")
         void createAccount_shouldCreateNewAccount() throws Exception {
-            // Arrange
+            // arrange
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name("Savings")
                     .type("SAVINGS")
@@ -120,7 +120,7 @@ class AccountControllerTest extends BaseControllerTest {
 
             when(accountService.createAccount(eq(USER_ID), any(AccountCreateRequest.class))).thenReturn(ACCOUNT_ID.intValue());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -134,7 +134,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createAccount_shouldReturn400WhenValidationFails() throws Exception {
-            // Arrange - invalid request (blank name, invalid currency)
+            // arrange - invalid request (blank name, invalid currency)
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name("")
                     .type("SAVINGS")
@@ -142,7 +142,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .currencyCode("INVALID")
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -162,7 +162,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should update the account and return 1")
         void updateAccount_shouldUpdateAccount() throws Exception {
-            // Arrange
+            // arrange
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(ACCOUNT_ID)
                     .name("Updated Savings")
@@ -174,7 +174,7 @@ class AccountControllerTest extends BaseControllerTest {
 
             when(accountService.updateAccount(eq(USER_ID), any(AccountUpdateRequest.class))).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -188,7 +188,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should return 400 Bad Request when ID is missing")
         void updateAccount_shouldReturn400WhenIdIsMissing() throws Exception {
-            // Arrange
+            // arrange
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .name("Updated Name")
                     .type("SAVINGS")
@@ -196,7 +196,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .version(1L)
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -208,7 +208,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should return 403 Forbidden when user does not own the account")
         void updateAccount_shouldReturn403WhenAccessDenied() throws Exception {
-            // Arrange
+            // arrange
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(ACCOUNT_ID)
                     .name("Unauthorized Update")
@@ -220,7 +220,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.updateAccount(eq(USER_ID), any(AccountUpdateRequest.class)))
                     .thenThrow(new AccessDeniedException("You do not have permission to access this resource."));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/accounts")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -238,7 +238,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should remove the account and return 204 No Content")
         void deleteAccount_shouldDeleteAccount() throws Exception {
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
                             .with(csrf()))
                     .andExpect(status().isNoContent());
@@ -249,11 +249,11 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should return 404 Not Found when account does not exist")
         void deleteAccount_shouldReturn404WhenNotFound() throws Exception {
-            // Arrange
+            // arrange
             when(accountService.deleteAccount(USER_ID, ACCOUNT_ID))
                     .thenThrow(new ResourceNotFoundException("Account with ID " + ACCOUNT_ID + " not found"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound())
@@ -264,11 +264,11 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should return 409 Conflict, not 500, when account has existing transactions (PF-193)")
         void deleteAccount_shouldReturn409WhenTransactionsExist() throws Exception {
-            // Arrange
+            // arrange
             when(accountService.deleteAccount(USER_ID, ACCOUNT_ID))
                     .thenThrow(new IllegalStateException("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
                             .with(csrf()))
                     .andExpect(status().isConflict())
@@ -283,7 +283,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /reconcile should update balance and return status")
         void reconcileAccount_shouldReconcile() throws Exception {
-            // Arrange
+            // arrange
             BigDecimal newBalance = new BigDecimal("1500.00");
             AccountReconcileRequest request = AccountReconcileRequest.builder()
                     .accountId(ACCOUNT_ID)
@@ -292,7 +292,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .build();
             when(accountService.reconcileAccount(eq(USER_ID), any(AccountReconcileRequest.class))).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts/reconcile")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -306,13 +306,13 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /reconcile should return 400 Bad Request when version is missing")
         void reconcileAccount_shouldReturn400WhenVersionIsMissing() throws Exception {
-            // Arrange
+            // arrange
             AccountReconcileRequest request = AccountReconcileRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .newBalance(new BigDecimal("1500.00"))
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts/reconcile")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)

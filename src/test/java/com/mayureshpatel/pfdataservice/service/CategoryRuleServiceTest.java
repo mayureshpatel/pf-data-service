@@ -59,14 +59,14 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should return list of rule DTOs")
         void shouldReturnRules() {
-            // Arrange
+            // arrange
             CategoryRule rule = CategoryRule.builder().id(RULE_ID).keywords(List.of("Amazon")).build();
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of(rule));
 
-            // Act
+            // act
             List<CategoryRuleDto> result = ruleService.getRules(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals(List.of("Amazon"), result.get(0).keywords());
         }
@@ -78,7 +78,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should create rule successfully")
         void shouldCreate() {
-            // Arrange
+            // arrange
             User user = User.builder().id(USER_ID).build();
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
@@ -92,10 +92,10 @@ class CategoryRuleServiceTest {
                     .priority(1)
                     .build();
 
-            // Act
+            // act
             Long result = ruleService.createRule(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(42L, result);
             verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getKeywords().equals(List.of("Amazon"))));
         }
@@ -103,7 +103,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should create with default priority if not provided")
         void shouldCreateWithDefaultPriority() {
-            // Arrange
+            // arrange
             User user = User.builder().id(USER_ID).build();
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
@@ -117,10 +117,10 @@ class CategoryRuleServiceTest {
                     .priority(null)
                     .build();
 
-            // Act
+            // act
             ruleService.createRule(USER_ID, request);
 
-            // Assert
+            // assert & verify
             verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getPriority() == 0));
         }
 
@@ -229,7 +229,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should update rule successfully")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             User user = User.builder().id(USER_ID).build();
             CategoryRule rule = CategoryRule.builder().id(RULE_ID).user(user).build();
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
@@ -246,10 +246,10 @@ class CategoryRuleServiceTest {
                     .maxAmount(new java.math.BigDecimal("20.00"))
                     .build();
 
-            // Act
+            // act
             int result = ruleService.updateRule(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(categoryRuleRepository).update(argThat(r -> r.getKeywords().equals(List.of("NewKW"))
                     && r.getPriority() == 5
@@ -267,7 +267,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if category not found during update")
         void shouldThrowOnCategoryNotFoundDuringUpdate() {
-            // Arrange
+            // arrange
             User user = User.builder().id(USER_ID).build();
             CategoryRule rule = CategoryRule.builder().id(RULE_ID).user(user).build();
             when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(rule));
@@ -276,7 +276,7 @@ class CategoryRuleServiceTest {
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .id(RULE_ID).categoryId(CATEGORY_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> ruleService.updateRule(USER_ID, request));
         }
 
@@ -297,15 +297,15 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should delete rule successfully")
         void shouldDelete() {
-            // Arrange
+            // arrange
             User user = User.builder().id(USER_ID).build();
             CategoryRule rule = CategoryRule.builder().id(RULE_ID).user(user).build();
             when(categoryRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(rule));
 
-            // Act
+            // act
             ruleService.deleteRule(USER_ID, RULE_ID);
 
-            // Assert
+            // assert & verify
             verify(categoryRuleRepository).deleteById(RULE_ID, USER_ID);
         }
 
@@ -333,7 +333,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should return previews for uncategorized transactions matching rules")
         void shouldReturnPreviews() {
-            // Arrange
+            // arrange
             Transaction t1 = Transaction.builder().description("Amazon").category(null).type(TransactionType.EXPENSE).build();
             Transaction tAlready = Transaction.builder().description("AlreadyCat").category(Category.builder().build()).build();
             Category targetCat = Category.builder().id(CATEGORY_ID).name("Shopping").build();
@@ -343,10 +343,10 @@ class CategoryRuleServiceTest {
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1, tAlready));
             when(categorizer.guessCategory(eq(t1), anyList(), anyList())).thenReturn(CATEGORY_ID);
 
-            // Act
+            // act
             List<RuleChangePreviewDto> result = ruleService.previewApply(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("Amazon", result.get(0).description());
             assertEquals("Shopping", result.get(0).newValue());
@@ -355,7 +355,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should defensively handle a null guess, even though the real categorizer never returns one")
         void shouldHandleDefensiveNullGuess() {
-            // Arrange -- TransactionCategorizer.guessCategory() is documented and implemented to
+            // arrange -- TransactionCategorizer.guessCategory() is documented and implemented to
             // never return null (it returns the sentinel -1L on no match); this exercises the
             // guard's defensive null-check anyway, since it's still part of the fixed condition
             Transaction t1 = Transaction.builder().description("Unknown").category(null).type(TransactionType.EXPENSE).build();
@@ -364,34 +364,34 @@ class CategoryRuleServiceTest {
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(null);
 
-            // Act
+            // act
             List<RuleChangePreviewDto> result = ruleService.previewApply(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("should skip when the guessed category id no longer exists (e.g. deleted after the rule was created)")
         void shouldHandleGuessNotInMap() {
-            // Arrange -- a real, non-sentinel id that simply isn't in the user's current categories
+            // arrange -- a real, non-sentinel id that simply isn't in the user's current categories
             Transaction t1 = Transaction.builder().description("Unknown").category(null).type(TransactionType.EXPENSE).build();
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(999L);
 
-            // Act
+            // act
             List<RuleChangePreviewDto> result = ruleService.previewApply(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("should skip the no-match sentinel via its own guard, even if categoryMap happens to have a -1-keyed entry (PF-204)")
         void shouldSkipSentinelEvenIfCategoryMapHasEntryForIt() {
-            // Arrange -- the real bug this guards against: if a future "Uncategorized" pseudo
+            // arrange -- the real bug this guards against: if a future "Uncategorized" pseudo
             // -category is ever added with id -1 (the app already has this exact sentinel pattern
             // elsewhere, e.g. bulk-edit-dialog's "Uncategorized" item), categoryMap.get(-1L) would
             // stop returning null -- so this deliberately engineers that exact scenario. Only the
@@ -405,17 +405,17 @@ class CategoryRuleServiceTest {
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(-1L);
 
-            // Act
+            // act
             List<RuleChangePreviewDto> result = ruleService.previewApply(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("should handle duplicate categories in map merge")
         void shouldHandleDuplicateCategories() {
-            // Arrange
+            // arrange
             Transaction t1 = Transaction.builder().description("Target").category(null).type(TransactionType.EXPENSE).build();
             Category c1 = Category.builder().id(CATEGORY_ID).name("Cat1").build();
             Category c2 = Category.builder().id(CATEGORY_ID).name("Cat2").build();
@@ -425,10 +425,10 @@ class CategoryRuleServiceTest {
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(CATEGORY_ID);
 
-            // Act
+            // act
             List<RuleChangePreviewDto> result = ruleService.previewApply(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("Cat1", result.get(0).newValue());
         }
@@ -440,7 +440,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should apply matching categories to transactions and persist")
         void shouldApplyRules() {
-            // Arrange
+            // arrange
             Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
             Transaction tAlready = Transaction.builder().id(2L).description("Already").category(Category.builder().id(10L).build()).type(TransactionType.EXPENSE).build();
             Category targetCat = Category.builder().id(CATEGORY_ID).build();
@@ -450,10 +450,10 @@ class CategoryRuleServiceTest {
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1, tAlready));
             when(categorizer.guessCategory(eq(t1), anyList(), anyList())).thenReturn(CATEGORY_ID);
 
-            // Act
+            // act
             int result = ruleService.applyRules(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.size() == 1 && list.get(0).getCategory().getId().equals(CATEGORY_ID)));
         }
@@ -461,7 +461,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should skip transaction if guess is defensively null or category not in map during apply")
         void shouldSkipOnNoMatch() {
-            // Arrange
+            // arrange
             Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
@@ -481,7 +481,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should skip the no-match sentinel via its own guard, even if categoryMap happens to have a -1-keyed entry (PF-204)")
         void shouldSkipSentinelEvenIfCategoryMapHasEntryForIt() {
-            // Arrange -- same isolation as previewApply's equivalent test: engineers categoryMap
+            // arrange -- same isolation as previewApply's equivalent test: engineers categoryMap
             // to contain a -1L-keyed category so only the guessedCategory <= 0 guard itself (not
             // the coincidental categoryMap.get(...) == null check) can correctly skip this
             Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
@@ -492,10 +492,10 @@ class CategoryRuleServiceTest {
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(-1L);
 
-            // Act
+            // act
             int result = ruleService.applyRules(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(0, result);
             verify(transactionRepository, never()).updateAll(eq(USER_ID), anyList());
         }
@@ -503,7 +503,7 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should handle duplicate categories in applyRules map merge")
         void shouldHandleDuplicateCategoriesInApply() {
-            // Arrange
+            // arrange
             Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
             Category c1 = Category.builder().id(CATEGORY_ID).name("Cat1").build();
             Category c2 = Category.builder().id(CATEGORY_ID).name("Cat2").build();
@@ -513,10 +513,10 @@ class CategoryRuleServiceTest {
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(CATEGORY_ID);
 
-            // Act
+            // act
             int result = ruleService.applyRules(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(transactionRepository).updateAll(eq(USER_ID), anyList());
         }
@@ -524,13 +524,13 @@ class CategoryRuleServiceTest {
         @Test
         @DisplayName("should return 0 and not call updateAll if no matches")
         void shouldHandleNoUpdates() {
-            // Arrange
+            // arrange
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of());
 
-            // Act
+            // act
             int result = ruleService.applyRules(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(0, result);
             verify(transactionRepository, never()).updateAll(eq(USER_ID), anyList());
         }

@@ -35,14 +35,14 @@ class CurrencyServiceTest {
         @Test
         @DisplayName("should return all active currencies from repository")
         void shouldReturnActiveCurrencies() {
-            // Arrange
+            // arrange
             Currency currency = Currency.builder().code("USD").name("US Dollar").active(true).build();
             when(currencyRepository.findByIsActive()).thenReturn(List.of(currency));
 
-            // Act
+            // act
             List<Currency> result = currencyService.getAllActiveCurrencies();
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("USD", result.get(0).getCode());
             verify(currencyRepository).findByIsActive();
@@ -55,14 +55,14 @@ class CurrencyServiceTest {
         @Test
         @DisplayName("should return currency when code exists")
         void shouldReturnCurrency() {
-            // Arrange
+            // arrange
             Currency currency = Currency.builder().code(CURRENCY_CODE).name("US Dollar").build();
             when(currencyRepository.findById(CURRENCY_CODE)).thenReturn(Optional.of(currency));
 
-            // Act
+            // act
             Currency result = currencyService.getCurrencyByCode(CURRENCY_CODE);
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             assertEquals(CURRENCY_CODE, result.getCode());
             verify(currencyRepository).findById(CURRENCY_CODE);
@@ -71,10 +71,10 @@ class CurrencyServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException when code does not exist")
         void shouldThrowException() {
-            // Arrange
+            // arrange
             when(currencyRepository.findById(anyString())).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                     () -> currencyService.getCurrencyByCode("XYZ"));
             assertTrue(ex.getMessage().contains("XYZ"));

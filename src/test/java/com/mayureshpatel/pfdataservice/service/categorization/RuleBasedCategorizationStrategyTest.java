@@ -26,7 +26,7 @@ class RuleBasedCategorizationStrategyTest {
         @Test
         @DisplayName("should return category ID if keyword matches description case-insensitively")
         void shouldMatchKeyword() {
-            // Arrange
+            // arrange
             Transaction t = Transaction.builder().description("AMAZON MARKETPLACE").build();
             CategoryRule rule = CategoryRule.builder()
                     .keywords(List.of("Amazon"))
@@ -37,10 +37,10 @@ class RuleBasedCategorizationStrategyTest {
                     .rules(List.of(rule))
                     .build();
 
-            // Act
+            // act
             Optional<Long> result = strategy.categorize(t, context);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(10L, result.get());
         }
@@ -48,24 +48,24 @@ class RuleBasedCategorizationStrategyTest {
         @Test
         @DisplayName("should return empty if no rules match")
         void shouldNotMatch() {
-            // Arrange
+            // arrange
             Transaction t = Transaction.builder().description("Unknown").build();
             CategoryRule rule = CategoryRule.builder().keywords(List.of("Amazon")).build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(rule))
                     .build();
 
-            // Act
+            // act
             Optional<Long> result = strategy.categorize(t, context);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("should return empty if description or rules are missing")
         void shouldHandleNulls() {
-            // Act & Assert
+            // act & assert & verify
             assertTrue(strategy.categorize(Transaction.builder().description(null).build(), CategorizationStrategy.CategorizationContext.builder().rules(List.of()).build()).isEmpty());
             assertTrue(strategy.categorize(Transaction.builder().description("Test").build(), CategorizationStrategy.CategorizationContext.builder().rules(null).build()).isEmpty());
         }
@@ -73,11 +73,11 @@ class RuleBasedCategorizationStrategyTest {
         @Test
         @DisplayName("should handle empty rules list")
         void shouldHandleEmptyRules() {
-            // Act
+            // act
             Optional<Long> result = strategy.categorize(Transaction.builder().description("Test").build(),
                     CategorizationStrategy.CategorizationContext.builder().rules(List.of()).build());
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
 
@@ -375,7 +375,7 @@ class RuleBasedCategorizationStrategyTest {
         @Test
         @DisplayName("should match keyword for update request")
         void shouldMatchRequest() {
-            // Arrange
+            // arrange
             TransactionUpdateRequest req = TransactionUpdateRequest.builder().description("Netflix.com").build();
             CategoryRule rule = CategoryRule.builder()
                     .keywords(List.of("Netflix"))
@@ -386,10 +386,10 @@ class RuleBasedCategorizationStrategyTest {
                     .rules(List.of(rule))
                     .build();
 
-            // Act
+            // act
             Optional<Long> result = strategy.categorize(req, context);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(20L, result.get());
         }
@@ -397,7 +397,7 @@ class RuleBasedCategorizationStrategyTest {
         @Test
         @DisplayName("should return empty if description or rules are missing for request")
         void shouldHandleNullsInRequest() {
-            // Act & Assert
+            // act & assert & verify
             assertTrue(strategy.categorize(TransactionUpdateRequest.builder().description(null).build(), CategorizationStrategy.CategorizationContext.builder().rules(List.of()).build()).isEmpty());
             assertTrue(strategy.categorize(TransactionUpdateRequest.builder().description("Test").build(), CategorizationStrategy.CategorizationContext.builder().rules(null).build()).isEmpty());
         }

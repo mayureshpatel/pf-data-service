@@ -16,13 +16,13 @@ class CsvParsingExceptionTest {
         @Test
         @DisplayName("should create exception with provided message")
         void shouldCreateWithProvidedMessage() {
-            // Arrange
+            // arrange
             String message = "Failed to parse CSV at line 5";
 
-            // Act
+            // act
             CsvParsingException exception = new CsvParsingException(message);
 
-            // Assert
+            // assert & verify
             assertEquals(message, exception.getMessage());
         }
     }
@@ -34,14 +34,14 @@ class CsvParsingExceptionTest {
         @Test
         @DisplayName("should create exception with provided message and cause")
         void shouldCreateWithProvidedMessageAndCause() {
-            // Arrange
+            // arrange
             String message = "Invalid numeric format";
             Throwable cause = new NumberFormatException("Invalid double");
 
-            // Act
+            // act
             CsvParsingException exception = new CsvParsingException(message, cause);
 
-            // Assert
+            // assert & verify
             assertEquals(message, exception.getMessage());
             assertEquals(cause, exception.getCause());
         }

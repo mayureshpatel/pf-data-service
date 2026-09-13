@@ -16,14 +16,14 @@ class MerchantDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<MerchantDtoMapper> constructor = MerchantDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         MerchantDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -34,17 +34,17 @@ class MerchantDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             MerchantDto result = MerchantDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             Merchant merchant = Merchant.builder()
                     .id(1L)
                     .userId(100L)
@@ -52,10 +52,10 @@ class MerchantDtoMapperTest {
                     .cleanName("McDonald's")
                     .build();
 
-            // Act
+            // act
             MerchantDto dto = MerchantDtoMapper.toDto(merchant);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(merchant.getId(), dto.id());
             assertEquals(merchant.getUserId(), dto.userId());
@@ -66,7 +66,7 @@ class MerchantDtoMapperTest {
         @Test
         @DisplayName("should handle null userId")
         void toDto_shouldHandleNullUserId() {
-            // Arrange
+            // arrange
             Merchant merchant = Merchant.builder()
                     .id(1L)
                     .originalName("TEST")
@@ -74,10 +74,10 @@ class MerchantDtoMapperTest {
                     .userId(null)
                     .build();
 
-            // Act
+            // act
             MerchantDto dto = MerchantDtoMapper.toDto(merchant);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.userId());
         }

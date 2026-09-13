@@ -20,14 +20,14 @@ class CategoryRuleDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<CategoryRuleDtoMapper> constructor = CategoryRuleDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         CategoryRuleDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -38,17 +38,17 @@ class CategoryRuleDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             CategoryRuleDto result = CategoryRuleDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             User user = User.builder().id(100L).build();
             Category category = Category.builder().id(50L).name("Dining").type("EXPENSE").build();
             CategoryRule rule = CategoryRule.builder()
@@ -62,10 +62,10 @@ class CategoryRuleDtoMapperTest {
                     .maxAmount(new java.math.BigDecimal("100.00"))
                     .build();
 
-            // Act
+            // act
             CategoryRuleDto dto = CategoryRuleDtoMapper.toDto(rule);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(rule.getId(), dto.id());
             assertEquals(user.getId(), dto.userId());
@@ -81,7 +81,7 @@ class CategoryRuleDtoMapperTest {
         @Test
         @DisplayName("should handle null user and category")
         void toDto_shouldHandleNulls() {
-            // Arrange
+            // arrange
             CategoryRule rule = CategoryRule.builder()
                     .id(1L)
                     .keywords(List.of("TEST"))
@@ -90,10 +90,10 @@ class CategoryRuleDtoMapperTest {
                     .category(null)
                     .build();
 
-            // Act
+            // act
             CategoryRuleDto dto = CategoryRuleDtoMapper.toDto(rule);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.userId());
             assertNull(dto.category());

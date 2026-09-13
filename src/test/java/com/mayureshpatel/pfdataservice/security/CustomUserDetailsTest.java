@@ -20,7 +20,7 @@ class CustomUserDetailsTest {
         @Test
         @DisplayName("should correctly map all fields from User domain object")
         void shouldMapFieldsFromUser() {
-            // Arrange
+            // arrange
             User user = User.builder()
                     .id(1L)
                     .username("testuser")
@@ -28,10 +28,10 @@ class CustomUserDetailsTest {
                     .email("test@example.com")
                     .build();
 
-            // Act
+            // act
             CustomUserDetails userDetails = new CustomUserDetails(user);
 
-            // Assert
+            // assert & verify
             assertThat(userDetails.getId()).isEqualTo(1L);
             assertThat(userDetails.getUsername()).isEqualTo("testuser");
             assertThat(userDetails.getPassword()).isEqualTo("hashedPassword");
@@ -41,7 +41,7 @@ class CustomUserDetailsTest {
         @Test
         @DisplayName("should assign ROLE_USER authority by default")
         void shouldAssignDefaultAuthority() {
-            // Arrange
+            // arrange
             User user = User.builder()
                     .id(1L)
                     .username("testuser")
@@ -49,11 +49,11 @@ class CustomUserDetailsTest {
                     .email("test@example.com")
                     .build();
 
-            // Act
+            // act
             CustomUserDetails userDetails = new CustomUserDetails(user);
             Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
 
-            // Assert
+            // assert & verify
             assertThat(authorities).hasSize(1);
             assertThat(authorities.iterator().next().getAuthority()).isEqualTo("ROLE_USER");
         }
@@ -66,7 +66,7 @@ class CustomUserDetailsTest {
         @Test
         @DisplayName("should return true for all account status flags")
         void shouldReturnTrueForStatusFlags() {
-            // Arrange
+            // arrange
             User user = User.builder()
                     .id(1L)
                     .username("testuser")
@@ -74,10 +74,10 @@ class CustomUserDetailsTest {
                     .email("test@example.com")
                     .build();
 
-            // Act
+            // act
             CustomUserDetails userDetails = new CustomUserDetails(user);
 
-            // Assert
+            // assert & verify
             assertThat(userDetails.isAccountNonExpired()).isTrue();
             assertThat(userDetails.isAccountNonLocked()).isTrue();
             assertThat(userDetails.isCredentialsNonExpired()).isTrue();

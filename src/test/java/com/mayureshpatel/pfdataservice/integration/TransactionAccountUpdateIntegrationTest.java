@@ -56,7 +56,7 @@ class TransactionAccountUpdateIntegrationTest extends BaseIntegrationTest {
             "INSERT INTO transactions (id, account_id, amount, date, description, type) VALUES (200, 200, 10.00, NOW(), 'Move me', 'EXPENSE') ON CONFLICT DO NOTHING;"
     })
     void shouldMoveTransactionAndCorrectBothBalances() throws Exception {
-        // Arrange -- move a $10 EXPENSE from the old account (id 200) to the new one (id 201)
+        // arrange -- move a $10 EXPENSE from the old account (id 200) to the new one (id 201)
         TransactionUpdateRequest request = TransactionUpdateRequest.builder()
                 .id(200L)
                 .accountId(201L)
@@ -66,14 +66,14 @@ class TransactionAccountUpdateIntegrationTest extends BaseIntegrationTest {
                 .type("EXPENSE")
                 .build();
 
-        // Act
+        // act
         mockMvc.perform(put("/api/v1/transactions")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
 
-        // Assert -- read persisted state back through the real repositories, not mocks
+        // assert & verify -- read persisted state back through the real repositories, not mocks
         Transaction moved = transactionRepository.findById(200L, 200L).orElseThrow();
         assertEquals(201L, moved.getAccount().getId());
         // PF-215: the enriched query's embedded account must also correctly hydrate its type,

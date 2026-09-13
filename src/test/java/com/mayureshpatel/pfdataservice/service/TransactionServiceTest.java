@@ -82,14 +82,14 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should return transfer matches from matcher")
         void shouldReturnMatches() {
-            // Arrange
+            // arrange
             when(transactionRepository.findRecentNonTransferTransactions(eq(USER_ID), any())).thenReturn(List.of());
             when(transferMatcher.findMatches(anyList())).thenReturn(List.of(new TransferSuggestionDto(null, null, 0.9)));
 
-            // Act
+            // act
             List<TransferSuggestionDto> result = transactionService.findPotentialTransfers(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             verify(transferMatcher).findMatches(anyList());
         }
@@ -101,17 +101,17 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should convert INCOME to TRANSFER_IN and update account balance")
         void shouldMarkCorrectly() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             Transaction t1 = Transaction.builder().id(1L).type(TransactionType.INCOME).amount(BigDecimal.TEN).account(account).build();
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t1));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act
+            // act
             transactionService.markAsTransfer(USER_ID, List.of(1L));
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_IN));
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
         }
@@ -119,29 +119,29 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should convert EXPENSE to TRANSFER_OUT")
         void shouldMarkExpenseCorrectly() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             Transaction t = Transaction.builder().id(1L).type(TransactionType.EXPENSE).amount(BigDecimal.ONE).account(account).build();
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act
+            // act
             transactionService.markAsTransfer(USER_ID, List.of(1L));
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_OUT));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user does not own transaction")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Account otherAccount = createMockAccount(999L);
             Transaction t = Transaction.builder().id(1L).account(otherAccount).build();
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> transactionService.markAsTransfer(USER_ID, List.of(1L)));
         }
     }
@@ -152,14 +152,14 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should return paginated DTOs")
         void shouldReturnPage() {
-            // Arrange
+            // arrange
             Page<Transaction> page = new PageImpl<>(List.of(Transaction.builder().id(1L).build()));
             when(transactionRepository.findAll(any(), any(Pageable.class))).thenReturn(page);
 
-            // Act
+            // act
             Page<TransactionDto> result = transactionService.getTransactions(USER_ID, TransactionType.INCOME, PageRequest.of(0, 10));
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.getContent().size());
             assertEquals(1L, result.getContent().get(0).id());
         }
@@ -167,17 +167,17 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should return paginated DTOs with full filter")
         void shouldReturnPageWithFullFilter() {
-            // Arrange
+            // arrange
             Page<Transaction> page = new PageImpl<>(List.of());
             when(transactionRepository.findAll(any(), any(Pageable.class))).thenReturn(page);
             TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
                     10L, TransactionType.EXPENSE, "Desc", "Cat", "Vendor", BigDecimal.ONE, BigDecimal.TEN, LocalDate.now(), LocalDate.now(), null
             );
 
-            // Act
+            // act
             Page<TransactionDto> result = transactionService.getTransactions(USER_ID, filter, PageRequest.of(0, 10));
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             verify(transactionRepository).findAll(any(), any(Pageable.class));
         }
@@ -197,17 +197,17 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should delete transactions and update balance if owned")
         void shouldDelete() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             Transaction t = Transaction.builder().id(1L).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act
+            // act
             transactionService.deleteTransactions(USER_ID, List.of(1L));
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).deleteAll(eq(USER_ID), anyList());
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
         }
@@ -215,14 +215,14 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should throw AccessDeniedException if any transaction is not owned")
         void shouldThrowOnMismatchedOwner() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             Account other = createMockAccount(999L);
             Transaction t1 = Transaction.builder().id(1L).account(account).build();
             Transaction t2 = Transaction.builder().id(2L).account(other).build();
             when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t1, t2));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> transactionService.deleteTransactions(USER_ID, List.of(1L, 2L)));
         }
     }
@@ -233,7 +233,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should create and apply transaction to account balance")
         void shouldCreate() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
@@ -252,10 +252,10 @@ class TransactionServiceTest {
             when(categoryRepository.findById(5L)).thenReturn(Optional.of(subCategory));
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 
-            // Act
+            // act
             int result = transactionService.createTransaction(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
             verify(transactionRepository).insert(any(Transaction.class));
@@ -264,7 +264,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should throw OptimisticLockingFailureException if account balance update fails due to concurrency")
         void shouldThrowOnOptimisticLockingFailure() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong())).thenReturn(0);
@@ -278,7 +278,7 @@ class TransactionServiceTest {
 
             when(merchantService.findOrCreateMerchant(eq(USER_ID), any())).thenReturn(1001L);
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(org.springframework.dao.OptimisticLockingFailureException.class, () -> transactionService.createTransaction(USER_ID, request));
             verify(transactionRepository, never()).insert(any(Transaction.class));
         }
@@ -286,18 +286,18 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if account not found")
         void shouldThrowOnAccountNotFound() {
-            // Arrange
+            // arrange
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
             TransactionCreateRequest request = TransactionCreateRequest.builder().accountId(ACCOUNT_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
         }
 
         @Test
         @DisplayName("should guess category if none provided")
         void shouldGuessCategory() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
@@ -310,10 +310,10 @@ class TransactionServiceTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID).type("INCOME").description("Guess Me").build();
 
-            // Act
+            // act
             transactionService.createTransaction(USER_ID, request);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory().getId().equals(10L)));
         }
 
@@ -348,7 +348,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should handle category guessing when ID is null or zero")
         void shouldHandleGuessedCategoryNullOrZero() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
@@ -361,10 +361,10 @@ class TransactionServiceTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID).type("INCOME").description("No Category").build();
 
-            // Act
+            // act
             transactionService.createTransaction(USER_ID, request);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory() == null));
         }
     }
@@ -375,7 +375,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should update transaction and update account balance")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             Transaction original = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
@@ -391,10 +391,10 @@ class TransactionServiceTest {
             when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Updated Description"))).thenReturn(1001L);
             when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
-            // Act
+            // act
             int result = transactionService.updateTransaction(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
             verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getAmount().equals(BigDecimal.TEN)));
@@ -403,7 +403,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should move a transaction to a different account and update both balances (PF-194)")
         void shouldUpdateAccountWhenChanged() {
-            // Arrange -- a $10 EXPENSE moving from the old account to a new one
+            // arrange -- a $10 EXPENSE moving from the old account to a new one
             Account oldAccount = createMockAccount(USER_ID); // id=ACCOUNT_ID, balance=1000.00
             Transaction original = Transaction.builder().id(TRANSACTION_ID).account(oldAccount).amount(BigDecimal.TEN).type(TransactionType.EXPENSE).build();
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
@@ -422,10 +422,10 @@ class TransactionServiceTest {
             when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Moved transaction"))).thenReturn(1001L);
             when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
-            // Act
+            // act
             int result = transactionService.updateTransaction(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             // old account loses the transaction's effect: undoing a $10 EXPENSE raises its balance (1000 -> 1010)
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), eq(new BigDecimal("1010.00")), anyLong());
@@ -437,7 +437,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if the target account doesn't exist (PF-194)")
         void shouldThrowOnTargetAccountNotFound() {
-            // Arrange
+            // arrange
             Account oldAccount = createMockAccount(USER_ID);
             Transaction original = Transaction.builder().id(TRANSACTION_ID).account(oldAccount).amount(BigDecimal.TEN).type(TransactionType.EXPENSE).build();
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
@@ -451,7 +451,7 @@ class TransactionServiceTest {
                     .description("Moved transaction")
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.updateTransaction(USER_ID, request));
             verify(transactionRepository, never()).update(anyLong(), any(Transaction.class));
         }
@@ -489,7 +489,7 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should throw AccessDeniedException if the target account belongs to a different user (PF-194)")
         void shouldThrowOnTargetAccountNotOwned() {
-            // Arrange
+            // arrange
             Account oldAccount = createMockAccount(USER_ID);
             Transaction original = Transaction.builder().id(TRANSACTION_ID).account(oldAccount).amount(BigDecimal.TEN).type(TransactionType.EXPENSE).build();
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
@@ -505,7 +505,7 @@ class TransactionServiceTest {
                     .description("Moved transaction")
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> transactionService.updateTransaction(USER_ID, request));
             verify(transactionRepository, never()).update(anyLong(), any(Transaction.class));
         }
@@ -517,15 +517,15 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should delete and reverse transaction from account balance")
         void shouldDelete() {
-            // Arrange
+            // arrange
             Account account = createMockAccount(USER_ID);
             Transaction t = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(t));
 
-            // Act
+            // act
             transactionService.deleteTransaction(USER_ID, TRANSACTION_ID);
 
-            // Assert
+            // assert & verify
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
             verify(transactionRepository).deleteById(TRANSACTION_ID, USER_ID);
         }

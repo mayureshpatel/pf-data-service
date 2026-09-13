@@ -19,15 +19,15 @@ class AccountDtoMapperTest {
     @Test
     @DisplayName("Private constructor should not be accessible but can be called for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<AccountDtoMapper> constructor = AccountDtoMapper.class.getDeclaredConstructor();
         assertTrue(java.lang.reflect.Modifier.isPrivate(constructor.getModifiers()));
         constructor.setAccessible(true);
 
-        // Act
+        // act
         AccountDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -38,20 +38,20 @@ class AccountDtoMapperTest {
         @Test
         @DisplayName("should return null when account is null")
         void toDto_shouldReturnNullWhenAccountIsNull() {
-            // Arrange
+            // arrange
             Account account = null;
 
-            // Act
+            // act
             AccountDto result = AccountDtoMapper.toDto(account);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when account is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             Account account = Account.builder()
                     .id(1L)
                     .userId(100L)
@@ -62,10 +62,10 @@ class AccountDtoMapperTest {
                     .bankCode("CAPITAL_ONE")
                     .build();
 
-            // Act
+            // act
             AccountDto dto = AccountDtoMapper.toDto(account);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(account.getId(), dto.id());
             assertEquals(account.getName(), dto.name());
@@ -87,7 +87,7 @@ class AccountDtoMapperTest {
         @Test
         @DisplayName("should handle null optional fields")
         void toDto_shouldHandleNullOptionals() {
-            // Arrange
+            // arrange
             Account account = Account.builder()
                     .id(1L)
                     .name("Minimal Account")
@@ -97,10 +97,10 @@ class AccountDtoMapperTest {
                     .bankCode(null)
                     .build();
 
-            // Act
+            // act
             AccountDto dto = AccountDtoMapper.toDto(account);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(account.getId(), dto.id());
             assertEquals(account.getName(), dto.name());

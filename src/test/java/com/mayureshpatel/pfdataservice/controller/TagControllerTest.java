@@ -38,11 +38,11 @@ class TagControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return list of tags for authenticated user")
         void getTags_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             TagDto tagDto = new TagDto(TAG_ID, USER_ID, "Travel", "#123456");
             when(tagService.getTags(USER_ID)).thenReturn(List.of(tagDto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/tags"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -70,7 +70,7 @@ class TagControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should create a new tag and return the generated id")
         void createTag_shouldReturnGeneratedId() throws Exception {
-            // Arrange
+            // arrange
             TagCreateRequest request = TagCreateRequest.builder()
                     .userId(USER_ID)
                     .name("Travel")
@@ -79,7 +79,7 @@ class TagControllerTest extends BaseControllerTest {
 
             when(tagService.createTag(eq(USER_ID), any(TagCreateRequest.class))).thenReturn(42L);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/tags")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -93,10 +93,10 @@ class TagControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createTag_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange -- missing name
+            // arrange -- missing name
             TagCreateRequest request = TagCreateRequest.builder().userId(USER_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/tags")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -112,11 +112,11 @@ class TagControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should update an existing tag and return rows affected")
         void updateTag_shouldReturnRowsAffected() throws Exception {
-            // Arrange
+            // arrange
             TagUpdateRequest request = TagUpdateRequest.builder().id(TAG_ID).name("Updated").color("#FFFFFF").build();
             when(tagService.updateTag(eq(USER_ID), any(TagUpdateRequest.class))).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/tags")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -130,7 +130,7 @@ class TagControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should return 400 Bad Request when validation fails")
         void updateTag_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange -- missing id and name
+            // arrange -- missing id and name
             TagUpdateRequest request = TagUpdateRequest.builder().build();
 
             mockMvc.perform(put("/api/v1/tags")

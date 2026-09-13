@@ -29,10 +29,10 @@ class UserRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all active users")
         void shouldFindAll() {
-            // Act
+            // act
             List<User> result = userRepository.findAll();
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.size() >= 2);
         }
@@ -40,10 +40,10 @@ class UserRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
-            // Act
+            // act
             Optional<User> result = userRepository.findById(1L);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(TEST_USER, result.get().getUsername());
         }
@@ -51,10 +51,10 @@ class UserRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by email")
         void shouldFindByEmail() {
-            // Act
+            // act
             Optional<User> result = userRepository.findByEmail(TEST_EMAIL);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(TEST_USER, result.get().getUsername());
         }
@@ -62,10 +62,10 @@ class UserRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by username")
         void shouldByUsername() {
-            // Act
+            // act
             Optional<User> result = userRepository.findByUsername(TEST_USER);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(TEST_EMAIL, result.get().getEmail());
         }
@@ -102,17 +102,17 @@ class UserRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert a new user")
         void shouldInsert() {
-            // Arrange
+            // arrange
             User user = User.builder()
                     .username("newuser")
                     .email("new@example.com")
                     .passwordHash("hash")
                     .build();
 
-            // Act
+            // act
             int userId = userRepository.insert(user);
 
-            // Assert
+            // assert & verify
             assertTrue(userId > 0);
             assertTrue(userRepository.existsByUsername("newuser"));
         }
@@ -120,16 +120,16 @@ class UserRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update an existing user")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             User existing = userRepository.findById(1L).orElseThrow();
             User update = existing.toBuilder()
                     .email("updated@example.com")
                     .build();
 
-            // Act
+            // act
             int rows = userRepository.update(update);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             User result = userRepository.findById(1L).orElseThrow();
             assertEquals("updated@example.com", result.getEmail());
@@ -138,13 +138,13 @@ class UserRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should soft delete a user")
         void shouldDelete() {
-            // Arrange
+            // arrange
             User user = userRepository.findById(1L).orElseThrow();
 
-            // Act
+            // act
             int rows = userRepository.delete(user);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertFalse(userRepository.existsById(1L));
         }
