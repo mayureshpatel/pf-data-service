@@ -161,11 +161,9 @@ public class UniversalCsvParser implements TransactionParser {
         if (descCol == null) {
             throw new IllegalArgumentException("Could not find a valid 'Description' column in CSV headers.");
         }
-        if (amountCol == null && (debitCol == null || creditCol == null)) {
-            // need either amount or (debit and credit)
-            if (debitCol == null && creditCol == null) {
-                throw new IllegalArgumentException("Could not find valid 'Amount' or 'Debit/Credit' columns.");
-            }
+        // need either amount or (debit and credit)
+        if (amountCol == null && debitCol == null && creditCol == null) {
+            throw new IllegalArgumentException("Could not find valid 'Amount' or 'Debit/Credit' columns.");
         }
 
         log.info("Universal Parser Mapped Columns - Date: {}, PostDate: {}, Desc: {}, Amount: {}, Debit: {}, Credit: {}",

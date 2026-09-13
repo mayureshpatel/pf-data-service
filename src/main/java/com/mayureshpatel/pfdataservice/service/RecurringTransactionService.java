@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class RecurringTransactionService {
 
+    private static final int MIN_OCCURRENCES_FOR_RECURRING_PATTERN = 3;
+
     private final RecurringTransactionRepository recurringRepository;
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
@@ -69,7 +71,7 @@ public class RecurringTransactionService {
         // 1. get existing recurring items to exclude duplicates
         Set<String> existingMerchants = recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
                 .map(r -> r.getMerchant() != null && r.getMerchant().getCleanName() != null
-                        ? r.getMerchant().getCleanName().toLowerCase()
+                        ? r.getMerchant().getCleanName().toLowerCase(Locale.ROOT)
                         : "")
                 .collect(Collectors.toSet());
 
@@ -87,7 +89,7 @@ public class RecurringTransactionService {
             if (name == null) continue;
 
             name = name.trim();
-            if (existingMerchants.contains(name.toLowerCase())) continue;
+            if (existingMerchants.contains(name.toLowerCase(Locale.ROOT))) continue;
 
             String key = name + "|" + t.getAmount();
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(t);
@@ -99,14 +101,14 @@ public class RecurringTransactionService {
         for (Map.Entry<String, List<Transaction>> entry : groups.entrySet()) {
             List<Transaction> group = entry.getValue();
 
-            if (group.size() < 3) continue;
+            if (group.size() < MIN_OCCURRENCES_FOR_RECURRING_PATTERN) continue;
 
             // filter out any transactions with null dates to prevent npe during sort
             group = group.stream()
                     .filter(t -> t.getTransactionDate() != null)
                     .collect(Collectors.toList());
 
-            if (group.size() < 3) continue;
+            if (group.size() < MIN_OCCURRENCES_FOR_RECURRING_PATTERN) continue;
 
             group.sort(Comparator.comparing(Transaction::getTransactionDate));
 

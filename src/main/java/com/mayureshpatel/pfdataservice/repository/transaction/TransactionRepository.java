@@ -122,6 +122,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      * @param transaction the resolved transaction to insert
      * @return the newly inserted transaction's generated id
      */
+    @Override
     public int insert(Transaction transaction) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 

@@ -236,6 +236,11 @@
                     <linkXRef>false</linkXRef>
                     <printFailingErrors>true</printFailingErrors>
                     <includeTests>true</includeTests>
+                    <!-- Priority 1-3 findings fail the build; priority 4 (PF-329's triaged,
+                         tracked-not-fixed findings) still print via verbose but don't fail it. -->
+                    <failurePriority>3</failurePriority>
+                    <verbose>true</verbose>
+                    <excludeFromFailureFile>pmd-excludes.properties</excludeFromFailureFile>
                 </configuration>
                 <dependencies>
                     <dependency>

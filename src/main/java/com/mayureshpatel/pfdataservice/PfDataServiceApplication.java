@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.TimeZone;
 
+@SuppressWarnings("PMD.UseUtilityClass")
 @SpringBootApplication
 public class PfDataServiceApplication {
 

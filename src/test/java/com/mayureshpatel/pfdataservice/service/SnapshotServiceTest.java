@@ -95,7 +95,6 @@ class SnapshotServiceTest {
         void shouldHandleNullNetFlow() {
             // Arrange
             LocalDate dateInMonth = LocalDate.of(2026, 3, 15);
-            LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("1000.00")).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));

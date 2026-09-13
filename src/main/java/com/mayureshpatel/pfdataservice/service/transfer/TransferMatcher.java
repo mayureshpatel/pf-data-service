@@ -22,6 +22,8 @@ import java.util.Set;
 @Component
 public class TransferMatcher {
 
+    private static final int MAX_DAYS_APART_FOR_TRANSFER_MATCH = 3;
+
     /**
      * Finds candidate transfer pairs among a set of transactions. Each transaction is matched at
      * most once, to whichever earlier-considered candidate it pairs with first.
@@ -52,24 +54,22 @@ public class TransferMatcher {
 
                 long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getTransactionDate(), t2.getTransactionDate()));
 
-                if (daysDiff > 3) {
+                if (daysDiff > MAX_DAYS_APART_FOR_TRANSFER_MATCH) {
                     break;
                 }
 
-                if (t1.getAmount().compareTo(t2.getAmount()) == 0) {
-                    if (t1.getType() != t2.getType()) {
-                        if (!t1.getAccount().getId().equals(t2.getAccount().getId())) {
-                            suggestions.add(new TransferSuggestionDto(
-                                    TransactionDtoMapper.toDto(t1),
-                                    TransactionDtoMapper.toDto(t2),
-                                    0.9 - (daysDiff * 0.1)
-                            ));
+                if (t1.getAmount().compareTo(t2.getAmount()) == 0
+                        && t1.getType() != t2.getType()
+                        && !t1.getAccount().getId().equals(t2.getAccount().getId())) {
+                    suggestions.add(new TransferSuggestionDto(
+                            TransactionDtoMapper.toDto(t1),
+                            TransactionDtoMapper.toDto(t2),
+                            0.9 - (daysDiff * 0.1)
+                    ));
 
-                            matchedIds.add(t1.getId());
-                            matchedIds.add(t2.getId());
-                            break;
-                        }
-                    }
+                    matchedIds.add(t1.getId());
+                    matchedIds.add(t2.getId());
+                    break;
                 }
             }
         }

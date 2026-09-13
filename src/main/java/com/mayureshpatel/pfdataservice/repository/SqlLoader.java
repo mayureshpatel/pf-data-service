@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository;
 
+import com.mayureshpatel.pfdataservice.exception.SqlLoadException;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
@@ -7,6 +8,7 @@ import org.springframework.util.StreamUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Utility class for loading SQL queries from external files.
@@ -15,14 +17,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class SqlLoader {
 
-    private final ConcurrentHashMap<String, String> queryCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, String> queryCache = new ConcurrentHashMap<>();
 
     /**
      * Load a SQL query from a file in the classpath.
      *
      * @param path the classpath path to the SQL file (e.g., "sql/currency/findById.sql")
      * @return the SQL query as a string
-     * @throws RuntimeException if the file cannot be read
+     * @throws SqlLoadException if the file cannot be read
      */
     public String load(String path) {
         return queryCache.computeIfAbsent(path, this::loadFromFile);
@@ -33,7 +35,7 @@ public class SqlLoader {
             ClassPathResource resource = new ClassPathResource(path);
             return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load SQL query from: " + path, e);
+            throw new SqlLoadException("Failed to load SQL query from: " + path, e);
         }
     }
 

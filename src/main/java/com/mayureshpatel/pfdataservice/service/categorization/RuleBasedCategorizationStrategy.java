@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -98,11 +99,11 @@ public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
             return false;
         }
 
-        String lowerDescription = description.toLowerCase();
+        String lowerDescription = description.toLowerCase(Locale.ROOT);
         if (rule.getMatchType() == MatchType.AND) {
-            return rule.getKeywords().stream().allMatch(keyword -> lowerDescription.contains(keyword.toLowerCase()));
+            return rule.getKeywords().stream().allMatch(keyword -> lowerDescription.contains(keyword.toLowerCase(Locale.ROOT)));
         }
-        return rule.getKeywords().stream().anyMatch(keyword -> lowerDescription.contains(keyword.toLowerCase()));
+        return rule.getKeywords().stream().anyMatch(keyword -> lowerDescription.contains(keyword.toLowerCase(Locale.ROOT)));
     }
 
     /**

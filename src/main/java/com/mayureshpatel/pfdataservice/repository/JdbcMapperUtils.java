@@ -11,8 +11,15 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
+/**
+ * Extended by every {@code RowMapper} implementation for shared column-hydration helpers; its
+ * methods being entirely static is a byproduct of that shared-helper role, not a sign this should
+ * be a non-instantiable static utility class.
+ */
+@SuppressWarnings("PMD.UseUtilityClass")
 @Component
 public class JdbcMapperUtils {
 
@@ -115,7 +122,7 @@ public class JdbcMapperUtils {
 
         Set<String> columns = new HashSet<>(columnCount * 2);
         for (int i = 1; i <= columnCount; i++) {
-            columns.add(metaData.getColumnLabel(i).toLowerCase());
+            columns.add(metaData.getColumnLabel(i).toLowerCase(Locale.ROOT));
         }
         return columns;
     }
@@ -140,7 +147,7 @@ public class JdbcMapperUtils {
      * @return true if column exists, false otherwise
      */
     public static boolean hasColumn(String columnName, Set<String> availableColumns) {
-        return columnName != null && availableColumns.contains(columnName.toLowerCase());
+        return columnName != null && availableColumns.contains(columnName.toLowerCase(Locale.ROOT));
     }
 
     /**
