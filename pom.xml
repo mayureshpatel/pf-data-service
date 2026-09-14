@@ -295,7 +295,6 @@
                     <jvmArgs>
                         <jvmArg>-XX:+EnableDynamicAgentLoading</jvmArg>
                     </jvmArgs>
-                    <verbose>true</verbose>
                 </configuration>
                 <!-- PF-323: bound to the verify phase specifically, not test: mvn test (and this
                      project's own narrow -Dtest=SingleClass invocations, e.g. PF-316's
