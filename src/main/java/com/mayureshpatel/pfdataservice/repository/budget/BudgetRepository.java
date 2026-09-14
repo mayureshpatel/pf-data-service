@@ -10,6 +10,9 @@ import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetRowMapper;
 import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetStatusRowMapper;
 import com.mayureshpatel.pfdataservice.repository.budget.query.BudgetQueries;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -84,6 +87,34 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
+    }
+
+    /**
+     * Paginated version of {@link #findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc}
+     * (PF-320) -- the "manage all budgets" view has never exposed column sorting, so
+     * {@code pageable} is used for page/size only; ordering stays fixed at year/month descending.
+     *
+     * @param userId   the user id
+     * @param pageable the requested page and size
+     * @return the requested page of the user's budgets, most recent period first
+     */
+    public Page<Budget> findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(Long userId, Pageable pageable) {
+        long total = jdbcClient.sql(BudgetQueries.COUNT_BY_USER_ID)
+                .param("userId", userId)
+                .query(Long.class)
+                .single();
+
+        // Pageable.unpaged() throws UnsupportedOperationException from getPageSize()/getOffset()
+        // -- only append limit/offset when the caller actually wants a bounded page.
+        String pageSql = BudgetQueries.FIND_BY_USER_ID_ORDER_BY_YEAR_DESC_MONTH_DESC;
+        var jdbcCall = jdbcClient.sql(pageable.isPaged() ? pageSql + " limit :limit offset :offset" : pageSql)
+                .param("userId", userId);
+        if (pageable.isPaged()) {
+            jdbcCall = jdbcCall.param("limit", pageable.getPageSize()).param("offset", pageable.getOffset());
+        }
+        List<Budget> content = jdbcCall.query(rowMapper).list();
+
+        return new PageImpl<>(content, pageable, total);
     }
 
     public Optional<Budget> findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(

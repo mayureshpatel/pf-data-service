@@ -10,6 +10,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +34,15 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
     private static final Long USER_1 = 1L;
     private static final Long USER_2 = 2L;
     private static final Long MERCHANT_WHOLEFOODS = 1L; // Global
+
+    /**
+     * PF-320: incidental test setup (e.g. "grab USER_1's first merchant to update/delete it")
+     * still needs the full, unpaginated list -- {@link Pageable#unpaged()} is the real Spring
+     * Data mechanism for that, not a parallel test-only convenience method.
+     */
+    private Merchant firstMerchantFor(Long userId) {
+        return repository.findAllByUserId(userId, null, Pageable.unpaged()).getContent().get(0);
+    }
 
     @Nested
     @DisplayName("Find Operations")
@@ -57,6 +70,38 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             // Baseline has 1 custom merchant for USER_1
             assertEquals(1, result.size());
             assertEquals("LOCAL CAFE", result.get(0).getOriginalName());
+        }
+
+        @Test
+        @DisplayName("PF-320: should return a Page honoring the requested page size and total count")
+        void shouldFindAllByUserIdPaged() {
+            // arrange
+            Pageable pageable = PageRequest.of(0, 1);
+
+            // act
+            Page<Merchant> result = repository.findAllByUserId(USER_1, null, pageable);
+
+            // assert & verify
+            assertEquals(1, result.getContent().size());
+            assertEquals(1, result.getTotalElements());
+            assertEquals(1, result.getTotalPages());
+        }
+
+        @Test
+        @DisplayName("PF-320: should filter by a case-insensitive search term matched against either name column")
+        void shouldFindAllByUserIdWithSearch() {
+            // arrange -- USER_1's baseline merchant is "My Favorite Cafe" / "LOCAL CAFE"
+            Pageable pageable = PageRequest.of(0, 20, Sort.by("cleanName"));
+
+            // act
+            Page<Merchant> matches = repository.findAllByUserId(USER_1, "favorite", pageable);
+            Page<Merchant> noMatches = repository.findAllByUserId(USER_1, "nonexistent-merchant-xyz", pageable);
+
+            // assert & verify
+            assertEquals(1, matches.getTotalElements());
+            assertEquals("My Favorite Cafe", matches.getContent().get(0).getCleanName());
+            assertTrue(noMatches.getContent().isEmpty());
+            assertEquals(0, noMatches.getTotalElements());
         }
 
         @Test
@@ -117,7 +162,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @DisplayName("PF-220: should find a merchant by id when the requesting user owns it")
         void shouldFindByIdAndUserId() {
             // arrange
-            Long ownedMerchantId = repository.findAllByUserId(USER_1).get(0).getId();
+            Long ownedMerchantId = firstMerchantFor(USER_1).getId();
 
             // act
             Optional<Merchant> result = repository.findByIdAndUserId(ownedMerchantId, USER_1);
@@ -131,7 +176,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @DisplayName("PF-220: should not find another user's merchant via findByIdAndUserId")
         void shouldNotFindAnotherUsersMerchantByIdAndUserId() {
             // arrange -- USER_1's own merchant, looked up as USER_2
-            Long user1MerchantId = repository.findAllByUserId(USER_1).get(0).getId();
+            Long user1MerchantId = firstMerchantFor(USER_1).getId();
 
             // act
             Optional<Merchant> result = repository.findByIdAndUserId(user1MerchantId, USER_2);
@@ -203,7 +248,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should update an existing merchant's clean name")
         void shouldUpdate() {
             // arrange
-            Merchant custom = repository.findAllByUserId(USER_1).get(0);
+            Merchant custom = firstMerchantFor(USER_1);
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(custom.getId())
                     .cleanName("Updated Cafe")
@@ -225,7 +270,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
                 + "a userId parameter but never used it in the WHERE clause)")
         void shouldNotUpdateAnotherUsersMerchant() {
             // arrange
-            Merchant custom = repository.findAllByUserId(USER_1).get(0);
+            Merchant custom = firstMerchantFor(USER_1);
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(custom.getId())
                     .cleanName("Malicious Rename")
@@ -244,7 +289,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should hard delete a merchant")
         void shouldDelete() {
             // arrange
-            Merchant custom = repository.findAllByUserId(USER_1).get(0);
+            Merchant custom = firstMerchantFor(USER_1);
 
             // act
             int rows = repository.delete(custom.getId(), USER_1);
@@ -261,7 +306,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
                 + "class of gap PF-220 had to fix on update() after the fact")
         void shouldNotDeleteAnotherUsersMerchant() {
             // arrange
-            Merchant custom = repository.findAllByUserId(USER_1).get(0);
+            Merchant custom = firstMerchantFor(USER_1);
 
             // act
             int rows = repository.delete(custom.getId(), USER_2);

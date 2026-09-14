@@ -10,6 +10,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,9 +21,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * Endpoint for the authenticated user's merchants (the cleaned-up, deduplicated counterparties
@@ -35,18 +37,26 @@ public class MerchantController {
     private final MerchantService merchantService;
 
     /**
-     * Returns all merchants for the authenticated user.
+     * Returns a page of merchants for the authenticated user (PF-320), optionally narrowed by a
+     * case-insensitive search term matched against either name column -- replaces the previous
+     * unbounded response, which returned the user's entire merchant history in one call
+     * (PF-319). Mirrors {@code TransactionCrudController.getTransactions}'s
+     * {@code Pageable}/{@code Page<T>} convention.
      *
      * @param userDetails the authenticated user
-     * @return the user's merchants
+     * @param pageable    the requested page, size, and sort, defaulting to clean name ascending
+     * @param search      an optional case-insensitive substring to match against clean/original name
+     * @return the requested page of the user's merchants
      */
-    @Operation(summary = "List merchants", description = "Returns all merchants for the authenticated user")
+    @Operation(summary = "List merchants", description = "Returns a page of merchants for the authenticated user, optionally filtered by a search term")
     @ApiResponse(responseCode = "200", description = "Merchants returned (possibly empty)")
     @GetMapping
-    public ResponseEntity<List<MerchantDto>> getMerchants(
-            @AuthenticationPrincipal CustomUserDetails userDetails
+    public ResponseEntity<Page<MerchantDto>> getMerchants(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(sort = "cleanName") Pageable pageable,
+            @RequestParam(required = false) String search
     ) {
-        return ResponseEntity.ok(merchantService.getAllMerchants(userDetails.getId()));
+        return ResponseEntity.ok(merchantService.getAllMerchants(userDetails.getId(), search, pageable));
     }
 
     /**

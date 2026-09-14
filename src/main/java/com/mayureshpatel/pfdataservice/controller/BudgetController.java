@@ -11,6 +11,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -77,17 +80,21 @@ public class BudgetController {
     }
 
     /**
-     * Returns every budget the user has across all periods.
+     * Returns a page of the user's budgets across all periods, most recent first (PF-320) --
+     * replaces the previous unbounded response, which returned every budget the user had ever
+     * set in one call (PF-319).
      *
      * @param userDetails the authenticated user
-     * @return all of the user's budgets
+     * @param pageable    the requested page and size, defaulting to 20 per page
+     * @return the requested page of the user's budgets
      */
-    @Operation(summary = "List all budgets", description = "Returns every budget the user has across all periods")
+    @Operation(summary = "List all budgets", description = "Returns a page of the user's budgets across all periods, most recent first")
     @ApiResponse(responseCode = "200", description = "Budgets returned (possibly empty)")
     @GetMapping("/all")
-    public ResponseEntity<List<BudgetDto>> getAllBudgets(
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return ResponseEntity.ok(budgetService.getAllBudgets(userDetails.getId()));
+    public ResponseEntity<Page<BudgetDto>> getAllBudgets(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(budgetService.getAllBudgets(userDetails.getId(), pageable));
     }
 
     /**

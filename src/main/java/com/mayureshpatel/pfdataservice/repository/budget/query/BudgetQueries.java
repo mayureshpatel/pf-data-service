@@ -90,6 +90,14 @@ public class BudgetQueries {
             """;
 
     // language=SQL
+    public static final String COUNT_BY_USER_ID = """
+            select count(*)
+            from budgets
+            where budgets.user_id = :userId
+              and budgets.deleted_at is null
+            """;
+
+    // language=SQL
     public static final String FIND_BY_USER_ID_AND_CATEGORY_ID_AND_MONTH_AND_YEAR = """
             select
                 budgets.*,

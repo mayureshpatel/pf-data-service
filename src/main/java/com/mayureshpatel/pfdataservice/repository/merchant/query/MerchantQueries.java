@@ -20,6 +20,36 @@ public final class MerchantQueries {
             """;
 
     // language=SQL
+    public static final String COUNT_BY_USER_ID = """
+            select count(*)
+            from merchants
+            where user_id = :userId
+            """;
+
+    // language=SQL
+    public static final String COUNT_BY_USER_ID_AND_SEARCH = """
+            select count(*)
+            from merchants
+            where user_id = :userId
+              and (clean_name ilike :search or original_name ilike :search)
+            """;
+
+    // language=SQL
+    public static final String FIND_PAGE_BY_USER_ID = """
+            select *
+            from merchants
+            where user_id = :userId
+            """;
+
+    // language=SQL
+    public static final String FIND_PAGE_BY_USER_ID_AND_SEARCH = """
+            select *
+            from merchants
+            where user_id = :userId
+              and (clean_name ilike :search or original_name ilike :search)
+            """;
+
+    // language=SQL
     public static final String FIND_BY_ID_AND_USER_ID = """
             select *
             from merchants

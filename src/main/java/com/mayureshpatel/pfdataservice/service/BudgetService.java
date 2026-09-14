@@ -12,6 +12,8 @@ import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,16 +50,17 @@ public class BudgetService {
     }
 
     /**
-     * Gets all budgets for a user.
+     * Gets a page of a user's budgets across all periods, most recent first (PF-320) -- replaces
+     * the previous unbounded {@code List<BudgetDto>} return, which grew linearly with how many
+     * months a user had budgeted (PF-319).
      *
-     * @param userId the user id
-     * @return the list of {@link BudgetDto}
+     * @param userId   the user id
+     * @param pageable the requested page and size
+     * @return the requested page of {@link BudgetDto}
      */
-    public List<BudgetDto> getAllBudgets(Long userId) {
-        return budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(userId)
-                .stream()
-                .map(BudgetDtoMapper::toDto)
-                .toList();
+    public Page<BudgetDto> getAllBudgets(Long userId, Pageable pageable) {
+        return budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(userId, pageable)
+                .map(BudgetDtoMapper::toDto);
     }
 
     /**

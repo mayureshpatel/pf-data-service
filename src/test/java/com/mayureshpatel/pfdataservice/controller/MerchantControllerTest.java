@@ -8,6 +8,10 @@ import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 
 import java.util.List;
@@ -15,6 +19,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -39,21 +44,36 @@ class MerchantControllerTest extends BaseControllerTest {
     class GetMerchantsTests {
 
         @Test
-        @DisplayName("GET should return the authenticated user's merchants")
-        void getMerchants_shouldReturnList() throws Exception {
+        @DisplayName("GET should return a page of the authenticated user's merchants")
+        void getMerchants_shouldReturnPage() throws Exception {
             // arrange
             MerchantDto dto = MerchantDto.builder().id(MERCHANT_ID).userId(USER_ID).originalName("STARBUCKS #1").cleanName("Starbucks").build();
-            when(merchantService.getAllMerchants(USER_ID)).thenReturn(List.of(dto));
+            Page<MerchantDto> page = new PageImpl<>(List.of(dto), PageRequest.of(0, 20), 1);
+            when(merchantService.getAllMerchants(eq(USER_ID), eq(null), any(Pageable.class))).thenReturn(page);
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/merchants"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].id").value(MERCHANT_ID))
-                    .andExpect(jsonPath("$[0].cleanName").value("Starbucks"));
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].id").value(MERCHANT_ID))
+                    .andExpect(jsonPath("$.content[0].cleanName").value("Starbucks"));
 
-            verify(merchantService).getAllMerchants(USER_ID);
+            verify(merchantService).getAllMerchants(eq(USER_ID), eq(null), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("PF-320: GET should pass a search query param through to the service")
+        void getMerchants_shouldPassThroughSearch() throws Exception {
+            // arrange
+            Page<MerchantDto> page = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+            when(merchantService.getAllMerchants(eq(USER_ID), anyString(), any(Pageable.class))).thenReturn(page);
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/merchants").param("search", "starbucks"))
+                    .andExpect(status().isOk());
+
+            verify(merchantService).getAllMerchants(eq(USER_ID), eq("starbucks"), any(Pageable.class));
         }
     }
 
