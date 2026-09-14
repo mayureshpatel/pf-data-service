@@ -1,9 +1,11 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.config.CacheConfig;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.currency.CurrencyRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +24,14 @@ public class CurrencyService {
     private final CurrencyRepository currencyRepository;
 
     /**
-     * Gets all active currencies from the repository.
+     * Gets all active currencies from the repository. Cached (PF-321): this list is genuinely
+     * static via the API (no create/update/delete endpoint exists), so repeated calls within the
+     * 24-hour TTL configured in {@link CacheConfig} are served from memory instead of hitting the
+     * database.
      *
      * @return list of {@link Currency} objects
      */
+    @Cacheable(CacheConfig.CURRENCIES_CACHE)
     public List<Currency> getAllActiveCurrencies() {
         return this.currencyRepository.findByIsActive();
     }

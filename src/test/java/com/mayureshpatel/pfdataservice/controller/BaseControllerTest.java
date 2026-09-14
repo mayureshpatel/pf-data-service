@@ -2,7 +2,6 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.config.SecurityConfig;
-import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
 import com.mayureshpatel.pfdataservice.security.JwtAuthenticationFilter;
 import com.mayureshpatel.pfdataservice.security.JwtService;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
@@ -39,7 +38,7 @@ public abstract class BaseControllerTest {
     @MockitoBean
     protected AccountService accountService;
     @MockitoBean
-    protected AccountTypeRepository accountTypeRepository;
+    protected AccountTypeService accountTypeService;
     @MockitoBean
     protected AuthenticationService authenticationService;
     @MockitoBean

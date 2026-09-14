@@ -2,8 +2,7 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
-import com.mayureshpatel.pfdataservice.mapper.AccountTypeDtoMapper;
-import com.mayureshpatel.pfdataservice.repository.account.AccountTypeRepository;
+import com.mayureshpatel.pfdataservice.service.AccountTypeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,7 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountTypeController {
 
-    private final AccountTypeRepository accountTypeRepository;
+    private final AccountTypeService accountTypeService;
 
     /**
      * Returns every active account type, ordered for display.
@@ -37,8 +36,7 @@ public class AccountTypeController {
     @ApiResponse(responseCode = "200", description = "Account types returned")
     @GetMapping
     public ResponseEntity<List<AccountTypeDto>> getAccountTypes() {
-        List<AccountTypeDto> types = AccountTypeDtoMapper.toDto(accountTypeRepository.findByIsActiveTrueOrderBySortOrder());
-        return ResponseEntity.ok(types);
+        return ResponseEntity.ok(accountTypeService.getAllActiveAccountTypes());
     }
 
     /**
@@ -54,7 +52,7 @@ public class AccountTypeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Integer> createAccountType(
             @RequestBody @Valid AccountTypeCreateRequest request) {
-        return ResponseEntity.ok(accountTypeRepository.insert(request));
+        return ResponseEntity.ok(accountTypeService.create(request));
     }
 
     /**
@@ -69,6 +67,6 @@ public class AccountTypeController {
     @DeleteMapping("/{code}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Integer> deleteAccountType(@PathVariable String code) {
-        return ResponseEntity.ok(accountTypeRepository.deleteByCode(code));
+        return ResponseEntity.ok(accountTypeService.delete(code));
     }
 }

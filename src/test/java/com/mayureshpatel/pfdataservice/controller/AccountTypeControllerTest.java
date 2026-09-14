@@ -1,7 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.domain.account.AccountType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountTypeCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,17 +37,17 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @DisplayName("GET should return list of active account types")
         void getAccountTypes_shouldReturnListOfAccountTypes() throws Exception {
             // arrange
-            AccountType type = AccountType.builder()
+            AccountTypeDto type = AccountTypeDto.builder()
                     .code(TYPE_CODE)
                     .label("Checking Account")
-                    .active(true)
+                    .isActive(true)
                     .sortOrder(1)
                     .icon("account_balance")
                     .color("#4CAF50")
-                    .asset(true)
+                    .isAsset(true)
                     .build();
 
-            when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(List.of(type));
+            when(accountTypeService.getAllActiveAccountTypes()).thenReturn(List.of(type));
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/account-types"))
@@ -59,7 +59,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$[0].isActive").value(true))
                     .andExpect(jsonPath("$[0].sortOrder").value(1));
 
-            verify(accountTypeRepository).findByIsActiveTrueOrderBySortOrder();
+            verify(accountTypeService).getAllActiveAccountTypes();
         }
 
         @Test
@@ -74,7 +74,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @DisplayName("GET should return empty list when no active account types exist")
         void getAccountTypes_shouldReturnEmptyList() throws Exception {
             // arrange
-            when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(Collections.emptyList());
+            when(accountTypeService.getAllActiveAccountTypes()).thenReturn(Collections.emptyList());
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/account-types"))
@@ -82,7 +82,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(0)));
 
-            verify(accountTypeRepository).findByIsActiveTrueOrderBySortOrder();
+            verify(accountTypeService).getAllActiveAccountTypes();
         }
     }
 
@@ -105,7 +105,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .isActive(true)
                     .build();
 
-            when(accountTypeRepository.insert(any(AccountTypeCreateRequest.class))).thenReturn(1);
+            when(accountTypeService.create(any(AccountTypeCreateRequest.class))).thenReturn(1);
 
             // act & assert & verify
             mockMvc.perform(post("/api/v1/account-types")
@@ -115,7 +115,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(content().string("1"));
 
-            verify(accountTypeRepository).insert(any(AccountTypeCreateRequest.class));
+            verify(accountTypeService).create(any(AccountTypeCreateRequest.class));
         }
 
         @Test
@@ -147,7 +147,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @DisplayName("DELETE should remove the account type and return rows affected")
         void deleteAccountType_shouldDeleteAccountType() throws Exception {
             // arrange
-            when(accountTypeRepository.deleteByCode(TYPE_CODE)).thenReturn(1);
+            when(accountTypeService.delete(TYPE_CODE)).thenReturn(1);
 
             // act & assert & verify
             mockMvc.perform(delete("/api/v1/account-types/{code}", TYPE_CODE)
@@ -155,7 +155,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(content().string("1"));
 
-            verify(accountTypeRepository).deleteByCode(TYPE_CODE);
+            verify(accountTypeService).delete(TYPE_CODE);
         }
     }
 
@@ -167,7 +167,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @DisplayName("GET should return 500 Internal Server Error when repository fails")
         void getAccountTypes_shouldReturn500WhenRepositoryFails() throws Exception {
             // arrange
-            when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder())
+            when(accountTypeService.getAllActiveAccountTypes())
                     .thenThrow(new RuntimeException("Database error"));
 
             // act & assert & verify
