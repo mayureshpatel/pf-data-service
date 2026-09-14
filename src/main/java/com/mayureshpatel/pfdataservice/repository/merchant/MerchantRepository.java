@@ -29,6 +29,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MerchantRepository implements JdbcRepository<Merchant, Long> {
 
+    private static final String SORT_PROPERTY_ORIGINAL_NAME = "originalName";
+
     private final JdbcClient jdbcClient;
     private final MerchantRowMapper rowMapper;
     private final MerchantTotalRowMapper merchantTotalRowMapper;
@@ -70,15 +72,14 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .single();
 
         String sortColumn = "clean_name";
+        String direction = "asc";
         if (pageable.getSort().isSorted()) {
             Sort.Order order = pageable.getSort().iterator().next();
-            sortColumn = switch (order.getProperty()) {
-                case "originalName" -> "original_name";
-                default -> "clean_name";
-            };
+            if (SORT_PROPERTY_ORIGINAL_NAME.equals(order.getProperty())) {
+                sortColumn = "original_name";
+            }
+            direction = order.getDirection().isDescending() ? "desc" : "asc";
         }
-        String direction = pageable.getSort().isSorted()
-                && pageable.getSort().iterator().next().getDirection().isDescending() ? "desc" : "asc";
 
         String baseSql = hasSearch ? MerchantQueries.FIND_PAGE_BY_USER_ID_AND_SEARCH : MerchantQueries.FIND_PAGE_BY_USER_ID;
         String orderClause = " order by " + sortColumn + " " + direction;
@@ -90,15 +91,13 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         // Pageable.unpaged() (used by test setup that genuinely wants "every merchant") throws
         // UnsupportedOperationException from getPageSize()/getOffset() -- there's no limit/offset
         // to apply in that case, only the ordering.
-        String pageSql = orderClause;
+        String limitOffsetClause = pageable.isPaged() ? " limit :limit offset :offset" : "";
         if (pageable.isPaged()) {
-            pageSql += " limit :limit offset :offset";
             params.put("limit", pageable.getPageSize());
             params.put("offset", pageable.getOffset());
         }
-        pageSql = baseSql + pageSql;
 
-        List<Merchant> content = jdbcClient.sql(pageSql)
+        List<Merchant> content = jdbcClient.sql(baseSql + orderClause + limitOffsetClause)
                 .params(params)
                 .query(rowMapper)
                 .list();
