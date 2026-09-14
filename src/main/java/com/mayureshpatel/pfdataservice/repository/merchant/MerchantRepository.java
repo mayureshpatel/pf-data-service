@@ -9,18 +9,27 @@ import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMap
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantTotalRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.query.MerchantQueries;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
 public class MerchantRepository implements JdbcRepository<Merchant, Long> {
+
+    private static final String SORT_PROPERTY_ORIGINAL_NAME = "originalName";
 
     private final JdbcClient jdbcClient;
     private final MerchantRowMapper rowMapper;
@@ -39,6 +48,61 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .param("userId", userId)
                 .query(rowMapper)
                 .list();
+    }
+
+    /**
+     * User-scoped, paginated merchant search: matches {@code search} (case-insensitive,
+     * substring) against either name column when provided, otherwise returns every merchant for
+     * the page requested. Mirrors {@code TransactionRepository.findAll(FilterResult, Pageable)}'s
+     * count-then-page-then-{@link PageImpl} shape.
+     *
+     * @param userId   the user id
+     * @param search   an optional case-insensitive substring to match against clean/original name
+     * @param pageable the requested page, size, and sort
+     * @return the requested page of the user's merchants
+     */
+    public Page<Merchant> findAllByUserId(Long userId, String search, Pageable pageable) {
+        boolean hasSearch = StringUtils.hasText(search);
+        String searchParam = hasSearch ? "%" + search.trim() + "%" : null;
+
+        long total = jdbcClient.sql(hasSearch ? MerchantQueries.COUNT_BY_USER_ID_AND_SEARCH : MerchantQueries.COUNT_BY_USER_ID)
+                .param("userId", userId)
+                .param("search", searchParam)
+                .query(Long.class)
+                .single();
+
+        String sortColumn = "clean_name";
+        String direction = "asc";
+        if (pageable.getSort().isSorted()) {
+            Sort.Order order = pageable.getSort().iterator().next();
+            if (SORT_PROPERTY_ORIGINAL_NAME.equals(order.getProperty())) {
+                sortColumn = "original_name";
+            }
+            direction = order.getDirection().isDescending() ? "desc" : "asc";
+        }
+
+        String baseSql = hasSearch ? MerchantQueries.FIND_PAGE_BY_USER_ID_AND_SEARCH : MerchantQueries.FIND_PAGE_BY_USER_ID;
+        String orderClause = " order by " + sortColumn + " " + direction;
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("userId", userId);
+        params.put("search", searchParam);
+
+        // Pageable.unpaged() (used by test setup that genuinely wants "every merchant") throws
+        // UnsupportedOperationException from getPageSize()/getOffset() -- there's no limit/offset
+        // to apply in that case, only the ordering.
+        String limitOffsetClause = pageable.isPaged() ? " limit :limit offset :offset" : "";
+        if (pageable.isPaged()) {
+            params.put("limit", pageable.getPageSize());
+            params.put("offset", pageable.getOffset());
+        }
+
+        List<Merchant> content = jdbcClient.sql(baseSql + orderClause + limitOffsetClause)
+                .params(params)
+                .query(rowMapper)
+                .list();
+
+        return new PageImpl<>(content, pageable, total);
     }
 
     public Optional<Merchant> findByIdAndUserId(Long id, Long userId) {

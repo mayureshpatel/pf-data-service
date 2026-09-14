@@ -11,6 +11,8 @@ import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,16 +41,19 @@ public class MerchantService {
     private final RecurringTransactionRepository recurringTransactionRepository;
 
     /**
-     * Returns all merchants for a user.
+     * Returns a page of a user's merchants (PF-320), optionally narrowed by a case-insensitive
+     * search term matched against either name column -- replaces the previous unbounded
+     * {@code List<MerchantDto>} return, which grew linearly with a user's transaction history
+     * (PF-319).
      *
-     * @param userId the user id
-     * @return the user's merchants
+     * @param userId   the user id
+     * @param search   an optional case-insensitive substring to match against clean/original name
+     * @param pageable the requested page, size, and sort
+     * @return the requested page of the user's merchants
      */
-    public List<MerchantDto> getAllMerchants(Long userId) {
-        return merchantRepository.findAllByUserId(userId)
-                .stream()
-                .map(MerchantDtoMapper::toDto)
-                .toList();
+    public Page<MerchantDto> getAllMerchants(Long userId, String search, Pageable pageable) {
+        return merchantRepository.findAllByUserId(userId, search, pageable)
+                .map(MerchantDtoMapper::toDto);
     }
 
     /**

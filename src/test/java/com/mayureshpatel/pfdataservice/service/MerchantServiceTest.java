@@ -18,6 +18,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -247,15 +251,32 @@ class MerchantServiceTest {
         void shouldMapRepositoryResultsToDtos() {
             // arrange
             Merchant merchant = Merchant.builder().id(1L).userId(USER_ID).originalName("TARGET #2").cleanName("Target").build();
-            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(merchant));
+            Pageable pageable = PageRequest.of(0, 20);
+            when(merchantRepository.findAllByUserId(USER_ID, null, pageable))
+                    .thenReturn(new PageImpl<>(List.of(merchant), pageable, 1));
 
             // act
-            List<MerchantDto> result = merchantService.getAllMerchants(USER_ID);
+            Page<MerchantDto> result = merchantService.getAllMerchants(USER_ID, null, pageable);
 
             // assert & verify
-            assertEquals(1, result.size());
-            assertEquals(1L, result.get(0).id());
-            assertEquals("Target", result.get(0).cleanName());
+            assertEquals(1, result.getContent().size());
+            assertEquals(1L, result.getContent().get(0).id());
+            assertEquals("Target", result.getContent().get(0).cleanName());
+        }
+
+        @Test
+        @DisplayName("PF-320: should pass the search term through to the repository unchanged")
+        void shouldPassSearchTermThrough() {
+            // arrange
+            Pageable pageable = PageRequest.of(0, 20);
+            when(merchantRepository.findAllByUserId(USER_ID, "target", pageable))
+                    .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+            // act
+            merchantService.getAllMerchants(USER_ID, "target", pageable);
+
+            // assert & verify
+            verify(merchantRepository).findAllByUserId(USER_ID, "target", pageable);
         }
     }
 

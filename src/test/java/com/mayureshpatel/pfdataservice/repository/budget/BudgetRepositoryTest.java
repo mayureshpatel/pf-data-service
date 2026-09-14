@@ -10,6 +10,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -124,6 +127,41 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
             assertTrue(result.size() >= 2);
             assertEquals(2, result.get(0).getMonth());
             assertEquals(1, result.get(1).getMonth());
+        }
+
+        @Test
+        @DisplayName("PF-320: should return a Page honoring the requested page size, with total count matching the full unpaginated list")
+        void shouldFindAllForUserPaged() {
+            // arrange -- ground truth from the existing unpaginated method, whatever the shared
+            // baseline fixture already contains for USER_1, plus these 2 new inserts
+            budgetRepository.insert(BudgetCreateRequest.builder().userId(USER_1).categoryId(1L).amount(BigDecimal.ONE).month(3).year(2026).build());
+            budgetRepository.insert(BudgetCreateRequest.builder().userId(USER_1).categoryId(2L).amount(BigDecimal.ONE).month(4).year(2026).build());
+            int fullCount = budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(USER_1).size();
+            Pageable pageable = PageRequest.of(0, 1);
+
+            // act
+            Page<Budget> result = budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(USER_1, pageable);
+
+            // assert & verify
+            assertEquals(1, result.getContent().size());
+            assertEquals(fullCount, result.getTotalElements());
+        }
+
+        @Test
+        @DisplayName("PF-320: should return every budget, not throw, when called with Pageable.unpaged()")
+        void shouldFindAllForUserUnpaged() {
+            // arrange -- Pageable.unpaged() throws UnsupportedOperationException from
+            // getPageSize()/getOffset(); a real bug caught here once (the sibling fix in
+            // MerchantRepository) before it could ever reach a real caller of this method
+            int fullCount = budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(USER_1).size();
+
+            // act
+            Page<Budget> result = budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(
+                    USER_1, Pageable.unpaged());
+
+            // assert & verify
+            assertEquals(fullCount, result.getContent().size());
+            assertEquals(fullCount, result.getTotalElements());
         }
 
         @Test

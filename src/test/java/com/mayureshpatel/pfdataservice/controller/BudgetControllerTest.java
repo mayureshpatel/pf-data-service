@@ -9,6 +9,10 @@ import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 
 import java.math.BigDecimal;
@@ -147,16 +151,33 @@ class BudgetControllerTest extends BaseControllerTest {
     class GetAllBudgetsTests {
 
         @Test
-        @DisplayName("GET /all should return all budgets for user")
-        void getAllBudgets_shouldReturnAll() throws Exception {
+        @DisplayName("GET /all should return a page of budgets for user")
+        void getAllBudgets_shouldReturnPage() throws Exception {
             // arrange
-            when(budgetService.getAllBudgets(USER_ID)).thenReturn(List.of());
+            Page<BudgetDto> page = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+            when(budgetService.getAllBudgets(eq(USER_ID), any(Pageable.class))).thenReturn(page);
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets/all"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(0)));
+
+            verify(budgetService).getAllBudgets(eq(USER_ID), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("PF-320: GET /all should honor page/size query params")
+        void getAllBudgets_shouldHonorPageParams() throws Exception {
+            // arrange
+            Page<BudgetDto> page = new PageImpl<>(List.of(), PageRequest.of(2, 5), 0);
+            when(budgetService.getAllBudgets(eq(USER_ID), any(Pageable.class))).thenReturn(page);
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/budgets/all").param("page", "2").param("size", "5"))
                     .andExpect(status().isOk());
 
-            verify(budgetService).getAllBudgets(USER_ID);
+            verify(budgetService).getAllBudgets(eq(USER_ID), argThat(
+                    (Pageable p) -> p.getPageNumber() == 2 && p.getPageSize() == 5));
         }
     }
 

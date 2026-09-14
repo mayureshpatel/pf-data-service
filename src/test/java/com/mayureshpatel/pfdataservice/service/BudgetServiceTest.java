@@ -19,6 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
@@ -72,18 +76,20 @@ class BudgetServiceTest {
     @DisplayName("getAllBudgets")
     class GetAllBudgetsTests {
         @Test
-        @DisplayName("should return all budgets for user ordered")
+        @DisplayName("should return a page of budgets for user ordered")
         void shouldReturnAllBudgets() {
             // arrange
             Budget budget = Budget.builder().id(BUDGET_ID).userId(USER_ID).build();
-            when(budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(USER_ID)).thenReturn(List.of(budget));
+            Pageable pageable = PageRequest.of(0, 20);
+            when(budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(USER_ID, pageable))
+                    .thenReturn(new PageImpl<>(List.of(budget), pageable, 1));
 
             // act
-            List<BudgetDto> result = budgetService.getAllBudgets(USER_ID);
+            Page<BudgetDto> result = budgetService.getAllBudgets(USER_ID, pageable);
 
             // assert & verify
-            assertEquals(1, result.size());
-            assertEquals(BUDGET_ID, result.get(0).id());
+            assertEquals(1, result.getContent().size());
+            assertEquals(BUDGET_ID, result.getContent().get(0).id());
         }
     }
 
