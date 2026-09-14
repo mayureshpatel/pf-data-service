@@ -282,8 +282,13 @@
                     <targetTests>
                         <param>com.mayureshpatel.pfdataservice.*</param>
                     </targetTests>
+                    <!-- PF-324: CSV added alongside HTML specifically to make triaging survivors
+                         and no-coverage mutations tractable (machine-readable rows: class, method,
+                         mutator, line, status) rather than reading through ~40 per-package HTML
+                         pages by hand. HTML stays the primary human-facing report per PF-323. -->
                     <outputFormats>
                         <value>HTML</value>
+                        <value>CSV</value>
                     </outputFormats>
                     <!-- PF-323: pitest-maven's real child-process JVM-argument parameter is
                          jvmArgs/jvmArg, not argLine (argLine isn't a recognized parameter for this
