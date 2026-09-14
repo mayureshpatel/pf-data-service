@@ -35,8 +35,6 @@ public class SnapshotService {
      */
     @Transactional
     public void createEndOfMonthSnapshot(Long userId, Long accountId, LocalDate dateInMonth) {
-        LocalDate endOfMonth = dateInMonth.withDayOfMonth(dateInMonth.lengthOfMonth());
-
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found: " + accountId));
 
@@ -44,17 +42,8 @@ public class SnapshotService {
             throw new AccessDeniedException("Access denied to account");
         }
 
-        BigDecimal currentBalance = account.getCurrentBalance();
-
-        // calculate transactions that happened after the snapshot date up to now
-        BigDecimal changesAfterDate = transactionRepository.getNetFlowAfterDate(accountId, endOfMonth);
-
-        if (changesAfterDate == null) {
-            changesAfterDate = BigDecimal.ZERO;
-        }
-
-        // historic balance = current - (changes that happened later)
-        BigDecimal historicBalance = currentBalance.subtract(changesAfterDate);
+        LocalDate endOfMonth = dateInMonth.withDayOfMonth(dateInMonth.lengthOfMonth());
+        BigDecimal historicBalance = calculateEndOfMonthBalance(account, endOfMonth);
 
         Optional<AccountSnapshot> existing = snapshotRepository.findByAccountIdAndSnapshotDate(accountId, endOfMonth);
 
@@ -71,5 +60,28 @@ public class SnapshotService {
             snapshotRepository.insert(snapshot);
         }
         log.info("Saved snapshot for Account {} on {}: {}", accountId, endOfMonth, historicBalance);
+    }
+
+    /**
+     * Computes (without persisting) an account's balance as of the end of the given month.
+     * Logic: Balance(EndOfMonth) = CurrentBalance - NetFlow(AfterEndOfMonth). Extracted from
+     * {@link #createEndOfMonthSnapshot} (PF-304) so a read-only caller -- a net-worth-over-time
+     * report, for one -- can reuse the same math without the write side effect that method's own
+     * snapshot-persistence contract requires.
+     *
+     * @param account      the account to compute a historic balance for
+     * @param endOfMonth   the month-end date to compute the balance as of (not normalized here --
+     *                     callers control exactly which date this represents)
+     * @return the account's computed balance as of {@code endOfMonth}
+     */
+    public BigDecimal calculateEndOfMonthBalance(Account account, LocalDate endOfMonth) {
+        BigDecimal currentBalance = account.getCurrentBalance();
+
+        BigDecimal changesAfterDate = transactionRepository.getNetFlowAfterDate(account.getId(), endOfMonth);
+        if (changesAfterDate == null) {
+            changesAfterDate = BigDecimal.ZERO;
+        }
+
+        return currentBalance.subtract(changesAfterDate);
     }
 }

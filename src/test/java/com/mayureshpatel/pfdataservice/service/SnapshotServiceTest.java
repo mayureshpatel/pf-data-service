@@ -18,9 +18,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -127,6 +129,43 @@ class SnapshotServiceTest {
 
             // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> snapshotService.createEndOfMonthSnapshot(USER_ID, ACCOUNT_ID, LocalDate.now()));
+        }
+    }
+
+    @Nested
+    @DisplayName("calculateEndOfMonthBalance (PF-304)")
+    class CalculateEndOfMonthBalanceTests {
+
+        @Test
+        @DisplayName("should compute current balance minus net flow after the given date, without persisting anything")
+        void shouldComputeWithoutPersisting() {
+            // arrange
+            LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("1000.00")).build();
+            when(transactionRepository.getNetFlowAfterDate(ACCOUNT_ID, endOfMonth)).thenReturn(new BigDecimal("100.00"));
+
+            // act
+            BigDecimal result = snapshotService.calculateEndOfMonthBalance(account, endOfMonth);
+
+            // assert & verify
+            assertEquals(0, result.compareTo(new BigDecimal("900.00")));
+            verifyNoInteractions(snapshotRepository);
+            verifyNoInteractions(accountRepository);
+        }
+
+        @Test
+        @DisplayName("should treat a null net flow as zero")
+        void shouldHandleNullNetFlow() {
+            // arrange
+            LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("1000.00")).build();
+            when(transactionRepository.getNetFlowAfterDate(ACCOUNT_ID, endOfMonth)).thenReturn(null);
+
+            // act
+            BigDecimal result = snapshotService.calculateEndOfMonthBalance(account, endOfMonth);
+
+            // assert & verify
+            assertEquals(0, result.compareTo(new BigDecimal("1000.00")));
         }
     }
 }
