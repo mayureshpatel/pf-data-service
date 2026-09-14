@@ -142,6 +142,19 @@
             </exclusions>
         </dependency>
 
+        <!-- PF-323: only ever pulled in transitively before (via spring-boot-starter-test), never
+             an explicit dependency of this project's own. PiTest's minion process auto-adds its own
+             junit-platform-launcher when one isn't explicitly declared, which crashed with
+             "OutputDirectoryProvider not available" (unaligned engine/launcher versions) even
+             though the plain test run never had a problem. Declaring it explicitly, version
+             controlled by spring-boot-starter-parent's own dependency management like every other
+             test dependency here, removes PiTest's need to auto-resolve one itself. -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
@@ -272,8 +285,34 @@
                     <outputFormats>
                         <value>HTML</value>
                     </outputFormats>
-                    <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+                    <!-- PF-323: pitest-maven's real child-process JVM-argument parameter is
+                         jvmArgs/jvmArg, not argLine (argLine isn't a recognized parameter for this
+                         plugin at all, confirmed via pitest.org/quickstart/maven: the pre-existing
+                         <argLine> here was silently never reaching the minion process). Without this
+                         flag actually applied, the minion crashes immediately on JDK 21 with a bare
+                         "UNKNOWN_ERROR", the same dynamic-agent-loading restriction Mockito's own
+                         inline-mock-maker warning (seen throughout this project's test output) hits. -->
+                    <jvmArgs>
+                        <jvmArg>-XX:+EnableDynamicAgentLoading</jvmArg>
+                    </jvmArgs>
+                    <verbose>true</verbose>
                 </configuration>
+                <!-- PF-323: bound to the verify phase specifically, not test: mvn test (and this
+                     project's own narrow -Dtest=SingleClass invocations, e.g. PF-316's
+                     generate:api:spec npm script) never reaches verify, so those stay fast and
+                     unaffected. Only a full ./mvnw clean verify (what scripts/verify.sh now runs)
+                     triggers a mutation run. Informational only per this epic's 2026-09-03
+                     decision: deliberately no mutationThreshold/coverageThreshold here, so a low
+                     or failing score reports but never fails the build at this stage. -->
+                <executions>
+                    <execution>
+                        <id>pitest-mutation-coverage</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>mutationCoverage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
