@@ -55,14 +55,14 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should return filtered budgets for user, month and year")
         void shouldReturnBudgets() {
-            // Arrange
+            // arrange
             Budget budget = Budget.builder().id(BUDGET_ID).userId(USER_ID).month(3).year(2026).build();
             when(budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(USER_ID, 3, 2026)).thenReturn(List.of(budget));
 
-            // Act
+            // act
             List<BudgetDto> result = budgetService.getBudgets(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals(BUDGET_ID, result.get(0).id());
         }
@@ -74,14 +74,14 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should return all budgets for user ordered")
         void shouldReturnAllBudgets() {
-            // Arrange
+            // arrange
             Budget budget = Budget.builder().id(BUDGET_ID).userId(USER_ID).build();
             when(budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(USER_ID)).thenReturn(List.of(budget));
 
-            // Act
+            // act
             List<BudgetDto> result = budgetService.getAllBudgets(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals(BUDGET_ID, result.get(0).id());
         }
@@ -93,15 +93,15 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should return budget status from repository")
         void shouldReturnStatus() {
-            // Arrange
+            // arrange
             CategoryDto cat = CategoryDto.builder().name("Food").build();
             BudgetStatusDto status = new BudgetStatusDto(cat, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.valueOf(9), 0.1);
             when(budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(USER_ID, 3, 2026)).thenReturn(List.of(status));
 
-            // Act
+            // act
             List<BudgetStatusDto> result = budgetService.getBudgetStatus(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("Food", result.get(0).category().name());
         }
@@ -113,7 +113,7 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should throw exception when budget already exists")
         void shouldThrowWhenBudgetExists() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(Category.builder().id(CATEGORY_ID).userId(USER_ID).build()));
             when(budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(
@@ -121,7 +121,7 @@ class BudgetServiceTest {
 
             BudgetCreateRequest request = BudgetCreateRequest.builder().categoryId(CATEGORY_ID).month(3).year(2026).amount(BigDecimal.TEN).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(IllegalArgumentException.class, () -> budgetService.create(USER_ID, request));
             verify(budgetRepository, org.mockito.Mockito.never()).insert(any(BudgetCreateRequest.class));
         }
@@ -129,17 +129,17 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should create budget when user and category are valid and owned")
         void shouldCreate() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(Category.builder().id(CATEGORY_ID).userId(USER_ID).build()));
             when(budgetRepository.insert(any(BudgetCreateRequest.class))).thenReturn(1);
 
             BudgetCreateRequest request = BudgetCreateRequest.builder().categoryId(CATEGORY_ID).month(3).year(2026).amount(BigDecimal.TEN).build();
 
-            // Act
+            // act
             int result = budgetService.create(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(budgetRepository).insert(any(BudgetCreateRequest.class));
         }
@@ -147,36 +147,36 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if user not found")
         void shouldThrowOnUserNotFound() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> budgetService.create(USER_ID, BudgetCreateRequest.builder().build()));
         }
 
         @Test
         @DisplayName("should throw ResourceNotFoundException if category not found")
         void shouldThrowOnCategoryNotFound() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().build()));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.empty());
 
             BudgetCreateRequest request = BudgetCreateRequest.builder().categoryId(CATEGORY_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> budgetService.create(USER_ID, request));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user doesn't own category")
         void shouldThrowOnCategoryAccessDenied() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().build()));
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(Category.builder().id(CATEGORY_ID).userId(999L).build()));
 
             BudgetCreateRequest request = BudgetCreateRequest.builder().categoryId(CATEGORY_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> budgetService.create(USER_ID, request));
         }
     }
@@ -187,17 +187,17 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should update budget if owned")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             Budget existing = Budget.builder().id(BUDGET_ID).userId(USER_ID).build();
             when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.of(existing));
             when(budgetRepository.update(any(BudgetUpdateRequest.class))).thenReturn(1);
 
             BudgetUpdateRequest request = BudgetUpdateRequest.builder().id(BUDGET_ID).amount(BigDecimal.TEN).build();
 
-            // Act
+            // act
             int result = budgetService.update(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(budgetRepository).update(any(BudgetUpdateRequest.class));
         }
@@ -205,25 +205,25 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if budget not found")
         void shouldThrowOnNotFound() {
-            // Arrange
+            // arrange
             when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.empty());
 
             BudgetUpdateRequest request = BudgetUpdateRequest.builder().id(BUDGET_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> budgetService.update(USER_ID, request));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user does not own budget")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Budget existing = Budget.builder().id(BUDGET_ID).userId(999L).build();
             when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.of(existing));
 
             BudgetUpdateRequest request = BudgetUpdateRequest.builder().id(BUDGET_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> budgetService.update(USER_ID, request));
         }
     }
@@ -234,35 +234,35 @@ class BudgetServiceTest {
         @Test
         @DisplayName("should delete budget if owned")
         void shouldDelete() {
-            // Arrange
+            // arrange
             Budget budget = Budget.builder().id(BUDGET_ID).userId(USER_ID).build();
             when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.of(budget));
 
-            // Act
+            // act
             budgetService.delete(USER_ID, BUDGET_ID);
 
-            // Assert
+            // assert & verify
             verify(budgetRepository).deleteById(BUDGET_ID);
         }
 
         @Test
         @DisplayName("should throw ResourceNotFoundException if budget not found during delete")
         void shouldThrowOnNotFound() {
-            // Arrange
+            // arrange
             when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> budgetService.delete(USER_ID, BUDGET_ID));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user does not own budget during delete")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Budget budget = Budget.builder().id(BUDGET_ID).userId(999L).build();
             when(budgetRepository.findById(BUDGET_ID)).thenReturn(Optional.of(budget));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> budgetService.delete(USER_ID, BUDGET_ID));
         }
     }

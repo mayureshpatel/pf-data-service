@@ -18,14 +18,14 @@ class RecurringTransactionDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<RecurringTransactionDtoMapper> constructor = RecurringTransactionDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         RecurringTransactionDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -36,17 +36,17 @@ class RecurringTransactionDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             RecurringTransactionDto result = RecurringTransactionDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             LocalDate nextDate = LocalDate.now().plusDays(30);
             RecurringTransaction rt = RecurringTransaction.builder()
                     .id(1L)
@@ -57,10 +57,10 @@ class RecurringTransactionDtoMapperTest {
                     .active(true)
                     .build();
 
-            // Act
+            // act
             RecurringTransactionDto dto = RecurringTransactionDtoMapper.toDto(rt);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(rt.getId(), dto.id());
             assertEquals(rt.getUserId(), dto.userId());
@@ -73,17 +73,17 @@ class RecurringTransactionDtoMapperTest {
         @Test
         @DisplayName("should handle null userId")
         void toDto_shouldHandleNullUserId() {
-            // Arrange
+            // arrange
             RecurringTransaction rt = RecurringTransaction.builder()
                     .id(1L)
                     .userId(null)
                     .frequency("WEEKLY")
                     .build();
 
-            // Act
+            // act
             RecurringTransactionDto dto = RecurringTransactionDtoMapper.toDto(rt);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.userId());
         }

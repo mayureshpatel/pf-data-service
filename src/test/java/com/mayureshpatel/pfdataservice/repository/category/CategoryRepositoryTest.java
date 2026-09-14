@@ -33,10 +33,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all categories")
         void shouldFindAll() {
-            // Act
+            // act
             List<Category> result = categoryRepository.findAll();
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.size() >= 11); // 10 from user 1, 1 from user 2
         }
@@ -44,10 +44,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
-            // Act
+            // act
             Optional<Category> result = categoryRepository.findById(CAT_FOOD);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals("Food", result.get().getName());
         }
@@ -55,10 +55,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by user ID")
         void shouldFindByUserId() {
-            // Act
+            // act
             List<Category> result = categoryRepository.findByUserId(USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(10, result.size());
             assertTrue(result.stream().allMatch(c -> c.getUserId().equals(USER_1)));
         }
@@ -66,10 +66,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all parent categories")
         void shouldFindAllParentCategories() {
-            // Act
+            // act
             List<Category> result = categoryRepository.findAllParentCategories(USER_1);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.stream().allMatch(c -> c.getParentId() != null));
         }
@@ -77,10 +77,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all sub-categories only")
         void shouldFindSubCategories() {
-            // Act
+            // act
             List<Category> result = categoryRepository.findAllSubCategories(USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(5, result.size());
             assertTrue(result.stream().allMatch(c -> c.getParentId() != null));
         }
@@ -92,20 +92,20 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should count subcategories for a parent category")
         void shouldCountByParentId() {
-            // Act -- category 1 (Housing) has exactly one baseline subcategory (Rent, id 6)
+            // act -- category 1 (Housing) has exactly one baseline subcategory (Rent, id 6)
             long count = categoryRepository.countByParentId(1L);
 
-            // Assert
+            // assert & verify
             assertEquals(1, count);
         }
 
         @Test
         @DisplayName("should count zero subcategories for a category with none")
         void shouldCountByParentIdZeroWhenNoSubcategories() {
-            // Act -- category 6 (Rent) is itself a subcategory with no children of its own
+            // act -- category 6 (Rent) is itself a subcategory with no children of its own
             long count = categoryRepository.countByParentId(6L);
 
-            // Assert
+            // assert & verify
             assertEquals(0, count);
         }
     }
@@ -116,7 +116,7 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert a new category")
         void shouldInsert() {
-            // Arrange
+            // arrange
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .name("Subscriptions")
                     .color("#ABCDEF")
@@ -125,10 +125,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
                     .userId(USER_1)
                     .build();
 
-            // Act
+            // act
             int newId = categoryRepository.insert(request);
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count (always
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count (always
             // 1 on a successful single-row insert, which would coincidentally collide with
             // baseline category 1 and mask the bug this regresses against)
             assertEquals(11, categoryRepository.count(USER_1));
@@ -140,7 +140,7 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert a sub-category")
         void shouldInsertSubCategory() {
-            // Arrange
+            // arrange
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .name("Streaming")
                     .parentId(CAT_FOOD) // Arbitrary parent for test
@@ -148,10 +148,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
                     .type("EXPENSE")
                     .build();
 
-            // Act
+            // act
             int newId = categoryRepository.insert(request);
 
-            // Assert
+            // assert & verify
             Category inserted = categoryRepository.findById((long) newId).orElseThrow();
             assertEquals("Streaming", inserted.getName());
             assertEquals(CAT_FOOD, inserted.getParentId());
@@ -162,7 +162,7 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update an existing category")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(CAT_FOOD)
                     .userId(USER_1)
@@ -171,10 +171,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
                     .type("EXPENSE")
                     .build();
 
-            // Act
+            // act
             int rows = categoryRepository.update(request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Category updated = categoryRepository.findById(CAT_FOOD).orElseThrow();
             assertEquals("Food & Dining", updated.getName());
@@ -184,13 +184,13 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should delete a category")
         void shouldDelete() {
-            // Arrange
+            // arrange
             Category toDelete = Category.builder().id(CAT_GROCERIES).userId(USER_1).build();
 
-            // Act
+            // act
             int rows = categoryRepository.delete(toDelete);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(categoryRepository.findById(CAT_GROCERIES).isEmpty());
         }
@@ -198,10 +198,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should return 0 when deleting category with no ID")
         void shouldHandleNoIdDelete() {
-            // Act
+            // act
             int rows = categoryRepository.delete(Category.builder().build());
 
-            // Assert
+            // assert & verify
             assertEquals(0, rows);
         }
 
@@ -215,10 +215,10 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
     @Test
     @DisplayName("should count categories for a user")
     void shouldCount() {
-        // Act
+        // act
         long count = categoryRepository.count(USER_1);
 
-        // Assert
+        // assert & verify
         assertEquals(10, count);
     }
 }

@@ -40,7 +40,7 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return list of budgets for specific month and year")
         void getBudgets_shouldReturnBudgets() throws Exception {
-            // Arrange
+            // arrange
             int month = 3;
             int year = 2026;
             BudgetDto budgetDto = BudgetDto.builder()
@@ -52,7 +52,7 @@ class BudgetControllerTest extends BaseControllerTest {
 
             when(budgetService.getBudgets(USER_ID, month, year)).thenReturn(List.of(budgetDto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets")
                             .param("month", String.valueOf(month))
                             .param("year", String.valueOf(year)))
@@ -67,12 +67,12 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should use current month and year when parameters are missing")
         void getBudgets_shouldUseDefaults() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(budgetService.getBudgets(eq(USER_ID), eq(now.getMonthValue()), eq(now.getYear())))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets"))
                     .andExpect(status().isOk());
 
@@ -82,12 +82,12 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should use defaults when month and year are explicitly null")
         void getBudgets_shouldUseDefaultsWhenExplicitlyNull() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(budgetService.getBudgets(eq(USER_ID), eq(now.getMonthValue()), eq(now.getYear())))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets")
                             .param("month", (String) null)
                             .param("year", (String) null))
@@ -104,7 +104,7 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /status should return budget status list")
         void getBudgetStatus_shouldReturnStatus() throws Exception {
-            // Arrange
+            // arrange
             int month = 3;
             int year = 2026;
             BudgetStatusDto statusDto = BudgetStatusDto.builder()
@@ -115,7 +115,7 @@ class BudgetControllerTest extends BaseControllerTest {
 
             when(budgetService.getBudgetStatus(USER_ID, month, year)).thenReturn(List.of(statusDto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets/status")
                             .param("month", String.valueOf(month))
                             .param("year", String.valueOf(year)))
@@ -129,12 +129,12 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /status should use defaults when parameters are missing")
         void getBudgetStatus_shouldUseDefaults() throws Exception {
-            // Arrange
+            // arrange
             LocalDate now = LocalDate.now();
             when(budgetService.getBudgetStatus(eq(USER_ID), eq(now.getMonthValue()), eq(now.getYear())))
                     .thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets/status"))
                     .andExpect(status().isOk());
 
@@ -149,10 +149,10 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /all should return all budgets for user")
         void getAllBudgets_shouldReturnAll() throws Exception {
-            // Arrange
+            // arrange
             when(budgetService.getAllBudgets(USER_ID)).thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets/all"))
                     .andExpect(status().isOk());
 
@@ -167,7 +167,7 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should create a new budget and return its ID")
         void createBudget_shouldReturnId() throws Exception {
-            // Arrange
+            // arrange
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(10L)
@@ -178,7 +178,7 @@ class BudgetControllerTest extends BaseControllerTest {
 
             when(budgetService.create(eq(USER_ID), any(BudgetCreateRequest.class))).thenReturn(BUDGET_ID.intValue());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/budgets")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -192,7 +192,7 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createBudget_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - missing categoryId
+            // arrange - missing categoryId
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .userId(USER_ID)
                     .amount(new BigDecimal("200.00"))
@@ -200,7 +200,7 @@ class BudgetControllerTest extends BaseControllerTest {
                     .year(2026)
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/budgets")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -217,7 +217,7 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should update budget and return status")
         void updateBudget_shouldReturnStatus() throws Exception {
-            // Arrange
+            // arrange
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .id(BUDGET_ID)
                     .userId(USER_ID)
@@ -226,7 +226,7 @@ class BudgetControllerTest extends BaseControllerTest {
 
             when(budgetService.update(eq(USER_ID), any(BudgetUpdateRequest.class))).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/budgets")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -245,7 +245,7 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should remove budget and return 204 No Content")
         void deleteBudget_shouldReturnNoContent() throws Exception {
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/budgets/{id}", BUDGET_ID)
                             .with(csrf()))
                     .andExpect(status().isNoContent());
@@ -261,11 +261,11 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should return 404 Not Found when budget does not exist")
         void deleteBudget_shouldReturn404() throws Exception {
-            // Arrange
+            // arrange
             org.mockito.Mockito.doThrow(new ResourceNotFoundException("Budget not found"))
                     .when(budgetService).delete(USER_ID, BUDGET_ID);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/budgets/{id}", BUDGET_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound());
@@ -274,11 +274,11 @@ class BudgetControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 500 when service fails")
         void getBudgets_shouldReturn500() throws Exception {
-            // Arrange
+            // arrange
             when(budgetService.getBudgets(anyLong(), anyInt(), anyInt()))
                     .thenThrow(new RuntimeException("Server error"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets"))
                     .andExpect(status().isInternalServerError());
         }

@@ -32,17 +32,17 @@ class TagRepositoryTest extends BaseRepositoryTest {
                 + "(previously returned the row-count from update(keyHolder) while never reading "
                 + "the actual generated key back out of the holder)")
         void shouldInsertAndFind() {
-            // Arrange
+            // arrange
             Tag tag = Tag.builder()
                     .userId(USER_1)
                     .name("Test Tag")
                     .color("#000000")
                     .build();
 
-            // Act
+            // act
             Long generatedId = repository.insertAndReturnId(tag);
 
-            // Assert
+            // assert & verify
             assertNotNull(generatedId);
             assertTrue(generatedId > 0);
             Tag persisted = repository.findById(generatedId).orElseThrow();
@@ -53,14 +53,14 @@ class TagRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
-            // Arrange
+            // arrange
             List<Tag> all = repository.findAllByUserId(USER_1); // Baseline has tags for USER_1
             Long id = all.get(0).getId();
 
-            // Act
+            // act
             Optional<Tag> result = repository.findById(id);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(id, result.get().getId());
         }
@@ -68,15 +68,15 @@ class TagRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("PF-307: should find by ID and user ID")
         void shouldFindByIdAndUserId() {
-            // Arrange
+            // arrange
             List<Tag> all = repository.findAllByUserId(USER_1);
             Long id = all.get(0).getId();
 
-            // Act
+            // act
             Optional<Tag> matchingUser = repository.findById(id, USER_1);
             Optional<Tag> wrongUser = repository.findById(id, OTHER_USER);
 
-            // Assert
+            // assert & verify
             assertTrue(matchingUser.isPresent());
             assertTrue(wrongUser.isEmpty());
         }
@@ -84,15 +84,15 @@ class TagRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update tag")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             List<Tag> all = repository.findAllByUserId(USER_1);
             Tag existing = all.get(0);
             Tag update = existing.toBuilder().name("Updated Tag").color("#FFFFFF").build();
 
-            // Act
+            // act
             int rows = repository.update(update);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Tag result = repository.findById(existing.getId()).orElseThrow();
             assertEquals("Updated Tag", result.getName());
@@ -121,14 +121,14 @@ class TagRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("PF-307: should delete a tag by ID and UserID")
         void shouldDeleteById() {
-            // Arrange
+            // arrange
             Tag tag = Tag.builder().userId(USER_1).name("Delete Me").color("#000").build();
             Long id = repository.insertAndReturnId(tag);
 
-            // Act
+            // act
             int rows = repository.deleteById(id, USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(repository.findById(id).isEmpty());
         }
@@ -158,10 +158,10 @@ class TagRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should count tags")
         void shouldCount() {
-            // Act
+            // act
             long count = repository.count();
 
-            // Assert
+            // assert & verify
             assertTrue(count >= 2); // Baseline has 2 tags
         }
 

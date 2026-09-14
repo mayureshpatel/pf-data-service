@@ -41,7 +41,7 @@ class TransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /upload should return transaction previews on successful upload")
         void uploadTransactions_shouldReturnPreviews() throws Exception {
-            // Arrange
+            // arrange
             MockMultipartFile file = new MockMultipartFile(
                     "file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "date,description,amount\n2026-03-04,Coffee,5.00".getBytes());
             String bankName = "CAPITAL_ONE";
@@ -53,7 +53,7 @@ class TransactionControllerTest extends BaseControllerTest {
             when(transactionImportService.previewTransactions(eq(USER_ID), eq(ACCOUNT_ID), eq(bankName), any(InputStream.class), eq("test.csv")))
                     .thenReturn(List.of(previewDto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
                             .file(file)
                             .param("bankName", bankName)
@@ -69,11 +69,11 @@ class TransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /upload should return 400 Bad Request when file is empty")
         void uploadTransactions_shouldReturn400WhenFileEmpty() throws Exception {
-            // Arrange
+            // arrange
             MockMultipartFile file = new MockMultipartFile(
                     "file", "empty.csv", MediaType.TEXT_PLAIN_VALUE, new byte[0]);
             
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
                             .file(file)
                             .param("bankName", "CAPITAL_ONE")
@@ -86,11 +86,11 @@ class TransactionControllerTest extends BaseControllerTest {
         @DisplayName("POST /upload should return 403 Forbidden when user is not account owner")
         @WithCustomMockUser(id = 999L)
         void uploadTransactions_shouldReturn403WhenNotOwner() throws Exception {
-            // Arrange
+            // arrange
             MockMultipartFile file = new MockMultipartFile("file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
             when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
                             .file(file)
                             .param("bankName", "CAPITAL_ONE")
@@ -106,7 +106,7 @@ class TransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /transactions should save transactions and return success message")
         void saveTransactions_shouldReturnSuccessMessage() throws Exception {
-            // Arrange
+            // arrange
             TransactionDto transaction = TransactionDto.builder()
                     .description("Test")
                     .amount(new BigDecimal("10.00"))
@@ -116,7 +116,7 @@ class TransactionControllerTest extends BaseControllerTest {
             when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq("test.csv"), eq("hash123")))
                     .thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", ACCOUNT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -130,10 +130,10 @@ class TransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /transactions should return 400 Bad Request when validation fails")
         void saveTransactions_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - empty transactions list
+            // arrange - empty transactions list
             SaveTransactionRequest request = new SaveTransactionRequest(Collections.emptyList(), "", "", 10L);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", ACCOUNT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -147,11 +147,11 @@ class TransactionControllerTest extends BaseControllerTest {
         @DisplayName("POST /transactions should return 403 Forbidden when user is not account owner")
         @WithCustomMockUser(id = 999L)
         void saveTransactions_shouldReturn403WhenNotOwner() throws Exception {
-            // Arrange
+            // arrange
             SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().build()), "test.csv", "hash", 10L);
             when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", ACCOUNT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -167,12 +167,12 @@ class TransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /upload should return 500 when service fails unexpectedly")
         void uploadTransactions_shouldReturn500OnServiceError() throws Exception {
-            // Arrange
+            // arrange
             MockMultipartFile file = new MockMultipartFile("file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
             when(transactionImportService.previewTransactions(anyLong(), anyLong(), anyString(), any(InputStream.class), anyString()))
                     .thenThrow(new RuntimeException("Import failed"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
                             .file(file)
                             .param("bankName", "CAPITAL_ONE")

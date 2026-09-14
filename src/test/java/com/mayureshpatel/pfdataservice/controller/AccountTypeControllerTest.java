@@ -36,7 +36,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return list of active account types")
         void getAccountTypes_shouldReturnListOfAccountTypes() throws Exception {
-            // Arrange
+            // arrange
             AccountType type = AccountType.builder()
                     .code(TYPE_CODE)
                     .label("Checking Account")
@@ -49,7 +49,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
 
             when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(List.of(type));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/account-types"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -65,7 +65,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 404 for the unversioned /api/account-types path (PF-200)")
         void getAccountTypes_unversionedPath_shouldReturn404() throws Exception {
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/account-types"))
                     .andExpect(status().isNotFound());
         }
@@ -73,10 +73,10 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return empty list when no active account types exist")
         void getAccountTypes_shouldReturnEmptyList() throws Exception {
-            // Arrange
+            // arrange
             when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(Collections.emptyList());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/account-types"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -94,7 +94,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should create a new account type and return rows affected")
         void createAccountType_shouldCreateNewAccountType() throws Exception {
-            // Arrange
+            // arrange
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .code("SAVINGS")
                     .label("Savings")
@@ -107,7 +107,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
 
             when(accountTypeRepository.insert(any(AccountTypeCreateRequest.class))).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/account-types")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -128,7 +128,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .isActive(true)
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/account-types")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -146,10 +146,10 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should remove the account type and return rows affected")
         void deleteAccountType_shouldDeleteAccountType() throws Exception {
-            // Arrange
+            // arrange
             when(accountTypeRepository.deleteByCode(TYPE_CODE)).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/account-types/{code}", TYPE_CODE)
                             .with(csrf()))
                     .andExpect(status().isOk())
@@ -166,11 +166,11 @@ class AccountTypeControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 500 Internal Server Error when repository fails")
         void getAccountTypes_shouldReturn500WhenRepositoryFails() throws Exception {
-            // Arrange
+            // arrange
             when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder())
                     .thenThrow(new RuntimeException("Database error"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/account-types"))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.title").value("Internal Server Error"))

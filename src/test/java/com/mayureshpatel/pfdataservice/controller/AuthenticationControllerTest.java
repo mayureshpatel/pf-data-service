@@ -31,7 +31,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /authenticate should return token on valid credentials")
         void authenticate_shouldReturnToken() throws Exception {
-            // Arrange
+            // arrange
             AuthenticationRequest request = AuthenticationRequest.builder()
                     .username("john_doe")
                     .password("secure_password")
@@ -59,7 +59,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /authenticate should return 400 Bad Request when validation fails (missing username)")
         void authenticate_shouldReturn400WhenValidationFails() throws Exception {
-            // Arrange
+            // arrange
             AuthenticationRequest request = AuthenticationRequest.builder()
                     .password("secure_password")
                     .build();
@@ -81,7 +81,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /register should succeed for an anonymous, unauthenticated caller (PF-183)")
         void register_anonymousCallerSucceeds() throws Exception {
-            // Arrange -- no @WithCustomMockUser here: this is the whole point of PF-183, an
+            // arrange -- no @WithCustomMockUser here: this is the whole point of PF-183, an
             // anonymous caller with no principal at all must be able to register.
             RegistrationRequest request = RegistrationRequest.builder()
                     .username("new_user")
@@ -110,7 +110,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /register should return 400 Bad Request on invalid email")
         void register_shouldReturn400OnInvalidEmail() throws Exception {
-            // Arrange
+            // arrange
             RegistrationRequest request = RegistrationRequest.builder()
                     .username("new_user")
                     .email("invalid-email")
@@ -129,7 +129,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /register should return 400 Bad Request when the honeypot field is filled")
         void register_shouldReturn400OnHoneypotFilled() throws Exception {
-            // Arrange
+            // arrange
             RegistrationRequest request = RegistrationRequest.builder()
                     .username("new_user")
                     .email("new@example.com")
@@ -157,7 +157,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /authenticate should return 500 when service fails unexpectedly")
         void authenticate_shouldReturn500WhenServiceFails() throws Exception {
-            // Arrange
+            // arrange
             AuthenticationRequest request = AuthenticationRequest.builder()
                     .username("john_doe")
                     .password("secure_password")

@@ -37,10 +37,10 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find global merchant by ID")
         void shouldFindById() {
-            // Act
+            // act
             Optional<Merchant> result = repository.findById(MERCHANT_WHOLEFOODS);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals("Whole Foods", result.get().getCleanName());
             assertNull(result.get().getUserId());
@@ -50,10 +50,10 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should find all merchants for user (including null/global ones if supported by query logic)")
         void shouldFindAllByUserId() {
             // Note: The query only filters by user_id = :userId
-            // Act
+            // act
             List<Merchant> result = repository.findAllByUserId(USER_1);
 
-            // Assert
+            // assert & verify
             // Baseline has 1 custom merchant for USER_1
             assertEquals(1, result.size());
             assertEquals("LOCAL CAFE", result.get(0).getOriginalName());
@@ -62,10 +62,10 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find merchants by exact clean name")
         void shouldFindByCleanName() {
-            // Act
+            // act
             List<Merchant> result = repository.findAllByCleanName("Whole Foods");
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertEquals(MERCHANT_WHOLEFOODS, result.get(0).getId());
         }
@@ -157,15 +157,15 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should calculate merchant totals from baseline transactions")
         void shouldFindMerchantTotals() {
-            // Arrange
+            // arrange
             // From baseline: USER_1 has Grocery Run transactions at Whole Foods (ID 1)
             OffsetDateTime start = LocalDate.of(2025, 9, 1).atStartOfDay().atOffset(ZoneOffset.UTC);
             OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
 
-            // Act
+            // act
             List<MerchantBreakdownDto> result = repository.findMerchantTotals(USER_1, start, end);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             MerchantBreakdownDto breakdown = result.stream()
                     .filter(b -> b.merchant().cleanName().equals("Whole Foods"))
@@ -182,17 +182,17 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert a new user-specific merchant")
         void shouldInsert() {
-            // Arrange
+            // arrange
             MerchantCreateRequest request = MerchantCreateRequest.builder()
                     .userId(USER_1)
                     .originalName("NEW SHOP 999")
                     .cleanName("New Shop")
                     .build();
 
-            // Act
+            // act
             Long id = repository.insert(request);
 
-            // Assert
+            // assert & verify
             assertNotNull(id);
             assertTrue(id > 0);
             List<Merchant> all = repository.findAllByUserId(USER_1);
@@ -202,17 +202,17 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update an existing merchant's clean name")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             Merchant custom = repository.findAllByUserId(USER_1).get(0);
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(custom.getId())
                     .cleanName("Updated Cafe")
                     .build();
 
-            // Act
+            // act
             int rows = repository.update(request, USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Merchant updated = repository.findById(custom.getId()).orElseThrow();
             assertEquals("Updated Cafe", updated.getCleanName());
@@ -243,13 +243,13 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should hard delete a merchant")
         void shouldDelete() {
-            // Arrange
+            // arrange
             Merchant custom = repository.findAllByUserId(USER_1).get(0);
 
-            // Act
+            // act
             int rows = repository.delete(custom.getId(), USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(repository.findById(custom.getId()).isEmpty());
         }
@@ -274,16 +274,16 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert multiple merchants in one call and return them with generated IDs")
         void shouldInsertAllAndReturn() {
-            // Arrange
+            // arrange
             List<MerchantCreateRequest> requests = List.of(
                     MerchantCreateRequest.builder().userId(USER_1).originalName("NEW SHOP A").cleanName("Shop A").build(),
                     MerchantCreateRequest.builder().userId(USER_1).originalName("NEW SHOP B").cleanName("Shop B").build()
             );
 
-            // Act
+            // act
             List<Merchant> result = repository.insertAllAndReturn(requests);
 
-            // Assert
+            // assert & verify
             assertEquals(2, result.size());
             assertTrue(result.stream().allMatch(m -> m.getId() != null && m.getId() > 0));
             assertTrue(result.stream().anyMatch(m -> m.getOriginalName().equals("NEW SHOP A") && m.getCleanName().equals("Shop A")));
@@ -293,10 +293,10 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should return empty list when inserting an empty request list")
         void shouldHandleEmptyInsertAllAndReturn() {
-            // Act
+            // act
             List<Merchant> result = repository.insertAllAndReturn(List.of());
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
     }

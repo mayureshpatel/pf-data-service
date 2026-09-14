@@ -34,10 +34,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all active accounts")
         void shouldFindAll() {
-            // Act
+            // act
             List<Account> accounts = accountRepository.findAll();
 
-            // Assert
+            // assert & verify
             assertFalse(accounts.isEmpty());
             assertTrue(accounts.size() >= 4); // Based on baseline
         }
@@ -45,10 +45,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find account by ID")
         void shouldFindById() {
-            // Act
+            // act
             Optional<Account> account = accountRepository.findById(ACCOUNT_1);
 
-            // Assert
+            // assert & verify
             assertTrue(account.isPresent());
             assertEquals("Main Checking", account.get().getName());
         }
@@ -56,10 +56,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all accounts for a specific user")
         void shouldFindAllByUserId() {
-            // Act
+            // act
             List<Account> accounts = accountRepository.findAllByUserId(USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(3, accounts.size());
             assertTrue(accounts.stream().allMatch(a -> a.getUserId().equals(USER_1)));
         }
@@ -67,10 +67,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find account by ID and User ID")
         void shouldFindByIdAndUserId() {
-            // Act
+            // act
             Optional<Account> account = accountRepository.findByIdAndUserId(ACCOUNT_1, USER_1);
 
-            // Assert
+            // assert & verify
             assertTrue(account.isPresent());
             assertEquals(USER_1, account.get().getUserId());
         }
@@ -78,10 +78,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should return empty if account ID exists but belongs to another user")
         void shouldNotFindByWrongUser() {
-            // Act
+            // act
             Optional<Account> account = accountRepository.findByIdAndUserId(ACCOUNT_1, USER_2);
 
-            // Assert
+            // assert & verify
             assertTrue(account.isEmpty());
         }
     }
@@ -92,7 +92,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert a new account")
         void shouldInsert() {
-            // Arrange
+            // arrange
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name("New Savings")
                     .type("SAVINGS")
@@ -101,10 +101,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .bankName("Test Bank")
                     .build();
 
-            // Act
+            // act
             int newId = accountRepository.insert(USER_1, request);
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count (which
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count (which
             // is always 1 on a successful single-row insert and would coincidentally collide with
             // baseline account 1, "Main Checking", masking the bug this regresses against)
             long count = accountRepository.count();
@@ -117,7 +117,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update an existing account with optimistic locking")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(ACCOUNT_1)
@@ -128,10 +128,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .version(account.getVersion())
                     .build();
 
-            // Act
+            // act
             int rows = accountRepository.update(USER_1, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Account updated = accountRepository.findById(ACCOUNT_1).orElseThrow();
             assertEquals("Updated Name", updated.getName());
@@ -141,7 +141,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should fail update if version mismatch")
         void shouldFailUpdateOnVersionMismatch() {
-            // Arrange
+            // arrange
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(ACCOUNT_1)
                     .name("Fail")
@@ -150,17 +150,17 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .version(999L) // Wrong version
                     .build();
 
-            // Act
+            // act
             int rows = accountRepository.update(USER_1, request);
 
-            // Assert
+            // assert & verify
             assertEquals(0, rows);
         }
 
         @Test
         @DisplayName("should fail update if UserID mismatch")
         void shouldFailUpdateOnUserMismatch() {
-            // Arrange
+            // arrange
             Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(ACCOUNT_1)
@@ -170,20 +170,20 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .version(account.getVersion())
                     .build();
 
-            // Act - User 2 trying to update User 1's account
+            // act - User 2 trying to update User 1's account
             int rows = accountRepository.update(USER_2, request);
 
-            // Assert
+            // assert & verify
             assertEquals(0, rows);
         }
 
         @Test
         @DisplayName("should soft delete an account")
         void shouldDelete() {
-            // Act
+            // act
             int rows = accountRepository.deleteById(ACCOUNT_1, USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Optional<Account> deleted = accountRepository.findById(ACCOUNT_1);
             assertTrue(deleted.isEmpty());
@@ -196,13 +196,13 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update balance explicitly")
         void shouldUpdateBalance() {
-            // Arrange
+            // arrange
             Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
 
-            // Act
+            // act
             int rows = accountRepository.updateBalance(USER_1, ACCOUNT_1, new BigDecimal("999.99"), account.getVersion());
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Account updated = accountRepository.findById(ACCOUNT_1).orElseThrow();
             assertEquals(0, new BigDecimal("999.99").compareTo(updated.getCurrentBalance()));
@@ -212,13 +212,13 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should reconcile balance with optimistic locking")
         void shouldReconcile() {
-            // Arrange
+            // arrange
             Account account = accountRepository.findById(ACCOUNT_1).orElseThrow();
 
-            // Act
+            // act
             int rows = accountRepository.reconcile(USER_1, ACCOUNT_1, new BigDecimal("1234.56"), account.getVersion());
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Account updated = accountRepository.findById(ACCOUNT_1).orElseThrow();
             assertEquals(0, new BigDecimal("1234.56").compareTo(updated.getCurrentBalance()));
@@ -246,10 +246,10 @@ class AccountRepositoryTest extends BaseRepositoryTest {
     @Test
     @DisplayName("should count active accounts")
     void shouldCount() {
-        // Act
+        // act
         long count = accountRepository.count();
 
-        // Assert
+        // assert & verify
         assertEquals(4, count);
     }
 }

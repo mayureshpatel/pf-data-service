@@ -39,7 +39,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return list of rules for authenticated user")
         void getRules_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             CategoryRuleDto ruleDto = CategoryRuleDto.builder()
                     .id(RULE_ID)
                     .keywords(List.of("AMZN"))
@@ -48,7 +48,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
 
             when(categoryRuleService.getRules(USER_ID)).thenReturn(List.of(ruleDto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/category-rules"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -62,10 +62,10 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return empty list when no rules exist")
         void getRules_shouldReturnEmptyList() throws Exception {
-            // Arrange
+            // arrange
             when(categoryRuleService.getRules(USER_ID)).thenReturn(Collections.emptyList());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/category-rules"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(0)));
@@ -79,7 +79,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should create a new rule and return the generated id")
         void createRule_shouldReturnGeneratedId() throws Exception {
-            // Arrange
+            // arrange
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .keywords(List.of("Starbucks"))
@@ -89,7 +89,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
 
             when(categoryRuleService.createRule(eq(USER_ID), any(CategoryRuleCreateRequest.class))).thenReturn(42L);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/category-rules")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -103,13 +103,13 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createRule_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - missing keywords and categoryId
+            // arrange - missing keywords and categoryId
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .priority(5)
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/category-rules")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -126,7 +126,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should update an existing rule and return rows affected")
         void updateRule_shouldReturnRowsAffected() throws Exception {
-            // Arrange
+            // arrange
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .id(RULE_ID)
                     .keywords(List.of("Updated Keyword"))
@@ -136,7 +136,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
 
             when(categoryRuleService.updateRule(eq(USER_ID), any(CategoryRuleUpdateRequest.class))).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/category-rules")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -150,12 +150,12 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should return 400 Bad Request when validation fails")
         void updateRule_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - missing id and categoryId
+            // arrange - missing id and categoryId
             CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
                     .priority(10)
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/category-rules")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -172,11 +172,11 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /preview should return rule change previews")
         void previewApply_shouldReturnPreviews() throws Exception {
-            // Arrange
+            // arrange
             RuleChangePreviewDto preview = new RuleChangePreviewDto("AMZN MKTP", "Uncategorized", "Shopping");
             when(categoryRuleService.previewApply(USER_ID)).thenReturn(List.of(preview));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/category-rules/preview"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -194,7 +194,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST /apply should trigger rule application and return 200")
         void applyRules_shouldReturnOk() throws Exception {
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/category-rules/apply")
                             .with(csrf()))
                     .andExpect(status().isOk());
@@ -210,7 +210,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should remove rule and return 204 No Content")
         void deleteRule_shouldReturnNoContent() throws Exception {
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/category-rules/{id}", RULE_ID)
                             .with(csrf()))
                     .andExpect(status().isNoContent());
@@ -226,11 +226,11 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should return 404 Not Found when rule does not exist")
         void deleteRule_shouldReturn404() throws Exception {
-            // Arrange
+            // arrange
             org.mockito.Mockito.doThrow(new ResourceNotFoundException("Rule not found"))
                     .when(categoryRuleService).deleteRule(USER_ID, RULE_ID);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/category-rules/{id}", RULE_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound());
@@ -239,11 +239,11 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 500 when service fails unexpectedly")
         void getRules_shouldReturn500() throws Exception {
-            // Arrange
+            // arrange
             when(categoryRuleService.getRules(anyLong()))
                     .thenThrow(new RuntimeException("Database error"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/category-rules"))
                     .andExpect(status().isInternalServerError());
         }

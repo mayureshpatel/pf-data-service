@@ -16,14 +16,14 @@ class TagDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<TagDtoMapper> constructor = TagDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         TagDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -34,17 +34,17 @@ class TagDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             TagDto result = TagDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             Tag tag = Tag.builder()
                     .id(1L)
                     .userId(100L)
@@ -52,10 +52,10 @@ class TagDtoMapperTest {
                     .color("#123456")
                     .build();
 
-            // Act
+            // act
             TagDto dto = TagDtoMapper.toDto(tag);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(tag.getId(), dto.id());
             assertEquals(tag.getUserId(), dto.userId());
@@ -66,13 +66,13 @@ class TagDtoMapperTest {
         @Test
         @DisplayName("should handle a null color")
         void toDto_shouldHandleNullColor() {
-            // Arrange
+            // arrange
             Tag tag = Tag.builder().id(1L).userId(100L).name("Travel").color(null).build();
 
-            // Act
+            // act
             TagDto dto = TagDtoMapper.toDto(tag);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.color());
         }

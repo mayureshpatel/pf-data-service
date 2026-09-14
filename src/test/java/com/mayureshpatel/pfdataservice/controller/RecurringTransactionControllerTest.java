@@ -40,10 +40,10 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /suggestions should return list of suggestions")
         void getSuggestions_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             when(recurringTransactionService.findSuggestions(USER_ID)).thenReturn(Collections.emptyList());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/recurring/suggestions"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -60,7 +60,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return list of recurring transactions")
         void getRecurringTransactions_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             RecurringTransactionDto dto = RecurringTransactionDto.builder()
                     .id(RECURRING_ID)
                     .amount(new BigDecimal("50.00"))
@@ -68,7 +68,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
 
             when(recurringTransactionService.getRecurringTransactions(USER_ID)).thenReturn(List.of(dto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/recurring"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -85,7 +85,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should create a new recurring transaction and return its ID")
         void createRecurringTransaction_shouldReturnId() throws Exception {
-            // Arrange
+            // arrange
             RecurringTransactionCreateRequest request = RecurringTransactionCreateRequest.builder()
                     .userId(USER_ID)
                     .accountId(10L)
@@ -98,7 +98,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
             when(recurringTransactionService.createRecurringTransaction(eq(USER_ID), any(RecurringTransactionCreateRequest.class)))
                     .thenReturn(RECURRING_ID.intValue());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/recurring")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -112,12 +112,12 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createRecurringTransaction_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - missing accountId, amount, frequency, nextDate, merchantId
+            // arrange - missing accountId, amount, frequency, nextDate, merchantId
             RecurringTransactionCreateRequest request = RecurringTransactionCreateRequest.builder()
                     .userId(USER_ID)
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/recurring")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -135,7 +135,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should update recurring transaction and return status")
         void updateRecurringTransaction_shouldReturnStatus() throws Exception {
-            // Arrange
+            // arrange
             RecurringTransactionUpdateRequest request = RecurringTransactionUpdateRequest.builder()
                     .id(RECURRING_ID)
                     .accountId(10L)
@@ -148,7 +148,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
             when(recurringTransactionService.updateRecurringTransaction(eq(USER_ID), any(RecurringTransactionUpdateRequest.class)))
                     .thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/recurring")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -162,11 +162,11 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should return 400 Bad Request when validation fails")
         void updateRecurringTransaction_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - missing ID and other fields
+            // arrange - missing ID and other fields
             RecurringTransactionUpdateRequest request = RecurringTransactionUpdateRequest.builder()
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/recurring")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -184,7 +184,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should remove recurring transaction and return 204 No Content")
         void deleteRecurringTransaction_shouldReturnNoContent() throws Exception {
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/recurring/{id}", RECURRING_ID)
                             .with(csrf()))
                     .andExpect(status().isNoContent());
@@ -200,11 +200,11 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should return 404 Not Found when recurring transaction does not exist")
         void deleteRecurringTransaction_shouldReturn404() throws Exception {
-            // Arrange
+            // arrange
             org.mockito.Mockito.doThrow(new ResourceNotFoundException("Recurring transaction not found"))
                     .when(recurringTransactionService).deleteRecurringTransaction(USER_ID, RECURRING_ID);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/recurring/{id}", RECURRING_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound());
@@ -213,11 +213,11 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 500 when service fails unexpectedly")
         void getRecurringTransactions_shouldReturn500() throws Exception {
-            // Arrange
+            // arrange
             when(recurringTransactionService.getRecurringTransactions(anyLong()))
                     .thenThrow(new RuntimeException("Internal error"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/recurring"))
                     .andExpect(status().isInternalServerError());
         }

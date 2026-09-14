@@ -34,10 +34,10 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all recurring transactions")
         void shouldFindAll() {
-            // Act
+            // act
             List<RecurringTransaction> result = repository.findAll();
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.size() >= 2); // Based on baseline
         }
@@ -45,10 +45,10 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by user ID")
         void shouldFindByUserId() {
-            // Act
+            // act
             List<RecurringTransaction> result = repository.findAllByUserId(USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(2, result.size());
             assertTrue(result.stream().allMatch(r -> r.getUserId().equals(USER_1)));
         }
@@ -56,10 +56,10 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find active by user ID ordered by next date")
         void shouldFindActiveByUserId() {
-            // Act
+            // act
             List<RecurringTransaction> result = repository.findByUserIdAndActiveTrueOrderByNextDate(USER_1);
 
-            // Assert
+            // assert & verify
             assertFalse(result.isEmpty());
             assertTrue(result.stream().allMatch(RecurringTransaction::isActive));
             // Verify order
@@ -72,14 +72,14 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
-            // Arrange
+            // arrange
             List<RecurringTransaction> all = repository.findAllByUserId(USER_1);
             Long id = all.get(0).getId();
 
-            // Act
+            // act
             Optional<RecurringTransaction> result = repository.findById(id);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(id, result.get().getId());
         }
@@ -91,7 +91,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert a new recurring transaction")
         void shouldInsert() {
-            // Arrange
+            // arrange
             RecurringTransactionCreateRequest request = RecurringTransactionCreateRequest.builder()
                     .accountId(ACCOUNT_1)
                     .merchantId(MERCHANT_AMAZON)
@@ -101,10 +101,10 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
                     .active(true)
                     .build();
 
-            // Act
+            // act
             int newId = repository.insert(request, USER_1);
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count (always
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count (always
             // 1 on a successful single-row insert, which would coincidentally collide with
             // baseline recurring transaction id 1 and mask the bug this regresses against)
             List<RecurringTransaction> all = repository.findAllByUserId(USER_1);
@@ -117,7 +117,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update an existing recurring transaction")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             List<RecurringTransaction> all = repository.findAllByUserId(USER_1);
             RecurringTransaction existing = all.get(0);
 
@@ -131,10 +131,10 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
                     .active(false)
                     .build();
 
-            // Act
+            // act
             int rows = repository.update(request, USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             RecurringTransaction updated = repository.findById(existing.getId()).orElseThrow();
             assertEquals(0, new BigDecimal("150.00").compareTo(updated.getAmount()));
@@ -145,14 +145,14 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should soft delete a recurring transaction")
         void shouldDelete() {
-            // Arrange
+            // arrange
             List<RecurringTransaction> all = repository.findAllByUserId(USER_1);
             Long id = all.get(0).getId();
 
-            // Act
+            // act
             int rows = repository.delete(id, USER_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(repository.findById(id).isEmpty());
         }
@@ -170,34 +170,34 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should count recurring transactions for an account")
         void shouldCountByAccountId() {
-            // Act -- account 1 (Main Checking) has exactly one baseline recurring transaction (id 1)
+            // act -- account 1 (Main Checking) has exactly one baseline recurring transaction (id 1)
             long count = repository.countByAccountId(ACCOUNT_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, count);
         }
 
         @Test
         @DisplayName("should count zero recurring transactions for an account with none")
         void shouldCountByAccountIdZeroWhenNone() {
-            // Act -- account 2 (Rainy Day Savings) has no baseline recurring transaction
+            // act -- account 2 (Rainy Day Savings) has no baseline recurring transaction
             long count = repository.countByAccountId(2L);
 
-            // Assert
+            // assert & verify
             assertEquals(0, count);
         }
 
         @Test
         @DisplayName("should exclude soft-deleted recurring transactions from the count")
         void shouldCountByAccountIdExcludingDeleted() {
-            // Arrange -- baseline recurring transaction id 1 belongs to account 1
+            // arrange -- baseline recurring transaction id 1 belongs to account 1
 
-            // Act
+            // act
             long countBeforeDelete = repository.countByAccountId(ACCOUNT_1);
             repository.delete(1L, USER_1);
             long countAfterDelete = repository.countByAccountId(ACCOUNT_1);
 
-            // Assert
+            // assert & verify
             assertEquals(1, countBeforeDelete);
             assertEquals(0, countAfterDelete);
         }

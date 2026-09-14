@@ -18,14 +18,14 @@ class AccountTypeDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<AccountTypeDtoMapper> constructor = AccountTypeDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         AccountTypeDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -36,17 +36,17 @@ class AccountTypeDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             AccountTypeDto result = AccountTypeDtoMapper.toDto((AccountType) null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             AccountType accountType = AccountType.builder()
                     .code("CHECKING")
                     .label("Checking Account")
@@ -57,10 +57,10 @@ class AccountTypeDtoMapperTest {
                     .color("#000000")
                     .build();
 
-            // Act
+            // act
             AccountTypeDto dto = AccountTypeDtoMapper.toDto(accountType);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(accountType.getCode(), dto.code());
             assertEquals(accountType.getLabel(), dto.label());
@@ -74,7 +74,7 @@ class AccountTypeDtoMapperTest {
         @Test
         @DisplayName("should handle null optional fields (icon and color)")
         void toDto_shouldHandleNullOptionals() {
-            // Arrange
+            // arrange
             AccountType accountType = AccountType.builder()
                     .code("SAVINGS")
                     .label("Savings Account")
@@ -85,10 +85,10 @@ class AccountTypeDtoMapperTest {
                     .color(null)
                     .build();
 
-            // Act
+            // act
             AccountTypeDto dto = AccountTypeDtoMapper.toDto(accountType);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.icon());
             assertNull(dto.color());
@@ -102,17 +102,17 @@ class AccountTypeDtoMapperTest {
         @Test
         @DisplayName("should map list of account types")
         void toDto_shouldMapList() {
-            // Arrange
+            // arrange
             AccountType accountType = AccountType.builder()
                     .code("CHECKING")
                     .label("Checking")
                     .build();
             List<AccountType> source = List.of(accountType);
 
-            // Act
+            // act
             List<AccountTypeDto> result = AccountTypeDtoMapper.toDto(source);
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             assertEquals(1, result.size());
             assertEquals(accountType.getCode(), result.get(0).code());
@@ -121,10 +121,10 @@ class AccountTypeDtoMapperTest {
         @Test
         @DisplayName("should return empty list when source is empty")
         void toDto_shouldReturnEmptyListWhenSourceIsEmpty() {
-            // Act
+            // act
             List<AccountTypeDto> result = AccountTypeDtoMapper.toDto(Collections.emptyList());
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             assertTrue(result.isEmpty());
         }

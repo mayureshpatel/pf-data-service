@@ -57,14 +57,14 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should return mapped category DTOs for a user")
         void shouldReturnCategories() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).name("Food").build();
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(category));
 
-            // Act
+            // act
             List<CategoryDto> result = categoryService.getCategoriesByUserId(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("Food", result.get(0).name());
         }
@@ -76,16 +76,16 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should create category successfully without parent")
         void shouldCreateSuccessfully() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(categoryRepository.insert(any(CategoryCreateRequest.class))).thenReturn(1);
 
             CategoryCreateRequest request = CategoryCreateRequest.builder().name("New").userId(USER_ID).build();
 
-            // Act
+            // act
             int result = categoryService.createCategory(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(categoryRepository).insert(any(CategoryCreateRequest.class));
         }
@@ -93,7 +93,7 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should create category successfully with parent owned by user")
         void shouldCreateWithParent() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Category parent = Category.builder().id(PARENT_ID).userId(USER_ID).build();
             when(categoryRepository.findById(PARENT_ID)).thenReturn(Optional.of(parent));
@@ -105,10 +105,10 @@ class CategoryServiceTest {
                     .parentId(PARENT_ID)
                     .build();
 
-            // Act
+            // act
             int result = categoryService.createCategory(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(categoryRepository).insert(any(CategoryCreateRequest.class));
         }
@@ -116,16 +116,16 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should create category successfully when parentId is 0 (treated as no parent)")
         void shouldCreateWithParentIdZero() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(categoryRepository.insert(any(CategoryCreateRequest.class))).thenReturn(1);
 
             CategoryCreateRequest request = CategoryCreateRequest.builder().name("New").userId(USER_ID).parentId(0L).build();
 
-            // Act
+            // act
             int result = categoryService.createCategory(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(categoryRepository).insert(any(CategoryCreateRequest.class));
         }
@@ -133,37 +133,37 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if user not found")
         void shouldThrowOnUserNotFound() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> categoryService.createCategory(USER_ID, CategoryCreateRequest.builder().build()));
         }
 
         @Test
         @DisplayName("should throw ResourceNotFoundException if parent category not found")
         void shouldThrowOnParentNotFound() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(categoryRepository.findById(PARENT_ID)).thenReturn(Optional.empty());
 
             CategoryCreateRequest request = CategoryCreateRequest.builder().userId(USER_ID).parentId(PARENT_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> categoryService.createCategory(USER_ID, request));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user doesn't own parent category")
         void shouldThrowOnParentAccessDenied() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Category parent = Category.builder().id(PARENT_ID).userId(999L).build();
             when(categoryRepository.findById(PARENT_ID)).thenReturn(Optional.of(parent));
 
             CategoryCreateRequest request = CategoryCreateRequest.builder().userId(USER_ID).parentId(PARENT_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> categoryService.createCategory(USER_ID, request));
         }
     }
@@ -174,17 +174,17 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should update category successfully if owned")
         void shouldUpdateSuccessfully() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRepository.update(any(CategoryUpdateRequest.class))).thenReturn(1);
 
             CategoryUpdateRequest request = CategoryUpdateRequest.builder().id(CATEGORY_ID).userId(USER_ID).name("Updated").build();
 
-            // Act
+            // act
             int result = categoryService.updateCategory(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(categoryRepository).update(any(CategoryUpdateRequest.class));
         }
@@ -192,7 +192,7 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should update category successfully with a valid parent")
         void shouldUpdateWithParent() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             Category parent = Category.builder().id(PARENT_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
@@ -202,10 +202,10 @@ class CategoryServiceTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(CATEGORY_ID).userId(USER_ID).parentId(PARENT_ID).name("Updated").build();
 
-            // Act
+            // act
             int result = categoryService.updateCategory(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(categoryRepository).update(any(CategoryUpdateRequest.class));
         }
@@ -213,68 +213,68 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should throw ResourceNotFoundException if category not found")
         void shouldThrowOnNotFound() {
-            // Arrange
+            // arrange
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> categoryService.updateCategory(USER_ID, CategoryUpdateRequest.builder().id(CATEGORY_ID).build()));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user does not own category")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(999L).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> categoryService.updateCategory(USER_ID, CategoryUpdateRequest.builder().id(CATEGORY_ID).build()));
         }
 
         @Test
         @DisplayName("should throw IllegalArgumentException if parent category ID is zero")
         void shouldThrowOnParentIdZero() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
             CategoryUpdateRequest request = CategoryUpdateRequest.builder().id(CATEGORY_ID).parentId(0L).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(IllegalArgumentException.class, () -> categoryService.updateCategory(USER_ID, request));
         }
 
         @Test
         @DisplayName("should throw IllegalArgumentException if category is its own parent")
         void shouldThrowOnSelfParenting() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
             CategoryUpdateRequest request = CategoryUpdateRequest.builder().id(CATEGORY_ID).parentId(CATEGORY_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(IllegalArgumentException.class, () -> categoryService.updateCategory(USER_ID, request));
         }
 
         @Test
         @DisplayName("should throw ResourceNotFoundException if parent category not found during update")
         void shouldThrowOnParentNotFound() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRepository.findById(PARENT_ID)).thenReturn(Optional.empty());
 
             CategoryUpdateRequest request = CategoryUpdateRequest.builder().id(CATEGORY_ID).parentId(PARENT_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> categoryService.updateCategory(USER_ID, request));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user doesn't own parent category during update")
         void shouldThrowOnParentAccessDenied() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             Category parent = Category.builder().id(PARENT_ID).userId(999L).build();
@@ -282,7 +282,7 @@ class CategoryServiceTest {
 
             CategoryUpdateRequest request = CategoryUpdateRequest.builder().id(CATEGORY_ID).parentId(PARENT_ID).build();
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> categoryService.updateCategory(USER_ID, request));
         }
     }
@@ -293,7 +293,7 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should delete category if owned and has no transactions, subcategories, rules, or budgets")
         void shouldDeleteSuccessfully() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
@@ -302,10 +302,10 @@ class CategoryServiceTest {
             when(budgetRepository.countByCategoryIdAndDeletedAtIsNull(CATEGORY_ID)).thenReturn(0L);
             when(categoryRepository.delete(category)).thenReturn(1);
 
-            // Act
+            // act
             int result = categoryService.deleteCategory(USER_ID, CATEGORY_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(categoryRepository).delete(category);
         }
@@ -313,36 +313,36 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should throw AccessDeniedException if not owned")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(999L).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
         }
 
         @Test
         @DisplayName("should throw IllegalStateException if category has transactions")
         void shouldThrowOnExistingTransactions() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
             when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(5L);
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(IllegalStateException.class, () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
         }
 
         @Test
         @DisplayName("should throw IllegalStateException if category has subcategories (PF-191)")
         void shouldThrowOnExistingSubcategories() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(2L);
 
-            // Act & Assert
+            // act & assert & verify
             IllegalStateException ex = assertThrows(IllegalStateException.class,
                     () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
             assertTrue(ex.getMessage().contains("subcategor"));
@@ -353,14 +353,14 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should throw IllegalStateException if category has dependent category rules (PF-191)")
         void shouldThrowOnExistingCategoryRules() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
             when(transactionRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
             when(categoryRuleRepository.countByCategoryId(CATEGORY_ID)).thenReturn(1L);
 
-            // Act & Assert
+            // act & assert & verify
             IllegalStateException ex = assertThrows(IllegalStateException.class,
                     () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
             assertTrue(ex.getMessage().contains("rule"));
@@ -369,7 +369,7 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should throw IllegalStateException if category has a dependent budget (PF-191)")
         void shouldThrowOnExistingBudget() {
-            // Arrange
+            // arrange
             Category category = Category.builder().id(CATEGORY_ID).userId(USER_ID).build();
             when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
             when(categoryRepository.countByParentId(CATEGORY_ID)).thenReturn(0L);
@@ -377,7 +377,7 @@ class CategoryServiceTest {
             when(categoryRuleRepository.countByCategoryId(CATEGORY_ID)).thenReturn(0L);
             when(budgetRepository.countByCategoryIdAndDeletedAtIsNull(CATEGORY_ID)).thenReturn(1L);
 
-            // Act & Assert
+            // act & assert & verify
             IllegalStateException ex = assertThrows(IllegalStateException.class,
                     () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
             assertTrue(ex.getMessage().contains("budget"));
@@ -397,13 +397,13 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should return grouped categories")
         void shouldReturnGrouped() {
-            // Arrange
+            // arrange
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
-            // Act
+            // act
             List<CategoryDto> result = categoryService.getCategoriesByUserId(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
             verify(categoryRepository).findByUserId(USER_ID);
         }
@@ -415,13 +415,13 @@ class CategoryServiceTest {
         @Test
         @DisplayName("should return child categories")
         void shouldReturnChildren() {
-            // Arrange
+            // arrange
             when(categoryRepository.findAllSubCategories(USER_ID)).thenReturn(Collections.emptyList());
 
-            // Act
+            // act
             List<CategoryDto> result = categoryService.getChildCategories(USER_ID);
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             verify(categoryRepository).findAllSubCategories(USER_ID);
         }

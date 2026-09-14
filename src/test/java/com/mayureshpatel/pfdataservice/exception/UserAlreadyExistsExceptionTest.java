@@ -16,13 +16,13 @@ class UserAlreadyExistsExceptionTest {
         @Test
         @DisplayName("should create exception with provided message")
         void shouldCreateWithProvidedMessage() {
-            // Arrange
+            // arrange
             String message = "User with email john@example.com already exists";
 
-            // Act
+            // act
             UserAlreadyExistsException exception = new UserAlreadyExistsException(message);
 
-            // Assert
+            // assert & verify
             assertEquals(message, exception.getMessage());
         }
     }

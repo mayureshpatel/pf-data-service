@@ -28,68 +28,68 @@ class AccountTest {
         @Test
         @DisplayName("applyTransaction should increase balance for INCOME")
         void applyTransaction_shouldIncreaseForIncome() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
                     .amount(new BigDecimal("50.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.applyTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("150.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("applyTransaction should decrease balance for EXPENSE")
         void applyTransaction_shouldDecreaseForExpense() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.EXPENSE)
                     .amount(new BigDecimal("30.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.applyTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("70.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("applyTransaction should handle ADJUSTMENT (positive)")
         void applyTransaction_shouldHandlePositiveAdjustment() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.ADJUSTMENT)
                     .amount(new BigDecimal("10.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.applyTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("110.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("applyTransaction should handle null balance by defaulting to ZERO")
         void applyTransaction_shouldHandleNullBalance() {
-            // Arrange - forcing null balance via toBuilder
+            // arrange - forcing null balance via toBuilder
             Account account = Account.builder().currentBalance(null).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
                     .amount(new BigDecimal("50.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.applyTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("50.00"), updatedAccount.getCurrentBalance());
         }
     }
@@ -101,51 +101,51 @@ class AccountTest {
         @Test
         @DisplayName("undoTransaction should reverse INCOME application")
         void undoTransaction_shouldReverseIncome() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("150.00")).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
                     .amount(new BigDecimal("50.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.undoTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("100.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("undoTransaction should reverse EXPENSE application")
         void undoTransaction_shouldReverseExpense() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("70.00")).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.EXPENSE)
                     .amount(new BigDecimal("30.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.undoTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("100.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("undoTransaction should handle null balance")
         void undoTransaction_shouldHandleNullBalance() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(null).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
                     .amount(new BigDecimal("50.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.undoTransaction(transaction);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("-50.00"), updatedAccount.getCurrentBalance());
         }
     }
@@ -157,51 +157,51 @@ class AccountTest {
         @Test
         @DisplayName("applyTransaction (DTO) should handle INCOME correctly")
         void applyTransactionDto_shouldAddIncome() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.applyTransaction(request);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("125.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("applyTransaction (DTO) should handle EXPENSE correctly")
         void applyTransactionDto_shouldSubtractExpense() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("EXPENSE")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.applyTransaction(request);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("75.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("applyTransaction (DTO) should handle null balance")
         void applyTransactionDto_shouldHandleNullBalance() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(null).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.applyTransaction(request);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("25.00"), updatedAccount.getCurrentBalance());
         }
     }
@@ -213,51 +213,51 @@ class AccountTest {
         @Test
         @DisplayName("undoTransaction (DTO) should reverse INCOME correctly")
         void undoTransactionDto_shouldSubtractIncome() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.undoTransaction(request);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("75.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("undoTransaction (DTO) should reverse EXPENSE correctly")
         void undoTransactionDto_shouldAddExpense() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("EXPENSE")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.undoTransaction(request);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("125.00"), updatedAccount.getCurrentBalance());
         }
 
         @Test
         @DisplayName("undoTransaction (DTO) should handle null balance")
         void undoTransactionDto_shouldHandleNullBalance() {
-            // Arrange
+            // arrange
             Account account = Account.builder().currentBalance(null).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("INCOME")
                     .amount(new BigDecimal("25.00"))
                     .build();
 
-            // Act
+            // act
             Account updatedAccount = account.undoTransaction(request);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("-25.00"), updatedAccount.getCurrentBalance());
         }
     }

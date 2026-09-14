@@ -29,18 +29,18 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert and find file import history")
         void shouldInsertAndFind() {
-            // Arrange
+            // arrange
             FileImportCreateRequest request = FileImportCreateRequest.builder()
                     .accountId(String.valueOf(ACCOUNT_1))
                     .fileHash("hash123")
                     .fileName("test.csv")
                     .build();
 
-            // Act
+            // act
             int newId = repository.insert(request);
             Optional<FileImportHistory> result = repository.findByAccountIdAndFileHash(ACCOUNT_1, "hash123");
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count
             assertTrue(result.isPresent());
             assertEquals("test.csv", result.get().getFileName());
             assertEquals(result.get().getId(), (long) newId);
@@ -49,14 +49,14 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
-            // Arrange
+            // arrange
             repository.insert(FileImportCreateRequest.builder().accountId(String.valueOf(ACCOUNT_1)).fileHash("h3").fileName("3.csv").build());
             Long id = repository.findByAccountIdAndFileHash(ACCOUNT_1, "h3").get().getId();
 
-            // Act
+            // act
             Optional<FileImportHistory> result = repository.findById(id);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(id, result.get().getId());
         }
@@ -64,7 +64,7 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should save a file import history built from a domain object")
         void shouldSave() {
-            // Arrange
+            // arrange
             FileImportHistory history = FileImportHistory.builder()
                     .account(Account.builder().id(ACCOUNT_1).build())
                     .fileHash("h5")
@@ -72,10 +72,10 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
                     .transactionCount(3)
                     .build();
 
-            // Act
+            // act
             int newId = repository.save(history);
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count
             FileImportHistory saved = repository.findByAccountIdAndFileHash(ACCOUNT_1, "h5").orElseThrow();
             assertEquals("5.csv", saved.getFileName());
             assertEquals(3, saved.getTransactionCount());

@@ -38,11 +38,11 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return list of categories")
         void getCategories_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             CategoryDto categoryDto = new CategoryDto(CATEGORY_ID, USER_ID, "Groceries", null, null, "shopping_cart", "#FF5722");
             when(categoryService.getCategoriesByUserId(USER_ID)).thenReturn(List.of(categoryDto));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/categories"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -56,7 +56,7 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 404 for the unversioned /api/categories path (PF-200)")
         void getCategories_unversionedPath_shouldReturn404() throws Exception {
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/categories"))
                     .andExpect(status().isNotFound());
         }
@@ -64,10 +64,10 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return empty list when no categories exist")
         void getCategories_shouldReturnEmptyList() throws Exception {
-            // Arrange
+            // arrange
             when(categoryService.getCategoriesByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/categories"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(0)));
@@ -81,10 +81,10 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /parents should return parent categories")
         void getParentCategories_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             when(categoryService.getParentCategories(USER_ID)).thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/categories/parents"))
                     .andExpect(status().isOk());
 
@@ -99,10 +99,10 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET /children should return list of child categories")
         void getChildCategories_shouldReturnList() throws Exception {
-            // Arrange
+            // arrange
             when(categoryService.getChildCategories(USER_ID)).thenReturn(List.of());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/categories/children"))
                     .andExpect(status().isOk());
 
@@ -117,7 +117,7 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should create a new category and return its ID")
         void createCategory_shouldReturnId() throws Exception {
-            // Arrange
+            // arrange
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(USER_ID)
                     .name("Dining")
@@ -126,7 +126,7 @@ class CategoryControllerTest extends BaseControllerTest {
 
             when(categoryService.createCategory(eq(USER_ID), any(CategoryCreateRequest.class))).thenReturn(CATEGORY_ID.intValue());
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/categories")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -140,13 +140,13 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createCategory_shouldReturn400OnInvalidInput() throws Exception {
-            // Arrange - blank name
+            // arrange - blank name
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(USER_ID)
                     .name("")
                     .build();
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(post("/api/v1/categories")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -163,7 +163,7 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("PUT should update category and return status")
         void updateCategory_shouldReturnStatus() throws Exception {
-            // Arrange
+            // arrange
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(CATEGORY_ID)
                     .userId(USER_ID)
@@ -172,7 +172,7 @@ class CategoryControllerTest extends BaseControllerTest {
 
             when(categoryService.updateCategory(eq(USER_ID), any(CategoryUpdateRequest.class))).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(put("/api/v1/categories")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -191,10 +191,10 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should remove category and return rows affected")
         void deleteCategory_shouldReturnStatus() throws Exception {
-            // Arrange
+            // arrange
             when(categoryService.deleteCategory(USER_ID, CATEGORY_ID)).thenReturn(1);
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/categories/{id}", CATEGORY_ID)
                             .with(csrf()))
                     .andExpect(status().isOk())
@@ -211,11 +211,11 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return 500 when service fails unexpectedly")
         void getCategories_shouldReturn500() throws Exception {
-            // Arrange
+            // arrange
             when(categoryService.getCategoriesByUserId(anyLong()))
                     .thenThrow(new RuntimeException("Server error"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(get("/api/v1/categories"))
                     .andExpect(status().isInternalServerError());
         }
@@ -223,11 +223,11 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should return 409 Conflict, not 500, when category has existing transactions (PF-193)")
         void deleteCategory_shouldReturn409WhenTransactionsExist() throws Exception {
-            // Arrange
+            // arrange
             when(categoryService.deleteCategory(USER_ID, CATEGORY_ID))
                     .thenThrow(new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first."));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/categories/{id}", CATEGORY_ID)
                             .with(csrf()))
                     .andExpect(status().isConflict())
@@ -237,11 +237,11 @@ class CategoryControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("DELETE should return 404 Not Found when category does not exist")
         void deleteCategory_shouldReturn404() throws Exception {
-            // Arrange
+            // arrange
             when(categoryService.deleteCategory(USER_ID, CATEGORY_ID))
                     .thenThrow(new ResourceNotFoundException("Category not found"));
 
-            // Act & Assert
+            // act & assert & verify
             mockMvc.perform(delete("/api/v1/categories/{id}", CATEGORY_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound());

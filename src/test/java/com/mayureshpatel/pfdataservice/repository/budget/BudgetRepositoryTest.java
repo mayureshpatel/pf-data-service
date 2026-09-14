@@ -33,7 +33,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert and find budget")
         void shouldInsertAndFind() {
-            // Arrange
+            // arrange
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .userId(USER_1)
                     .categoryId(CAT_RENT)
@@ -42,11 +42,11 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
                     .year(2026)
                     .build();
 
-            // Act
+            // act
             int newId = budgetRepository.insert(request);
             Optional<Budget> budget = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(USER_1, CAT_RENT, 3, 2026);
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count
             assertTrue(budget.isPresent());
             assertEquals(0, new BigDecimal("1500.00").compareTo(budget.get().getAmount()));
             assertEquals(budget.get().getId(), (long) newId);
@@ -55,7 +55,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update budget amount")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             BudgetCreateRequest create = BudgetCreateRequest.builder()
                     .userId(USER_1).categoryId(CAT_RENT).amount(BigDecimal.TEN).month(4).year(2026).build();
             budgetRepository.insert(create);
@@ -66,10 +66,10 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
                     .amount(new BigDecimal("20.00"))
                     .build();
 
-            // Act
+            // act
             int rows = budgetRepository.update(update);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             Budget updated = budgetRepository.findById(budget.getId()).orElseThrow();
             assertEquals(0, new BigDecimal("20.00").compareTo(updated.getAmount()));
@@ -78,16 +78,16 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should soft delete budget")
         void shouldDelete() {
-            // Arrange
+            // arrange
             BudgetCreateRequest create = BudgetCreateRequest.builder()
                     .userId(USER_1).categoryId(CAT_RENT).amount(BigDecimal.TEN).month(5).year(2026).build();
             budgetRepository.insert(create);
             Budget budget = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(USER_1, CAT_RENT, 5, 2026).orElseThrow();
 
-            // Act
+            // act
             int rows = budgetRepository.delete(budget);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(budgetRepository.findById(budget.getId()).isEmpty());
         }
@@ -95,7 +95,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should handle delete by ID directly")
         void shouldDeleteById() {
-            // Act
+            // act
             int rows = budgetRepository.deleteById(999L);
             assertEquals(0, rows);
         }
@@ -113,14 +113,14 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find all budgets for user ordered by period")
         void shouldFindAllForUser() {
-            // Arrange
+            // arrange
             budgetRepository.insert(BudgetCreateRequest.builder().userId(USER_1).categoryId(1L).amount(BigDecimal.ONE).month(1).year(2026).build());
             budgetRepository.insert(BudgetCreateRequest.builder().userId(USER_1).categoryId(2L).amount(BigDecimal.ONE).month(2).year(2026).build());
 
-            // Act
+            // act
             List<Budget> result = budgetRepository.findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(USER_1);
 
-            // Assert
+            // assert & verify
             assertTrue(result.size() >= 2);
             assertEquals(2, result.get(0).getMonth());
             assertEquals(1, result.get(1).getMonth());
@@ -129,29 +129,29 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should find budgets by month and year")
         void shouldFindByMonthYear() {
-            // Arrange
+            // arrange
             budgetRepository.insert(BudgetCreateRequest.builder().userId(USER_1).categoryId(1L).amount(BigDecimal.ONE).month(6).year(2026).build());
 
-            // Act
+            // act
             List<Budget> result = budgetRepository.findByUserIdAndMonthAndYearAndDeletedAtIsNull(USER_1, 6, 2026);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
         }
 
         @Test
         @DisplayName("should count active budgets for a category, excluding soft-deleted ones")
         void shouldCountByCategoryIdExcludingDeleted() {
-            // Arrange
+            // arrange
             budgetRepository.insert(BudgetCreateRequest.builder().userId(USER_1).categoryId(CAT_RENT).amount(BigDecimal.TEN).month(7).year(2026).build());
             Budget budget = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(USER_1, CAT_RENT, 7, 2026).orElseThrow();
 
-            // Act
+            // act
             long countBeforeDelete = budgetRepository.countByCategoryIdAndDeletedAtIsNull(CAT_RENT);
             budgetRepository.delete(budget);
             long countAfterDelete = budgetRepository.countByCategoryIdAndDeletedAtIsNull(CAT_RENT);
 
-            // Assert
+            // assert & verify
             assertEquals(1, countBeforeDelete);
             assertEquals(0, countAfterDelete);
         }
@@ -159,10 +159,10 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should count zero budgets for a category with none")
         void shouldCountByCategoryIdZeroWhenNoBudget() {
-            // Act -- category 2 (Food) has no budget inserted anywhere in this test class
+            // act -- category 2 (Food) has no budget inserted anywhere in this test class
             long count = budgetRepository.countByCategoryIdAndDeletedAtIsNull(2L);
 
-            // Assert
+            // assert & verify
             assertEquals(0, count);
         }
     }
@@ -173,7 +173,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should calculate budget status including spending from baseline")
         void shouldCalculateStatus() {
-            // Arrange
+            // arrange
             budgetRepository.insert(BudgetCreateRequest.builder()
                     .userId(USER_1)
                     .categoryId(CAT_RENT)
@@ -182,10 +182,10 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
                     .year(2025)
                     .build());
 
-            // Act
+            // act
             List<BudgetStatusDto> status = budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(USER_1, 9, 2025);
 
-            // Assert
+            // assert & verify
             assertFalse(status.isEmpty());
             BudgetStatusDto rentStatus = status.stream()
                     .filter(s -> s.category().name().equals("Rent"))
@@ -201,10 +201,10 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should include unbudgeted categories with spending")
         void shouldIncludeUnbudgeted() {
-            // Act
+            // act
             List<BudgetStatusDto> status = budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(USER_1, 10, 2025);
 
-            // Assert
+            // assert & verify
             assertTrue(status.stream().anyMatch(s -> s.category().name().equals("Rent") && s.budgetedAmount().compareTo(BigDecimal.ZERO) == 0));
         }
     }

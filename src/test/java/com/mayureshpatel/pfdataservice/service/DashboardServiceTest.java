@@ -44,7 +44,7 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should aggregate income, expense and category breakdown")
         void shouldReturnDashboardData() {
-            // Arrange
+            // arrange
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(new BigDecimal("5000.00"));
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.EXPENSE))).thenReturn(new BigDecimal("3000.00"));
             
@@ -52,10 +52,10 @@ class DashboardServiceTest {
             when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any()))
                     .thenReturn(List.of(new CategoryBreakdownDto(catDto, new BigDecimal("500.00"))));
 
-            // Act
+            // act
             DashboardData result = dashboardService.getDashboardData(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("5000.00"), result.totalIncome());
             assertEquals(new BigDecimal("3000.00"), result.totalExpense());
             assertEquals(new BigDecimal("2000.00"), result.netSavings());
@@ -65,16 +65,16 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
         void shouldQueryThroughEndOfMonth() {
-            // Arrange -- a transaction timestamped later in the day on Mar 31 must still be
+            // arrange -- a transaction timestamped later in the day on Mar 31 must still be
             // included; a midnight endDate would silently exclude it
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), any())).thenReturn(BigDecimal.ZERO);
             when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
             OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
 
-            // Act
+            // act
             dashboardService.getDashboardData(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEnd), eq(TransactionType.INCOME));
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEnd), eq(TransactionType.EXPENSE));
             verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), eq(expectedEnd));
@@ -87,13 +87,13 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should return breakdown from repository")
         void shouldReturnBreakdown() {
-            // Arrange
+            // arrange
             when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
 
-            // Act
+            // act
             List<CategoryBreakdownDto> result = dashboardService.getCategoryBreakdown(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), any());
         }
@@ -101,14 +101,14 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
         void shouldQueryThroughEndOfMonth() {
-            // Arrange
+            // arrange
             when(transactionRepository.findCategoryTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
             OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
 
-            // Act
+            // act
             dashboardService.getCategoryBreakdown(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).findCategoryTotals(eq(USER_ID), any(), eq(expectedEnd));
         }
     }
@@ -119,13 +119,13 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should return merchant totals from repository")
         void shouldReturnMerchantTotals() {
-            // Arrange
+            // arrange
             when(merchantRepository.findMerchantTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
 
-            // Act
+            // act
             List<MerchantBreakdownDto> result = dashboardService.getMerchantBreakdown(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             verify(merchantRepository).findMerchantTotals(eq(USER_ID), any(), any());
         }
@@ -133,14 +133,14 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should query through the end of the month's last day, not midnight (PF-196)")
         void shouldQueryThroughEndOfMonth() {
-            // Arrange
+            // arrange
             when(merchantRepository.findMerchantTotals(eq(USER_ID), any(), any())).thenReturn(List.of());
             OffsetDateTime expectedEnd = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
 
-            // Act
+            // act
             dashboardService.getMerchantBreakdown(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             verify(merchantRepository).findMerchantTotals(eq(USER_ID), any(), eq(expectedEnd));
         }
     }
@@ -151,14 +151,14 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should calculate savings rate and handle zero income")
         void shouldCalculatePulse() {
-            // Arrange
+            // arrange
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(new BigDecimal("1000.00"), new BigDecimal("0.00"));
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.EXPENSE))).thenReturn(new BigDecimal("500.00"), new BigDecimal("200.00"));
 
-            // Act
+            // act
             DashboardPulseDto result = dashboardService.getPulse(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             assertEquals(0, new BigDecimal("50.0000").compareTo(result.currentSavingsRate()));
             assertEquals(BigDecimal.ZERO, result.previousSavingsRate());
         }
@@ -166,13 +166,13 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should calculate pulse for arbitrary date range")
         void shouldCalculatePulseForRange() {
-            // Arrange
+            // arrange
             when(transactionRepository.getSumByDateRange(anyLong(), any(), any(), any())).thenReturn(BigDecimal.TEN);
 
-            // Act
+            // act
             DashboardPulseDto result = dashboardService.getPulse(USER_ID, OffsetDateTime.now().minusDays(10), OffsetDateTime.now());
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             verify(transactionRepository, times(4)).getSumByDateRange(anyLong(), any(), any(), any());
         }
@@ -180,15 +180,15 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should compute the previous period as exactly the prior calendar month, with no overlap (PF-195)")
         void shouldComputePreviousPeriodWithNoOverlap() {
-            // Arrange -- March 2026: previous period must be exactly [Feb 1, Feb 28], not
+            // arrange -- March 2026: previous period must be exactly [Feb 1, Feb 28], not
             // [Feb 1, Mar 30] -- the bug anchored endPrevious to endCurrent instead of startCurrent
             OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
 
-            // Act
+            // act
             dashboardService.getPulse(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
         }
@@ -196,14 +196,14 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should compute the previous period correctly across a year boundary (PF-195)")
         void shouldComputePreviousPeriodAcrossYearBoundary() {
-            // Arrange -- January 2026: previous period must be exactly December 2025
+            // arrange -- January 2026: previous period must be exactly December 2025
             OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2025, 12, 1, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2025, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC);
 
-            // Act
+            // act
             dashboardService.getPulse(USER_ID, 1, 2026);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
         }
@@ -211,17 +211,17 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should compute a non-overlapping, same-length previous period for the explicit date-range overload (PF-195)")
         void shouldComputePreviousPeriodWithNoOverlapForExplicitRange() {
-            // Arrange -- a 31-day range; the immediately preceding 31-day period must end the day
+            // arrange -- a 31-day range; the immediately preceding 31-day period must end the day
             // before startDate, not the day before endDate
             OffsetDateTime startDate = OffsetDateTime.of(2026, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime endDate = OffsetDateTime.of(2026, 3, 31, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 1, 29, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
 
-            // Act
+            // act
             dashboardService.getPulse(USER_ID, startDate, endDate);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
         }
@@ -229,14 +229,14 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should query the current period through the end of the month's last day, not midnight (PF-196)")
         void shouldQueryCurrentPeriodThroughEndOfMonth() {
-            // Arrange
+            // arrange
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), any())).thenReturn(BigDecimal.ZERO);
             OffsetDateTime expectedEndCurrent = OffsetDateTime.of(2026, 3, 31, 23, 59, 59, 0, ZoneOffset.UTC);
 
-            // Act
+            // act
             dashboardService.getPulse(USER_ID, 3, 2026);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEndCurrent), eq(TransactionType.INCOME));
             verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), eq(expectedEndCurrent), eq(TransactionType.EXPENSE));
         }
@@ -248,15 +248,15 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should fill missing months with zero values")
         void shouldReturnContinuousTrend() {
-            // Arrange
+            // arrange
             // Return only one month of data: 2026-03 Income 100
             Object[] row = new Object[]{2026, 3, "INCOME", new BigDecimal("100.00")};
             when(transactionRepository.findMonthlySums(eq(USER_ID), any())).thenReturn(List.<Object[]>of(row));
 
-            // Act
+            // act
             List<CashFlowTrendDto> result = dashboardService.getCashFlowTrend(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(12, result.size());
             CashFlowTrendDto march = result.stream().filter(t -> t.month() == 3 && t.year() == 2026).findFirst().orElseThrow();
             assertEquals(new BigDecimal("100.00"), march.income());
@@ -266,15 +266,15 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should sum multiple rows for same month (Income and Expense)")
         void shouldSumMonthlyTypes() {
-            // Arrange
+            // arrange
             Object[] row1 = new Object[]{2026, 3, "INCOME", new BigDecimal("100.00")};
             Object[] row2 = new Object[]{2026, 3, "EXPENSE", new BigDecimal("50.00")};
             when(transactionRepository.findMonthlySums(eq(USER_ID), any())).thenReturn(List.<Object[]>of(row1, row2));
 
-            // Act
+            // act
             List<CashFlowTrendDto> result = dashboardService.getCashFlowTrend(USER_ID);
 
-            // Assert
+            // assert & verify
             CashFlowTrendDto march = result.stream().filter(t -> t.month() == 3 && t.year() == 2026).findFirst().orElseThrow();
             assertEquals(new BigDecimal("100.00"), march.income());
             assertEquals(new BigDecimal("50.00"), march.expense());
@@ -287,15 +287,15 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should return summary for current year")
         void shouldReturnYtd() {
-            // Arrange
+            // arrange
             int year = 2026;
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(new BigDecimal("10000.00"));
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.EXPENSE))).thenReturn(new BigDecimal("8000.00"));
 
-            // Act
+            // act
             YtdSummaryDto result = dashboardService.getYtdSummary(USER_ID, year);
 
-            // Assert
+            // assert & verify
             assertEquals(new BigDecimal("10000.00"), result.totalIncome());
             assertEquals(new BigDecimal("2000.00"), result.netSavings());
             assertEquals(0, new BigDecimal("20.0000").compareTo(result.avgSavingsRate()));
@@ -304,10 +304,10 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should return zeros for future year")
         void shouldHandleFutureYear() {
-            // Act
+            // act
             YtdSummaryDto result = dashboardService.getYtdSummary(USER_ID, 2030);
 
-            // Assert
+            // assert & verify
             assertEquals(2030, result.year());
             assertEquals(BigDecimal.ZERO, result.totalIncome());
         }
@@ -315,15 +315,15 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should handle year in past correctly")
         void shouldHandlePastYear() {
-            // Arrange
+            // arrange
             int year = 2020;
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(new BigDecimal("100.00"));
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.EXPENSE))).thenReturn(new BigDecimal("50.00"));
 
-            // Act
+            // act
             YtdSummaryDto result = dashboardService.getYtdSummary(USER_ID, year);
 
-            // Assert
+            // assert & verify
             assertEquals(year, result.year());
             assertEquals(new BigDecimal("100.00"), result.totalIncome());
         }
@@ -335,14 +335,14 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should include transfer and uncategorized review actions")
         void shouldReturnActions() {
-            // Arrange
+            // arrange
             when(transactionService.findPotentialTransfers(USER_ID)).thenReturn(List.of(new TransferSuggestionDto(null, null, 0.9)));
             when(transactionRepository.getUncategorizedExpenseTotals(USER_ID)).thenReturn(new BigDecimal("150.00"));
 
-            // Act
+            // act
             List<ActionItemDto> result = dashboardService.getActionItems(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(2, result.size());
             assertTrue(result.stream().anyMatch(a -> a.type() == ActionItemDto.ActionType.TRANSFER_REVIEW));
             assertTrue(result.stream().anyMatch(a -> a.type() == ActionItemDto.ActionType.UNCATEGORIZED));
@@ -373,14 +373,14 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should return empty list if no actions needed")
         void shouldReturnEmpty() {
-            // Arrange
+            // arrange
             when(transactionService.findPotentialTransfers(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.getUncategorizedExpenseTotals(USER_ID)).thenReturn(BigDecimal.ZERO);
 
-            // Act
+            // act
             List<ActionItemDto> result = dashboardService.getActionItems(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isEmpty());
         }
     }

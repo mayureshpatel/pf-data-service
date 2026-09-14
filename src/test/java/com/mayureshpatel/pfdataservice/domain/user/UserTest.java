@@ -12,10 +12,10 @@ class UserTest {
     @Test
     @DisplayName("Builder should create User with correct fields")
     void builder_shouldCreateUser() {
-        // Arrange
+        // arrange
         TableAudit audit = TableAudit.insertAudit(null);
         
-        // Act
+        // act
         User user = User.builder()
                 .id(1L)
                 .username("john_doe")
@@ -24,7 +24,7 @@ class UserTest {
                 .audit(audit)
                 .build();
 
-        // Assert
+        // assert & verify
         assertEquals(1L, user.getId());
         assertEquals("john_doe", user.getUsername());
         assertEquals("john@example.com", user.getEmail());
@@ -35,18 +35,18 @@ class UserTest {
     @Test
     @DisplayName("toBuilder should create a copy that can be modified")
     void toBuilder_shouldCreateMutableCopy() {
-        // Arrange
+        // arrange
         User original = User.builder()
                 .id(1L)
                 .username("john_doe")
                 .build();
 
-        // Act
+        // act
         User modified = original.toBuilder()
                 .username("jane_doe")
                 .build();
 
-        // Assert
+        // assert & verify
         assertNotSame(original, modified);
         assertEquals(1L, modified.getId());
         assertEquals("jane_doe", modified.getUsername());

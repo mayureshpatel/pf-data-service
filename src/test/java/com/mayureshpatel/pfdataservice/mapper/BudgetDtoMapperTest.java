@@ -18,14 +18,14 @@ class BudgetDtoMapperTest {
     @Test
     @DisplayName("Private constructor should be accessible for coverage")
     void testPrivateConstructor() throws Exception {
-        // Arrange
+        // arrange
         Constructor<BudgetDtoMapper> constructor = BudgetDtoMapper.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
-        // Act
+        // act
         BudgetDtoMapper instance = constructor.newInstance();
 
-        // Assert
+        // assert & verify
         assertNotNull(instance);
     }
 
@@ -36,17 +36,17 @@ class BudgetDtoMapperTest {
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
-            // Act
+            // act
             BudgetDto result = BudgetDtoMapper.toDto(null);
 
-            // Assert
+            // assert & verify
             assertNull(result);
         }
 
         @Test
         @DisplayName("should map all fields when source is fully populated")
         void toDto_shouldMapAllFields() {
-            // Arrange
+            // arrange
             Budget budget = Budget.builder()
                     .id(1L)
                     .userId(100L)
@@ -56,10 +56,10 @@ class BudgetDtoMapperTest {
                     .year(2023)
                     .build();
 
-            // Act
+            // act
             BudgetDto dto = BudgetDtoMapper.toDto(budget);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertEquals(budget.getId(), dto.id());
             assertEquals(budget.getUserId(), dto.userId());
@@ -73,7 +73,7 @@ class BudgetDtoMapperTest {
         @Test
         @DisplayName("should handle null userId and categoryId")
         void toDto_shouldHandleNullIds() {
-            // Arrange
+            // arrange
             Budget budget = Budget.builder()
                     .id(1L)
                     .userId(null)
@@ -83,10 +83,10 @@ class BudgetDtoMapperTest {
                     .year(2023)
                     .build();
 
-            // Act
+            // act
             BudgetDto dto = BudgetDtoMapper.toDto(budget);
 
-            // Assert
+            // assert & verify
             assertNotNull(dto);
             assertNull(dto.userId());
             assertNull(dto.category());

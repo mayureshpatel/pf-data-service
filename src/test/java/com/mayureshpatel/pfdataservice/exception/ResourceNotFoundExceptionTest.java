@@ -11,43 +11,43 @@ class ResourceNotFoundExceptionTest {
     @Test
     @DisplayName("should create exception with simple message")
     void shouldCreateWithSimpleMessage() {
-        // Arrange
+        // arrange
         String message = "User not found";
 
-        // Act
+        // act
         ResourceNotFoundException exception = new ResourceNotFoundException(message);
 
-        // Assert
+        // assert & verify
         assertEquals(message, exception.getMessage());
     }
 
     @Test
     @DisplayName("should create exception with formatted message")
     void shouldCreateWithFormattedMessage() {
-        // Arrange
+        // arrange
         String resourceName = "Account";
         String fieldName = "id";
         Long fieldValue = 123L;
         String expectedMessage = "Account not found with id: '123'";
 
-        // Act
+        // act
         ResourceNotFoundException exception = new ResourceNotFoundException(resourceName, fieldName, fieldValue);
 
-        // Assert
+        // assert & verify
         assertEquals(expectedMessage, exception.getMessage());
     }
 
     @Test
     @DisplayName("should create exception with message and cause")
     void shouldCreateWithMessageAndCause() {
-        // Arrange
+        // arrange
         String message = "Operation failed";
         Throwable cause = new RuntimeException("Database error");
 
-        // Act
+        // act
         ResourceNotFoundException exception = new ResourceNotFoundException(message, cause);
 
-        // Assert
+        // assert & verify
         assertEquals(message, exception.getMessage());
         assertEquals(cause, exception.getCause());
     }

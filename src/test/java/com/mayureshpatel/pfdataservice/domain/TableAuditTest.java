@@ -16,10 +16,10 @@ class TableAuditTest {
     @Test
     @DisplayName("insertAudit should populate creation and update fields")
     void insertAudit_shouldPopulateCorrectFields() {
-        // Act
+        // act
         TableAudit audit = TableAudit.insertAudit(mockUser);
 
-        // Assert
+        // assert & verify
         assertNotNull(audit.getCreatedAt());
         assertNotNull(audit.getUpdatedAt());
         assertEquals(mockUser, audit.getCreatedBy());
@@ -36,10 +36,10 @@ class TableAuditTest {
     @Test
     @DisplayName("updateAudit should only populate update fields")
     void updateAudit_shouldPopulateCorrectFields() {
-        // Act
+        // act
         TableAudit audit = TableAudit.updateAudit(mockUser);
 
-        // Assert
+        // assert & verify
         assertNull(audit.getCreatedAt());
         assertNull(audit.getCreatedBy());
         assertNotNull(audit.getUpdatedAt());
@@ -49,10 +49,10 @@ class TableAuditTest {
     @Test
     @DisplayName("deleteAudit should only populate deletion fields")
     void deleteAudit_shouldPopulateCorrectFields() {
-        // Act
+        // act
         TableAudit audit = TableAudit.deleteAudit(mockUser);
 
-        // Assert
+        // assert & verify
         assertNull(audit.getCreatedAt());
         assertNull(audit.getCreatedBy());
         assertNull(audit.getUpdatedAt());
@@ -64,17 +64,17 @@ class TableAuditTest {
     @Test
     @DisplayName("toBuilder should allow updating an existing audit while preserving creation fields")
     void toBuilder_shouldAllowPreservingFields() {
-        // Arrange
+        // arrange
         TableAudit original = TableAudit.insertAudit(mockUser);
         User updatingUser = User.builder().id(2L).username("updater").build();
 
-        // Act
+        // act
         TableAudit updated = original.toBuilder()
                 .updatedAt(OffsetDateTime.now())
                 .updatedBy(updatingUser)
                 .build();
 
-        // Assert
+        // assert & verify
         assertEquals(original.getCreatedAt(), updated.getCreatedAt());
         assertEquals(original.getCreatedBy(), updated.getCreatedBy());
         assertNotEquals(original.getUpdatedAt(), updated.getUpdatedAt());

@@ -49,14 +49,14 @@ class AccountServiceTest {
         @Test
         @DisplayName("should return mapped account DTOs")
         void shouldReturnAccounts() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Checking").build();
             when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
 
-            // Act
+            // act
             List<AccountDto> result = accountService.getAllAccountsByUserId(USER_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("Checking", result.get(0).name());
         }
@@ -68,16 +68,16 @@ class AccountServiceTest {
         @Test
         @DisplayName("should create account successfully")
         void shouldCreate() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(accountRepository.insert(eq(USER_ID), any())).thenReturn(1);
 
             AccountCreateRequest request = AccountCreateRequest.builder().name("New").build();
 
-            // Act
+            // act
             int result = accountService.createAccount(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(accountRepository).insert(USER_ID, request);
         }
@@ -96,7 +96,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("should update account successfully if owned")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
@@ -104,10 +104,10 @@ class AccountServiceTest {
 
             AccountUpdateRequest request = AccountUpdateRequest.builder().id(ACCOUNT_ID).name("Updated").build();
 
-            // Act
+            // act
             int result = accountService.updateAccount(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(accountRepository).update(eq(USER_ID), any());
         }
@@ -135,7 +135,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("should create adjustment transaction and reconcile balance")
         void shouldReconcile() {
-            // Arrange
+            // arrange
             BigDecimal target = new BigDecimal("1000.00");
             Long version = 1L;
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
@@ -143,10 +143,10 @@ class AccountServiceTest {
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
             when(accountRepository.reconcile(USER_ID, ACCOUNT_ID, target, version)).thenReturn(1);
 
-            // Act
+            // act
             int result = accountService.reconcileAccount(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(transactionRepository).insert((TransactionCreateRequest) argThat(req -> ((TransactionCreateRequest) req).getAmount().compareTo(new BigDecimal("100.00")) == 0));
             verify(accountRepository).reconcile(USER_ID, ACCOUNT_ID, target, version);
@@ -155,16 +155,16 @@ class AccountServiceTest {
         @Test
         @DisplayName("should return 0 if target balance matches current balance")
         void shouldReturnZeroIfBalancesMatch() {
-            // Arrange
+            // arrange
             BigDecimal target = new BigDecimal("1000.00");
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, 1L);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(target).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
 
-            // Act
+            // act
             int result = accountService.reconcileAccount(USER_ID, request);
 
-            // Assert
+            // assert & verify
             assertEquals(0, result);
             verify(transactionRepository, never()).insert(any(TransactionCreateRequest.class));
         }
@@ -184,7 +184,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("should delete account if owned and has no transactions")
         void shouldDelete() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
@@ -192,10 +192,10 @@ class AccountServiceTest {
             when(recurringTransactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(0L);
             when(accountRepository.deleteById(ACCOUNT_ID, USER_ID)).thenReturn(1);
 
-            // Act
+            // act
             int result = accountService.deleteAccount(USER_ID, ACCOUNT_ID);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(accountRepository).deleteById(ACCOUNT_ID, USER_ID);
         }
@@ -203,25 +203,25 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw AccessDeniedException if not owned during delete")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Account otherAccount = Account.builder().id(ACCOUNT_ID).userId(999L).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(otherAccount));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> accountService.deleteAccount(USER_ID, ACCOUNT_ID));
         }
 
         @Test
         @DisplayName("should throw IllegalStateException if account has transactions")
         void shouldThrowOnExistingTransactions() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(5L);
 
-            // Act & Assert
+            // act & assert & verify
             IllegalStateException ex = assertThrows(IllegalStateException.class, () -> accountService.deleteAccount(USER_ID, ACCOUNT_ID));
             assertTrue(ex.getMessage().contains("5 transaction(s)"));
         }
@@ -229,14 +229,14 @@ class AccountServiceTest {
         @Test
         @DisplayName("should throw IllegalStateException if account has dependent recurring transactions (PF-192)")
         void shouldThrowOnExistingRecurringTransactions() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(transactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(0L);
             when(recurringTransactionRepository.countByAccountId(ACCOUNT_ID)).thenReturn(2L);
 
-            // Act & Assert
+            // act & assert & verify
             IllegalStateException ex = assertThrows(IllegalStateException.class, () -> accountService.deleteAccount(USER_ID, ACCOUNT_ID));
             assertTrue(ex.getMessage().contains("2 recurring transaction(s)"));
             verify(accountRepository, never()).deleteById(any(), any());

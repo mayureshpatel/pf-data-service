@@ -44,13 +44,13 @@ class UserServiceTest {
         @Test
         @DisplayName("should check if user exists by username")
         void shouldCheckExistsByUsername() {
-            // Arrange
+            // arrange
             when(userRepository.existsByUsername(USERNAME)).thenReturn(true);
 
-            // Act
+            // act
             boolean result = userService.isUserExistsByUsername(USERNAME);
 
-            // Assert
+            // assert & verify
             assertTrue(result);
             verify(userRepository).existsByUsername(USERNAME);
         }
@@ -58,13 +58,13 @@ class UserServiceTest {
         @Test
         @DisplayName("should check if user exists by email")
         void shouldCheckExistsByEmail() {
-            // Arrange
+            // arrange
             when(userRepository.existsByEmail(EMAIL)).thenReturn(true);
 
-            // Act
+            // act
             boolean result = userService.isUserExistsByEmail(EMAIL);
 
-            // Assert
+            // assert & verify
             assertTrue(result);
             verify(userRepository).existsByEmail(EMAIL);
         }
@@ -72,13 +72,13 @@ class UserServiceTest {
         @Test
         @DisplayName("should check if user exists by id")
         void shouldCheckExistsById() {
-            // Arrange
+            // arrange
             when(userRepository.existsById(USER_ID)).thenReturn(true);
 
-            // Act
+            // act
             boolean result = userService.existsById(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result);
             verify(userRepository).existsById(USER_ID);
         }
@@ -90,14 +90,14 @@ class UserServiceTest {
         @Test
         @DisplayName("should insert user successfully")
         void shouldInsertUser() {
-            // Arrange
+            // arrange
             User user = User.builder().username(USERNAME).build();
             when(userRepository.insert(user)).thenReturn(1);
 
-            // Act
+            // act
             int result = userService.insert(user);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(userRepository).insert(user);
         }
@@ -105,7 +105,7 @@ class UserServiceTest {
         @Test
         @DisplayName("should update profile successfully and preserve existing role")
         void shouldUpdateProfileAndPreserveRole() {
-            // Arrange
+            // arrange
             String originalRole = "ADMIN";
             String newUsername = "newusername";
             String newEmail = "new@example.com";
@@ -118,10 +118,10 @@ class UserServiceTest {
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(existingUser));
             when(userRepository.update(org.mockito.ArgumentMatchers.any(User.class))).thenReturn(1);
 
-            // Act
+            // act
             int result = userService.updateProfile(USER_ID, newUsername, newEmail);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).update(userCaptor.capture());
@@ -136,10 +136,10 @@ class UserServiceTest {
         @Test
         @DisplayName("updateProfile should throw ResourceNotFoundException when user not found")
         void updateProfileShouldThrowException() {
-            // Arrange
+            // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> userService.updateProfile(USER_ID, "newname", "new@example.com"));
         }
     }
@@ -150,14 +150,14 @@ class UserServiceTest {
         @Test
         @DisplayName("should find user by username")
         void shouldFindByUsername() {
-            // Arrange
+            // arrange
             User user = User.builder().username(USERNAME).build();
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
 
-            // Act
+            // act
             Optional<User> result = userService.findByUsername(USERNAME);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(USERNAME, result.get().getUsername());
         }
@@ -165,14 +165,14 @@ class UserServiceTest {
         @Test
         @DisplayName("should find user by email")
         void shouldFindByEmail() {
-            // Arrange
+            // arrange
             User user = User.builder().email(EMAIL).build();
             when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
 
-            // Act
+            // act
             Optional<User> result = userService.findByEmail(EMAIL);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(EMAIL, result.get().getEmail());
         }
@@ -180,14 +180,14 @@ class UserServiceTest {
         @Test
         @DisplayName("should find user by id")
         void shouldFindById() {
-            // Arrange
+            // arrange
             User user = User.builder().id(USER_ID).build();
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
-            // Act
+            // act
             Optional<User> result = userService.findById(USER_ID);
 
-            // Assert
+            // assert & verify
             assertTrue(result.isPresent());
             assertEquals(USER_ID, result.get().getId());
         }
@@ -195,14 +195,14 @@ class UserServiceTest {
         @Test
         @DisplayName("should find all users")
         void shouldFindAll() {
-            // Arrange
+            // arrange
             User user = User.builder().id(USER_ID).build();
             when(userRepository.findAll()).thenReturn(List.of(user));
 
-            // Act
+            // act
             List<User> result = userService.findAll();
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             verify(userRepository).findAll();
         }
@@ -214,7 +214,7 @@ class UserServiceTest {
         @Test
         @DisplayName("should load UserDetails when user exists")
         void shouldLoadUserDetails() {
-            // Arrange
+            // arrange
             User user = User.builder()
                     .id(USER_ID)
                     .username(USERNAME)
@@ -223,10 +223,10 @@ class UserServiceTest {
                     .build();
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
 
-            // Act
+            // act
             UserDetails result = userService.loadUserByUsername(USERNAME);
 
-            // Assert
+            // assert & verify
             assertNotNull(result);
             assertTrue(result instanceof CustomUserDetails);
             assertEquals(USERNAME, result.getUsername());
@@ -236,10 +236,10 @@ class UserServiceTest {
         @Test
         @DisplayName("should throw UsernameNotFoundException when user does not exist")
         void shouldThrowException() {
-            // Arrange
+            // arrange
             when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(UsernameNotFoundException.class, () -> userService.loadUserByUsername("nonexistent"));
         }
     }

@@ -75,7 +75,7 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should parse and return previews with suggested categories")
         void shouldReturnPreviews() {
-            // Arrange
+            // arrange
             String bankName = "Standard";
             InputStream stream = new ByteArrayInputStream("test".getBytes());
             TransactionParser parser = mock(TransactionParser.class);
@@ -89,10 +89,10 @@ class TransactionImportServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(cat));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(5L);
 
-            // Act
+            // act
             List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, stream, "test.csv");
 
-            // Assert
+            // assert & verify
             assertEquals(1, result.size());
             assertEquals("Food", result.get(0).suggestedCategory().name());
         }
@@ -100,7 +100,7 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should handle category guess null or <= 0")
         void shouldHandleNoCategoryGuess() {
-            // Arrange
+            // arrange
             String bankName = "Standard";
             TransactionParser parser = mock(TransactionParser.class);
             Transaction t1 = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.TEN).build();
@@ -126,7 +126,7 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should handle category guessed ID not in list")
         void shouldHandleGuessedCategoryNotFound() {
-            // Arrange
+            // arrange
             String bankName = "Standard";
             TransactionParser parser = mock(TransactionParser.class);
             Transaction t = Transaction.builder().transactionDate(OffsetDateTime.now()).amount(BigDecimal.TEN).build();
@@ -138,17 +138,17 @@ class TransactionImportServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(99L);
 
-            // Act
+            // act
             List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, new ByteArrayInputStream(new byte[0]), "test.csv");
 
-            // Assert
+            // assert & verify
             assertNull(result.get(0).suggestedCategory());
         }
 
         @Test
         @DisplayName("should throw CsvParsingException if parsing fails")
         void shouldThrowOnException() {
-            // Arrange
+            // arrange
             String bankName = "Standard";
             TransactionParser parser = mock(TransactionParser.class);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
@@ -158,18 +158,18 @@ class TransactionImportServiceTest {
             // Throw inside the try block (during parse or stream processing)
             when(parser.parse(anyLong(), any())).thenThrow(new RuntimeException("Oops"));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(CsvParsingException.class, () -> importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, null, "test.csv"));
         }
 
         @Test
         @DisplayName("should throw AccessDeniedException if user does not own account during preview")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(99L).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> importService.previewTransactions(USER_ID, ACCOUNT_ID, "Standard", null, "test.csv"));
         }
     }
@@ -180,7 +180,7 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should save unique transactions and update account balance")
         void shouldSaveAndBalance() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
             TransactionDto dto = TransactionDto.builder().description("Test").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
@@ -190,10 +190,10 @@ class TransactionImportServiceTest {
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
 
-            // Act
+            // act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), "file.csv", "hash");
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(transactionRepository).insertAll(anyList());
             verify(accountRepository).updateBalance(eq(1L), eq(10L), any(BigDecimal.class), anyLong());
@@ -203,7 +203,7 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should skip duplicates in database and batch")
         void shouldDetectBatchDuplicates() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).build();
             OffsetDateTime now = OffsetDateTime.now();
             TransactionDto dto1 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(now).type(TransactionType.INCOME).build();
@@ -214,10 +214,10 @@ class TransactionImportServiceTest {
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
-            // Act
+            // act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null);
 
-            // Assert
+            // assert & verify
             assertEquals(1, result);
             verify(transactionRepository).insertAll(argThat(list -> list.size() == 1));
         }
@@ -225,19 +225,19 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should throw DuplicateImportException if file hash exists")
         void shouldThrowOnDuplicateHash() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), eq("existing"))).thenReturn(Optional.of(FileImportHistory.builder().build()));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(DuplicateImportException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "file.csv", "existing"));
         }
 
         @Test
         @DisplayName("should handle null fileName or fileHash separately")
         void shouldHandlePartialFileMetadata() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             TransactionDto dto = TransactionDto.builder().description("T").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
@@ -259,14 +259,14 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should handle empty approved list")
         void shouldHandleEmptyList() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act
+            // act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, Collections.emptyList(), null, null);
 
-            // Assert
+            // assert & verify
             assertEquals(0, result);
             verify(transactionRepository, never()).insertAll(any());
         }
@@ -274,7 +274,7 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should skip if transaction exists in database")
         void shouldSkipOnDatabaseMatch() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).build();
             TransactionDto dto = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
@@ -286,10 +286,10 @@ class TransactionImportServiceTest {
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of(mockExisting));
             when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
-            // Act
+            // act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);
 
-            // Assert
+            // assert & verify
             assertEquals(0, result);
             verify(transactionRepository, never()).insertAll(any());
         }
@@ -304,18 +304,18 @@ class TransactionImportServiceTest {
         @Test
         @DisplayName("should throw AccessDeniedException if user does not own account during save")
         void shouldThrowOnAccessDenied() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(99L).build();
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
-            // Act & Assert
+            // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null));
         }
 
         @Test
         @DisplayName("should map category ID from TransactionDto to TransactionCreateRequest")
         void shouldMapCategoryId() {
-            // Arrange
+            // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
             com.mayureshpatel.pfdataservice.dto.category.CategoryDto categoryDto = com.mayureshpatel.pfdataservice.dto.category.CategoryDto.builder().id(42L).name("Test Category").build();
             TransactionDto dto = TransactionDto.builder()
@@ -331,10 +331,10 @@ class TransactionImportServiceTest {
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
 
-            // Act
+            // act
             importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);
 
-            // Assert
+            // assert & verify
             verify(transactionRepository).insertAll(argThat(list ->
                     list.size() == 1 && Long.valueOf(42L).equals(list.get(0).getCategoryId())
             ));

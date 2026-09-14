@@ -30,7 +30,7 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert and find snapshot")
         void shouldInsertAndFind() {
-            // Arrange
+            // arrange
             LocalDate date = LocalDate.of(2026, 3, 31);
             AccountSnapshot snapshot = AccountSnapshot.builder()
                     .accountId(ACCOUNT_1)
@@ -38,11 +38,11 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
                     .balance(new BigDecimal("1000.00"))
                     .build();
 
-            // Act
+            // act
             int newId = repository.insert(snapshot);
             Optional<AccountSnapshot> result = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date);
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count
             assertTrue(result.isPresent());
             assertEquals(0, new BigDecimal("1000.00").compareTo(result.get().getBalance()));
             assertEquals(result.get().getId(), (long) newId);
@@ -51,7 +51,7 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should insert using embedded account object")
         void shouldInsertWithEmbeddedAccount() {
-            // Arrange
+            // arrange
             LocalDate date = LocalDate.of(2026, 4, 30);
             AccountSnapshot snapshot = AccountSnapshot.builder()
                     .account(Account.builder().id(ACCOUNT_1).build())
@@ -59,11 +59,11 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
                     .balance(new BigDecimal("2000.00"))
                     .build();
 
-            // Act
+            // act
             int newId = repository.insert(snapshot);
             Optional<AccountSnapshot> result = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date);
 
-            // Assert -- must be the real generated id, not update()'s rows-affected count
+            // assert & verify -- must be the real generated id, not update()'s rows-affected count
             assertTrue(result.isPresent());
             assertEquals(result.get().getId(), (long) newId);
         }
@@ -71,7 +71,7 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should update snapshot balance")
         void shouldUpdate() {
-            // Arrange
+            // arrange
             LocalDate date = LocalDate.of(2026, 5, 31);
             AccountSnapshot snapshot = AccountSnapshot.builder()
                     .accountId(ACCOUNT_1)
@@ -81,11 +81,11 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
             repository.insert(snapshot);
             AccountSnapshot existing = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date).orElseThrow();
 
-            // Act
+            // act
             AccountSnapshot updated = existing.toBuilder().balance(new BigDecimal("750.00")).build();
             int rows = repository.update(updated);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             AccountSnapshot result = repository.findById(existing.getId()).orElseThrow();
             assertEquals(0, new BigDecimal("750.00").compareTo(result.getBalance()));
@@ -94,7 +94,7 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should delete snapshot")
         void shouldDelete() {
-            // Arrange
+            // arrange
             LocalDate date = LocalDate.of(2026, 6, 30);
             AccountSnapshot snapshot = AccountSnapshot.builder()
                     .accountId(ACCOUNT_1)
@@ -104,10 +104,10 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
             repository.insert(snapshot);
             AccountSnapshot existing = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date).orElseThrow();
 
-            // Act
+            // act
             int rows = repository.delete(existing);
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(repository.findById(existing.getId()).isEmpty());
         }
@@ -121,7 +121,7 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("should delete snapshot by ID directly")
         void shouldDeleteById() {
-            // Arrange
+            // arrange
             LocalDate date = LocalDate.of(2026, 7, 31);
             AccountSnapshot snapshot = AccountSnapshot.builder()
                     .accountId(ACCOUNT_1)
@@ -131,10 +131,10 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
             repository.insert(snapshot);
             AccountSnapshot existing = repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date).orElseThrow();
 
-            // Act
+            // act
             int rows = repository.deleteById(existing.getId());
 
-            // Assert
+            // assert & verify
             assertEquals(1, rows);
             assertTrue(repository.findById(existing.getId()).isEmpty());
         }
