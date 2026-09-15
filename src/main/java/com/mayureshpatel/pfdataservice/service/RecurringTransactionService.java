@@ -79,7 +79,13 @@ public class RecurringTransactionService {
         LocalDate oneYearAgo = LocalDate.now().minusYears(1);
         List<Transaction> transactions = transactionRepository.findExpensesSince(userId, oneYearAgo);
 
-        // 3. group by merchant name (or description) + amount
+        // 3. group by merchant name (or description) alone -- NOT also by amount. A subscription
+        // that changed price partway through its history (routine: rate increases, promotional
+        // periods ending) used to split into one independent group per price, each evaluated as
+        // its own recurring candidate -- confirmed live, Netflix's real 56-month history across 4
+        // price tiers surfaced as multiple simultaneous, conflicting suggestions for the same
+        // subscription. detectFrequency() only ever looked at dates, never amount, so grouping by
+        // name alone doesn't change frequency detection at all -- see PF-834.
         Map<String, List<Transaction>> groups = new HashMap<>();
 
         for (Transaction t : transactions) {
@@ -91,8 +97,7 @@ public class RecurringTransactionService {
             name = name.trim();
             if (existingMerchants.contains(name.toLowerCase(Locale.ROOT))) continue;
 
-            String key = name + "|" + t.getAmount();
-            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(t);
+            groups.computeIfAbsent(name, k -> new ArrayList<>()).add(t);
         }
 
         List<RecurringSuggestionDto> suggestions = new ArrayList<>();
@@ -115,18 +120,16 @@ public class RecurringTransactionService {
             Frequency frequency = detectFrequency(group);
             if (frequency != null) {
                 Transaction lastTxn = group.get(group.size() - 1);
-                String[] parts = entry.getKey().split("\\|");
-                String merchantName = parts[0];
-                BigDecimal amount = new BigDecimal(parts[1]);
+                String merchantName = entry.getKey();
 
                 suggestions.add(RecurringSuggestionDto.builder()
                         .merchant(new MerchantDto(null, null, null, merchantName))
-                        .amount(amount)
+                        .amount(lastTxn.getAmount())
                         .frequency(frequency)
                         .lastDate(lastTxn.getTransactionDate().toLocalDate())
                         .nextDate(calculateNextDate(lastTxn.getTransactionDate().toLocalDate(), frequency))
                         .occurrenceCount(group.size())
-                        .confidenceScore(0.8 + (group.size() * 0.05))
+                        .confidenceScore(calculateConfidenceScore(group.size()))
                         .build());
             }
         }
@@ -172,6 +175,26 @@ public class RecurringTransactionService {
         if (avgInterval >= 360 && avgInterval <= 370) return Frequency.YEARLY;
 
         return null;
+    }
+
+    /**
+     * Scores how confident a detected pattern is, as a real 0-100 percentage. The prior formula
+     * (uncapped {@code 0.8 + occurrenceCount * 0.05}) was never actually a percentage -- displayed
+     * with a literal "%" suffix and color-coded against 0-100 thresholds on the frontend, it read
+     * as "1.35%" for the *strongest* real suggestion in a live dataset, and the color tiers never
+     * differentiated anything since real values never approached even 2.0. See PF-835.
+     * <p>
+     * {@link #MIN_OCCURRENCES_FOR_RECURRING_PATTERN} (the minimum to even qualify as a suggestion
+     * at all) starts at a substantial 50%; each occurrence past that adds 4 points, capped at 100%
+     * once a pattern has repeated enough (a dozen-plus occurrences) to be about as confident as
+     * this heuristic can meaningfully get.
+     *
+     * @param occurrenceCount how many transactions matched the pattern
+     * @return a confidence percentage in [0, 100]
+     */
+    private double calculateConfidenceScore(int occurrenceCount) {
+        double score = 50.0 + (occurrenceCount - MIN_OCCURRENCES_FOR_RECURRING_PATTERN) * 4.0;
+        return Math.min(100.0, score);
     }
 
     /**
