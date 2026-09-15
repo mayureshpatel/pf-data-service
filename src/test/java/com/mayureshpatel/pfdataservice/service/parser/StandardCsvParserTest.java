@@ -149,6 +149,25 @@ class StandardCsvParserTest {
             assertThat(result.get(0).getTransactionDate())
                     .isEqualTo(OffsetDateTime.parse("2025-06-15T12:30:00Z"));
         }
+
+        @Test
+        @DisplayName("should parse a plain ISO date (no time or offset) as UTC midnight — PF-311")
+        void parse_plainIsoDate_setsTransactionDateAsUtcMidnight() {
+            // this is the single most likely real-world input for a format the UI itself
+            // advertises to users as "Generic format (Date, Description, Amount)" -- a plain
+            // date, not a full offset-date-time string.
+            String csv = "date,description,amount\n" +
+                    "2025-06-15,Test,100.00\n";
+
+            List<Transaction> result;
+            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
+                result = stream.toList();
+            }
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTransactionDate())
+                    .isEqualTo(OffsetDateTime.parse("2025-06-15T00:00:00Z"));
+        }
     }
 
     @Nested

@@ -14,7 +14,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.stream.Stream;
 
 /**
@@ -86,8 +89,27 @@ public class StandardCsvParser implements TransactionParser {
 
         return t.toBuilder()
                 .amount(amount.abs())
-                .transactionDate(OffsetDateTime.parse(csvRecord.get("date")))
+                .transactionDate(parseDate(csvRecord.get("date")))
                 .type(type)
                 .build();
+    }
+
+    /**
+     * Parses the date column, accepting either a full ISO-8601 offset-date-time (e.g.
+     * "2025-01-15T00:00:00Z") or a plain ISO-8601 local date (e.g. "2025-01-15"), the latter
+     * defaulted to UTC midnight -- never a hardcoded or system-inferred local timezone (PF-311).
+     * A date-only value is the most likely real input for this format, which the UI advertises to
+     * users simply as "Generic format (Date, Description, Amount)"; it previously threw an
+     * unhandled {@link DateTimeParseException} instead of importing successfully.
+     *
+     * @param dateStr the raw date column value
+     * @return the parsed date, at UTC midnight if no time/offset was present
+     */
+    private OffsetDateTime parseDate(String dateStr) {
+        try {
+            return OffsetDateTime.parse(dateStr);
+        } catch (DateTimeParseException e) {
+            return LocalDate.parse(dateStr).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
+        }
     }
 }
