@@ -91,7 +91,22 @@ public interface TransactionParser {
 
     /**
      * Configures the transaction type and amount based on the net amount for credit card accounts.
-     * Positive amounts are treated as expenses (charges), negative amounts as transfers in (payments).
+     * Positive amounts are treated as expenses (charges), negative amounts as income (payments
+     * received and merchant refunds/credits alike).
+     * <p>
+     * Deliberately does NOT classify negative amounts as {@code TRANSFER_IN}: a negative amount on
+     * a credit card statement is just as often a merchant refund as a payment from a linked bank
+     * account, and this method has no way to tell them apart from the card's own statement alone.
+     * Pre-emptively marking every negative row a transfer used to (a) permanently hide real
+     * merchant refunds from every income/expense total, since they aren't transfers at all, and
+     * (b) make a real transfer un-matchable: {@code TransferMatcher}'s candidate pool explicitly
+     * excludes anything already typed as a transfer, so the linked bank account's own payment
+     * transaction could never be found and paired with this one -- confirmed live, 104 real
+     * Synovus-to-credit-card payments, $98,973.78, permanently miscounted as ordinary spending
+     * with zero transfer suggestions ever generated. See PF-829. Importing as {@code INCOME}
+     * instead lets the existing, already-correct post-import matcher (equal amount, opposite type,
+     * different account, within a few days) do the actual transfer detection, now able to see both
+     * sides of a real transfer pair.
      *
      * @param transaction the transaction to configure
      * @param netAmount   the net amount of the transaction
@@ -105,9 +120,9 @@ public interface TransactionParser {
                     .amount(netAmount)
                     .build();
         } else {
-            // payments are negative in Discover/CapitalOne(debit-credit)
+            // payments/refunds are negative in Discover/CapitalOne(debit-credit)
             return transaction.toBuilder()
-                    .type(TransactionType.TRANSFER_IN)
+                    .type(TransactionType.INCOME)
                     .amount(netAmount.abs())
                     .build();
         }

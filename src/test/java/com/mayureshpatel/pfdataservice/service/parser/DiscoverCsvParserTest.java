@@ -83,8 +83,12 @@ class DiscoverCsvParserTest {
         }
 
         @Test
-        @DisplayName("should parse negative amount as TRANSFER_IN for credit card")
-        void parse_negativeAmount_returnsTransferInTransaction() {
+        @DisplayName("should parse negative amount as INCOME for credit card, not TRANSFER_IN (PF-829)")
+        void parse_negativeAmount_returnsIncomeTransaction() {
+            // a negative amount here is a payment or a merchant refund -- either way, this parser
+            // has no way to tell them apart or confirm a real transfer's other half exists, so it
+            // must not pre-emptively classify it as a transfer (see PF-829: doing so made a real
+            // transfer un-matchable, and permanently hid real refunds from every total)
             String csv = "Trans. Date,Description,Amount\n" +
                     "1/2/2025,INTERNET PAYMENT - THANK YOU,-843.00\n";
 
@@ -95,7 +99,7 @@ class DiscoverCsvParserTest {
 
             assertThat(result).hasSize(1);
             Transaction t = result.get(0);
-            assertThat(t.getType()).isEqualTo(TransactionType.TRANSFER_IN);
+            assertThat(t.getType()).isEqualTo(TransactionType.INCOME);
             assertThat(t.getAmount()).isEqualByComparingTo(new BigDecimal("843.00"));
         }
 
@@ -239,8 +243,8 @@ class DiscoverCsvParserTest {
     class LegacyDebitCreditFormatTests {
 
         @Test
-        @DisplayName("should return TRANSFER_IN for a Credit-only legacy row (PF-198)")
-        void parse_legacyCreditOnlyRow_returnsTransferIn() {
+        @DisplayName("should return INCOME for a Credit-only legacy row, not TRANSFER_IN (PF-198, PF-829)")
+        void parse_legacyCreditOnlyRow_returnsIncome() {
             String csv = "Trans. Date,Description,Debit,Credit,Category\n" +
                     "6/15/2022,PAYMENT - THANK YOU,,500.00,Payment\n";
 
@@ -251,7 +255,7 @@ class DiscoverCsvParserTest {
 
             assertThat(result).hasSize(1);
             Transaction t = result.get(0);
-            assertThat(t.getType()).isEqualTo(TransactionType.TRANSFER_IN);
+            assertThat(t.getType()).isEqualTo(TransactionType.INCOME);
             assertThat(t.getAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
         }
     }
