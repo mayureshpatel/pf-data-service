@@ -1,5 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
+import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
+import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
@@ -66,6 +69,92 @@ class ReportControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$", hasSize(0)));
 
             verify(reportService).getNetWorthOverTime(USER_ID, expectedStart, today);
+        }
+    }
+
+    @Nested
+    @DisplayName("getCategoryReportData")
+    class GetCategoryReportDataTests {
+
+        @Test
+        @DisplayName("GET /categories should return the breakdown for the requested range")
+        void getCategoryReportData_shouldReturnBreakdownForRange() throws Exception {
+            // arrange
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 3, 1);
+            CategoryReportDataDto row = new CategoryReportDataDto(null, new BigDecimal("250.00"), 5L);
+            when(reportService.getCategoryReportData(USER_ID, start, end)).thenReturn(List.of(row));
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/reports/categories")
+                            .param("startDate", start.toString())
+                            .param("endDate", end.toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].total").value(250.00))
+                    .andExpect(jsonPath("$[0].count").value(5));
+
+            verify(reportService).getCategoryReportData(USER_ID, start, end);
+        }
+
+        @Test
+        @DisplayName("GET /categories without startDate/endDate should fail with a 400, not a silent default")
+        void getCategoryReportData_shouldRequireExplicitRange() throws Exception {
+            // act & assert & verify -- unlike net-worth, Reports always has an active range client-side
+            mockMvc.perform(get("/api/v1/reports/categories"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("getMerchantReportData")
+    class GetMerchantReportDataTests {
+
+        @Test
+        @DisplayName("GET /merchants should return the breakdown for the requested range")
+        void getMerchantReportData_shouldReturnBreakdownForRange() throws Exception {
+            // arrange
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 3, 1);
+            MerchantReportDataDto row = new MerchantReportDataDto(null, new BigDecimal("75.00"), 2L, List.of("Groceries"));
+            when(reportService.getMerchantReportData(USER_ID, start, end)).thenReturn(List.of(row));
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/reports/merchants")
+                            .param("startDate", start.toString())
+                            .param("endDate", end.toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].total").value(75.00))
+                    .andExpect(jsonPath("$[0].categories[0]").value("Groceries"));
+
+            verify(reportService).getMerchantReportData(USER_ID, start, end);
+        }
+    }
+
+    @Nested
+    @DisplayName("getMonthlyReportData")
+    class GetMonthlyReportDataTests {
+
+        @Test
+        @DisplayName("GET /monthly should return the breakdown for the requested range")
+        void getMonthlyReportData_shouldReturnBreakdownForRange() throws Exception {
+            // arrange
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 3, 1);
+            MonthlyReportDataDto row = new MonthlyReportDataDto(2026, 1, new BigDecimal("3000.00"), new BigDecimal("1800.00"));
+            when(reportService.getMonthlyReportData(USER_ID, start, end)).thenReturn(List.of(row));
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/reports/monthly")
+                            .param("startDate", start.toString())
+                            .param("endDate", end.toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].income").value(3000.00))
+                    .andExpect(jsonPath("$[0].expense").value(1800.00));
+
+            verify(reportService).getMonthlyReportData(USER_ID, start, end);
         }
     }
 }

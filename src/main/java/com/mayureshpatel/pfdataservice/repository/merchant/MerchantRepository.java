@@ -4,7 +4,9 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantTotalRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.query.MerchantQueries;
@@ -34,6 +36,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
     private final JdbcClient jdbcClient;
     private final MerchantRowMapper rowMapper;
     private final MerchantTotalRowMapper merchantTotalRowMapper;
+    private final MerchantReportDataRowMapper merchantReportDataRowMapper;
 
     @Override
     public Optional<Merchant> findById(Long aLong) {
@@ -152,6 +155,19 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .param("startDate", startDate)
                 .param("endDate", endDate)
                 .query(merchantTotalRowMapper)
+                .list();
+    }
+
+    /**
+     * PF-823: Reports' Merchants tab data for the given range, aggregated fully server-side --
+     * no row cap, unlike the client-side approach it replaces.
+     */
+    public List<MerchantReportDataDto> findMerchantReportData(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
+        return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_REPORT_DATA)
+                .param("userId", userId)
+                .param("startDate", startDate)
+                .param("endDate", endDate)
+                .query(merchantReportDataRowMapper)
                 .list();
     }
 
