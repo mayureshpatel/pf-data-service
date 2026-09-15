@@ -303,6 +303,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .orElse(BigDecimal.ZERO);
     }
 
+    public long getUncategorizedExpenseCount(Long userId) {
+        return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_COUNT)
+                .param("userId", userId)
+                .query(Long.class)
+                .single();
+    }
+
     public List<Transaction> findRecentNonTransferTransactions(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_RECENT_NON_TRANSFER)
                 .param("userId", userId)

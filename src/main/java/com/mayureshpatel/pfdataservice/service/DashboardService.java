@@ -130,9 +130,12 @@ public class DashboardService {
         OffsetDateTime startCurrent = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
         OffsetDateTime endCurrent = endOfMonth(startCurrent);
 
-        // previous month
+        // previous month -- end boundary is end-of-day (via endOfMonth, since startPrevious is
+        // itself a month-start), not midnight; a bare startCurrent.minusDays(1) silently excludes
+        // any transaction timestamped later in the day on the previous month's last day, the same
+        // bug class endOfMonth() already exists to prevent for the current period -- see PF-827.
         OffsetDateTime startPrevious = startCurrent.minusMonths(1);
-        OffsetDateTime endPrevious = startCurrent.minusDays(1);
+        OffsetDateTime endPrevious = endOfMonth(startPrevious);
 
         return calculatePulse(userId, startCurrent, endCurrent, startPrevious, endPrevious);
     }
@@ -150,7 +153,8 @@ public class DashboardService {
         // calculate duration to find equivalent previous period
         long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         OffsetDateTime startPrevious = startDate.minusDays(days);
-        OffsetDateTime endPrevious = startDate.minusDays(1);
+        // end-of-day, not midnight -- same PF-827 reasoning as the month/year overload above
+        OffsetDateTime endPrevious = endOfDay(startDate.minusDays(1));
 
         return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
     }
@@ -241,17 +245,22 @@ public class DashboardService {
      * @return the year-to-date summary
      */
     public YtdSummaryDto getYtdSummary(Long userId, int year) {
-//        LocalDate startYtd = LocalDate.of(year, 1, 1);
-//        LocalDate endYtd = LocalDate.now();
-        OffsetDateTime startYtd = ZonedDateTime.of(year, 1, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
-        OffsetDateTime endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, UTC_ZONE).toOffsetDateTime();
+        LocalDate today = LocalDate.now();
+        int currentYear = today.getYear();
 
-        if (endYtd.getYear() > year) {
-            endYtd = ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, UTC_ZONE).toOffsetDateTime();
-        }
-        if (endYtd.getYear() < year) {
+        if (year > currentYear) {
             return new YtdSummaryDto(year, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
+
+        OffsetDateTime startYtd = ZonedDateTime.of(year, 1, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
+        // "year to date" for the current year means through today, not through December 31st --
+        // the previous version of this method built endYtd unconditionally from `year` (so
+        // endYtd.getYear() could never actually differ from `year`, making both of its own
+        // "future"/"past" branches dead code) and always used Dec 31, silently including months
+        // that haven't happened yet whenever `year` was the current year. See PF-826.
+        OffsetDateTime endYtd = (year == currentYear)
+                ? ZonedDateTime.of(today.getYear(), today.getMonthValue(), today.getDayOfMonth(), 23, 59, 59, 0, UTC_ZONE).toOffsetDateTime()
+                : ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, UTC_ZONE).toOffsetDateTime();
 
         BigDecimal income = getSum(userId, startYtd, endYtd, TransactionType.INCOME);
         BigDecimal expense = getSum(userId, startYtd, endYtd, TransactionType.EXPENSE);
@@ -283,12 +292,16 @@ public class DashboardService {
             ));
         }
 
-        // uncategorized expenses
+        // uncategorized expenses -- count() must be a real row count (ActionItemDto.count is
+        // documented and rendered as an item count), not the dollar total; that mistake used to
+        // put a truncated dollar sum into this field, e.g. "425239 unresolved items" for a real
+        // $425,239.61 total against 2,935 actual uncategorized transactions -- see PF-825.
         BigDecimal uncategorizedSum = transactionRepository.getUncategorizedExpenseTotals(userId);
         if (uncategorizedSum != null && uncategorizedSum.compareTo(BigDecimal.ZERO) > 0) {
+            long uncategorizedCount = transactionRepository.getUncategorizedExpenseCount(userId);
             actions.add(new ActionItemDto(
                     ActionItemDto.ActionType.UNCATEGORIZED,
-                    uncategorizedSum.longValue(),
+                    uncategorizedCount,
                     "Uncategorized expenses found",
                     "/transactions?categoryName=null"
             ));
@@ -308,6 +321,18 @@ public class DashboardService {
      */
     private OffsetDateTime endOfMonth(OffsetDateTime startOfMonth) {
         return startOfMonth.plusMonths(1).minusSeconds(1);
+    }
+
+    /**
+     * The last moment of the calendar day a given midnight instant belongs to (23:59:59, not the
+     * following midnight). Same PF-196/PF-827 reasoning as {@link #endOfMonth}, for an arbitrary
+     * single day rather than a whole month.
+     *
+     * @param startOfDay midnight on the day in question
+     * @return the last second of that same day
+     */
+    private OffsetDateTime endOfDay(OffsetDateTime startOfDay) {
+        return startOfDay.plusDays(1).minusSeconds(1);
     }
 
     /**

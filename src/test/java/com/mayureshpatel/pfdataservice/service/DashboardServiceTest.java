@@ -12,11 +12,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
@@ -181,9 +183,12 @@ class DashboardServiceTest {
         @DisplayName("should compute the previous period as exactly the prior calendar month, with no overlap (PF-195)")
         void shouldComputePreviousPeriodWithNoOverlap() {
             // arrange -- March 2026: previous period must be exactly [Feb 1, Feb 28], not
-            // [Feb 1, Mar 30] -- the bug anchored endPrevious to endCurrent instead of startCurrent
+            // [Feb 1, Mar 30] -- the bug anchored endPrevious to endCurrent instead of startCurrent.
+            // End boundary is end-of-day (23:59:59), not midnight -- PF-827; this assertion used to
+            // encode the pre-fix midnight value as "correct" since PF-195's own fix was about the
+            // start/end anchor, not this distinct end-of-day bug in the same method.
             OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC);
-            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 23, 59, 59, 0, ZoneOffset.UTC);
 
             // act
             dashboardService.getPulse(USER_ID, 3, 2026);
@@ -196,9 +201,10 @@ class DashboardServiceTest {
         @Test
         @DisplayName("should compute the previous period correctly across a year boundary (PF-195)")
         void shouldComputePreviousPeriodAcrossYearBoundary() {
-            // arrange -- January 2026: previous period must be exactly December 2025
+            // arrange -- January 2026: previous period must be exactly December 2025. End
+            // boundary is end-of-day, not midnight -- PF-827.
             OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2025, 12, 1, 0, 0, 0, 0, ZoneOffset.UTC);
-            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2025, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2025, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC);
 
             // act
             dashboardService.getPulse(USER_ID, 1, 2026);
@@ -212,11 +218,12 @@ class DashboardServiceTest {
         @DisplayName("should compute a non-overlapping, same-length previous period for the explicit date-range overload (PF-195)")
         void shouldComputePreviousPeriodWithNoOverlapForExplicitRange() {
             // arrange -- a 31-day range; the immediately preceding 31-day period must end the day
-            // before startDate, not the day before endDate
+            // before startDate, not the day before endDate. End boundary is end-of-day, not
+            // midnight -- PF-827.
             OffsetDateTime startDate = OffsetDateTime.of(2026, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime endDate = OffsetDateTime.of(2026, 3, 31, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 1, 29, 0, 0, 0, 0, ZoneOffset.UTC);
-            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 2, 28, 23, 59, 59, 0, ZoneOffset.UTC);
 
             // act
             dashboardService.getPulse(USER_ID, startDate, endDate);
@@ -302,6 +309,26 @@ class DashboardServiceTest {
         }
 
         @Test
+        @DisplayName("bug regression: the current year's summary must stop at today, not run through "
+                + "Dec 31 (PF-826) -- dead code left over from an incomplete LocalDate.now()-to-"
+                + "OffsetDateTime refactor meant \"YTD\" for the current year silently included months "
+                + "that haven't happened yet")
+        void shouldCapCurrentYearAtToday() {
+            // arrange
+            int currentYear = LocalDate.now().getYear();
+            ArgumentCaptor<OffsetDateTime> endCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(BigDecimal.ZERO);
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.EXPENSE))).thenReturn(BigDecimal.ZERO);
+
+            // act
+            dashboardService.getYtdSummary(USER_ID, currentYear);
+
+            // assert & verify -- the end bound's calendar date is today, not December 31st
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), endCaptor.capture(), eq(TransactionType.INCOME));
+            assertEquals(LocalDate.now(), endCaptor.getValue().toLocalDate());
+        }
+
+        @Test
         @DisplayName("should return zeros for future year")
         void shouldHandleFutureYear() {
             // act
@@ -368,6 +395,27 @@ class DashboardServiceTest {
                     .findFirst()
                     .orElseThrow();
             assertEquals("/transactions?categoryName=null", uncategorized.route());
+        }
+
+        @Test
+        @DisplayName("bug regression: UNCATEGORIZED item's count must be a real transaction count, "
+                + "not the dollar sum truncated to a long (PF-825) -- confirmed live, this displayed "
+                + "as \"425239 unresolved items\" in the real app for a $425,239.61 uncategorized total")
+        void shouldReturnRealCountNotDollarSumForUncategorizedItem() {
+            // arrange -- deliberately different numbers so the two are unmistakable if swapped
+            when(transactionService.findPotentialTransfers(USER_ID)).thenReturn(Collections.emptyList());
+            when(transactionRepository.getUncategorizedExpenseTotals(USER_ID)).thenReturn(new BigDecimal("425239.61"));
+            when(transactionRepository.getUncategorizedExpenseCount(USER_ID)).thenReturn(2935L);
+
+            // act
+            List<ActionItemDto> result = dashboardService.getActionItems(USER_ID);
+
+            // assert & verify
+            ActionItemDto uncategorized = result.stream()
+                    .filter(a -> a.type() == ActionItemDto.ActionType.UNCATEGORIZED)
+                    .findFirst()
+                    .orElseThrow();
+            assertEquals(2935L, uncategorized.count());
         }
 
         @Test

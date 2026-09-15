@@ -313,6 +313,17 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
+    public static final String GET_UNCATEGORIZED_EXPENSE_COUNT = """
+            select count(*)
+            from transactions
+            join accounts on transactions.account_id = accounts.id
+            where accounts.user_id = :userId
+              and transactions.category_id is null
+              and transactions.type = 'EXPENSE'
+              and transactions.deleted_at is null
+            """;
+
+    // language=SQL
     public static final String COUNT_BY_CATEGORY = """
             select categories.id        as category_id,
                    categories.name      as category_name,
