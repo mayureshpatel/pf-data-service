@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +32,9 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     private MerchantRepository repository;
+
+    @Autowired
+    private JdbcClient jdbcClient;
 
     private static final Long USER_1 = 1L;
     private static final Long USER_2 = 2L;
@@ -343,6 +348,65 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertTrue(result.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("PF-823: Reports server-side aggregation (Merchants)")
+    class ReportDataAggregation {
+
+        @Test
+        @DisplayName("findMerchantReportData sums every matching transaction, not just the newest 1000")
+        void shouldAggregateMerchantTotalsPastThousandRows() {
+            // arrange -- 1,500 EXPENSE transactions for user 1, $10 each, one per day starting
+            // 2020-01-01 -- account 1, category 7 (Groceries), merchant 1 (Whole Foods). A single
+            // set-based INSERT rather than 1,500 round trips.
+            jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    select 1, 7, 1, 10.00, (date '2020-01-01' + s.n)::timestamptz, 'Bulk Test Txn ' || s.n, 'EXPENSE'
+                    from generate_series(0, 1499) as s(n)
+                    """).update();
+
+            // act -- range covers all 1,500 seeded days plus margin
+            List<MerchantReportDataDto> result = repository.findMerchantReportData(
+                    USER_1,
+                    OffsetDateTime.parse("2020-01-01T00:00:00Z"),
+                    OffsetDateTime.parse("2024-12-31T00:00:00Z"));
+
+            // assert & verify
+            MerchantReportDataDto wholeFoods = result.stream()
+                    .filter(r -> r.merchant().id().equals(MERCHANT_WHOLEFOODS))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("expected a Whole Foods entry, got: " + result));
+            assertEquals(1500L, wholeFoods.count(),
+                    "a 1000-row cap would silently drop 500 of these -- got count=" + wholeFoods.count());
+            assertEquals(0, new BigDecimal("15000.00").compareTo(wholeFoods.total()),
+                    "expected 1500 * $10.00, got " + wholeFoods.total());
+            assertTrue(wholeFoods.categories().contains("Groceries"),
+                    "expected the associated category name to be aggregated, got: " + wholeFoods.categories());
+        }
+
+        @Test
+        @DisplayName("findMerchantReportData reports an empty categories list, not a null placeholder, "
+                + "when every transaction for a merchant is uncategorized")
+        void shouldReportEmptyCategoriesListWhenAllUncategorized() {
+            // arrange -- merchant 2 (Amazon) with a single uncategorized expense on an otherwise
+            // empty future date, isolated from baseline data
+            jdbcClient.sql("""
+                    insert into transactions (account_id, merchant_id, amount, date, description, type)
+                    values (1, 2, 42.00, '2031-06-01T00:00:00Z', 'Uncategorized Amazon Order', 'EXPENSE')
+                    """).update();
+
+            // act
+            List<MerchantReportDataDto> result = repository.findMerchantReportData(
+                    USER_1,
+                    OffsetDateTime.parse("2031-06-01T00:00:00Z"),
+                    OffsetDateTime.parse("2031-06-02T00:00:00Z"));
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(List.of(), result.get(0).categories(),
+                    "array_remove must strip the null placeholder array_agg would otherwise contribute");
         }
     }
 }
