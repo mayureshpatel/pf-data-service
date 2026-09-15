@@ -18,12 +18,17 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Repository("jdbcBudgetRepository")
 @RequiredArgsConstructor
 public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDeleteSupport {
+
+    private static final ZoneOffset UTC_ZONE = ZoneOffset.UTC;
 
     private final JdbcClient jdbcClient;
     private final BudgetRowMapper rowMapper;
@@ -129,10 +134,22 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
     }
 
     public List<BudgetStatusDto> findBudgetStatusByUserIdAndMonthAndYear(Long userId, Integer month, Integer year) {
+        // explicit UTC bounds for the spending CTE, rather than EXTRACT(YEAR/MONTH FROM t.date)
+        // -- EXTRACT() on a timestamptz implicitly converts using the database session's
+        // timezone first (America/New_York in production, see application.yml), which silently
+        // moves a UTC-midnight transaction on the 1st of a month into the prior month. See
+        // PF-836. `:month`/`:year` are still passed too -- they also match plain-integer
+        // `budgets.month`/`budgets.year` columns elsewhere in the same query, which aren't
+        // timestamptz and aren't affected by this bug.
+        OffsetDateTime startDate = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
+        OffsetDateTime endDate = startDate.plusMonths(1);
+
         return jdbcClient.sql(BudgetQueries.FIND_BUDGET_STATUS_BY_USER_ID_AND_MONTH_AND_YEAR)
                 .param("userId", userId)
                 .param("month", month)
                 .param("year", year)
+                .param("startDate", startDate)
+                .param("endDate", endDate)
                 .query(budgetStatusRowMapper)
                 .list();
     }

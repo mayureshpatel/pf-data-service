@@ -127,8 +127,8 @@ public class BudgetQueries {
                   AND a.deleted_at  IS NULL
                   AND t.deleted_at  IS NULL
                   AND t.type        = 'EXPENSE'
-                  AND EXTRACT(YEAR  FROM t.date) = :year
-                  AND EXTRACT(MONTH FROM t.date) = :month
+                  AND t.date        >= :startDate
+                  AND t.date        <  :endDate
                 GROUP BY t.category_id
             )
             

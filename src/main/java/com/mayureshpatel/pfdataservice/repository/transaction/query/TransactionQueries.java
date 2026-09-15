@@ -220,8 +220,8 @@ public final class TransactionQueries {
 
     // language=SQL
     public static final String FIND_MONTHLY_SUMS = """
-            select extract(year from transactions.date)  as year,
-                   extract(month from transactions.date) as month,
+            select extract(year from transactions.date at time zone 'UTC')  as year,
+                   extract(month from transactions.date at time zone 'UTC') as month,
                    transactions.type,
                    sum(transactions.amount)              as total
             from transactions
@@ -230,7 +230,7 @@ public final class TransactionQueries {
                 and transactions.date >= :startDate
               and transactions.type in ('INCOME', 'EXPENSE')
               and transactions.deleted_at is null
-            group by extract(year from transactions.date), extract(month from transactions.date), transactions.type
+            group by extract(year from transactions.date at time zone 'UTC'), extract(month from transactions.date at time zone 'UTC'), transactions.type
             order by year, month
             """;
 
