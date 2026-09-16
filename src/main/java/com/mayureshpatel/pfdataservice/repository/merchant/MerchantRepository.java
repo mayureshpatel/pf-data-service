@@ -108,6 +108,51 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         return new PageImpl<>(content, pageable, total);
     }
 
+    /**
+     * User-scoped, paginated distinct clean names (PF-842) -- backs the two-level clean-name
+     * picker and the grouped Merchants view's outer rows. Mirrors
+     * {@link #findAllByUserId(Long, String, Pageable)}'s count-then-page-then-{@link PageImpl}
+     * shape, minus the sort-column branch (there's only one column to sort here).
+     *
+     * @param userId   the user id
+     * @param search   an optional case-insensitive substring to match against clean name
+     * @param pageable the requested page and size (sort is always by clean name, ascending)
+     * @return the requested page of the user's distinct, non-blank clean names
+     */
+    public Page<String> findDistinctCleanNames(Long userId, String search, Pageable pageable) {
+        boolean hasSearch = StringUtils.hasText(search);
+        String searchParam = hasSearch ? "%" + search.trim() + "%" : null;
+
+        long total = jdbcClient.sql(hasSearch
+                        ? MerchantQueries.COUNT_DISTINCT_CLEAN_NAMES_BY_USER_ID_AND_SEARCH
+                        : MerchantQueries.COUNT_DISTINCT_CLEAN_NAMES_BY_USER_ID)
+                .param("userId", userId)
+                .param("search", searchParam)
+                .query(Long.class)
+                .single();
+
+        String baseSql = hasSearch
+                ? MerchantQueries.FIND_DISTINCT_CLEAN_NAMES_BY_USER_ID_AND_SEARCH
+                : MerchantQueries.FIND_DISTINCT_CLEAN_NAMES_BY_USER_ID;
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("userId", userId);
+        params.put("search", searchParam);
+
+        String limitOffsetClause = pageable.isPaged() ? " limit :limit offset :offset" : "";
+        if (pageable.isPaged()) {
+            params.put("limit", pageable.getPageSize());
+            params.put("offset", pageable.getOffset());
+        }
+
+        List<String> content = jdbcClient.sql(baseSql + limitOffsetClause)
+                .params(params)
+                .query(String.class)
+                .list();
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
     public Optional<Merchant> findByIdAndUserId(Long id, Long userId) {
         return jdbcClient.sql(MerchantQueries.FIND_BY_ID_AND_USER_ID)
                 .param("id", id)

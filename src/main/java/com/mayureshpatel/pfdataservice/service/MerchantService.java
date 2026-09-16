@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantReviewClusterDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -33,14 +35,15 @@ import java.util.stream.Collectors;
  * matching on normalized clean-name equality. Two raw descriptions that differ only by case or
  * incidental whitespace resolve to the same merchant; nothing beyond that is ever assumed to be
  * the same merchant automatically -- see {@link MerchantNameNormalizer}, which still fixes
- * PF-832's chain-stripping bug but is now only a suggestion generator for the review flow
- * (PF-842), never an ingest-time matcher.
+ * PF-832's chain-stripping bug and is used here (PF-842) as exactly that: a suggestion generator
+ * for {@link #getMerchantsNeedingReview}, never an ingest-time matcher.
  */
 @Service
 @RequiredArgsConstructor
 public class MerchantService {
 
     private final MerchantRepository merchantRepository;
+    private final MerchantNameNormalizer nameNormalizer;
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
 
@@ -78,6 +81,73 @@ public class MerchantService {
     }
 
     /**
+     * Returns a page of a user's distinct, non-blank clean names (PF-842), optionally narrowed by
+     * a case-insensitive search term -- backs the two-level clean-name picker and the grouped
+     * Merchants view's outer rows.
+     *
+     * @param userId   the user id
+     * @param search   an optional case-insensitive substring to match against clean name
+     * @param pageable the requested page and size
+     * @return the requested page of distinct clean names
+     */
+    public Page<String> getDistinctCleanNames(Long userId, String search, Pageable pageable) {
+        return merchantRepository.findDistinctCleanNames(userId, search, pageable);
+    }
+
+    /**
+     * Returns every merchant sharing an exact clean name (PF-842) -- a grouped view's expanded
+     * detail rows for one outer group.
+     *
+     * @param userId    the user id
+     * @param cleanName the exact clean name to look up
+     * @return the group's member merchants, oldest first
+     */
+    public List<MerchantDto> getMerchantsByCleanName(Long userId, String cleanName) {
+        return merchantRepository.findAllByCleanNameAndUserId(cleanName, userId).stream()
+                .map(MerchantDtoMapper::toDto)
+                .toList();
+    }
+
+    /**
+     * Clusters a user's merchants needing review (PF-842): any merchant whose current
+     * {@code cleanName} is blank, or doesn't match what re-running {@link #nameNormalizer} against
+     * its {@code originalName} would produce right now, grouped by that fresh suggestion. Computed
+     * in application code, not SQL -- the normalizer's branching logic can't be expressed as a SQL
+     * predicate without reimplementing it a second time, and per-user merchant counts are in the
+     * hundreds, not millions, so fetching and filtering in Java is the simpler, safer choice.
+     * <p>
+     * This single condition -- "differs from a fresh suggestion," not just "blank" -- is also this
+     * project's chosen resolution for PF-833: it catches brand-new, never-reviewed rows and
+     * pre-existing merchants mislabeled by the normalizer's now-fixed chain-stripping bug (PF-832)
+     * identically, with no separate historical-backfill script. Clusters are returned largest
+     * first, since a bigger cluster is the more impactful one to review first.
+     * <p>
+     * Known, accepted tradeoff: a merchant manually renamed to something the normalizer would
+     * never independently produce will keep reappearing here on every call. It's a dismissible
+     * suggestion, not an auto-apply, so the cost is a repeat nag, not data loss.
+     *
+     * @param userId the user id
+     * @return the user's review clusters, largest first
+     */
+    public List<MerchantReviewClusterDto> getMerchantsNeedingReview(Long userId) {
+        List<Merchant> flagged = merchantRepository.findAllByUserId(userId).stream()
+                .filter(m -> m.getCleanName().isBlank()
+                        || !m.getCleanName().equals(nameNormalizer.normalize(m.getOriginalName())))
+                .toList();
+
+        Map<String, List<Merchant>> clusters = flagged.stream()
+                .collect(Collectors.groupingBy(m -> nameNormalizer.normalize(m.getOriginalName()), LinkedHashMap::new, Collectors.toList()));
+
+        return clusters.entrySet().stream()
+                .map(e -> MerchantReviewClusterDto.builder()
+                        .suggestedCleanName(e.getKey())
+                        .merchants(e.getValue().stream().map(MerchantDtoMapper::toDto).toList())
+                        .build())
+                .sorted(Comparator.comparingInt((MerchantReviewClusterDto c) -> c.merchants().size()).reversed())
+                .toList();
+    }
+
+    /**
      * Manually corrects a merchant's display name (PF-220) -- for fixing names automatic
      * normalization gets wrong, or merchants that predate it. Ownership is checked here in
      * addition to the Controller's {@code @PreAuthorize}, matching this project's established
@@ -97,6 +167,26 @@ public class MerchantService {
         merchantRepository.findByIdAndUserId(request.getId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
         return merchantRepository.update(request, userId);
+    }
+
+    /**
+     * Updates multiple merchants' clean names by calling {@link #updateMerchant} once per request
+     * (PF-842) -- confirming a whole review cluster in one action. Exact structural mirror of
+     * {@code TransactionService.updateTransactionsBulk}. Ownership is already covered per-item
+     * since {@link #updateMerchant} checks it before writing, so no separate list-level ownership
+     * check is needed here.
+     *
+     * @param userId   the authenticated user id
+     * @param requests the corrections to apply, each including its merchant id
+     * @return the total number of merchants updated
+     */
+    @Transactional
+    public Integer updateMerchantsBulk(Long userId, List<MerchantUpdateRequest> requests) {
+        if (requests == null || requests.isEmpty()) return 0;
+
+        return requests.stream()
+                .map(request -> updateMerchant(userId, request))
+                .toList().stream().mapToInt(Integer::intValue).sum();
     }
 
     /**

@@ -272,6 +272,58 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertTrue(result.isEmpty());
         }
+
+        @Test
+        @DisplayName("PF-842: should find the user's distinct clean names")
+        void shouldFindDistinctCleanNames() {
+            // arrange & act -- USER_1's baseline merchant has clean_name "My Favorite Cafe"
+            Page<String> result = repository.findDistinctCleanNames(USER_1, null, PageRequest.of(0, 20));
+
+            // assert & verify
+            assertTrue(result.getContent().contains("My Favorite Cafe"));
+        }
+
+        @Test
+        @DisplayName("PF-842: should filter distinct clean names by a case-insensitive search term")
+        void shouldFindDistinctCleanNamesWithSearch() {
+            // arrange & act
+            Page<String> matches = repository.findDistinctCleanNames(USER_1, "favorite", PageRequest.of(0, 20));
+            Page<String> noMatches = repository.findDistinctCleanNames(USER_1, "nonexistent-xyz", PageRequest.of(0, 20));
+
+            // assert & verify
+            assertTrue(matches.getContent().contains("My Favorite Cafe"));
+            assertTrue(noMatches.getContent().isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-842: should exclude blank clean names -- an unreviewed merchant isn't a real group to pick")
+        void shouldExcludeBlankCleanNamesFromDistinctList() {
+            // arrange
+            repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-842 UNREVIEWED ROW").cleanName("").build());
+
+            // act
+            Page<String> result = repository.findDistinctCleanNames(USER_1, null, PageRequest.of(0, 50));
+
+            // assert & verify
+            assertFalse(result.getContent().contains(""));
+        }
+
+        @Test
+        @DisplayName("PF-842: multiple rows sharing one clean name collapse to a single distinct entry")
+        void shouldCollapseSharedCleanNameToOneDistinctEntry() {
+            // arrange -- two distinct merchant rows, same clean name
+            repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-842 GROUPED A").cleanName("PF-842 Grouped Merchant").build());
+            repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-842 GROUPED B").cleanName("PF-842 Grouped Merchant").build());
+
+            // act
+            Page<String> result = repository.findDistinctCleanNames(USER_1, "PF-842 Grouped Merchant", PageRequest.of(0, 20));
+
+            // assert & verify
+            assertEquals(1, result.getTotalElements());
+        }
     }
 
     @Nested
