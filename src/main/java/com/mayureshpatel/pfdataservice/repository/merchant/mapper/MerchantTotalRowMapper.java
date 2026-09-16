@@ -1,8 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.merchant.mapper;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
-import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -10,14 +8,21 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * Maps {@code MerchantQueries.FIND_MERCHANT_TOTALS}'s grouped-by-display-name rows (PF-841)
+ * directly to columns -- no longer delegates to {@link MerchantRowMapper}/{@code MerchantDtoMapper}
+ * since a group's row no longer corresponds to one real {@code Merchant} entity.
+ */
 @Component
 public class MerchantTotalRowMapper extends JdbcMapperUtils implements RowMapper<MerchantBreakdownDto> {
 
     @Override
     public MerchantBreakdownDto mapRow(ResultSet rs, int rowNum) throws SQLException {
-        MerchantDto merchantDto = MerchantDtoMapper.toDto(MerchantRowMapper.mapRow(rs, "merchant"));
-
-        return new MerchantBreakdownDto(merchantDto, rs.getBigDecimal("total"));
+        return new MerchantBreakdownDto(
+                rs.getLong("representative_merchant_id"),
+                rs.getString("display_name"),
+                rs.getBigDecimal("total")
+        );
     }
 
 }

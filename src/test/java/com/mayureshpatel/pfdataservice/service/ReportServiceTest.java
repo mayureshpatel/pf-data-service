@@ -227,7 +227,7 @@ class ReportServiceTest {
         void shouldPassThroughMerchantReportRows() {
             // arrange
             List<MerchantReportDataDto> rows = List.of(
-                    new MerchantReportDataDto(null, new BigDecimal("42.00"), 3L, List.of("Groceries")));
+                    new MerchantReportDataDto(1L, "Whole Foods", new BigDecimal("42.00"), 3L, List.of("Groceries")));
             when(merchantRepository.findMerchantReportData(eq(USER_ID), any(), any())).thenReturn(rows);
 
             // act

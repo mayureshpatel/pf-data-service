@@ -116,7 +116,7 @@ class ReportControllerTest extends BaseControllerTest {
             // arrange
             LocalDate start = LocalDate.of(2026, 1, 1);
             LocalDate end = LocalDate.of(2026, 3, 1);
-            MerchantReportDataDto row = new MerchantReportDataDto(null, new BigDecimal("75.00"), 2L, List.of("Groceries"));
+            MerchantReportDataDto row = new MerchantReportDataDto(1L, "Whole Foods", new BigDecimal("75.00"), 2L, List.of("Groceries"));
             when(reportService.getMerchantReportData(USER_ID, start, end)).thenReturn(List.of(row));
 
             // act & assert & verify
