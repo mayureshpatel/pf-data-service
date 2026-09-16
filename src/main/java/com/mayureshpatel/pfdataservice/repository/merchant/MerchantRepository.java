@@ -149,6 +149,45 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
+    /**
+     * User-scoped, light-normalized {@code original_name} lookup -- the matching key
+     * {@code MerchantService.findOrCreateMerchant} uses to decide whether a raw description
+     * resolves to an existing merchant. Ordered by {@code id} for the same reason as
+     * {@link #findAllByCleanNameAndUserId}: no uniqueness constraint on the normalized form
+     * either (the DB's real unique index is on the raw, un-normalized {@code original_name}), so
+     * callers picking the first result need a stable, deterministic choice.
+     *
+     * @param normalizedOriginalName the case-folded, whitespace-collapsed original name to match
+     * @param userId                 the user id
+     * @return every merchant whose {@code original_name} normalizes to the same value, oldest first
+     */
+    public List<Merchant> findAllByNormalizedOriginalNameAndUserId(String normalizedOriginalName, Long userId) {
+        return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_NORMALIZED_ORIGINAL_NAME_AND_USER_ID)
+                .param("normalizedOriginalName", normalizedOriginalName)
+                .param("userId", userId)
+                .query(rowMapper)
+                .list();
+    }
+
+    /**
+     * Batch form of {@link #findAllByNormalizedOriginalNameAndUserId}, mirroring
+     * {@link #findAllByCleanNamesAndUserId}'s empty-input guard.
+     *
+     * @param normalizedOriginalNames the case-folded, whitespace-collapsed original names to match
+     * @param userId                  the user id
+     * @return every merchant whose {@code original_name} normalizes to one of the given values
+     */
+    public List<Merchant> findAllByNormalizedOriginalNamesAndUserId(List<String> normalizedOriginalNames, Long userId) {
+        if (normalizedOriginalNames == null || normalizedOriginalNames.isEmpty()) {
+            return List.of();
+        }
+        return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_NORMALIZED_ORIGINAL_NAMES_AND_USER_ID)
+                .param("normalizedOriginalNames", normalizedOriginalNames)
+                .param("userId", userId)
+                .query(rowMapper)
+                .list();
+    }
+
     public List<MerchantBreakdownDto> findMerchantTotals(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_TOTALS)
                 .param("userId", userId)

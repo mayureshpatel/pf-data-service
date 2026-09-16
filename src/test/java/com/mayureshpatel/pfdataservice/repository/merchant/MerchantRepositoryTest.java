@@ -164,6 +164,79 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("PF-840: should find a merchant by its light-normalized original name")
+        void shouldFindAllByNormalizedOriginalNameAndUserId() {
+            // arrange & act -- USER_1's baseline merchant has original_name "LOCAL CAFE"
+            List<Merchant> result = repository.findAllByNormalizedOriginalNameAndUserId("local cafe", USER_1);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals("LOCAL CAFE", result.get(0).getOriginalName());
+        }
+
+        @Test
+        @DisplayName("PF-840: should match regardless of case or whitespace differences, via the same "
+                + "case-fold + whitespace-collapse the parameter is expected to already carry")
+        void shouldFindAllByNormalizedOriginalNameAndUserIdWithWhitespaceVariance() {
+            // arrange -- insert a row whose raw original_name has extra/irregular whitespace
+            MerchantCreateRequest request = MerchantCreateRequest.builder()
+                    .userId(USER_1)
+                    .originalName("COFFEE  HOUSE   777")
+                    .cleanName("")
+                    .build();
+            repository.insert(request);
+
+            // act
+            List<Merchant> result = repository.findAllByNormalizedOriginalNameAndUserId("coffee house 777", USER_1);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals("COFFEE  HOUSE   777", result.get(0).getOriginalName());
+        }
+
+        @Test
+        @DisplayName("PF-840: should not match a genuinely different original name")
+        void shouldNotFindAllByNormalizedOriginalNameAndUserIdForDifferentText() {
+            // arrange & act
+            List<Merchant> result = repository.findAllByNormalizedOriginalNameAndUserId("some other merchant entirely", USER_1);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-840: should not find another user's merchant via the normalized-original-name lookup")
+        void shouldNotFindAnotherUsersMerchantByNormalizedOriginalName() {
+            // arrange & act -- USER_1's baseline merchant, looked up as USER_2
+            List<Merchant> result = repository.findAllByNormalizedOriginalNameAndUserId("local cafe", USER_2);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-840: should find merchants matching any of a list of normalized original names, scoped to user")
+        void shouldFindAllByNormalizedOriginalNamesAndUserId() {
+            // arrange & act
+            List<Merchant> result = repository.findAllByNormalizedOriginalNamesAndUserId(
+                    List.of("local cafe", "some clean name that does not exist"), USER_1);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals("LOCAL CAFE", result.get(0).getOriginalName());
+        }
+
+        @Test
+        @DisplayName("PF-840: should return empty list for an empty normalized original names list")
+        void shouldReturnEmptyForEmptyNormalizedOriginalNamesList() {
+            // arrange & act
+            List<Merchant> result = repository.findAllByNormalizedOriginalNamesAndUserId(List.of(), USER_1);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
         @DisplayName("PF-220: should find a merchant by id when the requesting user owns it")
         void shouldFindByIdAndUserId() {
             // arrange
