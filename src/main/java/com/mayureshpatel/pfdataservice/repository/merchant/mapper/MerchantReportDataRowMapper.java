@@ -1,8 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.merchant.mapper;
 
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
-import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -13,15 +11,19 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Maps {@code MerchantQueries.FIND_MERCHANT_REPORT_DATA}'s grouped-by-display-name rows (PF-841)
+ * directly to columns -- no longer delegates to {@link MerchantRowMapper}/{@code MerchantDtoMapper}
+ * since a group's row no longer corresponds to one real {@code Merchant} entity.
+ */
 @Component
 public class MerchantReportDataRowMapper extends JdbcMapperUtils implements RowMapper<MerchantReportDataDto> {
 
     @Override
     public MerchantReportDataDto mapRow(ResultSet rs, int rowNum) throws SQLException {
-        MerchantDto merchantDto = MerchantDtoMapper.toDto(MerchantRowMapper.mapRow(rs, "merchant"));
-
         return new MerchantReportDataDto(
-                merchantDto,
+                rs.getLong("representative_merchant_id"),
+                rs.getString("display_name"),
                 rs.getBigDecimal("total"),
                 rs.getLong("txn_count"),
                 toCategoryNames(rs.getArray("category_names"))

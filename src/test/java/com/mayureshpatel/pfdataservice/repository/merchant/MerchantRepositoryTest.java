@@ -291,11 +291,41 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertFalse(result.isEmpty());
             MerchantBreakdownDto breakdown = result.stream()
-                    .filter(b -> b.merchant().cleanName().equals("Whole Foods"))
+                    .filter(b -> b.displayName().equals("Whole Foods"))
                     .findFirst()
                     .orElseThrow();
-            
+
             assertTrue(breakdown.total().compareTo(BigDecimal.ZERO) > 0);
+        }
+
+        @Test
+        @DisplayName("PF-841: two merchant rows sharing one clean name aggregate into a single "
+                + "grouped row, summing both totals -- not two separate, identically-labeled rows")
+        void shouldGroupMerchantTotalsByDisplayNameNotRowId() {
+            // arrange -- two distinct merchant rows (different original_name), same clean_name,
+            // each with their own transaction, in a date range isolated from every other test's data
+            Long groupedA = repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-841 GROUPED STORE A").cleanName("PF-841 Grouped Merchant").build());
+            Long groupedB = repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-841 GROUPED STORE B").cleanName("PF-841 Grouped Merchant").build());
+            jdbcClient.sql("""
+                    insert into transactions (account_id, merchant_id, amount, date, description, type)
+                    values (1, :groupedA, 10.00, '2033-01-01T00:00:00Z', 'grouped a', 'EXPENSE'),
+                           (1, :groupedB, 15.00, '2033-01-02T00:00:00Z', 'grouped b', 'EXPENSE')
+                    """).param("groupedA", groupedA).param("groupedB", groupedB).update();
+
+            OffsetDateTime start = OffsetDateTime.parse("2033-01-01T00:00:00Z");
+            OffsetDateTime end = OffsetDateTime.parse("2033-01-03T00:00:00Z");
+
+            // act
+            List<MerchantBreakdownDto> result = repository.findMerchantTotals(USER_1, start, end);
+
+            // assert & verify -- one row for the shared clean name, total = both transactions summed
+            List<MerchantBreakdownDto> grouped = result.stream()
+                    .filter(b -> b.displayName().equals("PF-841 Grouped Merchant"))
+                    .toList();
+            assertEquals(1, grouped.size(), "expected exactly one aggregated row, got: " + grouped);
+            assertEquals(0, new BigDecimal("25.00").compareTo(grouped.get(0).total()));
         }
     }
 
@@ -448,7 +478,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             MerchantReportDataDto wholeFoods = result.stream()
-                    .filter(r -> r.merchant().id().equals(MERCHANT_WHOLEFOODS))
+                    .filter(r -> r.displayName().equals("Whole Foods"))
                     .findFirst()
                     .orElseThrow(() -> new AssertionError("expected a Whole Foods entry, got: " + result));
             assertEquals(1500L, wholeFoods.count(),
@@ -480,6 +510,56 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             assertEquals(1, result.size());
             assertEquals(List.of(), result.get(0).categories(),
                     "array_remove must strip the null placeholder array_agg would otherwise contribute");
+        }
+
+        @Test
+        @DisplayName("PF-841: merchants sharing one clean name aggregate into a single grouped row "
+                + "(summed total/count), while distinct blank-clean-name merchants stay separate -- "
+                + "grouping by clean_name alone would wrongly merge the blank ones together")
+        void shouldGroupSharedCleanNameButKeepDistinctBlankRowsSeparate() {
+            // arrange -- two rows sharing one clean name, plus two distinct rows with blank
+            // clean_name (the normal state for a freshly-imported, not-yet-reviewed merchant per
+            // PF-840) -- everything isolated to its own date range and merchant identities
+            Long groupedA = repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-841 REPORT GROUPED A").cleanName("PF-841 Report Grouped").build());
+            Long groupedB = repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-841 REPORT GROUPED B").cleanName("PF-841 Report Grouped").build());
+            Long blankA = repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-841 REPORT BLANK A").cleanName("").build());
+            Long blankB = repository.insert(MerchantCreateRequest.builder()
+                    .userId(USER_1).originalName("PF-841 REPORT BLANK B").cleanName("").build());
+
+            jdbcClient.sql("""
+                    insert into transactions (account_id, merchant_id, amount, date, description, type)
+                    values (1, :groupedA, 20.00, '2034-01-01T00:00:00Z', 'grouped a', 'EXPENSE'),
+                           (1, :groupedB, 30.00, '2034-01-02T00:00:00Z', 'grouped b', 'EXPENSE'),
+                           (1, :blankA,   5.00,  '2034-01-01T00:00:00Z', 'blank a', 'EXPENSE'),
+                           (1, :blankB,   7.00,  '2034-01-01T00:00:00Z', 'blank b', 'EXPENSE')
+                    """)
+                    .param("groupedA", groupedA).param("groupedB", groupedB)
+                    .param("blankA", blankA).param("blankB", blankB)
+                    .update();
+
+            // act
+            List<MerchantReportDataDto> result = repository.findMerchantReportData(
+                    USER_1,
+                    OffsetDateTime.parse("2034-01-01T00:00:00Z"),
+                    OffsetDateTime.parse("2034-01-03T00:00:00Z"));
+
+            // assert & verify -- one aggregated row for the shared clean name...
+            List<MerchantReportDataDto> grouped = result.stream()
+                    .filter(r -> r.displayName().equals("PF-841 Report Grouped"))
+                    .toList();
+            assertEquals(1, grouped.size(), "expected exactly one aggregated row, got: " + grouped);
+            assertEquals(0, new BigDecimal("50.00").compareTo(grouped.get(0).total()));
+            assertEquals(2L, grouped.get(0).count());
+
+            // ...but the two blank-clean-name merchants must NOT be merged into each other --
+            // each keeps its own original_name as its fallback display name, in its own row.
+            List<MerchantReportDataDto> blanks = result.stream()
+                    .filter(r -> r.displayName().equals("PF-841 REPORT BLANK A") || r.displayName().equals("PF-841 REPORT BLANK B"))
+                    .toList();
+            assertEquals(2, blanks.size(), "blank-clean-name merchants must stay in separate rows, got: " + blanks);
         }
     }
 }

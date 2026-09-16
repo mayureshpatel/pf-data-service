@@ -13,11 +13,13 @@ class MerchantBreakdownDtoTest {
     @Test
     @DisplayName("should correctly map all fields")
     void shouldPopulateFields() {
-        MerchantDto merchant = new MerchantDto(1L, 2L, "Original", "Clean");
+        Long representativeMerchantId = 1L;
+        String displayName = "Clean";
         BigDecimal total = new BigDecimal("100.50");
-        MerchantBreakdownDto dto = new MerchantBreakdownDto(merchant, total);
+        MerchantBreakdownDto dto = new MerchantBreakdownDto(representativeMerchantId, displayName, total);
 
-        assertEquals(merchant, dto.merchant());
+        assertEquals(representativeMerchantId, dto.representativeMerchantId());
+        assertEquals(displayName, dto.displayName());
         assertEquals(total, dto.total());
     }
 }

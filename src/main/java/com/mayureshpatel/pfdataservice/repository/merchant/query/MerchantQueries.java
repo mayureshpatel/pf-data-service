@@ -104,11 +104,18 @@ public final class MerchantQueries {
               and lower(trim(regexp_replace(original_name, '\\s+', ' ', 'g'))) in (:normalizedOriginalNames)
             """;
 
-    // language=SQL
+    // language=SQL -- PF-841: groups by display name (clean name if set, else the merchant's own
+    // original name), not merchant id, so merchants deliberately linked under one clean name
+    // aggregate into a single row instead of rendering as separate, identically-labeled entries
+    // with split totals. Grouping by clean_name alone would be wrong while rows are unreviewed
+    // (blank clean_name, the normal state for a freshly-imported merchant per PF-840) -- that
+    // would merge every unrelated blank-clean-name row into one meaningless "" bucket. Falling
+    // back to original_name (unique per user, idx_merchants_user_original_name) avoids that.
+    // min(m.id) is kept only as a stable representative id for the frontend to key/track by --
+    // once a group spans multiple merchant rows there's no single "the" id anymore.
     public static final String FIND_MERCHANT_TOTALS = """
-            select m.id as merchant_id,
-                   m.original_name as merchant_original_name,
-                   m.clean_name as merchant_clean_name,
+            select min(m.id) as representative_merchant_id,
+                   coalesce(nullif(m.clean_name, ''), m.original_name) as display_name,
                    sum(t.amount) as total
             from transactions t
             join accounts a on t.account_id = a.id
@@ -118,17 +125,17 @@ public final class MerchantQueries {
               and t.date < :endDate
               and t.type = 'EXPENSE'
               and t.deleted_at is null
-            group by m.id
+            group by coalesce(nullif(m.clean_name, ''), m.original_name)
             """;
 
     // language=SQL -- PF-823: Reports' Merchants tab, aggregated over the full requested range
     // (no row cap). array_remove(..., null) drops the NULL entry array_agg would otherwise
     // contribute for this merchant's uncategorized transactions, so `categories` never contains
-    // a null placeholder.
+    // a null placeholder. PF-841: grouped by display name, not merchant id -- see
+    // FIND_MERCHANT_TOTALS's comment above for why (same rationale, same fallback).
     public static final String FIND_MERCHANT_REPORT_DATA = """
-            select m.id as merchant_id,
-                   m.original_name as merchant_original_name,
-                   m.clean_name as merchant_clean_name,
+            select min(m.id) as representative_merchant_id,
+                   coalesce(nullif(m.clean_name, ''), m.original_name) as display_name,
                    sum(t.amount) as total,
                    count(*) as txn_count,
                    array_remove(array_agg(distinct c.name), null) as category_names
@@ -141,7 +148,7 @@ public final class MerchantQueries {
               and t.date < :endDate
               and t.type = 'EXPENSE'
               and t.deleted_at is null
-            group by m.id
+            group by coalesce(nullif(m.clean_name, ''), m.original_name)
             """;
 
     // language=SQL
