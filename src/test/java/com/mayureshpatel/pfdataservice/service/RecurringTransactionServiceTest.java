@@ -174,7 +174,7 @@ class RecurringTransactionServiceTest {
             Transaction t1 = Transaction.builder().transactionDate(now.minusDays(100).atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("None").build();
             Transaction t2 = Transaction.builder().transactionDate(now.minusDays(50).atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("None").build();
             Transaction t3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("None").build();
-            
+
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(t1, t2, t3));
 
@@ -183,6 +183,70 @@ class RecurringTransactionServiceTest {
 
             // assert & verify
             assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("bug regression: a subscription that changed price mid-history must produce one "
+                + "suggestion, not one per price tier (PF-834) -- confirmed live, Netflix's real 56-month "
+                + "history across 4 price tiers surfaced as multiple simultaneous, conflicting suggestions")
+        void shouldMergePriceTiersIntoOneSuggestion() {
+            // arrange -- same merchant, monthly cadence throughout, price increases partway through
+            LocalDate now = LocalDate.now();
+            OffsetDateTime offset = OffsetDateTime.now();
+            List<Transaction> netflix = List.of(
+                    Transaction.builder().transactionDate(now.minusMonths(5).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description("Netflix").build(),
+                    Transaction.builder().transactionDate(now.minusMonths(4).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description("Netflix").build(),
+                    Transaction.builder().transactionDate(now.minusMonths(3).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description("Netflix").build(),
+                    Transaction.builder().transactionDate(now.minusMonths(2).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("15.49")).description("Netflix").build(),
+                    Transaction.builder().transactionDate(now.minusMonths(1).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("15.49")).description("Netflix").build(),
+                    Transaction.builder().transactionDate(now.atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("15.49")).description("Netflix").build()
+            );
+
+            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(netflix);
+
+            // act
+            List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
+
+            // assert & verify -- one suggestion, reflecting the current price and the full history
+            long netflixSuggestions = result.stream().filter(s -> "Netflix".equals(s.merchant().cleanName())).count();
+            assertEquals(1, netflixSuggestions, "expected exactly one Netflix suggestion, got: " + result);
+
+            RecurringSuggestionDto suggestion = result.stream()
+                    .filter(s -> "Netflix".equals(s.merchant().cleanName())).findFirst().orElseThrow();
+            assertEquals(0, new BigDecimal("15.49").compareTo(suggestion.amount()), "expected the current/most-recent price");
+            assertEquals(6, suggestion.occurrenceCount(), "expected the full history counted, not just the current tier");
+            assertEquals(Frequency.MONTHLY, suggestion.frequency());
+        }
+
+        @Test
+        @DisplayName("PF-835: confidence score is a real 0-100 percentage, never exceeding 100")
+        void confidenceScoreStaysWithinPercentageBounds() {
+            // arrange -- 12 monthly occurrences, a full year's worth within the lookback window
+            LocalDate now = LocalDate.now();
+            OffsetDateTime offset = OffsetDateTime.now();
+            List<Transaction> group = new java.util.ArrayList<>();
+            for (int i = 11; i >= 0; i--) {
+                group.add(Transaction.builder()
+                        .transactionDate(now.minusMonths(i).atStartOfDay().atOffset(offset.getOffset()))
+                        .amount(BigDecimal.TEN)
+                        .description("LongRunning")
+                        .build());
+            }
+
+            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(group);
+
+            // act
+            List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
+
+            // assert & verify -- a strong, 12-occurrence pattern should read as a real, high
+            // percentage (well above the un-rescaled raw score of ~1.4 the old formula produced,
+            // which technically satisfies ">1.0" but isn't a percentage by any reasonable reading)
+            assertEquals(1, result.size());
+            double score = result.get(0).confidenceScore();
+            assertTrue(score >= 50.0, "expected a real percentage for a strong pattern (>=50), got: " + score);
+            assertTrue(score <= 100.0, "confidence must never exceed 100%, got: " + score);
         }
     }
 
