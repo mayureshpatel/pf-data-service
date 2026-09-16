@@ -129,6 +129,89 @@ class MerchantNameNormalizerTest {
     }
 
     @Nested
+    @DisplayName("PF-832: store number followed by a city, before the trailing state code")
+    class NumberBlockedByCity {
+
+        @Test
+        @DisplayName("should strip both the store number and the state code even when a city sits "
+                + "between them -- the city itself is left alone (still out of scope, per the "
+                + "documented PF-EPIC-021 design), only the two already-recognized token types are "
+                + "removed regardless of what's between them")
+        void shouldStripNumberAndStateAroundAnInterveningCity() {
+            // arrange -- confirmed live: this exact shape split one real chain across 15 separate
+            // merchant records (some statements had a trailing city, some didn't)
+            String input = "KROGER #431 ROSWELL GA";
+
+            // act
+            String result = normalizer.normalize(input);
+
+            // assert & verify
+            assertEquals("Kroger Roswell", result);
+        }
+
+        @Test
+        @DisplayName("should still strip the number+city+state shape when the city is two words")
+        void shouldStripNumberAndStateAroundATwoWordCity() {
+            // arrange
+            String input = "KROGER #696 WARNER ROBINS GA";
+
+            // act
+            String result = normalizer.normalize(input);
+
+            // assert & verify
+            assertEquals("Kroger Warner Robins", result);
+        }
+
+        @Test
+        @DisplayName("should produce the same merchant name for the same store whether or not a "
+                + "given statement happened to include a trailing city")
+        void shouldNormalizeToTheSameNameWithOrWithoutATrailingCity() {
+            // arrange -- confirmed live: 'WALGREENS #11348' and 'WALGREENS #11348 WARNER ROBINS GA'
+            // (same real store) previously produced two different merchants
+            String withCity = normalizer.normalize("WALGREENS #11348 WARNER ROBINS GA");
+            String withoutCity = normalizer.normalize("WALGREENS #11348");
+
+            // act & assert -- withoutCity has no trailing state, so it keeps stripping only the
+            // number (existing end-anchored behavior); withCity now strips the number too, just
+            // leaves the city. They won't be byte-identical (one still carries the city), but the
+            // number must be gone from both -- the specific bug was the number surviving only in
+            // the city-suffixed version.
+            assertEquals("Walgreens", withoutCity);
+            assertEquals("Walgreens Warner Robins", withCity);
+        }
+
+        @Test
+        @DisplayName("should NOT reach backward past a city when there's no trailing state code at "
+                + "all -- the aggressive skip-the-city behavior only activates once a real trailing "
+                + "state code confirms this is genuinely a location-suffixed record, not a merchant "
+                + "name that simply happens to start with a number")
+        void shouldNotStripALeadingNumberWithNoTrailingStateCode() {
+            // arrange -- no trailing state code anywhere in this input
+            String input = "24 Hour Fitness";
+
+            // act
+            String result = normalizer.normalize(input);
+
+            // assert & verify -- must stay fully intact; this is a real, whole merchant name
+            assertEquals("24 Hour Fitness", result);
+        }
+
+        @Test
+        @DisplayName("should strip multiple adjacent numeric tokens before a city, not just the one "
+                + "immediately before it")
+        void shouldStripAdjacentNumericTokensBeforeACity() {
+            // arrange
+            String input = "CHEVRON 00123 4567 ROSWELL GA";
+
+            // act
+            String result = normalizer.normalize(input);
+
+            // assert & verify
+            assertEquals("Chevron Roswell", result);
+        }
+    }
+
+    @Nested
     @DisplayName("fallback for names that would normalize to empty")
     class EmptyNormalizationFallback {
 
