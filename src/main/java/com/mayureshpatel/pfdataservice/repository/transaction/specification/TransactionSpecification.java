@@ -4,6 +4,8 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,6 +16,7 @@ public final class TransactionSpecification {
 
     // sentinel the frontend sends as a literal categoryName value to mean "uncategorized"
     private static final String UNCATEGORIZED_SENTINEL = "null";
+    private static final ZoneOffset UTC_ZONE = ZoneOffset.UTC;
 
     private TransactionSpecification() {
     }
@@ -75,17 +78,23 @@ public final class TransactionSpecification {
             }
 
             if (filter.startDate() != null) {
+                // bound as an explicit UTC OffsetDateTime, not a bare LocalDate -- a LocalDate
+                // parameter compared against a timestamptz column resolves using the database
+                // session's timezone (America/New_York in production, see application.yml), not
+                // UTC. Under that non-UTC session, a transaction stored at UTC midnight on this
+                // exact start date falls *before* the implicitly-shifted lower bound and was
+                // silently excluded. See PF-828.
                 conditions.add("transactions.date >= :startDate");
-                parameters.put("startDate", filter.startDate());
+                parameters.put("startDate", filter.startDate().atStartOfDay(UTC_ZONE).toOffsetDateTime());
             }
 
             if (filter.endDate() != null) {
                 // exclusive upper bound on the day AFTER endDate, so the filter covers the whole
-                // end date rather than cutting off at midnight -- endDate is a LocalDate with no
-                // time component, and transactions.date is a timestamptz, so a literal `<= :endDate`
-                // silently excluded anything on the end date itself after 00:00:00.
+                // end date rather than cutting off at midnight -- same explicit-UTC reasoning as
+                // startDate above, not just the inclusive-end-date reasoning this originally
+                // documented (see PF-828).
                 conditions.add("transactions.date < :endDate");
-                parameters.put("endDate", filter.endDate().plusDays(1));
+                parameters.put("endDate", filter.endDate().plusDays(1).atStartOfDay(UTC_ZONE).toOffsetDateTime());
             }
 
             if (filter.tagId() != null) {

@@ -35,6 +35,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,12 @@ import java.util.stream.Collectors;
 @Repository("jdbcTransactionRepository")
 @RequiredArgsConstructor
 public class TransactionRepository implements JdbcRepository<Transaction, Long>, SoftDeleteSupport {
+
+    // PF-828: every method below that takes a LocalDate binds it as an explicit UTC
+    // OffsetDateTime before it reaches SQL, rather than letting a bare LocalDate parameter get
+    // implicitly cast using the database session's timezone (America/New_York in production --
+    // see application.yml). Same root cause as TransactionSpecification's date-range filtering.
+    private static final ZoneOffset UTC_ZONE = ZoneOffset.UTC;
 
     private final JdbcClient jdbcClient;
     private final TransactionDetailRowMapper rowMapper;
@@ -317,7 +324,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public List<Object[]> findMonthlySums(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_SUMS)
                 .param("userId", userId)
-                .param("startDate", startDate)
+                .param("startDate", startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query((rs, rowNum) -> new Object[]{
                         rs.getInt("year"),
                         rs.getInt("month"),
@@ -345,7 +352,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public List<Transaction> findRecentNonTransferTransactions(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_RECENT_NON_TRANSFER)
                 .param("userId", userId)
-                .param("startDate", startDate)
+                .param("startDate", startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query(rowMapper)
                 .list();
     }
@@ -368,7 +375,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public BigDecimal getNetFlowAfterDate(Long accountId, LocalDate date) {
         return jdbcClient.sql(TransactionQueries.GET_NET_FLOW_AFTER_DATE)
                 .param("accountId", accountId)
-                .param("date", date)
+                .param("date", date.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query(BigDecimal.class)
                 .optional()
                 .orElse(BigDecimal.ZERO);
@@ -377,7 +384,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public List<Transaction> findExpensesSince(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_EXPENSES_SINCE)
                 .param("userId", userId)
-                .param("startDate", startDate)
+                .param("startDate", startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query(rowMapper)
                 .list();
     }
