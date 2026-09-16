@@ -6,6 +6,8 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
+import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
+import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
@@ -14,7 +16,9 @@ import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMap
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
 import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
+import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryTransactionsRowMapper;
+import com.mayureshpatel.pfdataservice.repository.transaction.mapper.MonthlyReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionDetailRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
@@ -47,6 +51,8 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     private final CategoryTransactionsRowMapper categoryTransactionsDtoMapper;
     private final CategoryRowMapper categoryRowMapper;
     private final MerchantRowMapper merchantRowMapper;
+    private final CategoryReportDataRowMapper categoryReportDataRowMapper;
+    private final MonthlyReportDataRowMapper monthlyReportDataRowMapper;
 
     @Override
     public Optional<Transaction> findById(Long id) {
@@ -82,6 +88,32 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("startDate", start)
                 .param("endDate", end)
                 .query(categoryBreakdownRowMapper)
+                .list();
+    }
+
+    /**
+     * PF-823: Reports' Categories tab data for the given range, aggregated fully server-side --
+     * no row cap, unlike the client-side approach it replaces.
+     */
+    public List<CategoryReportDataDto> findCategoryReportData(Long userId, OffsetDateTime start, OffsetDateTime end) {
+        return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_REPORT_DATA)
+                .param("userId", userId)
+                .param("startDate", start)
+                .param("endDate", end)
+                .query(categoryReportDataRowMapper)
+                .list();
+    }
+
+    /**
+     * PF-823: Reports' Cash Flow tab data for the given range, one row per month with income and
+     * expense already pivoted side by side.
+     */
+    public List<MonthlyReportDataDto> findMonthlyIncomeExpense(Long userId, OffsetDateTime start, OffsetDateTime end) {
+        return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_INCOME_EXPENSE)
+                .param("userId", userId)
+                .param("startDate", start)
+                .param("endDate", end)
+                .query(monthlyReportDataRowMapper)
                 .list();
     }
 

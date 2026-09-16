@@ -1,14 +1,21 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
+import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
+import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +30,17 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ReportService {
 
+    /**
+     * Session timezone can differ from UTC (see PF-828/PF-836); every {@link LocalDate} boundary
+     * this service hands to a repository is anchored to UTC explicitly rather than left to
+     * whatever the JDBC session happens to be set to.
+     */
+    private static final ZoneOffset UTC_ZONE = ZoneOffset.UTC;
+
     private final AccountRepository accountRepository;
     private final SnapshotService snapshotService;
+    private final TransactionRepository transactionRepository;
+    private final MerchantRepository merchantRepository;
 
     /**
      * Computes the user's total net worth -- the sum of every account they owned -- as of the
@@ -73,5 +89,63 @@ public class ReportService {
     private boolean existedAsOf(Account account, LocalDate date) {
         return account.getAudit() == null || account.getAudit().getCreatedAt() == null
                 || !account.getAudit().getCreatedAt().toLocalDate().isAfter(date);
+    }
+
+    /**
+     * Computes the Categories tab's spending breakdown for {@code [startDate, endDate]}, inclusive
+     * of both endpoints from the caller's point of view (PF-823). Aggregated fully server-side --
+     * no row cap, unlike the client-side approach it replaces.
+     *
+     * @param userId    the authenticated user
+     * @param startDate the first date to include
+     * @param endDate   the last date to include
+     * @return one entry per category with spend in range (including uncategorized), highest total first
+     */
+    public List<CategoryReportDataDto> getCategoryReportData(Long userId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.findCategoryReportData(userId, toStartOfDayUtc(startDate), toExclusiveEndUtc(endDate));
+    }
+
+    /**
+     * Computes the Merchants tab's spending breakdown for {@code [startDate, endDate]}, inclusive
+     * of both endpoints from the caller's point of view (PF-823). Aggregated fully server-side --
+     * no row cap, unlike the client-side approach it replaces.
+     *
+     * @param userId    the authenticated user
+     * @param startDate the first date to include
+     * @param endDate   the last date to include
+     * @return one entry per merchant with spend in range, highest total first
+     */
+    public List<MerchantReportDataDto> getMerchantReportData(Long userId, LocalDate startDate, LocalDate endDate) {
+        return merchantRepository.findMerchantReportData(userId, toStartOfDayUtc(startDate), toExclusiveEndUtc(endDate));
+    }
+
+    /**
+     * Computes the Cash Flow tab's monthly income/expense breakdown for {@code [startDate, endDate]},
+     * inclusive of both endpoints from the caller's point of view (PF-823). Transfers are excluded
+     * from both sides -- a transfer between the user's own accounts is neither real income nor real
+     * spending.
+     *
+     * @param userId    the authenticated user
+     * @param startDate the first date to include
+     * @param endDate   the last date to include
+     * @return one entry per month with matching activity, oldest first
+     */
+    public List<MonthlyReportDataDto> getMonthlyReportData(Long userId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.findMonthlyIncomeExpense(userId, toStartOfDayUtc(startDate), toExclusiveEndUtc(endDate));
+    }
+
+    /**
+     * Anchors a {@link LocalDate} to midnight UTC, for the inclusive start of a date-range filter.
+     */
+    private OffsetDateTime toStartOfDayUtc(LocalDate date) {
+        return date.atStartOfDay(UTC_ZONE).toOffsetDateTime();
+    }
+
+    /**
+     * Anchors the day after a {@link LocalDate} to midnight UTC, so a caller-inclusive end date can
+     * be passed to a half-open {@code [start, end)} SQL range without excluding same-day activity.
+     */
+    private OffsetDateTime toExclusiveEndUtc(LocalDate date) {
+        return date.plusDays(1).atStartOfDay(UTC_ZONE).toOffsetDateTime();
     }
 }

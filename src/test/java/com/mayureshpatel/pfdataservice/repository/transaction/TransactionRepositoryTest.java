@@ -6,6 +6,8 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
+import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
+import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
@@ -808,6 +810,121 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             // act & assert -- must not throw
             assertDoesNotThrow(() -> transactionRepository.insert(transaction));
+        }
+    }
+
+    @Nested
+    @DisplayName("PF-823: Reports server-side aggregation (Categories, Cash Flow)")
+    class ReportDataAggregation {
+
+        /**
+         * Seeds 1,500 EXPENSE transactions for user 1 (well past the 1000-row cap PF-823 fixes),
+         * $10 each, one per day starting 2020-01-01 -- category 7 (Groceries), merchant 1 (Whole
+         * Foods). A single set-based INSERT rather than 1,500 round trips.
+         */
+        private void seedBulkGroceryTransactions() {
+            jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    select 1, 7, 1, 10.00, (date '2020-01-01' + s.n)::timestamptz, 'Bulk Test Txn ' || s.n, 'EXPENSE'
+                    from generate_series(0, 1499) as s(n)
+                    """).update();
+        }
+
+        @Test
+        @DisplayName("findCategoryReportData sums every matching transaction, not just the newest 1000")
+        void shouldAggregateCategoryTotalsPastThousandRows() {
+            // arrange
+            seedBulkGroceryTransactions();
+
+            // act -- range covers all 1,500 seeded days plus margin
+            List<CategoryReportDataDto> result = transactionRepository.findCategoryReportData(
+                    USER_ID,
+                    OffsetDateTime.parse("2020-01-01T00:00:00Z"),
+                    OffsetDateTime.parse("2024-12-31T00:00:00Z"));
+
+            // assert & verify
+            CategoryReportDataDto groceries = result.stream()
+                    .filter(r -> r.category() != null && r.category().id().equals(7L))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("expected a Groceries entry, got: " + result));
+            assertEquals(1500L, groceries.count(),
+                    "a 1000-row cap would silently drop 500 of these -- got count=" + groceries.count());
+            assertEquals(0, new BigDecimal("15000.00").compareTo(groceries.total()),
+                    "expected 1500 * $10.00, got " + groceries.total());
+        }
+
+        @Test
+        @DisplayName("findCategoryReportData excludes uncategorized transactions, matching the old "
+                + "client-side aggregateByCategory()'s `&& txn.category` check")
+        void shouldExcludeUncategorizedFromCategoryReportData() {
+            // arrange -- an otherwise-empty future month containing only an uncategorized expense
+            jdbcClient.sql("""
+                    insert into transactions (account_id, merchant_id, amount, date, description, type)
+                    values (1, null, 99.00, '2031-07-01T00:00:00Z', 'Uncategorized Spend', 'EXPENSE')
+                    """).update();
+
+            // act
+            List<CategoryReportDataDto> result = transactionRepository.findCategoryReportData(
+                    USER_ID,
+                    OffsetDateTime.parse("2031-07-01T00:00:00Z"),
+                    OffsetDateTime.parse("2031-07-02T00:00:00Z"));
+
+            // assert & verify -- the inner join to categories drops the uncategorized row entirely
+            assertTrue(result.isEmpty(), "expected no category entries at all, got: " + result);
+        }
+
+        @Test
+        @DisplayName("findMonthlyIncomeExpense includes the oldest in-range month, not just the newest")
+        void shouldIncludeOldestMonthPastThousandRows() {
+            // arrange -- the old bug sorted date desc and kept only the newest 1000, silently
+            // dropping the oldest ~500 days (all of 2020's January-ish window) from the range
+            seedBulkGroceryTransactions();
+
+            // act
+            List<MonthlyReportDataDto> result = transactionRepository.findMonthlyIncomeExpense(
+                    USER_ID,
+                    OffsetDateTime.parse("2020-01-01T00:00:00Z"),
+                    OffsetDateTime.parse("2024-12-31T00:00:00Z"));
+
+            // assert & verify -- the oldest seeded month (Jan 2020) must be present and correctly summed
+            MonthlyReportDataDto oldestMonth = result.stream()
+                    .filter(m -> m.year() == 2020 && m.month() == 1)
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("expected a 2020-01 entry, got: " + result));
+            assertEquals(0, new BigDecimal("310.00").compareTo(oldestMonth.expense()),
+                    "expected 31 days * $10.00 for January 2020, got " + oldestMonth.expense());
+
+            BigDecimal totalAcrossAllMonths = result.stream()
+                    .map(MonthlyReportDataDto::expense)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            assertEquals(0, new BigDecimal("15000.00").compareTo(totalAcrossAllMonths),
+                    "sum across every returned month must account for all 1500 seeded transactions, got "
+                            + totalAcrossAllMonths);
+        }
+
+        @Test
+        @DisplayName("findMonthlyIncomeExpense excludes transfers from both income and expense")
+        void shouldExcludeTransfersFromMonthlyIncomeExpense() {
+            // arrange -- an otherwise-empty future month containing only a transfer pair (the
+            // Synovus-pays-off-credit-card pattern: TRANSFER_OUT on the bank side, TRANSFER_IN on
+            // the card side), so a non-empty result here can only mean a transfer leaked through
+            jdbcClient.sql("""
+                    insert into transactions (account_id, merchant_id, amount, date, description, type)
+                    values (1, null, 500.00, '2031-05-15T00:00:00Z', 'Card Payoff Out', 'TRANSFER_OUT'),
+                           (3, null, 500.00, '2031-05-15T00:00:00Z', 'Card Payoff In', 'TRANSFER_IN')
+                    """).update();
+
+            // act
+            List<MonthlyReportDataDto> result = transactionRepository.findMonthlyIncomeExpense(
+                    USER_ID,
+                    OffsetDateTime.parse("2031-05-01T00:00:00Z"),
+                    OffsetDateTime.parse("2031-05-31T00:00:00Z"));
+
+            // assert & verify -- with type in ('INCOME','EXPENSE') filtering transfers out before
+            // the group by, a month containing only transfer legs produces no row at all
+            assertTrue(result.isEmpty(),
+                    "a month with only TRANSFER_OUT/TRANSFER_IN legs must produce no income/expense row, got: "
+                            + result);
         }
     }
 }

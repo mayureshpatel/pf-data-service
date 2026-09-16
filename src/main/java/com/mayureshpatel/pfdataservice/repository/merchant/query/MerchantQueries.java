@@ -98,6 +98,29 @@ public final class MerchantQueries {
             group by m.id
             """;
 
+    // language=SQL -- PF-823: Reports' Merchants tab, aggregated over the full requested range
+    // (no row cap). array_remove(..., null) drops the NULL entry array_agg would otherwise
+    // contribute for this merchant's uncategorized transactions, so `categories` never contains
+    // a null placeholder.
+    public static final String FIND_MERCHANT_REPORT_DATA = """
+            select m.id as merchant_id,
+                   m.original_name as merchant_original_name,
+                   m.clean_name as merchant_clean_name,
+                   sum(t.amount) as total,
+                   count(*) as txn_count,
+                   array_remove(array_agg(distinct c.name), null) as category_names
+            from transactions t
+            join accounts a on t.account_id = a.id
+            join merchants m on t.merchant_id = m.id
+            left join categories c on t.category_id = c.id
+            where a.user_id = :userId
+              and t.date >= :startDate
+              and t.date < :endDate
+              and t.type = 'EXPENSE'
+              and t.deleted_at is null
+            group by m.id
+            """;
+
     // language=SQL
     public static final String INSERT = """
             insert into merchants (user_id, original_name, clean_name)

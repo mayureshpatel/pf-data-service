@@ -218,6 +218,57 @@ public final class TransactionQueries {
             order by total desc
             """;
 
+    // language=SQL -- PF-823: Reports' Categories tab, aggregated over the full requested range
+    // (no row cap, unlike the old client-side approach that only ever saw the newest 1000 rows).
+    // half-open [:startDate, :endDate) bound, matching this codebase's established UTC-safe
+    // date-range pattern -- callers pass already-UTC-anchored OffsetDateTime bounds. Excludes
+    // uncategorized transactions (category_id is not null), matching the old client-side
+    // aggregateByCategory()'s `&& txn.category` check exactly -- unlike FIND_CATEGORY_TOTALS
+    // (Dashboard's analogous query), which deliberately surfaces an "Uncategorized" bucket;
+    // changing Reports' own scope to match is a separate decision, not a byproduct of this fix.
+    public static final String FIND_CATEGORY_REPORT_DATA = """
+            select categories.id as category_id,
+                   categories.name as category_name,
+                   categories.color as category_color,
+                   categories.icon as category_icon,
+                   categories.type as category_type,
+                   categories.parent_id as category_parent_id,
+                   sum(transactions.amount) as total,
+                   count(*) as txn_count
+            from transactions
+            join categories on transactions.category_id = categories.id
+            join accounts on transactions.account_id = accounts.id
+            where accounts.user_id = :userId
+              and transactions.date >= :startDate
+              and transactions.date < :endDate
+              and transactions.type = 'EXPENSE'
+              and transactions.deleted_at is null
+            group by categories.id
+            order by total desc
+            """;
+
+    // language=SQL -- PF-823: Reports' Cash Flow tab, pre-pivoted (one row per month, income and
+    // expense both present) rather than one row per (month, type) like FIND_MONTHLY_SUMS -- Reports
+    // needs an explicit end bound (an arbitrary user-picked range), unlike FIND_MONTHLY_SUMS's
+    // open-ended "trailing months to now" used by the Dashboard pulse widget. Transfers excluded
+    // from both sides, same as FIND_MONTHLY_SUMS -- a transfer between the user's own accounts is
+    // neither real income nor real spending.
+    public static final String FIND_MONTHLY_INCOME_EXPENSE = """
+            select extract(year from transactions.date at time zone 'UTC')::int as year,
+                   extract(month from transactions.date at time zone 'UTC')::int as month,
+                   coalesce(sum(transactions.amount) filter (where transactions.type = 'INCOME'), 0) as income,
+                   coalesce(sum(transactions.amount) filter (where transactions.type = 'EXPENSE'), 0) as expense
+            from transactions
+            join accounts on transactions.account_id = accounts.id
+            where accounts.user_id = :userId
+              and transactions.date >= :startDate
+              and transactions.date < :endDate
+              and transactions.type in ('INCOME', 'EXPENSE')
+              and transactions.deleted_at is null
+            group by extract(year from transactions.date at time zone 'UTC'), extract(month from transactions.date at time zone 'UTC')
+            order by year, month
+            """;
+
     // language=SQL
     public static final String FIND_MONTHLY_SUMS = """
             select extract(year from transactions.date)  as year,
