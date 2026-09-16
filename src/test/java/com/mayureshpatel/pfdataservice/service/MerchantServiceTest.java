@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantReviewClusterDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -44,6 +46,13 @@ class MerchantServiceTest {
 
     @Mock
     private MerchantRepository merchantRepository;
+
+    // @Spy, not @Mock: a real instance so its actual logic runs (it's a plain, fully-unit-tested
+    // pure function -- MerchantNameNormalizerTest -- and mocking it here would hide whether
+    // MerchantService actually calls it correctly), but still injectable via @InjectMocks. Only
+    // getMerchantsNeedingReview (PF-842) calls this; findOrCreateMerchant(s) do not (PF-840).
+    @Spy
+    private final MerchantNameNormalizer nameNormalizer = new MerchantNameNormalizer();
 
     @Mock
     private TransactionRepository transactionRepository;
@@ -318,6 +327,140 @@ class MerchantServiceTest {
     }
 
     @Nested
+    @DisplayName("getDistinctCleanNames")
+    class GetDistinctCleanNamesTests {
+
+        @Test
+        @DisplayName("PF-842: should return the repository's page of distinct clean names unchanged")
+        void shouldReturnDistinctCleanNames() {
+            // arrange
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<String> page = new PageImpl<>(List.of("Kroger", "Starbucks"), pageable, 2);
+            when(merchantRepository.findDistinctCleanNames(USER_ID, null, pageable)).thenReturn(page);
+
+            // act
+            Page<String> result = merchantService.getDistinctCleanNames(USER_ID, null, pageable);
+
+            // assert & verify
+            assertEquals(page, result);
+        }
+    }
+
+    @Nested
+    @DisplayName("getMerchantsByCleanName")
+    class GetMerchantsByCleanNameTests {
+
+        @Test
+        @DisplayName("PF-842: should map every merchant sharing the exact clean name to a MerchantDto")
+        void shouldReturnGroupAsDtos() {
+            // arrange
+            Merchant a = Merchant.builder().id(1L).userId(USER_ID).originalName("KROGER #431 ROSWELL").cleanName("Kroger").build();
+            Merchant b = Merchant.builder().id(2L).userId(USER_ID).originalName("KROGER #696 WARNER ROBINS").cleanName("Kroger").build();
+            when(merchantRepository.findAllByCleanNameAndUserId("Kroger", USER_ID)).thenReturn(List.of(a, b));
+
+            // act
+            List<MerchantDto> result = merchantService.getMerchantsByCleanName(USER_ID, "Kroger");
+
+            // assert & verify
+            assertEquals(2, result.size());
+            assertEquals(1L, result.get(0).id());
+            assertEquals(2L, result.get(1).id());
+        }
+    }
+
+    @Nested
+    @DisplayName("getMerchantsNeedingReview")
+    class GetMerchantsNeedingReviewTests {
+
+        @Test
+        @DisplayName("PF-842: should cluster merchants with a blank clean name by the normalizer's suggestion")
+        void shouldClusterBlankCleanNameMerchants() {
+            // arrange -- two different store numbers, same city (the merged PF-832 fix strips the
+            // number but deliberately preserves the city -- same city means same suggestion here)
+            Merchant a = Merchant.builder().id(1L).userId(USER_ID).originalName("KROGER #431 ROSWELL GA").cleanName("").build();
+            Merchant b = Merchant.builder().id(2L).userId(USER_ID).originalName("KROGER #999 ROSWELL GA").cleanName("").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(a, b));
+
+            // act
+            List<MerchantReviewClusterDto> result = merchantService.getMerchantsNeedingReview(USER_ID);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals("Kroger Roswell", result.get(0).suggestedCleanName());
+            assertEquals(2, result.get(0).merchants().size());
+        }
+
+        @Test
+        @DisplayName("PF-842/PF-833: should also flag a merchant whose current clean name differs from a "
+                + "fresh suggestion -- the same condition resolves both brand-new blank rows and merchants "
+                + "mislabeled before the normalizer existed at all, with no separate backfill")
+        void shouldFlagMismatchedCleanNameMerchant() {
+            // arrange -- clean name doesn't match what a fresh normalize() would produce right now
+            Merchant mislabeled = Merchant.builder().id(3L).userId(USER_ID)
+                    .originalName("KROGER #431 ROSWELL GA").cleanName("Kroger").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(mislabeled));
+
+            // act
+            List<MerchantReviewClusterDto> result = merchantService.getMerchantsNeedingReview(USER_ID);
+
+            // assert & verify -- real normalizer strips the number, keeps the city
+            assertEquals(1, result.size());
+            assertEquals("Kroger Roswell", result.get(0).suggestedCleanName());
+        }
+
+        @Test
+        @DisplayName("PF-842: should NOT flag a merchant whose clean name already matches a fresh suggestion")
+        void shouldNotFlagAlreadyReviewedMerchant() {
+            // arrange -- already correctly reviewed: cleanName matches what normalize() produces now
+            Merchant reviewed = Merchant.builder().id(4L).userId(USER_ID)
+                    .originalName("KROGER #431 ROSWELL GA").cleanName("Kroger Roswell").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(reviewed));
+
+            // act
+            List<MerchantReviewClusterDto> result = merchantService.getMerchantsNeedingReview(USER_ID);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("PF-842: known tradeoff -- a manually-customized clean name the normalizer would never "
+                + "produce keeps reappearing (a dismissible suggestion, not data loss)")
+        void shouldFlagCustomizedCleanNameAsAKnownTradeoff() {
+            // arrange -- deliberately renamed to something no normalizer run would ever independently produce
+            Merchant customized = Merchant.builder().id(5L).userId(USER_ID)
+                    .originalName("KROGER #431 ROSWELL GA").cleanName("My Local Grocery Store").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(customized));
+
+            // act
+            List<MerchantReviewClusterDto> result = merchantService.getMerchantsNeedingReview(USER_ID);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(5L, result.get(0).merchants().get(0).id());
+        }
+
+        @Test
+        @DisplayName("PF-842: should return clusters largest-first")
+        void shouldReturnClustersLargestFirst() {
+            // arrange -- one 2-member Kroger/Roswell cluster, one 1-member Amazon cluster
+            Merchant krogerA = Merchant.builder().id(1L).userId(USER_ID).originalName("KROGER #431 ROSWELL GA").cleanName("").build();
+            Merchant krogerB = Merchant.builder().id(2L).userId(USER_ID).originalName("KROGER #999 ROSWELL GA").cleanName("").build();
+            Merchant amazon = Merchant.builder().id(3L).userId(USER_ID).originalName("AMAZON").cleanName("").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(amazon, krogerA, krogerB));
+
+            // act
+            List<MerchantReviewClusterDto> result = merchantService.getMerchantsNeedingReview(USER_ID);
+
+            // assert & verify
+            assertEquals(2, result.size());
+            assertEquals("Kroger Roswell", result.get(0).suggestedCleanName());
+            assertEquals(2, result.get(0).merchants().size());
+            assertEquals("Amazon", result.get(1).suggestedCleanName());
+        }
+    }
+
+    @Nested
     @DisplayName("updateMerchant")
     class UpdateMerchantTests {
 
@@ -349,6 +492,59 @@ class MerchantServiceTest {
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> merchantService.updateMerchant(USER_ID, request));
             verify(merchantRepository, never()).update(any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("updateMerchantsBulk")
+    class UpdateMerchantsBulkTests {
+
+        @Test
+        @DisplayName("PF-842: should update every merchant in the request and sum the affected row counts")
+        void shouldUpdateEveryMerchantInBatch() {
+            // arrange -- confirming a whole review cluster in one action
+            MerchantUpdateRequest r1 = MerchantUpdateRequest.builder().id(1L).cleanName("Kroger").build();
+            MerchantUpdateRequest r2 = MerchantUpdateRequest.builder().id(2L).cleanName("Kroger").build();
+            Merchant owned1 = Merchant.builder().id(1L).userId(USER_ID).build();
+            Merchant owned2 = Merchant.builder().id(2L).userId(USER_ID).build();
+            when(merchantRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(owned1));
+            when(merchantRepository.findByIdAndUserId(2L, USER_ID)).thenReturn(Optional.of(owned2));
+            when(merchantRepository.update(r1, USER_ID)).thenReturn(1);
+            when(merchantRepository.update(r2, USER_ID)).thenReturn(1);
+
+            // act
+            Integer result = merchantService.updateMerchantsBulk(USER_ID, List.of(r1, r2));
+
+            // assert & verify
+            assertEquals(2, result);
+            verify(merchantRepository).update(r1, USER_ID);
+            verify(merchantRepository).update(r2, USER_ID);
+        }
+
+        @Test
+        @DisplayName("should return 0 and never touch the repository when given no requests")
+        void shouldReturnZeroForNoRequests() {
+            // arrange & act
+            Integer result = merchantService.updateMerchantsBulk(USER_ID, List.of());
+
+            // assert & verify
+            assertEquals(0, result);
+            verify(merchantRepository, never()).update(any(), any());
+        }
+
+        @Test
+        @DisplayName("PF-842: should throw, and roll back the whole batch, when one item isn't owned by the "
+                + "requesting user -- matches updateMerchant's own per-item ownership check")
+        void shouldThrowWhenOneItemNotOwned() {
+            // arrange
+            MerchantUpdateRequest r1 = MerchantUpdateRequest.builder().id(1L).cleanName("Kroger").build();
+            MerchantUpdateRequest r2 = MerchantUpdateRequest.builder().id(2L).cleanName("Kroger").build();
+            Merchant owned1 = Merchant.builder().id(1L).userId(USER_ID).build();
+            when(merchantRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(owned1));
+            when(merchantRepository.findByIdAndUserId(2L, USER_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> merchantService.updateMerchantsBulk(USER_ID, List.of(r1, r2)));
         }
     }
 

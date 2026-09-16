@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantReviewClusterDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -74,6 +77,90 @@ class MerchantControllerTest extends BaseControllerTest {
                     .andExpect(status().isOk());
 
             verify(merchantService).getAllMerchants(eq(USER_ID), eq("starbucks"), any(Pageable.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("getDistinctCleanNames")
+    class GetDistinctCleanNamesTests {
+
+        @Test
+        @DisplayName("GET /clean-names should return a page of the authenticated user's distinct clean names")
+        void getDistinctCleanNames_shouldReturnPage() throws Exception {
+            // arrange
+            Page<String> page = new PageImpl<>(List.of("Kroger", "Starbucks"), PageRequest.of(0, 20), 2);
+            when(merchantService.getDistinctCleanNames(eq(USER_ID), eq(null), any(Pageable.class))).thenReturn(page);
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/merchants/clean-names"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0]").value("Kroger"));
+
+            verify(merchantService).getDistinctCleanNames(eq(USER_ID), eq(null), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("GET /clean-names should pass a search query param through to the service")
+        void getDistinctCleanNames_shouldPassThroughSearch() throws Exception {
+            // arrange
+            Page<String> page = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+            when(merchantService.getDistinctCleanNames(eq(USER_ID), anyString(), any(Pageable.class))).thenReturn(page);
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/merchants/clean-names").param("search", "kro"))
+                    .andExpect(status().isOk());
+
+            verify(merchantService).getDistinctCleanNames(eq(USER_ID), eq("kro"), any(Pageable.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("getMerchantsByCleanName")
+    class GetMerchantsByCleanNameTests {
+
+        @Test
+        @DisplayName("GET /by-clean-name should return every merchant sharing the given exact clean name")
+        void getMerchantsByCleanName_shouldReturnGroup() throws Exception {
+            // arrange
+            MerchantDto a = MerchantDto.builder().id(1L).userId(USER_ID).originalName("KROGER #431 ROSWELL").cleanName("Kroger").build();
+            MerchantDto b = MerchantDto.builder().id(2L).userId(USER_ID).originalName("KROGER #696 WARNER ROBINS").cleanName("Kroger").build();
+            when(merchantService.getMerchantsByCleanName(USER_ID, "Kroger")).thenReturn(List.of(a, b));
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/merchants/by-clean-name").param("cleanName", "Kroger"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].id").value(1L))
+                    .andExpect(jsonPath("$[1].id").value(2L));
+
+            verify(merchantService).getMerchantsByCleanName(USER_ID, "Kroger");
+        }
+    }
+
+    @Nested
+    @DisplayName("getMerchantsNeedingReview")
+    class GetMerchantsNeedingReviewTests {
+
+        @Test
+        @DisplayName("GET /needs-review should return the authenticated user's review clusters")
+        void getMerchantsNeedingReview_shouldReturnClusters() throws Exception {
+            // arrange
+            MerchantDto a = MerchantDto.builder().id(1L).userId(USER_ID).originalName("KROGER #431 ROSWELL GA").cleanName("").build();
+            MerchantReviewClusterDto cluster = MerchantReviewClusterDto.builder()
+                    .suggestedCleanName("Kroger")
+                    .merchants(List.of(a))
+                    .build();
+            when(merchantService.getMerchantsNeedingReview(USER_ID)).thenReturn(List.of(cluster));
+
+            // act & assert & verify
+            mockMvc.perform(get("/api/v1/merchants/needs-review"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].suggestedCleanName").value("Kroger"))
+                    .andExpect(jsonPath("$[0].merchants", hasSize(1)));
+
+            verify(merchantService).getMerchantsNeedingReview(USER_ID);
         }
     }
 
@@ -149,6 +236,49 @@ class MerchantControllerTest extends BaseControllerTest {
 
             // the request never reached the service -- @PreAuthorize denied it first
             verify(merchantService, never()).updateMerchant(anyLong(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("updateMerchantsBulk")
+    class UpdateMerchantsBulkTests {
+
+        @Test
+        @DisplayName("PATCH /bulk should update every merchant in the request and return the total rows-affected count")
+        void updateMerchantsBulk_shouldUpdateAll() throws Exception {
+            // arrange
+            List<MerchantUpdateRequest> requests = List.of(
+                    MerchantUpdateRequest.builder().id(1L).cleanName("Kroger").build(),
+                    MerchantUpdateRequest.builder().id(2L).cleanName("Kroger").build());
+            when(merchantService.updateMerchantsBulk(eq(USER_ID), any())).thenReturn(2);
+
+            // act & assert & verify
+            mockMvc.perform(patch("/api/v1/merchants/bulk")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(requests)))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("2"));
+
+            verify(merchantService).updateMerchantsBulk(eq(USER_ID), any());
+        }
+
+        @Test
+        @DisplayName("PATCH /bulk should return 400 Bad Request when more than 1000 items are sent")
+        void updateMerchantsBulk_shouldReturn400WhenOverLimit() throws Exception {
+            // arrange
+            List<MerchantUpdateRequest> requests = IntStream.rangeClosed(1, 1001)
+                    .mapToObj(i -> MerchantUpdateRequest.builder().id((long) i).cleanName("Name " + i).build())
+                    .toList();
+
+            // act & assert & verify
+            mockMvc.perform(patch("/api/v1/merchants/bulk")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(requests)))
+                    .andExpect(status().isBadRequest());
+
+            verify(merchantService, never()).updateMerchantsBulk(anyLong(), any());
         }
     }
 

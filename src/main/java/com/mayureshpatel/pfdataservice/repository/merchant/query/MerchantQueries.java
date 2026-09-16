@@ -49,6 +49,43 @@ public final class MerchantQueries {
               and (clean_name ilike :search or original_name ilike :search)
             """;
 
+    // language=SQL -- PF-842: distinct clean names for the two-level picker/grouped view. Excludes
+    // "" (unreviewed rows have no clean name yet -- not a real group to pick or display).
+    public static final String COUNT_DISTINCT_CLEAN_NAMES_BY_USER_ID = """
+            select count(distinct clean_name)
+            from merchants
+            where user_id = :userId
+              and clean_name <> ''
+            """;
+
+    // language=SQL
+    public static final String COUNT_DISTINCT_CLEAN_NAMES_BY_USER_ID_AND_SEARCH = """
+            select count(distinct clean_name)
+            from merchants
+            where user_id = :userId
+              and clean_name <> ''
+              and clean_name ilike :search
+            """;
+
+    // language=SQL
+    public static final String FIND_DISTINCT_CLEAN_NAMES_BY_USER_ID = """
+            select distinct clean_name
+            from merchants
+            where user_id = :userId
+              and clean_name <> ''
+            order by clean_name
+            """;
+
+    // language=SQL
+    public static final String FIND_DISTINCT_CLEAN_NAMES_BY_USER_ID_AND_SEARCH = """
+            select distinct clean_name
+            from merchants
+            where user_id = :userId
+              and clean_name <> ''
+              and clean_name ilike :search
+            order by clean_name
+            """;
+
     // language=SQL
     public static final String FIND_BY_ID_AND_USER_ID = """
             select *
