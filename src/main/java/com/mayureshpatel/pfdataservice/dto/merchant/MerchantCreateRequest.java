@@ -21,7 +21,8 @@ public class MerchantCreateRequest {
     @Size(max = 255, message = "Merchant name must be less than 255 characters.")
     private final String originalName;
 
-    @NotBlank(message = "Merchant name cannot be blank.")
+    // intentionally not @NotBlank -- cleanName is left blank ("") at creation (PF-840), a
+    // deliberate, user-managed display label set later, never auto-computed here.
     @Size(max = 255, message = "Merchant name must be less than 255 characters.")
     private final String cleanName;
 

@@ -105,8 +105,9 @@ class MerchantCreateRequestTest {
     @DisplayName("Field: cleanName")
     class CleanNameValidationTests {
         @Test
-        @DisplayName("should fail when cleanName is blank")
-        void shouldFailWhenCleanNameIsBlank() {
+        @DisplayName("PF-840: should pass when cleanName is blank -- it's intentionally left blank at "
+                + "creation, set later by a human or a reviewed suggestion, never auto-computed")
+        void shouldPassWhenCleanNameIsBlank() {
             MerchantCreateRequest request = MerchantCreateRequest.builder()
                     .userId(1L)
                     .originalName("Starbucks")
@@ -114,8 +115,7 @@ class MerchantCreateRequestTest {
                     .build();
 
             Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
-            assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant name cannot be blank.")));
+            assertTrue(violations.isEmpty(), "Should have no violations");
         }
 
         @Test

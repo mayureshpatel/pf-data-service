@@ -16,7 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -55,12 +54,6 @@ class MerchantServiceTest {
     @InjectMocks
     private MerchantService merchantService;
 
-    // @Spy, not @Mock: a real instance so its actual logic runs (it's a plain, fully-unit-tested
-    // pure function -- MerchantNameNormalizerTest -- and mocking it here would hide whether
-    // MerchantService actually calls it correctly), but still injectable via @InjectMocks.
-    @Spy
-    private final MerchantNameNormalizer nameNormalizer = new MerchantNameNormalizer();
-
     private static final Long USER_ID = 1L;
 
     @Nested
@@ -72,8 +65,9 @@ class MerchantServiceTest {
         void shouldReturnExistingMerchantId() {
             // arrange
             String description = "STARBUCKS #12345";
-            Merchant existing = Merchant.builder().id(99L).userId(USER_ID).originalName(description).cleanName("Starbucks").build();
-            when(merchantRepository.findAllByCleanNameAndUserId("Starbucks", USER_ID)).thenReturn(List.of(existing));
+            Merchant existing = Merchant.builder().id(99L).userId(USER_ID).originalName(description).cleanName("").build();
+            when(merchantRepository.findAllByNormalizedOriginalNameAndUserId("starbucks #12345", USER_ID))
+                    .thenReturn(List.of(existing));
 
             // act
             Long result = merchantService.findOrCreateMerchant(USER_ID, description);
@@ -84,11 +78,13 @@ class MerchantServiceTest {
         }
 
         @Test
-        @DisplayName("should create a new merchant with a normalized clean name when none exists")
-        void shouldCreateNewMerchantWithNormalizedName() {
+        @DisplayName("PF-840: should create a new merchant with a blank clean name when none exists -- "
+                + "cleanName is never auto-computed at creation")
+        void shouldCreateNewMerchantWithBlankCleanName() {
             // arrange
             String description = "WHOLEFDS #12345";
-            when(merchantRepository.findAllByCleanNameAndUserId("Wholefds", USER_ID)).thenReturn(List.of());
+            when(merchantRepository.findAllByNormalizedOriginalNameAndUserId("wholefds #12345", USER_ID))
+                    .thenReturn(List.of());
             when(merchantRepository.insert(any(MerchantCreateRequest.class))).thenReturn(42L);
 
             // act
@@ -98,21 +94,21 @@ class MerchantServiceTest {
             assertEquals(42L, result);
             verify(merchantRepository).insert(argThat((MerchantCreateRequest request) ->
                     request.getOriginalName().equals(description)
-                            && request.getCleanName().equals("Wholefds")
-                            && !request.getCleanName().isBlank()
+                            && request.getCleanName().equals("")
             ));
         }
 
         @Test
-        @DisplayName("PF-219: should match an existing merchant even when the raw description differs, "
-                + "as long as it normalizes to the same clean name")
-        void shouldMatchExistingMerchantDespiteRawDescriptionDifference() {
-            // arrange -- same real-world merchant, different store number than what's on file
-            Merchant existing = Merchant.builder().id(7L).userId(USER_ID).originalName("STARBUCKS #100").cleanName("Starbucks").build();
-            when(merchantRepository.findAllByCleanNameAndUserId("Starbucks", USER_ID)).thenReturn(List.of(existing));
+        @DisplayName("PF-840: should match an existing merchant when the raw description differs only by "
+                + "case or incidental whitespace")
+        void shouldMatchExistingMerchantDespiteFormattingDifference() {
+            // arrange -- same raw text, different case and extra whitespace than what's on file
+            Merchant existing = Merchant.builder().id(7L).userId(USER_ID).originalName("Starbucks  #100").cleanName("").build();
+            when(merchantRepository.findAllByNormalizedOriginalNameAndUserId("starbucks #100", USER_ID))
+                    .thenReturn(List.of(existing));
 
             // act
-            Long result = merchantService.findOrCreateMerchant(USER_ID, "STARBUCKS #999");
+            Long result = merchantService.findOrCreateMerchant(USER_ID, "STARBUCKS #100");
 
             // assert & verify
             assertEquals(7L, result);
@@ -120,11 +116,31 @@ class MerchantServiceTest {
         }
 
         @Test
-        @DisplayName("PF-219: should NOT match a genuinely different merchant that happens to share no relation "
-                + "to the one on file -- the matching change must not over-merge")
+        @DisplayName("PF-840: should NOT match a different store number for the same real-world chain -- "
+                + "matching no longer strips numbers, so two locations stay two separate merchants until a "
+                + "human links them (PF-842)")
+        void shouldNotMatchDifferentStoreNumberForSameChain() {
+            // arrange -- a #999 statement must not silently resolve to an existing #100 record
+            when(merchantRepository.findAllByNormalizedOriginalNameAndUserId("starbucks #999", USER_ID))
+                    .thenReturn(List.of());
+            when(merchantRepository.insert(any(MerchantCreateRequest.class))).thenReturn(55L);
+
+            // act
+            Long result = merchantService.findOrCreateMerchant(USER_ID, "STARBUCKS #999");
+
+            // assert & verify
+            assertEquals(55L, result);
+            verify(merchantRepository).insert(argThat((MerchantCreateRequest request) ->
+                    request.getOriginalName().equals("STARBUCKS #999") && request.getCleanName().equals("")
+            ));
+        }
+
+        @Test
+        @DisplayName("PF-840: should NOT match a genuinely different merchant")
         void shouldNotMatchGenuinelyDifferentMerchant() {
-            // arrange -- an existing "Chevron" on file must not catch an unrelated "Shell Oil" lookup
-            when(merchantRepository.findAllByCleanNameAndUserId("Shell Oil", USER_ID)).thenReturn(List.of());
+            // arrange
+            when(merchantRepository.findAllByNormalizedOriginalNameAndUserId("shell oil wa", USER_ID))
+                    .thenReturn(List.of());
             when(merchantRepository.insert(any(MerchantCreateRequest.class))).thenReturn(55L);
 
             // act
@@ -133,10 +149,8 @@ class MerchantServiceTest {
             // assert & verify
             assertEquals(55L, result);
             verify(merchantRepository).insert(argThat((MerchantCreateRequest request) ->
-                    request.getCleanName().equals("Shell Oil")
+                    request.getOriginalName().equals("SHELL OIL WA") && request.getCleanName().equals("")
             ));
-            // never looked up under the unrelated existing merchant's clean name
-            verify(merchantRepository, never()).findAllByCleanNameAndUserId("Chevron", USER_ID);
         }
     }
 
@@ -149,9 +163,9 @@ class MerchantServiceTest {
         void shouldResolveExistingMerchantsOnly() {
             // arrange
             List<String> descriptions = List.of("STARBUCKS #1", "TARGET #2");
-            Merchant m1 = Merchant.builder().id(1L).userId(USER_ID).originalName("STARBUCKS #1").cleanName("Starbucks").build();
-            Merchant m2 = Merchant.builder().id(2L).userId(USER_ID).originalName("TARGET #2").cleanName("Target").build();
-            when(merchantRepository.findAllByCleanNamesAndUserId(List.of("Starbucks", "Target"), USER_ID))
+            Merchant m1 = Merchant.builder().id(1L).userId(USER_ID).originalName("STARBUCKS #1").cleanName("").build();
+            Merchant m2 = Merchant.builder().id(2L).userId(USER_ID).originalName("TARGET #2").cleanName("").build();
+            when(merchantRepository.findAllByNormalizedOriginalNamesAndUserId(List.of("starbucks #1", "target #2"), USER_ID))
                     .thenReturn(List.of(m1, m2));
 
             // act
@@ -163,15 +177,15 @@ class MerchantServiceTest {
         }
 
         @Test
-        @DisplayName("should create only the missing merchants, with normalized clean names")
-        void shouldCreateOnlyMissingMerchantsWithNormalizedNames() {
+        @DisplayName("PF-840: should create only the missing merchants, with blank clean names")
+        void shouldCreateOnlyMissingMerchantsWithBlankCleanNames() {
             // arrange
             List<String> descriptions = List.of("STARBUCKS #1", "CHEVRON 00123 4567");
-            Merchant existing = Merchant.builder().id(1L).userId(USER_ID).originalName("STARBUCKS #1").cleanName("Starbucks").build();
-            when(merchantRepository.findAllByCleanNamesAndUserId(List.of("Starbucks", "Chevron"), USER_ID))
+            Merchant existing = Merchant.builder().id(1L).userId(USER_ID).originalName("STARBUCKS #1").cleanName("").build();
+            when(merchantRepository.findAllByNormalizedOriginalNamesAndUserId(List.of("starbucks #1", "chevron 00123 4567"), USER_ID))
                     .thenReturn(List.of(existing));
 
-            Merchant inserted = Merchant.builder().id(2L).userId(USER_ID).originalName("CHEVRON 00123 4567").cleanName("Chevron").build();
+            Merchant inserted = Merchant.builder().id(2L).userId(USER_ID).originalName("CHEVRON 00123 4567").cleanName("").build();
             when(merchantRepository.insertAllAndReturn(any())).thenReturn(List.of(inserted));
 
             // act
@@ -182,7 +196,7 @@ class MerchantServiceTest {
             verify(merchantRepository).insertAllAndReturn(argThat(requests ->
                     requests.size() == 1
                             && requests.get(0).getOriginalName().equals("CHEVRON 00123 4567")
-                            && requests.get(0).getCleanName().equals("Chevron")
+                            && requests.get(0).getCleanName().equals("")
             ));
         }
 
@@ -194,18 +208,19 @@ class MerchantServiceTest {
 
             // assert & verify
             assertTrue(result.isEmpty());
-            verify(merchantRepository, never()).findAllByCleanNamesAndUserId(any(), any());
+            verify(merchantRepository, never()).findAllByNormalizedOriginalNamesAndUserId(any(), any());
             verify(merchantRepository, never()).insertAllAndReturn(any());
         }
 
         @Test
-        @DisplayName("PF-219: two raw descriptions that normalize to the same clean name resolve to the "
+        @DisplayName("PF-840: two raw descriptions that differ only by case or whitespace resolve to the "
                 + "same merchant -- only one gets created, not two")
-        void shouldCollapseMultipleRawDescriptionsToOneMerchant() {
-            // arrange -- same real-world Starbucks, two different store numbers, neither on file yet
-            List<String> descriptions = List.of("STARBUCKS #100", "STARBUCKS #200");
-            Merchant inserted = Merchant.builder().id(9L).userId(USER_ID).originalName("STARBUCKS #100").cleanName("Starbucks").build();
-            when(merchantRepository.findAllByCleanNamesAndUserId(List.of("Starbucks"), USER_ID)).thenReturn(List.of());
+        void shouldCollapseFormattingVariantsToOneMerchant() {
+            // arrange -- identical real merchant text, differing only by case and extra whitespace
+            List<String> descriptions = List.of("STARBUCKS #100", "starbucks   #100");
+            Merchant inserted = Merchant.builder().id(9L).userId(USER_ID).originalName("STARBUCKS #100").cleanName("").build();
+            when(merchantRepository.findAllByNormalizedOriginalNamesAndUserId(List.of("starbucks #100"), USER_ID))
+                    .thenReturn(List.of());
             when(merchantRepository.insertAllAndReturn(any())).thenReturn(List.of(inserted));
 
             // act
@@ -213,24 +228,46 @@ class MerchantServiceTest {
 
             // assert & verify
             assertEquals(9L, result.get("STARBUCKS #100"));
-            assertEquals(9L, result.get("STARBUCKS #200"));
+            assertEquals(9L, result.get("starbucks   #100"));
             // exactly one merchant created for both, using the first-seen description as original_name
             verify(merchantRepository).insertAllAndReturn(argThat(requests ->
                     requests.size() == 1
                             && requests.get(0).getOriginalName().equals("STARBUCKS #100")
-                            && requests.get(0).getCleanName().equals("Starbucks")
+                            && requests.get(0).getCleanName().equals("")
             ));
         }
 
         @Test
-        @DisplayName("PF-219: genuinely different merchants in the same batch are not merged")
+        @DisplayName("PF-840: two different store numbers for the same real-world chain are NOT merged in "
+                + "a batch either -- matching no longer strips numbers")
+        void shouldNotMergeDifferentStoreNumbersInBatch() {
+            // arrange -- same chain, two different, previously-unseen store numbers
+            List<String> descriptions = List.of("STARBUCKS #100", "STARBUCKS #200");
+            when(merchantRepository.findAllByNormalizedOriginalNamesAndUserId(List.of("starbucks #100", "starbucks #200"), USER_ID))
+                    .thenReturn(List.of());
+
+            Merchant m1 = Merchant.builder().id(9L).userId(USER_ID).originalName("STARBUCKS #100").cleanName("").build();
+            Merchant m2 = Merchant.builder().id(10L).userId(USER_ID).originalName("STARBUCKS #200").cleanName("").build();
+            when(merchantRepository.insertAllAndReturn(any())).thenReturn(List.of(m1, m2));
+
+            // act
+            Map<String, Long> result = merchantService.findOrCreateMerchants(USER_ID, descriptions);
+
+            // assert & verify
+            assertNotEquals(result.get("STARBUCKS #100"), result.get("STARBUCKS #200"));
+            verify(merchantRepository).insertAllAndReturn(argThat(requests -> requests.size() == 2));
+        }
+
+        @Test
+        @DisplayName("PF-840: genuinely different merchants in the same batch are not merged")
         void shouldNotMergeGenuinelyDifferentMerchantsInBatch() {
             // arrange
             List<String> descriptions = List.of("CHEVRON 00123 WA", "SHELL OIL WA");
-            when(merchantRepository.findAllByCleanNamesAndUserId(List.of("Chevron", "Shell Oil"), USER_ID)).thenReturn(List.of());
+            when(merchantRepository.findAllByNormalizedOriginalNamesAndUserId(List.of("chevron 00123 wa", "shell oil wa"), USER_ID))
+                    .thenReturn(List.of());
 
-            Merchant chevron = Merchant.builder().id(1L).userId(USER_ID).originalName("CHEVRON 00123 WA").cleanName("Chevron").build();
-            Merchant shell = Merchant.builder().id(2L).userId(USER_ID).originalName("SHELL OIL WA").cleanName("Shell Oil").build();
+            Merchant chevron = Merchant.builder().id(1L).userId(USER_ID).originalName("CHEVRON 00123 WA").cleanName("").build();
+            Merchant shell = Merchant.builder().id(2L).userId(USER_ID).originalName("SHELL OIL WA").cleanName("").build();
             when(merchantRepository.insertAllAndReturn(any())).thenReturn(List.of(chevron, shell));
 
             // act

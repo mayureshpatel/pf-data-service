@@ -82,6 +82,29 @@ public final class MerchantQueries {
             """;
 
     // language=SQL
+    // light-normalized (case-fold + whitespace-collapse) match against original_name -- must
+    // stay in exact lockstep with MerchantService.lightNormalize(), which performs the
+    // equivalent transformation in application code. note the escaping: inside a text block,
+    // '\s' is JEP 378's own literal-space escape, not a regex passthrough -- '\\s+' below is
+    // required to actually send the two-character regex '\s+' to postgres.
+    public static final String FIND_ALL_BY_NORMALIZED_ORIGINAL_NAME_AND_USER_ID = """
+            select *
+            from merchants
+            where user_id = :userId
+              and lower(trim(regexp_replace(original_name, '\\s+', ' ', 'g'))) = :normalizedOriginalName
+            order by id
+            """;
+
+    // language=SQL
+    // batch form of FIND_ALL_BY_NORMALIZED_ORIGINAL_NAME_AND_USER_ID -- same escaping note applies.
+    public static final String FIND_ALL_BY_NORMALIZED_ORIGINAL_NAMES_AND_USER_ID = """
+            select *
+            from merchants
+            where user_id = :userId
+              and lower(trim(regexp_replace(original_name, '\\s+', ' ', 'g'))) in (:normalizedOriginalNames)
+            """;
+
+    // language=SQL
     public static final String FIND_MERCHANT_TOTALS = """
             select m.id as merchant_id,
                    m.original_name as merchant_original_name,

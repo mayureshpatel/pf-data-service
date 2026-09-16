@@ -18,27 +18,48 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * Resolves the raw description text on an imported transaction to a deduplicated
- * {@code Merchant} record, creating one on first sight. {@code cleanName} is generated at
- * creation time via {@link MerchantNameNormalizer}, so merchants get a readable display name
- * immediately instead of the raw, uncleaned bank description.
+ * {@code Merchant} record, creating one on first sight. {@code cleanName} is left blank ({@code
+ * ""}) at creation (PF-840) -- it's a deliberate, user-managed display label, set later by a
+ * human or a reviewed suggestion (PF-842), never auto-computed here.
  * <p>
- * Resolution matches on the normalized clean name, not raw {@code original_name} equality (PF-219)
- * -- two raw descriptions that differ only by case, a trailing reference number, or a trailing
- * state code resolve to the same merchant instead of each creating their own.
+ * Resolution matches on light normalization of {@code original_name} (case-fold + whitespace-
+ * collapse only, see {@link #lightNormalize}) -- this supersedes PF-219's original approach of
+ * matching on normalized clean-name equality. Two raw descriptions that differ only by case or
+ * incidental whitespace resolve to the same merchant; nothing beyond that is ever assumed to be
+ * the same merchant automatically -- see {@link MerchantNameNormalizer}, which still fixes
+ * PF-832's chain-stripping bug but is now only a suggestion generator for the review flow
+ * (PF-842), never an ingest-time matcher.
  */
 @Service
 @RequiredArgsConstructor
 public class MerchantService {
 
     private final MerchantRepository merchantRepository;
-    private final MerchantNameNormalizer nameNormalizer;
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
+
+    /**
+     * Case-folds and collapses whitespace in a raw merchant name -- the matching key
+     * {@link #findOrCreateMerchant}/{@link #findOrCreateMerchants} use to decide whether a raw
+     * description resolves to an existing merchant. Deliberately does not strip numbers, cities,
+     * or reference codes (unlike {@link MerchantNameNormalizer}) -- matching only ever collapses
+     * pure formatting noise, never approximates two genuinely different descriptions into one
+     * merchant. Has a SQL mirror in {@code MerchantQueries.FIND_ALL_BY_NORMALIZED_ORIGINAL_NAME*}
+     * that must stay in exact lockstep, or matching silently diverges between newly-created rows
+     * (matched here, in Java) and existing rows (matched there, in SQL).
+     *
+     * @param raw the raw merchant name; may be null
+     * @return the case-folded, whitespace-collapsed form, or {@code ""} for a null input
+     */
+    private static String lightNormalize(String raw) {
+        return raw == null ? "" : raw.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
 
     /**
      * Returns a page of a user's merchants (PF-320), optionally narrowed by a case-insensitive
@@ -80,7 +101,8 @@ public class MerchantService {
 
     /**
      * Finds the merchant matching a transaction description, creating one if none exists yet.
-     * Matching is by normalized clean name (PF-219), not raw {@code original_name} equality.
+     * Matching is by light normalization of {@code original_name} (PF-840), not clean-name
+     * equality (PF-219's original approach) and not raw equality either.
      *
      * @param userId      the user id
      * @param description the raw transaction description to resolve
@@ -88,18 +110,18 @@ public class MerchantService {
      */
     @Transactional
     public Long findOrCreateMerchant(Long userId, String description) {
-        String cleanName = nameNormalizer.normalize(description);
-        List<Merchant> matches = merchantRepository.findAllByCleanNameAndUserId(cleanName, userId);
+        List<Merchant> matches = merchantRepository.findAllByNormalizedOriginalNameAndUserId(
+                lightNormalize(description), userId);
         if (!matches.isEmpty()) {
             return matches.get(0).getId();
         }
-        return createMerchant(userId, description, cleanName);
+        return createMerchant(userId, description);
     }
 
     /**
      * Batch version of {@link #findOrCreateMerchant}: resolves a list of transaction
      * descriptions to merchant ids in one pass, creating any that don't already exist. Several
-     * raw descriptions can normalize to the same clean name -- each still gets its own entry in
+     * raw descriptions can light-normalize to the same key -- each still gets its own entry in
      * the returned map, but they resolve to the same merchant id rather than one each.
      *
      * @param userId       the user id
@@ -114,48 +136,50 @@ public class MerchantService {
 
         List<String> distinctDescriptions = descriptions.stream().distinct().toList();
 
-        // Normalized once per distinct raw description -- reused below both to look up existing
-        // merchants and, for anything missing, as the clean_name of the merchant that gets created.
-        // LinkedHashMap (not the default Collectors.toMap HashMap) so distinctCleanNames below comes
-        // out in a deterministic, insertion-derived order rather than hash-bucket order -- this has
-        // no bearing on correctness, but it keeps the repository call's argument predictable.
-        Map<String, String> descriptionToCleanName = distinctDescriptions.stream()
-                .collect(Collectors.toMap(desc -> desc, nameNormalizer::normalize, (a, b) -> a, LinkedHashMap::new));
-        List<String> distinctCleanNames = descriptionToCleanName.values().stream().distinct().toList();
+        // normalized once per distinct raw description -- reused below both to look up existing
+        // merchants and, for anything missing, as the matching key of the merchant that gets
+        // created. linkedhashmap (not the default collectors.toMap hashmap) so
+        // distinctNormalizedKeys below comes out in a deterministic, insertion-derived order
+        // rather than hash-bucket order -- this has no bearing on correctness, but it keeps the
+        // repository call's argument predictable.
+        Map<String, String> descriptionToNormalizedKey = distinctDescriptions.stream()
+                .collect(Collectors.toMap(desc -> desc, MerchantService::lightNormalize, (a, b) -> a, LinkedHashMap::new));
+        List<String> distinctNormalizedKeys = descriptionToNormalizedKey.values().stream().distinct().toList();
 
-        List<Merchant> existingMerchants = merchantRepository.findAllByCleanNamesAndUserId(distinctCleanNames, userId);
-        Map<String, Long> cleanNameToMerchantId = new LinkedHashMap<>();
-        existingMerchants.forEach(m -> cleanNameToMerchantId.putIfAbsent(m.getCleanName(), m.getId()));
+        List<Merchant> existingMerchants = merchantRepository.findAllByNormalizedOriginalNamesAndUserId(distinctNormalizedKeys, userId);
+        Map<String, Long> normalizedKeyToMerchantId = new LinkedHashMap<>();
+        existingMerchants.forEach(m -> normalizedKeyToMerchantId.putIfAbsent(lightNormalize(m.getOriginalName()), m.getId()));
 
-        List<String> missingCleanNames = distinctCleanNames.stream()
-                .filter(cleanName -> !cleanNameToMerchantId.containsKey(cleanName))
+        List<String> missingNormalizedKeys = distinctNormalizedKeys.stream()
+                .filter(key -> !normalizedKeyToMerchantId.containsKey(key))
                 .toList();
 
-        if (!missingCleanNames.isEmpty()) {
-            // One new merchant per distinct missing clean name, not per raw description. Whichever
-            // distinct description reaches a given clean name first (stream order over
+        if (!missingNormalizedKeys.isEmpty()) {
+            // one new merchant per distinct missing key, not per raw description. whichever
+            // distinct description reaches a given key first (stream order over
             // distinctDescriptions) becomes that merchant's original_name -- just the first-seen
-            // raw text, not otherwise meaningful once normalized.
-            Map<String, String> cleanNameToFirstDescription = new LinkedHashMap<>();
+            // raw text, not otherwise meaningful once normalized. cleanName is always "" -- never
+            // auto-computed (PF-840).
+            Map<String, String> normalizedKeyToFirstDescription = new LinkedHashMap<>();
             distinctDescriptions.forEach(desc ->
-                    cleanNameToFirstDescription.putIfAbsent(descriptionToCleanName.get(desc), desc));
+                    normalizedKeyToFirstDescription.putIfAbsent(descriptionToNormalizedKey.get(desc), desc));
 
-            List<MerchantCreateRequest> newMerchants = missingCleanNames.stream()
-                    .map(cleanName -> MerchantCreateRequest.builder()
+            List<MerchantCreateRequest> newMerchants = missingNormalizedKeys.stream()
+                    .map(key -> MerchantCreateRequest.builder()
                             .userId(userId)
-                            .originalName(cleanNameToFirstDescription.get(cleanName))
-                            .cleanName(cleanName)
+                            .originalName(normalizedKeyToFirstDescription.get(key))
+                            .cleanName("")
                             .build())
                     .toList();
 
             merchantRepository.insertAllAndReturn(newMerchants)
-                    .forEach(m -> cleanNameToMerchantId.put(m.getCleanName(), m.getId()));
+                    .forEach(m -> normalizedKeyToMerchantId.put(lightNormalize(m.getOriginalName()), m.getId()));
         }
 
         return distinctDescriptions.stream()
                 .collect(Collectors.toMap(
                         desc -> desc,
-                        desc -> cleanNameToMerchantId.get(descriptionToCleanName.get(desc))));
+                        desc -> normalizedKeyToMerchantId.get(descriptionToNormalizedKey.get(desc))));
     }
 
     /**
@@ -195,20 +219,19 @@ public class MerchantService {
     }
 
     /**
-     * Creates a new merchant for a transaction description with a precomputed clean name (the
-     * caller has always already normalized it while checking for an existing match, so this
-     * doesn't normalize a second time).
+     * Creates a new merchant for a transaction description. {@code cleanName} is always left
+     * blank ({@code ""}) -- it's set later, deliberately, by a human or a reviewed suggestion
+     * (PF-842), never auto-computed at creation (PF-840).
      *
      * @param userId      the user id
      * @param description the raw transaction description to create a merchant for
-     * @param cleanName   {@code description}, already normalized by {@link MerchantNameNormalizer}
      * @return the new merchant's generated id
      */
-    private Long createMerchant(Long userId, String description, String cleanName) {
+    private Long createMerchant(Long userId, String description) {
         MerchantCreateRequest request = MerchantCreateRequest.builder()
                 .userId(userId)
                 .originalName(description)
-                .cleanName(cleanName)
+                .cleanName("")
                 .build();
         return merchantRepository.insert(request);
     }
