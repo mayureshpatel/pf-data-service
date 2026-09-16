@@ -57,9 +57,12 @@ class CapitalOneCsvParserTest {
         }
 
         @Test
-        @DisplayName("should return TRANSFER_IN when credit > 0 and debit is empty (net = debit - credit < 0)")
-        void parse_creditOnly_returnsTransferIn() {
-            // net = 0 - 1000 = -1000 → TRANSFER_IN
+        @DisplayName("should return INCOME when credit > 0 and debit is empty (net = debit - credit < 0), not TRANSFER_IN (PF-829)")
+        void parse_creditOnly_returnsIncome() {
+            // net = 0 - 1000 = -1000 -> INCOME, not TRANSFER_IN: this parser can't tell a payment
+            // from a linked account apart from a merchant refund/credit, and pre-emptively
+            // classifying either as a transfer both hides real refunds from every total and makes
+            // a real transfer's bank-side half un-matchable by TransferMatcher -- see PF-829
             String csv = "Transaction Date,Description,Debit,Credit\n" +
                     "2025-01-20,Paycheck,,1000.00\n";
 
@@ -70,7 +73,7 @@ class CapitalOneCsvParserTest {
 
             assertThat(result).hasSize(1);
             Transaction t = result.get(0);
-            assertThat(t.getType()).isEqualTo(TransactionType.TRANSFER_IN);
+            assertThat(t.getType()).isEqualTo(TransactionType.INCOME);
             assertThat(t.getAmount()).isEqualByComparingTo(new BigDecimal("1000.00"));
         }
 
