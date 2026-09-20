@@ -246,8 +246,6 @@ class TransactionServiceTest {
                     .categoryId(5L)
                     .build();
 
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Test Description"))).thenReturn(1001L);
-
             Category subCategory = Category.builder().id(5L).parentId(1L).userId(USER_ID).build();
             when(categoryRepository.findById(5L)).thenReturn(Optional.of(subCategory));
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
@@ -276,8 +274,6 @@ class TransactionServiceTest {
                     .description("Test")
                     .build();
 
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), any())).thenReturn(1001L);
-
             // act & assert & verify
             assertThrows(org.springframework.dao.OptimisticLockingFailureException.class, () -> transactionService.createTransaction(USER_ID, request));
             verify(transactionRepository, never()).insert(any(Transaction.class));
@@ -305,7 +301,6 @@ class TransactionServiceTest {
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(cat));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(10L);
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), any())).thenReturn(1001L);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID).type("INCOME").description("Guess Me").build();
@@ -342,7 +337,55 @@ class TransactionServiceTest {
 
             // assert & verify
             verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getMerchant().getId().equals(9999L)));
-            verify(merchantService, never()).findOrCreateMerchant(anyLong(), anyString());
+        }
+
+        @Test
+        @DisplayName("PF-845: should auto-capture a description->merchant link when an explicit "
+                + "merchantId and a non-blank description are both present")
+        void shouldRecordDescriptionLinkWhenMerchantAssigned() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("INCOME")
+                    .transactionDate(OffsetDateTime.now())
+                    .description("Costco Wholesale #123")
+                    .merchantId(9999L)
+                    .build();
+
+            // act
+            transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(merchantService).recordDescriptionLink(USER_ID, 9999L, "Costco Wholesale #123");
+        }
+
+        @Test
+        @DisplayName("PF-845: should never call recordDescriptionLink when no merchant is assigned")
+        void shouldNotRecordDescriptionLinkWhenNoMerchant() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("INCOME")
+                    .transactionDate(OffsetDateTime.now())
+                    .description("No merchant assigned")
+                    .build();
+
+            // act
+            transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getMerchant() == null));
+            verify(merchantService, never()).recordDescriptionLink(anyLong(), anyLong(), anyString());
         }
 
         @Test
@@ -356,7 +399,6 @@ class TransactionServiceTest {
 
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(null);
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), any())).thenReturn(1001L);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID).type("INCOME").description("No Category").build();
@@ -388,7 +430,6 @@ class TransactionServiceTest {
                     .description("Updated Description")
                     .build();
 
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Updated Description"))).thenReturn(1001L);
             when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
             // act
@@ -419,7 +460,6 @@ class TransactionServiceTest {
                     .description("Moved transaction")
                     .build();
 
-            when(merchantService.findOrCreateMerchant(eq(USER_ID), eq("Moved transaction"))).thenReturn(1001L);
             when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
             // act
@@ -483,7 +523,7 @@ class TransactionServiceTest {
 
             // assert & verify
             verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getMerchant().getId().equals(9999L)));
-            verify(merchantService, never()).findOrCreateMerchant(anyLong(), anyString());
+            verify(merchantService).recordDescriptionLink(USER_ID, 9999L, "Costco Wholesale #123");
         }
 
         @Test

@@ -19,32 +19,48 @@ public class MerchantCreateRequest {
 
     @NotBlank(message = "Merchant name cannot be blank.")
     @Size(max = 255, message = "Merchant name must be less than 255 characters.")
-    private final String originalName;
+    private final String name;
 
-    // intentionally not @NotBlank -- cleanName is left blank ("") at creation (PF-840), a
-    // deliberate, user-managed display label set later, never auto-computed here.
-    @Size(max = 255, message = "Merchant name must be less than 255 characters.")
-    private final String cleanName;
+    @Size(max = 120, message = "City must be less than 120 characters.")
+    private final String city;
+
+    @Size(max = 120, message = "State must be less than 120 characters.")
+    private final String state;
+
+    @Size(max = 20, message = "Postal code must be less than 20 characters.")
+    private final String postalCode;
+
+    @Size(max = 60, message = "Country must be less than 60 characters.")
+    private final String country;
 
     /**
      * Default constructor.
      */
     public MerchantCreateRequest() {
         this.userId = null;
-        this.originalName = null;
-        this.cleanName = null;
+        this.name = null;
+        this.city = null;
+        this.state = null;
+        this.postalCode = null;
+        this.country = null;
     }
 
     /**
      * All-args constructor.
      *
-     * @param userId       the user id
-     * @param originalName the original merchant name
-     * @param cleanName    the cleaned merchant name
+     * @param userId     the user id
+     * @param name       the merchant's deliberately-chosen name
+     * @param city       the merchant's city, optional
+     * @param state      the merchant's state/province, optional
+     * @param postalCode the merchant's postal code, optional
+     * @param country    the merchant's country, optional
      */
-    public MerchantCreateRequest(Long userId, String originalName, String cleanName) {
+    public MerchantCreateRequest(Long userId, String name, String city, String state, String postalCode, String country) {
         this.userId = userId;
-        this.originalName = originalName;
-        this.cleanName = cleanName;
+        this.name = name;
+        this.city = city;
+        this.state = state;
+        this.postalCode = postalCode;
+        this.country = country;
     }
 }

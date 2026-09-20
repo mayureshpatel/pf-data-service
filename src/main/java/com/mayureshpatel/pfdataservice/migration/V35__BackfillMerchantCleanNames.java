@@ -18,6 +18,14 @@ import java.sql.ResultSet;
  * drift from it over time. Spring Boot auto-registers any {@link org.flywaydb.core.api.migration.JavaMigration}
  * bean with Flyway, so this runs exactly once, tracked in {@code flyway_schema_history} like every
  * other migration.
+ * <p>
+ * <b>No dedicated integration test as of PF-845.</b> {@code V42__finalize_merchants_schema.sql}
+ * drops {@code clean_name}/{@code original_name} -- since Flyway always replays every migration
+ * to the latest version before any test runs, there is no longer a reachable point in the test
+ * schema where a fixture could insert rows with those columns to exercise this class's logic
+ * directly. The class itself stays in place (already executed in any real environment; migrations
+ * here are never deleted once shipped), only its own {@code V35BackfillMerchantCleanNamesTest} was
+ * removed.
  */
 @Component
 @RequiredArgsConstructor

@@ -62,8 +62,11 @@ public final class TransactionSpecification {
                 }
             }
 
+            // PF-845: merchants.clean_name no longer exists (dropped by V42) -- matches against
+            // merchants.name instead. filter.merchantCleanName()'s own name is untouched here,
+            // deliberately out of this ticket's scope (see TransactionFilter).
             if (filter.merchantCleanName() != null && !filter.merchantCleanName().isBlank()) {
-                conditions.add("LOWER(merchants.clean_name) LIKE :merchantCleanName ESCAPE '\\'");
+                conditions.add("LOWER(merchants.name) LIKE :merchantCleanName ESCAPE '\\'");
                 parameters.put("merchantCleanName", "%" + escapeLike(filter.merchantCleanName().toLowerCase(Locale.ROOT)) + "%");
             }
 

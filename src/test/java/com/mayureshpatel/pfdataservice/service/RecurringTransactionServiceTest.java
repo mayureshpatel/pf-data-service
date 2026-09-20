@@ -151,7 +151,7 @@ class RecurringTransactionServiceTest {
             // arrange
             Transaction t1 = Transaction.builder().description(null).merchant(null).build();
             Transaction t2 = Transaction.builder().description("  ").merchant(null).build();
-            Merchant m = Merchant.builder().cleanName(null).build();
+            Merchant m = Merchant.builder().name(null).build();
             Transaction t3 = Transaction.builder().description(null).merchant(m).build();
             Transaction t4 = Transaction.builder().description("D").merchant(null).build();
             
@@ -209,11 +209,11 @@ class RecurringTransactionServiceTest {
             List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
 
             // assert & verify -- one suggestion, reflecting the current price and the full history
-            long netflixSuggestions = result.stream().filter(s -> "Netflix".equals(s.merchant().cleanName())).count();
+            long netflixSuggestions = result.stream().filter(s -> "Netflix".equals(s.merchant().name())).count();
             assertEquals(1, netflixSuggestions, "expected exactly one Netflix suggestion, got: " + result);
 
             RecurringSuggestionDto suggestion = result.stream()
-                    .filter(s -> "Netflix".equals(s.merchant().cleanName())).findFirst().orElseThrow();
+                    .filter(s -> "Netflix".equals(s.merchant().name())).findFirst().orElseThrow();
             assertEquals(0, new BigDecimal("15.49").compareTo(suggestion.amount()), "expected the current/most-recent price");
             assertEquals(6, suggestion.occurrenceCount(), "expected the full history counted, not just the current tier");
             assertEquals(Frequency.MONTHLY, suggestion.frequency());

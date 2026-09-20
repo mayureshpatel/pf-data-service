@@ -1,63 +1,52 @@
 package com.mayureshpatel.pfdataservice.service;
 
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantMergeRequest;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantReviewClusterDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.mapper.MerchantDescriptionLinkDtoMapper;
 import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantDescriptionLinkRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
-import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Resolves the raw description text on an imported transaction to a deduplicated
- * {@code Merchant} record, creating one on first sight. {@code cleanName} is left blank ({@code
- * ""}) at creation (PF-840) -- it's a deliberate, user-managed display label, set later by a
- * human or a reviewed suggestion (PF-842), never auto-computed here.
- * <p>
- * Resolution matches on light normalization of {@code original_name} (case-fold + whitespace-
- * collapse only, see {@link #lightNormalize}) -- this supersedes PF-219's original approach of
- * matching on normalized clean-name equality. Two raw descriptions that differ only by case or
- * incidental whitespace resolve to the same merchant; nothing beyond that is ever assumed to be
- * the same merchant automatically -- see {@link MerchantNameNormalizer}, which still fixes
- * PF-832's chain-stripping bug and is used here (PF-842) as exactly that: a suggestion generator
- * for {@link #getMerchantsNeedingReview}, never an ingest-time matcher.
+ * CRUD for a user's deliberately-created merchants (PF-845), plus matching/auto-capture against
+ * {@code merchant_description_links}: a separate table remembering which raw transaction
+ * descriptions map to which merchant. Unlike the model this replaces (PF-EPIC-047, superseded),
+ * nothing here ever auto-creates a merchant from transaction text -- {@link #findMatchingMerchantId}/
+ * {@link #findMatchingMerchantIds} are lookup-only, and a description with no existing link simply
+ * resolves to nothing. A link itself is created two ways: automatically, as a side effect whenever
+ * a human assigns a merchant to a transaction ({@code TransactionService}), or explicitly via
+ * {@link #recordDescriptionLink}'s other caller, the description-links management endpoint.
  */
 @Service
 @RequiredArgsConstructor
 public class MerchantService {
 
     private final MerchantRepository merchantRepository;
-    private final MerchantNameNormalizer nameNormalizer;
-    private final TransactionRepository transactionRepository;
-    private final RecurringTransactionRepository recurringTransactionRepository;
+    private final MerchantDescriptionLinkRepository descriptionLinkRepository;
 
     /**
-     * Case-folds and collapses whitespace in a raw merchant name -- the matching key
-     * {@link #findOrCreateMerchant}/{@link #findOrCreateMerchants} use to decide whether a raw
-     * description resolves to an existing merchant. Deliberately does not strip numbers, cities,
-     * or reference codes (unlike {@link MerchantNameNormalizer}) -- matching only ever collapses
-     * pure formatting noise, never approximates two genuinely different descriptions into one
-     * merchant. Has a SQL mirror in {@code MerchantQueries.FIND_ALL_BY_NORMALIZED_ORIGINAL_NAME*}
-     * that must stay in exact lockstep, or matching silently diverges between newly-created rows
-     * (matched here, in Java) and existing rows (matched there, in SQL).
+     * Case-folds and collapses whitespace in a raw description -- the lookup key
+     * {@link #findMatchingMerchantId}/{@link #findMatchingMerchantIds}/{@link #recordDescriptionLink}
+     * use against {@code merchant_description_links.normalized_description}. Exact-match-after-
+     * light-normalization only: no fuzzy matching, no number/state stripping -- a user can look at
+     * a description and know whether it will match.
      *
-     * @param raw the raw merchant name; may be null
+     * @param raw the raw description; may be null
      * @return the case-folded, whitespace-collapsed form, or {@code ""} for a null input
      */
     private static String lightNormalize(String raw) {
@@ -66,12 +55,10 @@ public class MerchantService {
 
     /**
      * Returns a page of a user's merchants (PF-320), optionally narrowed by a case-insensitive
-     * search term matched against either name column -- replaces the previous unbounded
-     * {@code List<MerchantDto>} return, which grew linearly with a user's transaction history
-     * (PF-319).
+     * search term matched against name or city.
      *
      * @param userId   the user id
-     * @param search   an optional case-insensitive substring to match against clean/original name
+     * @param search   an optional case-insensitive substring to match against name/city
      * @param pageable the requested page, size, and sort
      * @return the requested page of the user's merchants
      */
@@ -81,84 +68,25 @@ public class MerchantService {
     }
 
     /**
-     * Returns a page of a user's distinct, non-blank clean names (PF-842), optionally narrowed by
-     * a case-insensitive search term -- backs the two-level clean-name picker and the grouped
-     * Merchants view's outer rows.
-     *
-     * @param userId   the user id
-     * @param search   an optional case-insensitive substring to match against clean name
-     * @param pageable the requested page and size
-     * @return the requested page of distinct clean names
-     */
-    public Page<String> getDistinctCleanNames(Long userId, String search, Pageable pageable) {
-        return merchantRepository.findDistinctCleanNames(userId, search, pageable);
-    }
-
-    /**
-     * Returns every merchant sharing an exact clean name (PF-842) -- a grouped view's expanded
-     * detail rows for one outer group.
-     *
-     * @param userId    the user id
-     * @param cleanName the exact clean name to look up
-     * @return the group's member merchants, oldest first
-     */
-    public List<MerchantDto> getMerchantsByCleanName(Long userId, String cleanName) {
-        return merchantRepository.findAllByCleanNameAndUserId(cleanName, userId).stream()
-                .map(MerchantDtoMapper::toDto)
-                .toList();
-    }
-
-    /**
-     * Clusters a user's merchants needing review (PF-842): any merchant whose current
-     * {@code cleanName} is blank, or doesn't match what re-running {@link #nameNormalizer} against
-     * its {@code originalName} would produce right now, grouped by that fresh suggestion. Computed
-     * in application code, not SQL -- the normalizer's branching logic can't be expressed as a SQL
-     * predicate without reimplementing it a second time, and per-user merchant counts are in the
-     * hundreds, not millions, so fetching and filtering in Java is the simpler, safer choice.
-     * <p>
-     * This single condition -- "differs from a fresh suggestion," not just "blank" -- is also this
-     * project's chosen resolution for PF-833: it catches brand-new, never-reviewed rows and
-     * pre-existing merchants mislabeled by the normalizer's now-fixed chain-stripping bug (PF-832)
-     * identically, with no separate historical-backfill script. Clusters are returned largest
-     * first, since a bigger cluster is the more impactful one to review first.
-     * <p>
-     * Known, accepted tradeoff: a merchant manually renamed to something the normalizer would
-     * never independently produce will keep reappearing here on every call. It's a dismissible
-     * suggestion, not an auto-apply, so the cost is a repeat nag, not data loss.
-     *
-     * @param userId the user id
-     * @return the user's review clusters, largest first
-     */
-    public List<MerchantReviewClusterDto> getMerchantsNeedingReview(Long userId) {
-        List<Merchant> flagged = merchantRepository.findAllByUserId(userId).stream()
-                .filter(m -> m.getCleanName().isBlank()
-                        || !m.getCleanName().equals(nameNormalizer.normalize(m.getOriginalName())))
-                .toList();
-
-        Map<String, List<Merchant>> clusters = flagged.stream()
-                .collect(Collectors.groupingBy(m -> nameNormalizer.normalize(m.getOriginalName()), LinkedHashMap::new, Collectors.toList()));
-
-        return clusters.entrySet().stream()
-                .map(e -> MerchantReviewClusterDto.builder()
-                        .suggestedCleanName(e.getKey())
-                        .merchants(e.getValue().stream().map(MerchantDtoMapper::toDto).toList())
-                        .build())
-                .sorted(Comparator.comparingInt((MerchantReviewClusterDto c) -> c.merchants().size()).reversed())
-                .toList();
-    }
-
-    /**
-     * Manually corrects a merchant's display name (PF-220) -- for fixing names automatic
-     * normalization gets wrong, or merchants that predate it. Ownership is checked here in
-     * addition to the Controller's {@code @PreAuthorize}, matching this project's established
-     * defense-in-depth pattern for owned-resource updates (see {@code AccountService.updateAccount}):
-     * the {@code @PreAuthorize} gate keeps a non-owner's request from ever reaching this method,
-     * this lookup keeps the method itself safe to call from anywhere else in the codebase without
-     * relying on that gate, and the repository's own {@code UPDATE ... WHERE id = ? AND user_id = ?}
-     * keeps the write itself scoped even if both of those were somehow bypassed.
+     * Creates a new merchant the user deliberately named. The only way a merchant gets created --
+     * nothing in this app auto-creates one from a transaction description.
      *
      * @param userId  the authenticated user id
-     * @param request the correction: the merchant id and its new clean name
+     * @param request the merchant to create
+     * @return the new merchant's generated id
+     */
+    @Transactional
+    public Long createMerchant(Long userId, MerchantCreateRequest request) {
+        return merchantRepository.insert(request.toBuilder().userId(userId).build());
+    }
+
+    /**
+     * Updates a merchant's name and location. Ownership is checked here in addition to the
+     * Controller's {@code @PreAuthorize}, matching this project's established defense-in-depth
+     * pattern for owned-resource updates (see {@code AccountService.updateAccount}).
+     *
+     * @param userId  the authenticated user id
+     * @param request the merchant's new name and location fields, including its id
      * @return the number of rows updated (0 or 1)
      * @throws ResourceNotFoundException if the merchant doesn't exist or isn't owned by {@code userId}
      */
@@ -170,159 +98,111 @@ public class MerchantService {
     }
 
     /**
-     * Updates multiple merchants' clean names by calling {@link #updateMerchant} once per request
-     * (PF-842) -- confirming a whole review cluster in one action. Exact structural mirror of
-     * {@code TransactionService.updateTransactionsBulk}. Ownership is already covered per-item
-     * since {@link #updateMerchant} checks it before writing, so no separate list-level ownership
-     * check is needed here.
+     * Deletes a merchant the user owns. No manual cleanup of dependents is needed here --
+     * {@code transactions.merchant_id} is {@code ON DELETE SET NULL} and
+     * {@code merchant_description_links.merchant_id} is {@code ON DELETE CASCADE}, so the database
+     * itself leaves dependent transactions with a blank merchant rather than erroring, and removes
+     * the now-meaningless links.
      *
-     * @param userId   the authenticated user id
-     * @param requests the corrections to apply, each including its merchant id
-     * @return the total number of merchants updated
+     * @param userId     the authenticated user id
+     * @param merchantId the merchant id to delete
+     * @throws ResourceNotFoundException if the merchant doesn't exist or isn't owned by {@code userId}
      */
     @Transactional
-    public Integer updateMerchantsBulk(Long userId, List<MerchantUpdateRequest> requests) {
-        if (requests == null || requests.isEmpty()) return 0;
-
-        return requests.stream()
-                .map(request -> updateMerchant(userId, request))
-                .toList().stream().mapToInt(Integer::intValue).sum();
+    public void deleteMerchant(Long userId, Long merchantId) {
+        merchantRepository.findByIdAndUserId(merchantId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+        merchantRepository.delete(merchantId, userId);
     }
 
     /**
-     * Finds the merchant matching a transaction description, creating one if none exists yet.
-     * Matching is by light normalization of {@code original_name} (PF-840), not clean-name
-     * equality (PF-219's original approach) and not raw equality either.
+     * Looks up the merchant an existing description link points to. Never creates one -- a
+     * description with no link simply has no match.
      *
      * @param userId      the user id
-     * @param description the raw transaction description to resolve
-     * @return the matched or newly created merchant's id
+     * @param description the raw transaction description to match
+     * @return the linked merchant's id, or empty if no link exists for this description
      */
-    @Transactional
-    public Long findOrCreateMerchant(Long userId, String description) {
-        List<Merchant> matches = merchantRepository.findAllByNormalizedOriginalNameAndUserId(
-                lightNormalize(description), userId);
-        if (!matches.isEmpty()) {
-            return matches.get(0).getId();
-        }
-        return createMerchant(userId, description);
+    public Optional<Long> findMatchingMerchantId(Long userId, String description) {
+        String normalized = lightNormalize(description);
+        return Optional.ofNullable(
+                descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(userId, List.of(normalized)).get(normalized));
     }
 
     /**
-     * Batch version of {@link #findOrCreateMerchant}: resolves a list of transaction
-     * descriptions to merchant ids in one pass, creating any that don't already exist. Several
-     * raw descriptions can light-normalize to the same key -- each still gets its own entry in
-     * the returned map, but they resolve to the same merchant id rather than one each.
+     * Batch form of {@link #findMatchingMerchantId}: resolves a list of transaction descriptions
+     * against existing description links in one pass. A description with no link is simply absent
+     * from the returned map -- callers must treat "absent" as "leave the merchant blank," not as
+     * an error.
      *
      * @param userId       the user id
-     * @param descriptions the raw transaction descriptions to resolve
-     * @return a map from each distinct raw description to its resolved merchant id
+     * @param descriptions the raw transaction descriptions to match
+     * @return each distinct raw description that has an existing link, mapped to its merchant id
      */
-    @Transactional
-    public Map<String, Long> findOrCreateMerchants(Long userId, List<String> descriptions) {
+    public Map<String, Long> findMatchingMerchantIds(Long userId, List<String> descriptions) {
         if (descriptions == null || descriptions.isEmpty()) {
             return Map.of();
         }
 
         List<String> distinctDescriptions = descriptions.stream().distinct().toList();
-
-        // normalized once per distinct raw description -- reused below both to look up existing
-        // merchants and, for anything missing, as the matching key of the merchant that gets
-        // created. linkedhashmap (not the default collectors.toMap hashmap) so
-        // distinctNormalizedKeys below comes out in a deterministic, insertion-derived order
-        // rather than hash-bucket order -- this has no bearing on correctness, but it keeps the
-        // repository call's argument predictable.
+        // linkedhashmap (not the default Collectors.toMap hashmap) so the normalized-key list
+        // below comes out in a deterministic, insertion-derived order rather than hash-bucket
+        // order -- no bearing on correctness, but keeps the repository call's argument predictable.
         Map<String, String> descriptionToNormalizedKey = distinctDescriptions.stream()
                 .collect(Collectors.toMap(desc -> desc, MerchantService::lightNormalize, (a, b) -> a, LinkedHashMap::new));
-        List<String> distinctNormalizedKeys = descriptionToNormalizedKey.values().stream().distinct().toList();
 
-        List<Merchant> existingMerchants = merchantRepository.findAllByNormalizedOriginalNamesAndUserId(distinctNormalizedKeys, userId);
-        Map<String, Long> normalizedKeyToMerchantId = new LinkedHashMap<>();
-        existingMerchants.forEach(m -> normalizedKeyToMerchantId.putIfAbsent(lightNormalize(m.getOriginalName()), m.getId()));
-
-        List<String> missingNormalizedKeys = distinctNormalizedKeys.stream()
-                .filter(key -> !normalizedKeyToMerchantId.containsKey(key))
-                .toList();
-
-        if (!missingNormalizedKeys.isEmpty()) {
-            // one new merchant per distinct missing key, not per raw description. whichever
-            // distinct description reaches a given key first (stream order over
-            // distinctDescriptions) becomes that merchant's original_name -- just the first-seen
-            // raw text, not otherwise meaningful once normalized. cleanName is always "" -- never
-            // auto-computed (PF-840).
-            Map<String, String> normalizedKeyToFirstDescription = new LinkedHashMap<>();
-            distinctDescriptions.forEach(desc ->
-                    normalizedKeyToFirstDescription.putIfAbsent(descriptionToNormalizedKey.get(desc), desc));
-
-            List<MerchantCreateRequest> newMerchants = missingNormalizedKeys.stream()
-                    .map(key -> MerchantCreateRequest.builder()
-                            .userId(userId)
-                            .originalName(normalizedKeyToFirstDescription.get(key))
-                            .cleanName("")
-                            .build())
-                    .toList();
-
-            merchantRepository.insertAllAndReturn(newMerchants)
-                    .forEach(m -> normalizedKeyToMerchantId.put(lightNormalize(m.getOriginalName()), m.getId()));
-        }
+        Map<String, Long> normalizedKeyToMerchantId = descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(
+                userId, descriptionToNormalizedKey.values().stream().distinct().toList());
 
         return distinctDescriptions.stream()
-                .collect(Collectors.toMap(
-                        desc -> desc,
-                        desc -> normalizedKeyToMerchantId.get(descriptionToNormalizedKey.get(desc))));
+                .filter(desc -> normalizedKeyToMerchantId.containsKey(descriptionToNormalizedKey.get(desc)))
+                .collect(Collectors.toMap(desc -> desc, desc -> normalizedKeyToMerchantId.get(descriptionToNormalizedKey.get(desc))));
     }
 
     /**
-     * Merges {@code mergedAwayMerchantId} into {@code survivingMerchantId} (PF-222): reassigns
-     * every transaction and recurring transaction pointing at the merged-away merchant to the
-     * survivor, then deletes the merged-away record. All in one transaction -- a partial failure
-     * must never leave a transaction or recurring rule pointing at a merchant that's been deleted.
-     * <p>
-     * Order matters: reassignment happens before deletion, not after. If the delete ran first and
-     * relied on {@code recurring_transactions_merchant_id_fkey}'s {@code ON DELETE SET NULL} to
-     * clean up, it would immediately violate that column's {@code NOT NULL} constraint and roll
-     * the whole operation back -- the exact edge case this story exists to actually exercise for
-     * the first time (nothing has ever deleted a merchant before this).
-     *
-     * @param userId                the authenticated user id
-     * @param request               which merchant survives and which gets merged away
-     * @throws ResourceNotFoundException if either merchant doesn't exist or isn't owned by {@code userId}
-     * @throws IllegalArgumentException  if both ids are the same merchant
-     */
-    @Transactional
-    public void mergeMerchants(Long userId, MerchantMergeRequest request) {
-        Long survivingId = request.getSurvivingMerchantId();
-        Long mergedAwayId = request.getMergedAwayMerchantId();
-
-        if (survivingId.equals(mergedAwayId)) {
-            throw new IllegalArgumentException("Cannot merge a merchant into itself.");
-        }
-
-        merchantRepository.findByIdAndUserId(survivingId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Surviving merchant not found."));
-        merchantRepository.findByIdAndUserId(mergedAwayId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Merged-away merchant not found."));
-
-        transactionRepository.reassignMerchant(mergedAwayId, survivingId, userId);
-        recurringTransactionRepository.reassignMerchant(mergedAwayId, survivingId, userId);
-        merchantRepository.delete(mergedAwayId, userId);
-    }
-
-    /**
-     * Creates a new merchant for a transaction description. {@code cleanName} is always left
-     * blank ({@code ""}) -- it's set later, deliberately, by a human or a reviewed suggestion
-     * (PF-842), never auto-computed at creation (PF-840).
+     * Creates or overwrites the link from a description to a merchant (last-write-wins) -- called
+     * both as a side effect whenever a human assigns a merchant to a transaction
+     * ({@code TransactionService}) and directly from the explicit add-link endpoint. Import never
+     * calls this: it consumes existing links, it never creates new ones.
      *
      * @param userId      the user id
-     * @param description the raw transaction description to create a merchant for
-     * @return the new merchant's generated id
+     * @param merchantId  the merchant to link the description to
+     * @param description the raw description to link
      */
-    private Long createMerchant(Long userId, String description) {
-        MerchantCreateRequest request = MerchantCreateRequest.builder()
-                .userId(userId)
-                .originalName(description)
-                .cleanName("")
-                .build();
-        return merchantRepository.insert(request);
+    @Transactional
+    public void recordDescriptionLink(Long userId, Long merchantId, String description) {
+        descriptionLinkRepository.upsert(userId, merchantId, description, lightNormalize(description));
+    }
+
+    /**
+     * Returns every description linked to a merchant the user owns -- backs the merchant's own
+     * description-links management screen.
+     *
+     * @param userId     the authenticated user id
+     * @param merchantId the merchant id
+     * @return the merchant's linked descriptions
+     * @throws ResourceNotFoundException if the merchant doesn't exist or isn't owned by {@code userId}
+     */
+    public List<MerchantDescriptionLinkDto> getDescriptionLinks(Long userId, Long merchantId) {
+        merchantRepository.findByIdAndUserId(merchantId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+        return descriptionLinkRepository.findByMerchantIdAndUserId(merchantId, userId).stream()
+                .map(MerchantDescriptionLinkDtoMapper::toDto)
+                .toList();
+    }
+
+    /**
+     * Deletes a single description link the user owns. Never touches transactions already
+     * assigned that merchant -- only affects future matching.
+     *
+     * @param userId the authenticated user id
+     * @param linkId the link id to delete
+     * @throws ResourceNotFoundException if the link doesn't exist or isn't owned by {@code userId}
+     */
+    @Transactional
+    public void deleteDescriptionLink(Long userId, Long linkId) {
+        descriptionLinkRepository.findByIdAndUserId(linkId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Description link not found."));
+        descriptionLinkRepository.deleteByIdAndUserId(linkId, userId);
     }
 }

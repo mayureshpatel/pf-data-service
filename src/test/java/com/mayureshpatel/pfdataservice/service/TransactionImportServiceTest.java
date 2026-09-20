@@ -188,7 +188,7 @@ class TransactionImportServiceTest {
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), anyString())).thenReturn(Optional.empty());
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
-            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
 
             // act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), "file.csv", "hash");
@@ -198,6 +198,30 @@ class TransactionImportServiceTest {
             verify(transactionRepository).insertAll(anyList());
             verify(accountRepository).updateBalance(eq(1L), eq(10L), any(BigDecimal.class), anyLong());
             verify(fileImportHistoryRepository).save(any(FileImportHistory.class));
+        }
+
+        @Test
+        @DisplayName("PF-845: should save with a null merchantId, not create one or throw, when the "
+                + "description has no existing link -- that's the normal, expected outcome for "
+                + "anything nobody has linked yet, not an edge case to fall back on")
+        void shouldSaveWithNullMerchantIdWhenNoLinkExists() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
+            TransactionDto dto = TransactionDto.builder().description("Unlinked Store").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
+
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
+            when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), anyString())).thenReturn(Optional.empty());
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of());
+
+            // act
+            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), "file.csv", "hash");
+
+            // assert & verify
+            assertEquals(1, result);
+            verify(transactionRepository).insertAll(argThat(list -> list.get(0).getMerchantId() == null));
+            verify(merchantService, never()).recordDescriptionLink(anyLong(), anyLong(), anyString());
         }
 
         @Test
@@ -212,7 +236,7 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
-            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
             // act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null);
@@ -245,7 +269,7 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
-            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("T", 1001L));
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("T", 1001L));
 
             importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash");
             verify(fileImportHistoryRepository, never()).save(any());
@@ -284,7 +308,7 @@ class TransactionImportServiceTest {
                     .transactionDate(dto.date()).amount(dto.amount()).description(dto.description()).type(TransactionType.INCOME)
                     .build();
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of(mockExisting));
-            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
             // act
             int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);
@@ -329,7 +353,7 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
-            when(merchantService.findOrCreateMerchants(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
 
             // act
             importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);

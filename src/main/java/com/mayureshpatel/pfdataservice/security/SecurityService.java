@@ -11,8 +11,6 @@ import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReposit
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.Objects;
-
 @Service("ss")
 @RequiredArgsConstructor
 public class SecurityService {
@@ -66,16 +64,10 @@ public class SecurityService {
                 .orElse(false);
     }
 
-    /**
-     * Unlike this class's other owner checks, a merchant's {@code userId} can legitimately be
-     * null (global merchants, e.g. "Whole Foods" -- shared reference data, not owned by any one
-     * user). {@link Objects#equals} rather than {@code .equals()} so that case correctly resolves
-     * to false instead of throwing.
-     */
     public boolean isMerchantOwner(Long merchantId, CustomUserDetails userDetails) {
         if (merchantId == null || userDetails == null) return false;
         return merchantRepository.findById(merchantId)
-                .map(merchant -> Objects.equals(merchant.getUserId(), userDetails.getId()))
+                .map(merchant -> merchant.getUserId().equals(userDetails.getId()))
                 .orElse(false);
     }
 

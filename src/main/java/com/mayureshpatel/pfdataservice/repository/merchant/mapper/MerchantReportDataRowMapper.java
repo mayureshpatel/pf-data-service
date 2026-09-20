@@ -12,9 +12,10 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Maps {@code MerchantQueries.FIND_MERCHANT_REPORT_DATA}'s grouped-by-display-name rows (PF-841)
- * directly to columns -- no longer delegates to {@link MerchantRowMapper}/{@code MerchantDtoMapper}
- * since a group's row no longer corresponds to one real {@code Merchant} entity.
+ * Maps {@code MerchantQueries.FIND_MERCHANT_REPORT_DATA}'s rows directly to columns rather than
+ * delegating to {@link MerchantRowMapper}/{@code MerchantDtoMapper} -- {@link MerchantReportDataDto}
+ * is a flat, purpose-built shape (see its own Javadoc for why its field names look like a
+ * PF-841-era grouped row even though PF-845's merchants can no longer fragment).
  */
 @Component
 public class MerchantReportDataRowMapper extends JdbcMapperUtils implements RowMapper<MerchantReportDataDto> {

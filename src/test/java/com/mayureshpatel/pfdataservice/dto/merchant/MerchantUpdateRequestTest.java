@@ -29,7 +29,7 @@ class MerchantUpdateRequestTest {
     void shouldPassWithValidData() {
         MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                 .id(1L)
-                .cleanName("Starbucks")
+                .name("Starbucks")
                 .build();
 
         Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
@@ -44,7 +44,7 @@ class MerchantUpdateRequestTest {
         void shouldFailWhenIdIsNull() {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(null)
-                    .cleanName("Starbucks")
+                    .name("Starbucks")
                     .build();
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
@@ -57,7 +57,7 @@ class MerchantUpdateRequestTest {
         void shouldFailWhenIdIsNotPositive() {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(0L)
-                    .cleanName("Starbucks")
+                    .name("Starbucks")
                     .build();
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
@@ -67,14 +67,14 @@ class MerchantUpdateRequestTest {
     }
 
     @Nested
-    @DisplayName("Field: cleanName")
-    class CleanNameValidationTests {
+    @DisplayName("Field: name")
+    class NameValidationTests {
         @Test
-        @DisplayName("should fail when cleanName is blank")
-        void shouldFailWhenCleanNameIsBlank() {
+        @DisplayName("should fail when name is blank")
+        void shouldFailWhenNameIsBlank() {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(1L)
-                    .cleanName("")
+                    .name("")
                     .build();
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
@@ -83,11 +83,11 @@ class MerchantUpdateRequestTest {
         }
 
         @Test
-        @DisplayName("should fail when cleanName exceeds 255 characters")
-        void shouldFailWhenCleanNameIsTooLong() {
+        @DisplayName("should fail when name exceeds 255 characters")
+        void shouldFailWhenNameIsTooLong() {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(1L)
-                    .cleanName("A".repeat(256))
+                    .name("A".repeat(256))
                     .build();
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
@@ -99,9 +99,13 @@ class MerchantUpdateRequestTest {
     @Test
     @DisplayName("should test all-args constructor and getters")
     void testAllArgsConstructorAndGetters() {
-        MerchantUpdateRequest request = new MerchantUpdateRequest(1L, "Clean");
+        MerchantUpdateRequest request = new MerchantUpdateRequest(1L, "Starbucks", "Atlanta", "GA", "30301", "USA");
         assertEquals(1L, request.getId());
-        assertEquals("Clean", request.getCleanName());
+        assertEquals("Starbucks", request.getName());
+        assertEquals("Atlanta", request.getCity());
+        assertEquals("GA", request.getState());
+        assertEquals("30301", request.getPostalCode());
+        assertEquals("USA", request.getCountry());
     }
 
     @Test
@@ -109,7 +113,11 @@ class MerchantUpdateRequestTest {
     void testDefaultConstructor() {
         MerchantUpdateRequest request = new MerchantUpdateRequest();
         assertNull(request.getId());
-        assertNull(request.getCleanName());
+        assertNull(request.getName());
+        assertNull(request.getCity());
+        assertNull(request.getState());
+        assertNull(request.getPostalCode());
+        assertNull(request.getCountry());
     }
 
     @Test
@@ -117,12 +125,12 @@ class MerchantUpdateRequestTest {
     void testToBuilder() {
         MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                 .id(1L)
-                .cleanName("Clean")
+                .name("Starbucks")
                 .build();
 
-        MerchantUpdateRequest updated = request.toBuilder().cleanName("Updated").build();
+        MerchantUpdateRequest updated = request.toBuilder().name("Starbucks (Downtown)").build();
         assertEquals(1L, updated.getId());
-        assertEquals("Updated", updated.getCleanName());
+        assertEquals("Starbucks (Downtown)", updated.getName());
     }
 
     @Test
@@ -130,7 +138,7 @@ class MerchantUpdateRequestTest {
     void testToString() {
         MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                 .id(1L)
-                .cleanName("Clean")
+                .name("Starbucks")
                 .build();
 
         assertNotNull(request.toString());

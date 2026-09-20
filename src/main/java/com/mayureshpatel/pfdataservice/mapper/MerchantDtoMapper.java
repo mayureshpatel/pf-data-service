@@ -12,9 +12,12 @@ public final class MerchantDtoMapper {
         if (merchant == null) return null;
         return new MerchantDto(
                 merchant.getId(),
-                merchant.getUserId() != null ? merchant.getUserId() : null,
-                merchant.getOriginalName(),
-                merchant.getCleanName()
+                merchant.getUserId(),
+                merchant.getName(),
+                merchant.getCity(),
+                merchant.getState(),
+                merchant.getPostalCode(),
+                merchant.getCountry()
         );
     }
 }

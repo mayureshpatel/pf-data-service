@@ -48,8 +48,11 @@ class MerchantDtoMapperTest {
             Merchant merchant = Merchant.builder()
                     .id(1L)
                     .userId(100L)
-                    .originalName("MCDONALDS 12345")
-                    .cleanName("McDonald's")
+                    .name("McDonald's")
+                    .city("Atlanta")
+                    .state("GA")
+                    .postalCode("30301")
+                    .country("USA")
                     .build();
 
             // act
@@ -59,19 +62,21 @@ class MerchantDtoMapperTest {
             assertNotNull(dto);
             assertEquals(merchant.getId(), dto.id());
             assertEquals(merchant.getUserId(), dto.userId());
-            assertEquals(merchant.getOriginalName(), dto.originalName());
-            assertEquals(merchant.getCleanName(), dto.cleanName());
+            assertEquals(merchant.getName(), dto.name());
+            assertEquals(merchant.getCity(), dto.city());
+            assertEquals(merchant.getState(), dto.state());
+            assertEquals(merchant.getPostalCode(), dto.postalCode());
+            assertEquals(merchant.getCountry(), dto.country());
         }
 
         @Test
-        @DisplayName("should handle null userId")
-        void toDto_shouldHandleNullUserId() {
+        @DisplayName("should handle unset location fields")
+        void toDto_shouldHandleUnsetLocationFields() {
             // arrange
             Merchant merchant = Merchant.builder()
                     .id(1L)
-                    .originalName("TEST")
-                    .cleanName("Test")
-                    .userId(null)
+                    .userId(100L)
+                    .name("Test")
                     .build();
 
             // act
@@ -79,7 +84,10 @@ class MerchantDtoMapperTest {
 
             // assert & verify
             assertNotNull(dto);
-            assertNull(dto.userId());
+            assertNull(dto.city());
+            assertNull(dto.state());
+            assertNull(dto.postalCode());
+            assertNull(dto.country());
         }
     }
 }

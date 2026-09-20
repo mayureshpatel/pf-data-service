@@ -10,16 +10,14 @@ import lombok.ToString;
 @Builder(toBuilder = true)
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class Merchant {
+public class MerchantDescriptionLink {
 
     @EqualsAndHashCode.Include
     private Long id;
     private Long userId;
-    private String name;
-    private String city;
-    private String state;
-    private String postalCode;
-    private String country;
+    private Long merchantId;
+    private String description;
+    private String normalizedDescription;
 
     @ToString.Exclude
     private TableAudit audit;

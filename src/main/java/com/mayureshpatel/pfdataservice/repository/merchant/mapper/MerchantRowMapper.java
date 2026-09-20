@@ -50,11 +50,20 @@ public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merc
         if (hasColumn(safePrefix + "user_id", availableColumns)) {
             builder.userId(getLongOrNull(rs, safePrefix + "user_id"));
         }
-        if (hasColumn(safePrefix + "original_name", availableColumns)) {
-            builder.originalName(rs.getString(safePrefix + "original_name"));
+        if (hasColumn(safePrefix + "name", availableColumns)) {
+            builder.name(rs.getString(safePrefix + "name"));
         }
-        if (hasColumn(safePrefix + "clean_name", availableColumns)) {
-            builder.cleanName(rs.getString(safePrefix + "clean_name"));
+        if (hasColumn(safePrefix + "city", availableColumns)) {
+            builder.city(rs.getString(safePrefix + "city"));
+        }
+        if (hasColumn(safePrefix + "state", availableColumns)) {
+            builder.state(rs.getString(safePrefix + "state"));
+        }
+        if (hasColumn(safePrefix + "postal_code", availableColumns)) {
+            builder.postalCode(rs.getString(safePrefix + "postal_code"));
+        }
+        if (hasColumn(safePrefix + "country", availableColumns)) {
+            builder.country(rs.getString(safePrefix + "country"));
         }
         builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
 

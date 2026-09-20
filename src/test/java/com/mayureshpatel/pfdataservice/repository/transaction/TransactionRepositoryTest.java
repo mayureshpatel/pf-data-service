@@ -197,7 +197,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // assert & verify -- every grocery-run transaction is linked to the Whole Foods merchant
             assertFalse(result.getContent().isEmpty());
             assertTrue(result.getContent().stream()
-                    .allMatch(t -> t.getMerchant() != null && t.getMerchant().getCleanName().equals("Whole Foods")));
+                    .allMatch(t -> t.getMerchant() != null && t.getMerchant().getName().equals("Whole Foods")));
         }
 
         @Test
@@ -503,9 +503,9 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // JSON response as a null array entry)
             assertTrue(result.stream().noneMatch(java.util.Objects::isNull));
             assertEquals(3, result.size());
-            assertTrue(result.stream().anyMatch(m -> m.getCleanName().equals("Whole Foods")));
-            assertTrue(result.stream().anyMatch(m -> m.getCleanName().equals("Shell")));
-            assertTrue(result.stream().anyMatch(m -> m.getCleanName().equals("My Favorite Cafe")));
+            assertTrue(result.stream().anyMatch(m -> m.getName().equals("Whole Foods")));
+            assertTrue(result.stream().anyMatch(m -> m.getName().equals("Shell")));
+            assertTrue(result.stream().anyMatch(m -> m.getName().equals("My Favorite Cafe")));
         }
     }
 

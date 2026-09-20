@@ -11,11 +11,14 @@ class MerchantDtoTest {
     @Test
     @DisplayName("should correctly map all fields")
     void shouldPopulateFields() {
-        MerchantDto dto = new MerchantDto(1L, 2L, "Original", "Clean");
+        MerchantDto dto = new MerchantDto(1L, 2L, "Starbucks", "Atlanta", "GA", "30301", "USA");
 
         assertEquals(1L, dto.id());
         assertEquals(2L, dto.userId());
-        assertEquals("Original", dto.originalName());
-        assertEquals("Clean", dto.cleanName());
+        assertEquals("Starbucks", dto.name());
+        assertEquals("Atlanta", dto.city());
+        assertEquals("GA", dto.state());
+        assertEquals("30301", dto.postalCode());
+        assertEquals("USA", dto.country());
     }
 }

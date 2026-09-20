@@ -196,12 +196,9 @@ public class TransactionService {
             throw new AccessDeniedException("You do not own this account");
         }
 
-        // an explicit merchantId (the frontend's merchant picker has already resolved one to a
-        // real Merchant) always wins; only auto-derive from the description when none was given,
-        // e.g. a brand-new transaction the user hasn't assigned a merchant to yet.
-        Long merchantId = request.getMerchantId() != null
-                ? request.getMerchantId()
-                : merchantService.findOrCreateMerchant(userId, request.getDescription());
+        // merchant assignment is exactly what the caller sent -- null means "left blank." Nothing
+        // auto-creates a merchant from the description anymore (PF-845).
+        Long merchantId = request.getMerchantId();
 
         Transaction transaction = Transaction.builder()
                 .account(account)
@@ -210,7 +207,7 @@ public class TransactionService {
                 .amount(request.getAmount())
                 .description(request.getDescription())
                 .type(TransactionType.valueOf(request.getType()))
-                .merchant(Merchant.builder().id(merchantId).build())
+                .merchant(merchantId != null ? Merchant.builder().id(merchantId).build() : null)
                 .build();
 
         transaction = resolveCategory(userId, transaction, request.getCategoryId());
@@ -221,7 +218,14 @@ public class TransactionService {
             throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
         }
 
-        return transactionRepository.insert(transaction);
+        int newTransactionId = transactionRepository.insert(transaction);
+
+        // auto-capture: a description assigned a merchant remembers that link for future imports.
+        if (merchantId != null && request.getDescription() != null && !request.getDescription().isBlank()) {
+            merchantService.recordDescriptionLink(userId, merchantId, request.getDescription());
+        }
+
+        return newTransactionId;
     }
 
     /**
@@ -274,12 +278,9 @@ public class TransactionService {
             }
         }
 
-        // an explicit merchantId (the frontend's merchant picker has already resolved one to a
-        // real Merchant -- including the bulk-edit dialog's own Reassign Merchant field, PF-395)
-        // always wins; only auto-derive from the description when none was given.
-        Long merchantId = request.getMerchantId() != null
-                ? request.getMerchantId()
-                : merchantService.findOrCreateMerchant(userId, request.getDescription());
+        // merchant assignment is exactly what the caller sent -- null means "left blank." Nothing
+        // auto-creates a merchant from the description anymore (PF-845).
+        Long merchantId = request.getMerchantId();
 
         Transaction updatedT = transaction.toBuilder()
                 .account(targetAccount)
@@ -288,7 +289,7 @@ public class TransactionService {
                 .postDate(request.getPostDate())
                 .description(request.getDescription())
                 .type(TransactionType.valueOf(request.getType()))
-                .merchant(Merchant.builder().id(merchantId).build())
+                .merchant(merchantId != null ? Merchant.builder().id(merchantId).build() : null)
                 .build();
 
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());
@@ -313,7 +314,14 @@ public class TransactionService {
             }
         }
 
-        return transactionRepository.update(userId, updatedT);
+        int updatedRowCount = transactionRepository.update(userId, updatedT);
+
+        // auto-capture: a description assigned a merchant remembers that link for future imports.
+        if (merchantId != null && request.getDescription() != null && !request.getDescription().isBlank()) {
+            merchantService.recordDescriptionLink(userId, merchantId, request.getDescription());
+        }
+
+        return updatedRowCount;
     }
 
     /**
