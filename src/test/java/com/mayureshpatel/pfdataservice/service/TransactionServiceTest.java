@@ -147,6 +147,55 @@ class TransactionServiceTest {
     }
 
     @Nested
+    @DisplayName("unmarkAsTransfer (PF-831)")
+    class UnmarkAsTransferTests {
+        @Test
+        @DisplayName("should convert TRANSFER_IN back to INCOME")
+        void shouldUnmarkTransferInCorrectly() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction t = Transaction.builder().id(1L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.TEN).account(account).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // act
+            transactionService.unmarkAsTransfer(USER_ID, List.of(1L));
+
+            // assert & verify
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.INCOME));
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+        }
+
+        @Test
+        @DisplayName("should convert TRANSFER_OUT back to EXPENSE")
+        void shouldUnmarkTransferOutCorrectly() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction t = Transaction.builder().id(1L).type(TransactionType.TRANSFER_OUT).amount(BigDecimal.ONE).account(account).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // act
+            transactionService.unmarkAsTransfer(USER_ID, List.of(1L));
+
+            // assert & verify
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException if user does not own transaction")
+        void shouldThrowOnAccessDenied() {
+            // arrange
+            Account otherAccount = createMockAccount(999L);
+            Transaction t = Transaction.builder().id(1L).account(otherAccount).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+
+            // act & assert & verify
+            assertThrows(AccessDeniedException.class, () -> transactionService.unmarkAsTransfer(USER_ID, List.of(1L)));
+        }
+    }
+
+    @Nested
     @DisplayName("backfillTransferTypes (PF-848)")
     class BackfillTransferTypesTests {
         @Test

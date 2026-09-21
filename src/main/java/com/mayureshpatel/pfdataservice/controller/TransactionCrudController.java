@@ -77,6 +77,24 @@ public class TransactionCrudController {
     }
 
     /**
+     * Reverts a batch of transactions previously confirmed as transfers back to plain
+     * income/expense (PF-831) -- for correcting a wrongly-confirmed match.
+     *
+     * @param userDetails    the authenticated user
+     * @param transactionIds the transaction ids to unmark, capped at 1000 per request
+     * @return 200 with no body once unmarked
+     */
+    @Operation(summary = "Unmark transactions as transfers", description = "Reverts a batch of previously-confirmed transfers back to plain income/expense")
+    @ApiResponse(responseCode = "200", description = "Transactions unmarked")
+    @PostMapping("/unmark-as-transfer")
+    public ResponseEntity<Void> unmarkAsTransfer(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Size(max = 1000, message = "Cannot process more than 1000 items at once") List<Long> transactionIds) {
+        transactionService.unmarkAsTransfer(userDetails.getId(), transactionIds);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * One-time backfill (PF-848): corrects every {@code TRANSFER_IN} transaction on the user's
      * credit-card accounts back to {@code INCOME} -- rows produced by the old parser heuristic
      * (fixed by PF-829) that pre-empted real transfer detection and hid genuine merchant refunds.
