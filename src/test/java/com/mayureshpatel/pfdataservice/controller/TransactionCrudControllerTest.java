@@ -67,6 +67,21 @@ class TransactionCrudControllerTest extends BaseControllerTest {
     }
 
     @Nested
+    @DisplayName("backfillTransferTypes (PF-848)")
+    class BackfillTransferTypesTests {
+        @Test
+        @DisplayName("POST /backfill/transfer-types should return the corrected count")
+        void backfillTransferTypes_shouldReturnCount() throws Exception {
+            when(transactionService.backfillTransferTypes(USER_ID)).thenReturn(3);
+            mockMvc.perform(post("/api/v1/transactions/backfill/transfer-types")
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("3"));
+            verify(transactionService).backfillTransferTypes(USER_ID);
+        }
+    }
+
+    @Nested
     @DisplayName("getTransactions")
     class GetTransactionsTests {
         @Test

@@ -114,6 +114,46 @@ public class TransactionService {
     }
 
     /**
+     * One-time backfill (PF-848): corrects every {@code TRANSFER_IN} transaction on a
+     * credit-card account back to {@code INCOME}. These rows were all produced by the old
+     * {@code configureCreditCardTransactionTypeAndAmount()} parser heuristic (fixed by PF-829),
+     * which classified every negative credit-card amount as a transfer regardless of whether a
+     * matching bank-side transaction existed -- pre-empting {@link TransferMatcher} from ever
+     * seeing (and completing) the real pairs, and hiding genuine merchant refunds from every
+     * total. Scoped to credit-card accounts specifically so a genuine {@link #markAsTransfer}
+     * confirmation elsewhere is never touched. Idempotent: once corrected, a row no longer
+     * matches the selection criteria, so calling this again finds nothing left to fix.
+     *
+     * @param userId the user id
+     * @return the number of transactions corrected
+     */
+    @Transactional
+    public int backfillTransferTypes(Long userId) {
+        List<Transaction> misTyped = transactionRepository.findTransferInOnCreditCardAccounts(userId);
+
+        List<Transaction> corrected = new ArrayList<>();
+        for (Transaction t : misTyped) {
+            Account account = accountRepository.findById(t.getAccount().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+            Account accountAfterUndo = account.undoTransaction(t);
+
+            Transaction correctedT = t.toBuilder().type(TransactionType.INCOME).build();
+            Account finalAccount = accountAfterUndo.applyTransaction(correctedT);
+
+            corrected.add(correctedT);
+            int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+            if (updatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
+        }
+
+        if (!corrected.isEmpty()) {
+            transactionRepository.updateAll(userId, corrected);
+        }
+        return corrected.size();
+    }
+
+    /**
      * Returns a paginated page of transactions filtered only by type.
      *
      * @param userId   the user id

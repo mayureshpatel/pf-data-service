@@ -147,6 +147,43 @@ class TransactionServiceTest {
     }
 
     @Nested
+    @DisplayName("backfillTransferTypes (PF-848)")
+    class BackfillTransferTypesTests {
+        @Test
+        @DisplayName("should correct every TRANSFER_IN row on a credit-card account to INCOME")
+        void shouldCorrectMisTypedRows() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction misTyped1 = Transaction.builder().id(1L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.TEN).account(account).build();
+            Transaction misTyped2 = Transaction.builder().id(2L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.ONE).account(account).build();
+            when(transactionRepository.findTransferInOnCreditCardAccounts(USER_ID)).thenReturn(List.of(misTyped1, misTyped2));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // act
+            int corrected = transactionService.backfillTransferTypes(USER_ID);
+
+            // assert & verify
+            assertEquals(2, corrected);
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list ->
+                    list.size() == 2 && list.stream().allMatch(t -> t.getType() == TransactionType.INCOME)));
+        }
+
+        @Test
+        @DisplayName("should not call updateAll when nothing needs correcting")
+        void shouldNoOpWhenNothingToFix() {
+            // arrange
+            when(transactionRepository.findTransferInOnCreditCardAccounts(USER_ID)).thenReturn(List.of());
+
+            // act
+            int corrected = transactionService.backfillTransferTypes(USER_ID);
+
+            // assert & verify
+            assertEquals(0, corrected);
+            verify(transactionRepository, never()).updateAll(any(), any());
+        }
+    }
+
+    @Nested
     @DisplayName("getTransactions")
     class GetTransactionsTests {
         @Test

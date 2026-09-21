@@ -577,6 +577,37 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("should find TRANSFER_IN rows on credit-card accounts only (PF-848)")
+        void shouldFindTransferInOnCreditCardAccountsOnly() {
+            // arrange -- account 3 is the baseline's CREDIT_CARD account, account 1 is CHECKING
+            TransactionCreateRequest onCreditCard = TransactionCreateRequest.builder()
+                    .accountId(3L)
+                    .amount(new BigDecimal("42.00"))
+                    .transactionDate(OffsetDateTime.parse("2026-03-05T00:00:00Z"))
+                    .description("Mis-typed refund")
+                    .type(TransactionType.TRANSFER_IN.name())
+                    .build();
+            Long creditCardTxnId = (long) transactionRepository.insert(onCreditCard);
+
+            TransactionCreateRequest onChecking = TransactionCreateRequest.builder()
+                    .accountId(1L)
+                    .amount(new BigDecimal("42.00"))
+                    .transactionDate(OffsetDateTime.parse("2026-03-05T00:00:00Z"))
+                    .description("Should not be found")
+                    .type(TransactionType.TRANSFER_IN.name())
+                    .build();
+            transactionRepository.insert(onChecking);
+
+            // act
+            List<Transaction> result = transactionRepository.findTransferInOnCreditCardAccounts(USER_ID);
+
+            // assert & verify
+            List<Long> ids = result.stream().map(Transaction::getId).toList();
+            assertTrue(ids.contains(creditCardTxnId));
+            assertTrue(result.stream().allMatch(t -> t.getAccount().getId().equals(3L)));
+        }
+
+        @Test
         @DisplayName("should find monthly sums for cash flow trend")
         void shouldFindMonthlySums() {
             // act

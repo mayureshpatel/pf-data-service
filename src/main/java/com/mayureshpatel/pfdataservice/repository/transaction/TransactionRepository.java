@@ -342,6 +342,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    public List<Transaction> findTransferInOnCreditCardAccounts(Long userId) {
+        return jdbcClient.sql(TransactionQueries.FIND_TRANSFER_IN_ON_CREDIT_CARD_ACCOUNTS)
+                .param("userId", userId)
+                .query(rowMapper)
+                .list();
+    }
+
     public List<Transaction> findAllById(Long userId, List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS_WITH_DETAILS)
