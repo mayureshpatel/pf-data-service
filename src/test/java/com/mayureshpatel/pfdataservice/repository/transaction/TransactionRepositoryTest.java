@@ -528,6 +528,38 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("bug regression: an end boundary finer than microsecond precision must not roll "
+                + "over into the next day (PF-828) -- Postgres's timestamptz only has microsecond "
+                + "resolution and rounds rather than truncates, so a 9-digit-nanosecond boundary meant "
+                + "as \"end of Dec 31\" silently becomes midnight Jan 1, pulling a next-year transaction "
+                + "into the prior year's sum")
+        void shouldNotRoundYearEndBoundaryIntoNextDay() {
+            // arrange -- a transaction dated exactly midnight UTC on Jan 1 of the following year,
+            // the same shape every transaction in this app's real data takes (midnight-UTC-anchored)
+            TransactionCreateRequest nextYearMidnight = TransactionCreateRequest.builder()
+                    .accountId(1L)
+                    .amount(new BigDecimal("26.99"))
+                    .transactionDate(OffsetDateTime.parse("2025-01-01T00:00:00Z"))
+                    .description("HLU*HULUPLUS")
+                    .type(TransactionType.EXPENSE.name())
+                    .build();
+            transactionRepository.insert(nextYearMidnight);
+
+            OffsetDateTime start = OffsetDateTime.parse("2024-01-01T00:00:00Z");
+            // the maximum value representable at microsecond precision -- an exact multiple of
+            // 1000ns, so it round-trips through Postgres unchanged. 999_999_999 (9 digits) would
+            // round up to 2025-01-01T00:00:00Z instead, confirmed live via psql.
+            OffsetDateTime end = OffsetDateTime.parse("2024-12-31T23:59:59.999999000Z");
+
+            // act
+            BigDecimal sum = transactionRepository.getSumByDateRange(USER_ID, start, end, TransactionType.EXPENSE);
+
+            // assert & verify -- baseline has no other 2024 EXPENSE transactions for this user; any
+            // non-zero result means the Jan-1-2025 transaction leaked into the 2024 range
+            assertEquals(0, BigDecimal.ZERO.compareTo(sum));
+        }
+
+        @Test
         @DisplayName("should find category totals")
         void shouldFindCategoryTotals() {
             // arrange

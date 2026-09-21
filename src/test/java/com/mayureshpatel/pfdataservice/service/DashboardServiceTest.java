@@ -329,6 +329,34 @@ class DashboardServiceTest {
         }
 
         @Test
+        @DisplayName("bug regression: a past year's end boundary must be an exact multiple of "
+                + "1000 nanoseconds (PF-828) -- ZonedDateTime.of(year, 12, 31, 23, 59, 59, "
+                + "999_999_999, UTC) is finer than Postgres's microsecond-resolution timestamptz, "
+                + "which rounds the 9-digit nanosecond value up to midnight of the following day: "
+                + "confirmed live, '2024-12-31 23:59:59.999999999+00'::timestamptz literally "
+                + "evaluates to '2025-01-01 00:00:00+00', silently pulling a Jan-1-next-year "
+                + "transaction into the prior year's total")
+        void shouldNotUseSubMicrosecondPrecisionForPastYearEndBoundary() {
+            // arrange
+            int year = 2024;
+            ArgumentCaptor<OffsetDateTime> endCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(BigDecimal.ZERO);
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.EXPENSE))).thenReturn(BigDecimal.ZERO);
+
+            // act
+            dashboardService.getYtdSummary(USER_ID, year);
+
+            // assert & verify -- Postgres's timestamptz only has microsecond resolution; any nanosecond
+            // remainder finer than that gets rounded rather than truncated, so the bound must land
+            // exactly on a microsecond to round-trip unchanged
+            verify(transactionRepository).getSumByDateRange(eq(USER_ID), any(), endCaptor.capture(), eq(TransactionType.INCOME));
+            OffsetDateTime end = endCaptor.getValue();
+            assertEquals(year, end.getYear());
+            assertEquals(0, end.getNano() % 1000,
+                    "end boundary's nanosecond component must be a whole number of microseconds");
+        }
+
+        @Test
         @DisplayName("should return zeros for future year")
         void shouldHandleFutureYear() {
             // act

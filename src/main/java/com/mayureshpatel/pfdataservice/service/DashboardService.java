@@ -258,9 +258,14 @@ public class DashboardService {
         // endYtd.getYear() could never actually differ from `year`, making both of its own
         // "future"/"past" branches dead code) and always used Dec 31, silently including months
         // that haven't happened yet whenever `year` was the current year. See PF-826.
+        // PF-828: 999_999_999 nanoseconds is finer than Postgres's microsecond-resolution
+        // timestamptz, which rounds (not truncates) -- the 9-digit value silently rolls over to
+        // midnight of the following day, pulling a Jan-1-next-year transaction into this year's
+        // sum. 999_999_000ns is the largest value that's an exact multiple of 1000ns (1
+        // microsecond), so it round-trips through Postgres unchanged.
         OffsetDateTime endYtd = (year == currentYear)
                 ? ZonedDateTime.of(today.getYear(), today.getMonthValue(), today.getDayOfMonth(), 23, 59, 59, 0, UTC_ZONE).toOffsetDateTime()
-                : ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999999, UTC_ZONE).toOffsetDateTime();
+                : ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999999000, UTC_ZONE).toOffsetDateTime();
 
         BigDecimal income = getSum(userId, startYtd, endYtd, TransactionType.INCOME);
         BigDecimal expense = getSum(userId, startYtd, endYtd, TransactionType.EXPENSE);
