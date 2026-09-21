@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
-import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import lombok.extern.slf4j.Slf4j;
@@ -124,9 +123,6 @@ public class DiscoverCsvParser implements TransactionParser {
         Transaction transaction = Transaction.builder()
                 .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_FORMATTER))
                 .description(csvRecord.get(HEADER_DESC))
-                .merchant(Merchant.builder()
-                        .originalName(csvRecord.get(HEADER_DESC))
-                        .build())
                 .build();
 
         BigDecimal rawAmount = csvRecord.isMapped(HEADER_AMOUNT)

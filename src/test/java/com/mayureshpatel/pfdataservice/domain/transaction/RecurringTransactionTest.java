@@ -17,7 +17,7 @@ class RecurringTransactionTest {
     @DisplayName("Builder should correctly populate all fields including inherited ones")
     void builder_shouldPopulateFields() {
         TableAudit audit = TableAudit.insertAudit(null);
-        Merchant merchant = Merchant.builder().id(20L).cleanName("Netflix").build();
+        Merchant merchant = Merchant.builder().id(20L).name("Netflix").build();
         LocalDate nextDate = LocalDate.now().plusDays(30);
         
         RecurringTransaction rt = RecurringTransaction.builder()

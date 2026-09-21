@@ -70,9 +70,7 @@ public class RecurringTransactionService {
     public List<RecurringSuggestionDto> findSuggestions(Long userId) {
         // 1. get existing recurring items to exclude duplicates
         Set<String> existingMerchants = recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(r -> r.getMerchant() != null && r.getMerchant().getCleanName() != null
-                        ? r.getMerchant().getCleanName().toLowerCase(Locale.ROOT)
-                        : "")
+                .map(r -> r.getMerchant() != null ? r.getMerchant().getName().toLowerCase(Locale.ROOT) : "")
                 .collect(Collectors.toSet());
 
         // 2. fetch expenses from last 12 months
@@ -89,9 +87,7 @@ public class RecurringTransactionService {
         Map<String, List<Transaction>> groups = new HashMap<>();
 
         for (Transaction t : transactions) {
-            String name = t.getMerchant() != null && t.getMerchant().getCleanName() != null
-                    ? t.getMerchant().getCleanName()
-                    : t.getDescription();
+            String name = t.getMerchant() != null ? t.getMerchant().getName() : t.getDescription();
             if (name == null) continue;
 
             name = name.trim();
@@ -123,7 +119,7 @@ public class RecurringTransactionService {
                 String merchantName = entry.getKey();
 
                 suggestions.add(RecurringSuggestionDto.builder()
-                        .merchant(new MerchantDto(null, null, null, merchantName))
+                        .merchant(MerchantDto.builder().name(merchantName).build())
                         .amount(lastTxn.getAmount())
                         .frequency(frequency)
                         .lastDate(lastTxn.getTransactionDate().toLocalDate())

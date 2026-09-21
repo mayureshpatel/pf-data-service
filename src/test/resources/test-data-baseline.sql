@@ -48,12 +48,13 @@ VALUES (1, 1, 'Main Checking', 'CHECKING', 5000.00, 'USD'),
        (3, 1, 'Credit Card', 'CREDIT_CARD', -500.00, 'USD'),
        (4, 2, 'User2 Account', 'CHECKING', 100.00, 'USD');
 
--- 6. MERCHANTS
-INSERT INTO merchants (id, user_id, original_name, clean_name)
-VALUES (1, NULL, 'WHOLEFDS 1234', 'Whole Foods'),
-       (2, NULL, 'AMZN MKTP', 'Amazon'),
-       (3, NULL, 'SHELL OIL', 'Shell'),
-       (4, 1, 'LOCAL CAFE', 'My Favorite Cafe');
+-- 6. MERCHANTS (PF-845: user_id is NOT NULL now -- global/unowned merchants no longer exist;
+-- the 3 rows that used to be global are now owned by user 1)
+INSERT INTO merchants (id, user_id, name)
+VALUES (1, 1, 'Whole Foods'),
+       (2, 1, 'Amazon'),
+       (3, 1, 'Shell'),
+       (4, 1, 'My Favorite Cafe');
 
 -- 7. TRANSACTIONS
 -- User 1 Rent (Expense) - Every month from 2025-09 to 2026-02

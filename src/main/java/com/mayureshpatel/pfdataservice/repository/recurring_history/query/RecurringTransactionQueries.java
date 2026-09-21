@@ -19,8 +19,7 @@ public final class RecurringTransactionQueries {
                 currencies.code as currency_code,
                 currencies.name as currency_name,
                 currencies.symbol as currency_symbol,
-                merchants.original_name as merchant_original_name,
-                merchants.clean_name as merchant_clean_name
+                merchants.name as merchant_name
             from recurring_transactions
                 left join accounts on recurring_transactions.account_id = accounts.id
                 left join currencies on accounts.currency_code = currencies.code
@@ -44,8 +43,7 @@ public final class RecurringTransactionQueries {
                 currencies.code as currency_code,
                 currencies.name as currency_name,
                 currencies.symbol as currency_symbol,
-                merchants.original_name as merchant_original_name,
-                merchants.clean_name as merchant_clean_name
+                merchants.name as merchant_name
             from recurring_transactions
                 left join accounts on recurring_transactions.account_id = accounts.id
                 left join currencies on accounts.currency_code = currencies.code
@@ -71,8 +69,7 @@ public final class RecurringTransactionQueries {
                 currencies.code as currency_code,
                 currencies.name as currency_name,
                 currencies.symbol as currency_symbol,
-                merchants.original_name as merchant_original_name,
-                merchants.clean_name as merchant_clean_name
+                merchants.name as merchant_name
             from recurring_transactions
                 left join accounts on recurring_transactions.account_id = accounts.id
                 left join currencies on accounts.currency_code = currencies.code
@@ -129,15 +126,6 @@ public final class RecurringTransactionQueries {
             where id = :id
                 and user_id = :userId
                 and deleted_at is null
-            """;
-
-    // language=SQL
-    public static final String REASSIGN_MERCHANT = """
-            update recurring_transactions
-            set merchant_id = :toMerchantId,
-                updated_at = CURRENT_TIMESTAMP
-            where merchant_id = :fromMerchantId
-                and user_id = :userId
             """;
 
     // language=SQL

@@ -104,22 +104,6 @@ class DiscoverCsvParserTest {
         }
 
         @Test
-        @DisplayName("should set merchant originalName from description")
-        void parse_validRecord_setsMerchantOriginalName() {
-            String csv = "Trans. Date,Description,Amount\n" +
-                    "1/15/2025,KROGER #431 ROSWELL GA,48.32\n";
-
-            List<Transaction> result;
-            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
-                result = stream.toList();
-            }
-
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getMerchant()).isNotNull();
-            assertThat(result.get(0).getMerchant().getOriginalName()).isEqualTo("KROGER #431 ROSWELL GA");
-        }
-
-        @Test
         @DisplayName("should parse multiple records successfully")
         void parse_multipleRecords_returnsAllTransactions() {
             String csv = "Trans. Date,Description,Amount\n" +

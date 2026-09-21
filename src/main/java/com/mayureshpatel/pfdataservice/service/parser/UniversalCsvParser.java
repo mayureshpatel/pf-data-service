@@ -236,19 +236,12 @@ public class UniversalCsvParser implements TransactionParser {
             return null;
         }
 
-        String truncatedDescription = description != null && description.length() > 255
-                ? description.substring(0, 255)
-                : description;
-
         return Transaction.builder()
                 .transactionDate(date)
                 .postDate(postDate)
                 .description(description)
                 .amount(amount)
                 .type(type)
-                .merchant(com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
-                        .originalName(truncatedDescription)
-                        .build())
                 .build();
     }
 

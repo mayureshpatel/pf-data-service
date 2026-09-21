@@ -131,8 +131,7 @@ class SecurityServiceTest {
         return Merchant.builder()
                 .id(MERCHANT_ID)
                 .userId(userId)
-                .originalName("STARBUCKS #1")
-                .cleanName("Starbucks")
+                .name("Starbucks")
                 .build();
     }
 
@@ -445,18 +444,6 @@ class SecurityServiceTest {
             CustomUserDetails userDetails = buildUserDetails(USER_ID);
             Merchant merchant = buildMerchant(ANOTHER_USER_ID);
             when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
-
-            boolean result = securityService.isMerchantOwner(MERCHANT_ID, userDetails);
-
-            assertThat(result).isFalse();
-        }
-
-        @Test
-        @DisplayName("PF-220: should return false, not throw, for a global merchant (userId is null)")
-        void isMerchantOwner_globalMerchant_returnsFalse() {
-            CustomUserDetails userDetails = buildUserDetails(USER_ID);
-            Merchant globalMerchant = buildMerchant(null);
-            when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(globalMerchant));
 
             boolean result = securityService.isMerchantOwner(MERCHANT_ID, userDetails);
 

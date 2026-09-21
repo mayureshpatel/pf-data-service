@@ -151,9 +151,6 @@ public class SynovusCsvParser implements TransactionParser {
         Transaction transaction = Transaction.builder()
                 .transactionDate(parseDate(csvRecord.get(HEADER_DATE), DATE_TIME_FORMATTER))
                 .description(csvRecord.get(HEADER_DESCRIPTION))
-                .merchant(com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
-                        .originalName(csvRecord.get(HEADER_DESCRIPTION))
-                        .build())
                 .build();
 
         BigDecimal netAmount = calculateNetAmount(csvRecord);

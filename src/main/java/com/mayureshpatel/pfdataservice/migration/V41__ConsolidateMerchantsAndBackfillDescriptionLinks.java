@@ -47,6 +47,14 @@ import java.util.Map;
  * Runs once per environment, tracked in {@code flyway_schema_history} like every other migration.
  * Must handle an empty {@code merchants} table cleanly -- Testcontainers replays every migration
  * from scratch on every integration test run.
+ * <p>
+ * <b>No dedicated integration test as of PF-845, one ticket after this class shipped.</b>
+ * {@code V42__finalize_merchants_schema.sql} drops {@code clean_name}/{@code original_name} --
+ * since Flyway always replays every migration to the latest version before any test runs, there is
+ * no longer a reachable point in the test schema where a fixture could insert rows with those
+ * columns to exercise this class's logic directly (the same fate {@code V35}'s own test met from
+ * this same migration). The class itself stays in place -- migrations here are never deleted once
+ * shipped -- only its dedicated test was removed.
  */
 @Component
 @RequiredArgsConstructor

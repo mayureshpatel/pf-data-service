@@ -264,21 +264,6 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         throw new UnsupportedOperationException("Use deleteById with userId");
     }
 
-    /**
-     * Reassigns every transaction (soft-deleted or not -- a deleted transaction still holds a
-     * real reference that needs to move too) pointing at {@code fromMerchantId} to
-     * {@code toMerchantId} instead. Used by merchant merge (PF-222).
-     *
-     * @return the number of rows reassigned
-     */
-    public int reassignMerchant(Long fromMerchantId, Long toMerchantId, Long userId) {
-        return jdbcClient.sql(TransactionQueries.REASSIGN_MERCHANT)
-                .param("fromMerchantId", fromMerchantId)
-                .param("toMerchantId", toMerchantId)
-                .param("userId", userId)
-                .update();
-    }
-
     @Override
     public long count() {
         return jdbcClient.sql(TransactionQueries.COUNT)
@@ -405,7 +390,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
             String col = switch (order.getProperty()) {
                 case "date" -> "transactions.date";
                 case "description" -> "transactions.description";
-                case "merchant.cleanName" -> "merchants.clean_name";
+                case "merchant.name" -> "merchants.name";
                 case "category.name" -> "categories.name";
                 case "amount" -> "transactions.amount";
                 case "type" -> "transactions.type";

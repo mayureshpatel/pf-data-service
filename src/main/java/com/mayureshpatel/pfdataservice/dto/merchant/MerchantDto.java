@@ -6,7 +6,10 @@ import lombok.Builder;
 public record MerchantDto(
         Long id,
         Long userId,
-        String originalName,
-        String cleanName
+        String name,
+        String city,
+        String state,
+        String postalCode,
+        String country
 ) {
 }

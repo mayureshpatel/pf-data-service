@@ -47,8 +47,11 @@ public final class TransactionQueries {
                     parent_categories.color as category_parent_color,
                     parent_categories.icon as category_parent_icon,
                     parent_categories.type as category_parent_type,
-                    merchants.original_name as merchant_original_name,
-                    merchants.clean_name as merchant_clean_name,
+                    merchants.name as merchant_name,
+                    merchants.city as merchant_city,
+                    merchants.state as merchant_state,
+                    merchants.postal_code as merchant_postal_code,
+                    merchants.country as merchant_country,
                     merchants.user_id as merchant_user_id
                     """;
 
@@ -157,14 +160,6 @@ public final class TransactionQueries {
             where id = :id
               and account_id in (select id from accounts where user_id = :userId)
               and deleted_at is null
-            """;
-
-    // language=SQL
-    public static final String REASSIGN_MERCHANT = """
-            update transactions
-            set merchant_id = :toMerchantId
-            where merchant_id = :fromMerchantId
-              and account_id in (select id from accounts where user_id = :userId)
             """;
 
     // language=SQL
@@ -429,6 +424,6 @@ public final class TransactionQueries {
             where accounts.user_id = :userId
                 and transactions.deleted_at is null
                 and merchants.id is not null
-            order by merchants.clean_name
+            order by merchants.name
             """;
 }

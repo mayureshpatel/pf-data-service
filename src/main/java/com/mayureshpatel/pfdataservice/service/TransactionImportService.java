@@ -194,7 +194,7 @@ public class TransactionImportService {
         OffsetDateTime latest = approvedDtos.stream().map(TransactionDto::date).max(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
 
         List<String> incomingDescriptions = approvedDtos.stream().map(TransactionDto::description).toList();
-        Map<String, Long> merchantMap = merchantService.findOrCreateMerchants(userId, incomingDescriptions);
+        Map<String, Long> merchantMap = merchantService.findMatchingMerchantIds(userId, incomingDescriptions);
 
         List<Transaction> existingTransactions = transactionRepository.findExistingForDuplicateCheck(accountId, earliest, latest);
 
@@ -213,12 +213,10 @@ public class TransactionImportService {
             boolean existsInBatch = batchSignatures.contains(signature);
 
             if (!existsInDb && !existsInBatch) {
+                // a description with no existing link (PF-845) just leaves merchantId null --
+                // that's the expected outcome for anything nobody has linked yet, not an edge
+                // case to fall back on. Import never creates a merchant or a link.
                 Long merchantId = merchantMap.get(dto.description());
-                if (merchantId == null) {
-                    // fallback for edge cases
-                    merchantId = merchantService.findOrCreateMerchant(userId, dto.description());
-                    merchantMap.put(dto.description(), merchantId);
-                }
                 TransactionCreateRequest t = mapToEntity(dto)
                         .toBuilder()
                         .accountId(account.getId())
