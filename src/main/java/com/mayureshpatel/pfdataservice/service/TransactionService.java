@@ -114,6 +114,95 @@ public class TransactionService {
     }
 
     /**
+     * Reverts a list of transactions previously confirmed as transfers back to plain
+     * income/expense (PF-831) -- the inverse of {@link #markAsTransfer}, for correcting a
+     * wrongly-confirmed match or reclassifying data affected by a heuristic fix (e.g. PF-848).
+     *
+     * @param userId         the user id
+     * @param transactionIds the transaction ids to unmark
+     * @throws AccessDeniedException     if any transaction belongs to a different user
+     * @throws ResourceNotFoundException if any transaction id doesn't exist
+     */
+    @Transactional
+    public void unmarkAsTransfer(Long userId, List<Long> transactionIds) {
+        List<Transaction> transactions = transactionRepository.findAllById(userId, transactionIds);
+        for (Transaction t : transactions) {
+            if (!t.getAccount().getUserId().equals(userId)) {
+                throw new AccessDeniedException("Access denied for transaction " + t.getId());
+            }
+        }
+
+        if (transactions.size() != transactionIds.size()) {
+            throw new ResourceNotFoundException("One or more transactions not found");
+        }
+
+        List<Transaction> updatedTransactions = new ArrayList<>();
+        for (Transaction t : transactions) {
+            Account account = accountRepository.findById(t.getAccount().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+            Account accountAfterUndo = account.undoTransaction(t);
+
+            TransactionType newType;
+            if (t.getType() == TransactionType.TRANSFER_IN) {
+                newType = TransactionType.INCOME;
+            } else {
+                newType = TransactionType.EXPENSE;
+            }
+
+            Transaction updatedT = t.toBuilder().type(newType).build();
+            Account finalAccount = accountAfterUndo.applyTransaction(updatedT);
+
+            updatedTransactions.add(updatedT);
+            int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+            if (updatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
+        }
+
+        transactionRepository.updateAll(userId, updatedTransactions);
+    }
+
+    /**
+     * One-time backfill (PF-848): corrects every {@code TRANSFER_IN} transaction on a
+     * credit-card account back to {@code INCOME}. These rows were all produced by the old
+     * {@code configureCreditCardTransactionTypeAndAmount()} parser heuristic (fixed by PF-829),
+     * which classified every negative credit-card amount as a transfer regardless of whether a
+     * matching bank-side transaction existed -- pre-empting {@link TransferMatcher} from ever
+     * seeing (and completing) the real pairs, and hiding genuine merchant refunds from every
+     * total. Scoped to credit-card accounts specifically so a genuine {@link #markAsTransfer}
+     * confirmation elsewhere is never touched. Idempotent: once corrected, a row no longer
+     * matches the selection criteria, so calling this again finds nothing left to fix.
+     *
+     * @param userId the user id
+     * @return the number of transactions corrected
+     */
+    @Transactional
+    public int backfillTransferTypes(Long userId) {
+        List<Transaction> misTyped = transactionRepository.findTransferInOnCreditCardAccounts(userId);
+
+        List<Transaction> corrected = new ArrayList<>();
+        for (Transaction t : misTyped) {
+            Account account = accountRepository.findById(t.getAccount().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+            Account accountAfterUndo = account.undoTransaction(t);
+
+            Transaction correctedT = t.toBuilder().type(TransactionType.INCOME).build();
+            Account finalAccount = accountAfterUndo.applyTransaction(correctedT);
+
+            corrected.add(correctedT);
+            int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
+            if (updatedRows == 0) {
+                throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
+            }
+        }
+
+        if (!corrected.isEmpty()) {
+            transactionRepository.updateAll(userId, corrected);
+        }
+        return corrected.size();
+    }
+
+    /**
      * Returns a paginated page of transactions filtered only by type.
      *
      * @param userId   the user id

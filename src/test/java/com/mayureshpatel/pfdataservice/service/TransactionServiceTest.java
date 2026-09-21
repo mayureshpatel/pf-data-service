@@ -147,6 +147,92 @@ class TransactionServiceTest {
     }
 
     @Nested
+    @DisplayName("unmarkAsTransfer (PF-831)")
+    class UnmarkAsTransferTests {
+        @Test
+        @DisplayName("should convert TRANSFER_IN back to INCOME")
+        void shouldUnmarkTransferInCorrectly() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction t = Transaction.builder().id(1L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.TEN).account(account).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // act
+            transactionService.unmarkAsTransfer(USER_ID, List.of(1L));
+
+            // assert & verify
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.INCOME));
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+        }
+
+        @Test
+        @DisplayName("should convert TRANSFER_OUT back to EXPENSE")
+        void shouldUnmarkTransferOutCorrectly() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction t = Transaction.builder().id(1L).type(TransactionType.TRANSFER_OUT).amount(BigDecimal.ONE).account(account).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // act
+            transactionService.unmarkAsTransfer(USER_ID, List.of(1L));
+
+            // assert & verify
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException if user does not own transaction")
+        void shouldThrowOnAccessDenied() {
+            // arrange
+            Account otherAccount = createMockAccount(999L);
+            Transaction t = Transaction.builder().id(1L).account(otherAccount).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+
+            // act & assert & verify
+            assertThrows(AccessDeniedException.class, () -> transactionService.unmarkAsTransfer(USER_ID, List.of(1L)));
+        }
+    }
+
+    @Nested
+    @DisplayName("backfillTransferTypes (PF-848)")
+    class BackfillTransferTypesTests {
+        @Test
+        @DisplayName("should correct every TRANSFER_IN row on a credit-card account to INCOME")
+        void shouldCorrectMisTypedRows() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction misTyped1 = Transaction.builder().id(1L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.TEN).account(account).build();
+            Transaction misTyped2 = Transaction.builder().id(2L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.ONE).account(account).build();
+            when(transactionRepository.findTransferInOnCreditCardAccounts(USER_ID)).thenReturn(List.of(misTyped1, misTyped2));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            // act
+            int corrected = transactionService.backfillTransferTypes(USER_ID);
+
+            // assert & verify
+            assertEquals(2, corrected);
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list ->
+                    list.size() == 2 && list.stream().allMatch(t -> t.getType() == TransactionType.INCOME)));
+        }
+
+        @Test
+        @DisplayName("should not call updateAll when nothing needs correcting")
+        void shouldNoOpWhenNothingToFix() {
+            // arrange
+            when(transactionRepository.findTransferInOnCreditCardAccounts(USER_ID)).thenReturn(List.of());
+
+            // act
+            int corrected = transactionService.backfillTransferTypes(USER_ID);
+
+            // assert & verify
+            assertEquals(0, corrected);
+            verify(transactionRepository, never()).updateAll(any(), any());
+        }
+    }
+
+    @Nested
     @DisplayName("getTransactions")
     class GetTransactionsTests {
         @Test

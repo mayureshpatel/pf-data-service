@@ -426,4 +426,17 @@ public final class TransactionQueries {
                 and merchants.id is not null
             order by merchants.name
             """;
+
+    // language=SQL
+    // PF-848: selects every TRANSFER_IN transaction on a credit-card account -- the only type of
+    // row the old configureCreditCardTransactionTypeAndAmount() heuristic (fixed by PF-829) could
+    // ever have produced. Scoped to credit-card accounts specifically (not "any TRANSFER_IN"), so
+    // this never touches a genuine markAsTransfer()-confirmed transfer that might exist on some
+    // other account type.
+    public static final String FIND_TRANSFER_IN_ON_CREDIT_CARD_ACCOUNTS = "select " + ENRICHED_COLUMNS +
+            " from transactions " + ENRICHED_JOINS +
+            " where accounts.user_id = :userId" +
+            "   and transactions.type = 'TRANSFER_IN'" +
+            "   and accounts.type = 'CREDIT_CARD'" +
+            "   and transactions.deleted_at is null";
 }

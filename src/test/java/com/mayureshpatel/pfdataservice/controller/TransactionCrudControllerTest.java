@@ -67,6 +67,37 @@ class TransactionCrudControllerTest extends BaseControllerTest {
     }
 
     @Nested
+    @DisplayName("unmarkAsTransfer (PF-831)")
+    class UnmarkAsTransferTests {
+        @Test
+        @DisplayName("POST /unmark-as-transfer should unmark transactions")
+        void unmarkAsTransfer_shouldReturnOk() throws Exception {
+            List<Long> ids = List.of(1L, 2L);
+            mockMvc.perform(post("/api/v1/transactions/unmark-as-transfer")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(ids)))
+                    .andExpect(status().isOk());
+            verify(transactionService).unmarkAsTransfer(USER_ID, ids);
+        }
+    }
+
+    @Nested
+    @DisplayName("backfillTransferTypes (PF-848)")
+    class BackfillTransferTypesTests {
+        @Test
+        @DisplayName("POST /backfill/transfer-types should return the corrected count")
+        void backfillTransferTypes_shouldReturnCount() throws Exception {
+            when(transactionService.backfillTransferTypes(USER_ID)).thenReturn(3);
+            mockMvc.perform(post("/api/v1/transactions/backfill/transfer-types")
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("3"));
+            verify(transactionService).backfillTransferTypes(USER_ID);
+        }
+    }
+
+    @Nested
     @DisplayName("getTransactions")
     class GetTransactionsTests {
         @Test

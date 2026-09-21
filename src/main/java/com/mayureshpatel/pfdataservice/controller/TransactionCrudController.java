@@ -77,6 +77,43 @@ public class TransactionCrudController {
     }
 
     /**
+     * Reverts a batch of transactions previously confirmed as transfers back to plain
+     * income/expense (PF-831) -- for correcting a wrongly-confirmed match.
+     *
+     * @param userDetails    the authenticated user
+     * @param transactionIds the transaction ids to unmark, capped at 1000 per request
+     * @return 200 with no body once unmarked
+     */
+    @Operation(summary = "Unmark transactions as transfers", description = "Reverts a batch of previously-confirmed transfers back to plain income/expense")
+    @ApiResponse(responseCode = "200", description = "Transactions unmarked")
+    @PostMapping("/unmark-as-transfer")
+    public ResponseEntity<Void> unmarkAsTransfer(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Size(max = 1000, message = "Cannot process more than 1000 items at once") List<Long> transactionIds) {
+        transactionService.unmarkAsTransfer(userDetails.getId(), transactionIds);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * One-time backfill (PF-848): corrects every {@code TRANSFER_IN} transaction on the user's
+     * credit-card accounts back to {@code INCOME} -- rows produced by the old parser heuristic
+     * (fixed by PF-829) that pre-empted real transfer detection and hid genuine merchant refunds.
+     * Safe to call more than once; a second call simply finds nothing left to correct. Does not
+     * auto-confirm anything -- call {@link #getTransferSuggestions} afterward to review the
+     * pairs this newly makes visible.
+     *
+     * @param userDetails the authenticated user
+     * @return the number of transactions corrected
+     */
+    @Operation(summary = "Backfill historical transfer mis-typing", description = "Corrects TRANSFER_IN transactions on credit-card accounts that were mis-typed by the old parser heuristic")
+    @ApiResponse(responseCode = "200", description = "Number of transactions corrected")
+    @PostMapping("/backfill/transfer-types")
+    public ResponseEntity<Integer> backfillTransferTypes(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(transactionService.backfillTransferTypes(userDetails.getId()));
+    }
+
+    /**
      * Returns a paginated, filtered page of the user's transactions. Every filter parameter is
      * optional; omitted ones simply aren't applied.
      *
