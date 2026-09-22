@@ -346,12 +346,45 @@ class TransactionServiceTest {
         }
 
         @Test
-        @DisplayName("should throw OptimisticLockingFailureException if account balance update fails due to concurrency")
-        void shouldThrowOnOptimisticLockingFailure() {
+        @DisplayName("bug regression: should retry, not fail outright, on a single optimistic-locking "
+                + "conflict (PF-839) -- live-reproduced against the real backend: 8 truly concurrent "
+                + "creates against one account 409ed 6 of 8 times with no retry in place")
+        void shouldRetryAndSucceedAfterOptimisticLockingConflict() {
+            // arrange -- first attempt conflicts (as if another request updated the account first);
+            // the retry re-fetches and finds the account at a newer version
+            Account staleAccount = createMockAccount(USER_ID);
+            Account refreshedAccount = staleAccount.toBuilder()
+                    .version(2L).currentBalance(new BigDecimal("1500.00")).build();
+            when(accountRepository.findById(ACCOUNT_ID))
+                    .thenReturn(Optional.of(staleAccount))
+                    .thenReturn(Optional.of(refreshedAccount));
+            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
+                    .thenThrow(new org.springframework.dao.OptimisticLockingFailureException("conflict"))
+                    .thenReturn(1);
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Test").build();
+
+            // act
+            int result = transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify -- succeeded, and the retry used the refreshed account's version/balance,
+            // not the stale first-read one
+            assertEquals(1, result);
+            verify(accountRepository, times(2)).findById(ACCOUNT_ID);
+            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), eq(new BigDecimal("1510.00")), eq(2L));
+            verify(transactionRepository).insert(any(Transaction.class));
+        }
+
+        @Test
+        @DisplayName("should throw OptimisticLockingFailureException if every retry attempt still conflicts")
+        void shouldThrowAfterExhaustingRetries() {
             // arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong())).thenReturn(0);
+            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
+                    .thenThrow(new org.springframework.dao.OptimisticLockingFailureException("conflict"));
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
@@ -360,8 +393,9 @@ class TransactionServiceTest {
                     .description("Test")
                     .build();
 
-            // act & assert & verify
+            // act & assert & verify -- gives up after 3 attempts total, not an infinite/unbounded retry
             assertThrows(org.springframework.dao.OptimisticLockingFailureException.class, () -> transactionService.createTransaction(USER_ID, request));
+            verify(accountRepository, times(3)).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
             verify(transactionRepository, never()).insert(any(Transaction.class));
         }
 
