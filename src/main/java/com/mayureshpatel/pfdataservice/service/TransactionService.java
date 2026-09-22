@@ -337,16 +337,17 @@ public class TransactionService {
      * @throws ResourceNotFoundException         if a retry's re-fetch finds the account gone
      */
     private void applyTransactionToAccountBalance(Long userId, Account account, Transaction transaction) {
+        Account currentAccount = account;
         for (int attempt = 1; attempt <= MAX_BALANCE_UPDATE_ATTEMPTS; attempt++) {
-            Account updated = account.applyTransaction(transaction);
+            Account updated = currentAccount.applyTransaction(transaction);
             try {
-                accountRepository.updateBalance(userId, updated.getId(), updated.getCurrentBalance(), account.getVersion());
+                accountRepository.updateBalance(userId, updated.getId(), updated.getCurrentBalance(), currentAccount.getVersion());
                 return;
             } catch (OptimisticLockingFailureException e) {
                 if (attempt == MAX_BALANCE_UPDATE_ATTEMPTS) {
                     throw e;
                 }
-                account = accountRepository.findById(account.getId())
+                currentAccount = accountRepository.findById(currentAccount.getId())
                         .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             }
         }
