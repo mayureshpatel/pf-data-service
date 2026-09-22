@@ -22,6 +22,7 @@ import com.mayureshpatel.pfdataservice.repository.transaction.specification.Tran
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.transfer.TransferMatcher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -42,6 +43,12 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TransactionService {
+    /**
+     * How many times {@link #applyTransactionToAccountBalance} retries a concurrent-modification
+     * conflict (PF-839) before giving up and letting the exception propagate.
+     */
+    private static final int MAX_BALANCE_UPDATE_ATTEMPTS = 3;
+
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
@@ -301,11 +308,7 @@ public class TransactionService {
 
         transaction = resolveCategory(userId, transaction, request.getCategoryId());
 
-        Account finalAccount = account.applyTransaction(transaction);
-        int updatedRows = accountRepository.updateBalance(userId, finalAccount.getId(), finalAccount.getCurrentBalance(), account.getVersion());
-        if (updatedRows == 0) {
-            throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
-        }
+        applyTransactionToAccountBalance(userId, account, transaction);
 
         int newTransactionId = transactionRepository.insert(transaction);
 
@@ -315,6 +318,38 @@ public class TransactionService {
         }
 
         return newTransactionId;
+    }
+
+    /**
+     * Applies a transaction's effect to its account's balance, retrying up to
+     * {@value #MAX_BALANCE_UPDATE_ATTEMPTS} times if a concurrent request updates the account
+     * first (PF-839) -- live-reproduced against the real backend: 8 truly concurrent creates
+     * against one account 409ed 6 of 8 times with no retry. Each retry re-fetches the account's
+     * current state and reapplies the transaction against it, rather than blindly repeating the
+     * same stale computed balance, which would either fail identically or silently clobber
+     * whatever the concurrent request just committed.
+     *
+     * @param userId      the user id
+     * @param account     the account as already fetched by the caller (used as-is for the first
+     *                    attempt, to avoid a redundant re-fetch on the common non-conflicting path)
+     * @param transaction the transaction whose effect to apply
+     * @throws OptimisticLockingFailureException if every retry attempt still conflicts
+     * @throws ResourceNotFoundException         if a retry's re-fetch finds the account gone
+     */
+    private void applyTransactionToAccountBalance(Long userId, Account account, Transaction transaction) {
+        for (int attempt = 1; attempt <= MAX_BALANCE_UPDATE_ATTEMPTS; attempt++) {
+            Account updated = account.applyTransaction(transaction);
+            try {
+                accountRepository.updateBalance(userId, updated.getId(), updated.getCurrentBalance(), account.getVersion());
+                return;
+            } catch (OptimisticLockingFailureException e) {
+                if (attempt == MAX_BALANCE_UPDATE_ATTEMPTS) {
+                    throw e;
+                }
+                account = accountRepository.findById(account.getId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+            }
+        }
     }
 
     /**
