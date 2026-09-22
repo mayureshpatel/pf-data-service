@@ -204,7 +204,11 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should parse the pre-July-2022 Debit/Credit-column format with correct, non-zero amounts (PF-198)")
         void parse_preJuly2022DiscoverFormat_parsesNonZeroAmounts() {
-            InputStream csvStream = getClass().getResourceAsStream("/sample-imports/Discover-2022-06.csv");
+            // PF-821: was /sample-imports/Discover-2022-06.csv, an untracked local-only directory
+            // -- getResourceAsStream returned null on a clean CI checkout, failing this assertion
+            // immediately. Moved into the already-tracked parser/ fixture directory alongside this
+            // class's other real-format example CSVs.
+            InputStream csvStream = getClass().getResourceAsStream("/parser/discover-old-example.csv");
             assertThat(csvStream).isNotNull();
 
             List<Transaction> result;
