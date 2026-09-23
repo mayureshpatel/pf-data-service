@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.parser;
 
+import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import org.junit.jupiter.api.DisplayName;
@@ -7,16 +8,26 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 @DisplayName("UniversalCsvParser Unit Tests")
 class UniversalCsvParserTest {
 
     private final UniversalCsvParser parser = new UniversalCsvParser();
+
+    @Test
+    @DisplayName("should report UNIVERSAL as its bank name")
+    void shouldReturnUniversalBankName() {
+        assertEquals(BankName.UNIVERSAL, parser.getBankName());
+    }
 
     @Nested
     @DisplayName("identifyColumns")
@@ -202,6 +213,20 @@ class UniversalCsvParserTest {
         }
 
         @Test
+        @DisplayName("should default to a zero-amount EXPENSE when debit and credit are both "
+                + "exactly zero (PF-817 boundary: neither compareTo(ZERO) > 0 check fires, so "
+                + "amount keeps its unscaled BigDecimal.ZERO initial value rather than either "
+                + "parsed column's own scale)")
+        void shouldHandleSplitWithBothZero() {
+            String csv = "Date,Description,Debit,Credit\n03/01/2026,Test,0.00,0.00";
+            try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
+                Transaction t = result.findFirst().orElseThrow();
+                assertEquals(0, BigDecimal.ZERO.compareTo(t.getAmount()));
+                assertEquals(TransactionType.EXPENSE, t.getType());
+            }
+        }
+
+        @Test
         @DisplayName("should skip rows where required columns are null in record")
         void shouldSkipRowsWithNullValues() {
             String csv = "Date,Description,Amount\n,Test,10.00";
@@ -215,6 +240,78 @@ class UniversalCsvParserTest {
         void shouldHandleUnknownDate() {
             String csv = "Date,Description,Amount\n03-Mar-2026,Test,10.00";
             assertThrows(com.mayureshpatel.pfdataservice.exception.CsvParsingException.class, () -> parser.parse(1L, new ByteArrayInputStream(csv.getBytes())));
+        }
+    }
+
+    /**
+     * PF-817: {@code parseAmount} is called directly here rather than through {@link
+     * UniversalCsvParser#parse}, because a genuine null argument is unreachable from that public
+     * entry point (a missing CSV field always arrives as ""), and real whitespace never survives to
+     * reach it either (the CSVFormat used by {@code parse} already trims every field). Testing
+     * through the public API could only ever exercise the blank-string half of the guard with an
+     * empty string, never a true null or a whitespace-only value -- so the two sides of the OR
+     * couldn't be shown independently necessary.
+     */
+    @Nested
+    @DisplayName("parseAmount direct boundary tests")
+    class ParseAmountDirectTests {
+        @Test
+        @DisplayName("should return zero for a literal null amount string")
+        void shouldReturnZeroForNullAmount() {
+            assertEquals(BigDecimal.ZERO, parser.parseAmount(null));
+        }
+
+        @Test
+        @DisplayName("should return zero for a whitespace-only amount string")
+        void shouldReturnZeroForBlankAmount() {
+            assertEquals(BigDecimal.ZERO, parser.parseAmount("   "));
+        }
+
+        @Test
+        @DisplayName("should parse a parenthesis-wrapped amount as negative")
+        void shouldParseParenthesesAsNegative() {
+            assertEquals(new BigDecimal("-100.00"), parser.parseAmount("(100.00)"));
+        }
+
+        @Test
+        @DisplayName("should reject an amount with only an opening parenthesis")
+        void shouldRejectMismatchedOpeningParenthesis() {
+            assertThrows(IllegalArgumentException.class, () -> parser.parseAmount("(100.00"));
+        }
+
+        @Test
+        @DisplayName("should reject an amount with only a closing parenthesis")
+        void shouldRejectMismatchedClosingParenthesis() {
+            assertThrows(IllegalArgumentException.class, () -> parser.parseAmount("100.00)"));
+        }
+    }
+
+    @Nested
+    @DisplayName("CSV resource cleanup (PF-817)")
+    class ResourceCleanupTests {
+        @Test
+        @DisplayName("should close the parser and reader after a successful parse")
+        void shouldCloseCsvResourcesAfterSuccessfulParse() throws IOException {
+            String csv = "Date,Description,Amount\n03/01/2026,Test,10.00";
+            ByteArrayInputStream spyStream = spy(new ByteArrayInputStream(csv.getBytes()));
+
+            try (Stream<Transaction> result = parser.parse(1L, spyStream)) {
+                assertEquals(1, result.count());
+            }
+
+            verify(spyStream, atLeastOnce()).close();
+        }
+
+        @Test
+        @DisplayName("should close the reader even when column identification fails before any "
+                + "row is parsed")
+        void shouldCloseReaderWhenColumnIdentificationFails() throws IOException {
+            String csv = "Description,Amount\nTest,100.00"; // missing required Date column
+            ByteArrayInputStream spyStream = spy(new ByteArrayInputStream(csv.getBytes()));
+
+            assertThrows(RuntimeException.class, () -> parser.parse(1L, spyStream));
+
+            verify(spyStream, atLeastOnce()).close();
         }
     }
 }
