@@ -247,11 +247,16 @@ public class UniversalCsvParser implements TransactionParser {
 
     /**
      * Parses a transaction amount string into a {@link BigDecimal} object.
+     * <p>
+     * package-private rather than private: the null-vs-blank branches below can't both be reached
+     * through {@link #parse}, since a missing CSV field always arrives here as "" (never a literal
+     * null), and {@code CSVFormat}'s own {@code setTrim(true)} strips real whitespace before this
+     * method ever sees it. Direct unit tests are the only way to exercise both independently.
      *
      * @param amountStr the amount string to parse
      * @return the parsed BigDecimal amount or BigDecimal.ZERO if parsing fails
      */
-    private BigDecimal parseAmount(String amountStr) {
+    BigDecimal parseAmount(String amountStr) {
         if (amountStr == null || amountStr.isBlank()) {
             return BigDecimal.ZERO;
         }
