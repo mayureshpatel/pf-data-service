@@ -72,7 +72,9 @@ public class StandardCsvParser implements TransactionParser {
 
     /**
      * Maps one CSV row to a transaction. The amount's sign determines the transaction type
-     * (negative -> expense, non-negative -> income) and is normalized to an absolute value.
+     * (negative -> expense, non-negative -> income) and is normalized to an absolute value. A
+     * zero amount is therefore stored as a real {@code $0.00} INCOME transaction, not skipped --
+     * deliberately, matching every other parser in this codebase (PF-822).
      *
      * @param csvRecord the CSV record to map
      * @return the parsed transaction

@@ -119,12 +119,18 @@ class UniversalCsvParserTest {
         }
 
         @Test
-        @DisplayName("should skip zero amount rows")
-        void shouldSkipZeros() {
+        @DisplayName("bug regression: should store a zero-amount row as a real $0.00 INCOME "
+                + "transaction (PF-822), matching every other parser in this codebase, rather "
+                + "than silently skipping it as a presumed pending/auth-hold artifact")
+        void shouldStoreZeroAmountRows() {
             String csv = "Date,Description,Amount\n03/01/2026,Zero,0.00";
+            List<Transaction> txns;
             try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
-                assertEquals(0, result.count());
+                txns = result.toList();
             }
+            assertEquals(1, txns.size());
+            assertEquals(new BigDecimal("0.00"), txns.get(0).getAmount());
+            assertEquals(TransactionType.INCOME, txns.get(0).getType());
         }
 
         @Test
