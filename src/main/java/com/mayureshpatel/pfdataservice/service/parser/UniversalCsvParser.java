@@ -27,8 +27,13 @@ import java.util.stream.Stream;
  * Fallback parser for banks without a dedicated implementation. Rather than fixed header names,
  * it fuzzy-matches common header name variants (e.g. "Trans Date", "Transaction Date", "Date" all
  * resolve to the date column) via {@link #identifyColumns}, and supports either a single signed
- * amount column or separate debit/credit columns. Rows that parse to a zero amount (often pending
- * or auth-hold entries) are silently skipped rather than treated as an error.
+ * amount column or separate debit/credit columns. A row that parses to a zero amount is stored as
+ * a real {@code $0.00} transaction (PF-822) -- every other parser in this codebase
+ * ({@link StandardCsvParser}, {@link CapitalOneCsvParser}, {@link DiscoverCsvParser},
+ * {@link SynovusCsvParser}) already does this via {@link TransactionParser}'s own
+ * {@code configureTransactionTypeAndAmount}/{@code configureCreditCardTransactionTypeAndAmount}
+ * default methods, which have no zero-amount special case at all; this parser used to be the one
+ * exception, silently skipping such rows as presumed pending/auth-hold artifacts.
  */
 @Component
 @Slf4j
@@ -229,11 +234,6 @@ public class UniversalCsvParser implements TransactionParser {
         } else if (mapping.creditCol != null) {
             amount = parseAmount(record.get(mapping.creditCol));
             type = TransactionType.INCOME;
-        }
-
-        // skip zero-amount transactions (often pending or auth holds)
-        if (amount.compareTo(BigDecimal.ZERO) == 0) {
-            return null;
         }
 
         return Transaction.builder()
