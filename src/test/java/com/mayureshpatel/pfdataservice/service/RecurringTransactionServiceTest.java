@@ -20,6 +20,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,8 +32,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -464,6 +469,90 @@ class RecurringTransactionServiceTest {
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(999L).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
             assertThrows(AccessDeniedException.class, () -> recurringService.deleteRecurringTransaction(USER_ID, RECURRING_ID));
+        }
+    }
+
+    @Nested
+    @DisplayName("detectFrequency boundary values (PF-816)")
+    class DetectFrequencyBoundaryTests {
+        // PF-816: PiTest's ConditionalsBoundaryMutator flipped each of these 5 ranges' >=/<=
+        // boundaries and every flip still passed the existing suite -- no test exercised an
+        // avgInterval landing exactly on a boundary. detectFrequency is private, so these go
+        // through the public findSuggestions entry point (per this class's own established
+        // pattern, e.g. shouldMergePriceTiersIntoOneSuggestion) with a constructed transaction
+        // group whose intervals average out to each exact value, not a reflection-based call.
+        //
+        // "On boundary" cases use constant intervals so avgInterval equals the boundary exactly.
+        // "Just outside" cases nudge one interval by a day so the average lands at the finest
+        // achievable distance past the boundary using a small (3-interval) group -- day-level
+        // interval granularity means an exact "8.01" isn't constructible without an impractically
+        // large fixture; "one interval off" is the practical equivalent for this class's own
+        // interval-averaging arithmetic.
+        private static Stream<Arguments> boundaryCases() {
+            return Stream.of(
+                    Arguments.of("WEEKLY lower bound (6)", List.of(6L, 6L, 6L), Frequency.WEEKLY),
+                    Arguments.of("WEEKLY upper bound (8)", List.of(8L, 8L, 8L), Frequency.WEEKLY),
+                    Arguments.of("BI_WEEKLY lower bound (13)", List.of(13L, 13L, 13L), Frequency.BI_WEEKLY),
+                    Arguments.of("BI_WEEKLY upper bound (16)", List.of(16L, 16L, 16L), Frequency.BI_WEEKLY),
+                    Arguments.of("MONTHLY lower bound (25)", List.of(25L, 25L, 25L), Frequency.MONTHLY),
+                    Arguments.of("MONTHLY upper bound (35)", List.of(35L, 35L, 35L), Frequency.MONTHLY),
+                    Arguments.of("QUARTERLY lower bound (85)", List.of(85L, 85L, 85L), Frequency.QUARTERLY),
+                    Arguments.of("QUARTERLY upper bound (95)", List.of(95L, 95L, 95L), Frequency.QUARTERLY),
+                    Arguments.of("YEARLY lower bound (360)", List.of(360L, 360L, 360L), Frequency.YEARLY),
+                    Arguments.of("YEARLY upper bound (370)", List.of(370L, 370L, 370L), Frequency.YEARLY),
+
+                    Arguments.of("just below WEEKLY lower bound (avg 5.67)", List.of(6L, 6L, 5L), null),
+                    Arguments.of("just above WEEKLY upper bound (avg 8.33)", List.of(8L, 8L, 9L), null),
+                    Arguments.of("just below BI_WEEKLY lower bound (avg 12.67)", List.of(13L, 13L, 12L), null),
+                    Arguments.of("just above BI_WEEKLY upper bound (avg 16.33)", List.of(16L, 16L, 17L), null),
+                    Arguments.of("just below MONTHLY lower bound (avg 24.67)", List.of(25L, 25L, 24L), null),
+                    Arguments.of("just above MONTHLY upper bound (avg 35.33)", List.of(35L, 35L, 36L), null),
+                    Arguments.of("just below QUARTERLY lower bound (avg 84.67)", List.of(85L, 85L, 84L), null),
+                    Arguments.of("just above QUARTERLY upper bound (avg 95.33)", List.of(95L, 95L, 96L), null),
+                    Arguments.of("just below YEARLY lower bound (avg 359.67)", List.of(360L, 360L, 359L), null),
+                    Arguments.of("just above YEARLY upper bound (avg 370.33)", List.of(370L, 370L, 371L), null)
+            );
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("boundaryCases")
+        void shouldClassifyAtBoundary(String caseName, List<Long> intervalDays, Frequency expected) {
+            // arrange
+            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(groupWithIntervals(intervalDays));
+
+            // act
+            List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
+
+            // assert & verify
+            if (expected == null) {
+                assertTrue(result.isEmpty(), caseName + ": expected no suggestion, got: " + result);
+            } else {
+                assertEquals(1, result.size(), caseName);
+                assertEquals(expected, result.get(0).frequency(), caseName);
+            }
+        }
+
+        private List<Transaction> groupWithIntervals(List<Long> intervalDays) {
+            OffsetDateTime offset = OffsetDateTime.now();
+            long totalSpan = intervalDays.stream().mapToLong(Long::longValue).sum();
+            LocalDate cursor = LocalDate.now().minusDays(totalSpan);
+
+            List<Transaction> group = new ArrayList<>();
+            group.add(Transaction.builder()
+                    .transactionDate(cursor.atStartOfDay().atOffset(offset.getOffset()))
+                    .amount(BigDecimal.TEN)
+                    .description("PF-816 Boundary Test Vendor")
+                    .build());
+            for (Long gap : intervalDays) {
+                cursor = cursor.plusDays(gap);
+                group.add(Transaction.builder()
+                        .transactionDate(cursor.atStartOfDay().atOffset(offset.getOffset()))
+                        .amount(BigDecimal.TEN)
+                        .description("PF-816 Boundary Test Vendor")
+                        .build());
+            }
+            return group;
         }
     }
 }
