@@ -24,8 +24,14 @@
 ## Testing (Backend)
 - **Tools:** JUnit5, Mockito, Testcontainers, AssertJ.
 - **Structure:** Follow the AAA pattern with exact lowercase comments: `// arrange`, `// act`, `// assert & verify`.
-- **Quality:** PiTest is configured in `pom.xml` for mutation testing, but is not currently bound
-  to any Maven lifecycle phase and is not run by `verify.sh` — running it today requires the
-  manual `mvn org.pitest:pitest-maven:mutationCoverage` invocation (see PF-EPIC-015, preliminary,
-  for wiring this in for real). Don't cite mutation-testing results as a passed quality bar until
-  that's true. Adhere to Test-Driven Development (TDD) for bugs.
+- **Quality:** PiTest (`pom.xml`) is bound to the Maven `verify` phase (since PF-323), so a full
+  `./mvnw clean verify` — what `scripts/verify.sh` runs — triggers a whole-codebase mutation run
+  automatically; `mvn test` and narrower `-Dtest=SingleClass` invocations never reach `verify`, so
+  they stay fast and unaffected. It's deliberately informational only: no `mutationThreshold`/
+  `coverageThreshold` is configured, so a low or failing mutation score reports but never fails the
+  build on its own — don't cite a passing `verify.sh` run as proof of a mutation-testing bar, since
+  it isn't gating on one. For a fast, scoped check against a single class while writing tests, skip
+  the full lifecycle-bound run and invoke the goal directly: `mvn org.pitest:pitest-maven:
+  mutationCoverage -DtargetClasses=<FQCN> -DtargetTests=<FQCN>*`, then read
+  `target/pit-reports/**/mutations.csv` directly rather than trusting the summary percentage.
+  Adhere to Test-Driven Development (TDD) for bugs.
