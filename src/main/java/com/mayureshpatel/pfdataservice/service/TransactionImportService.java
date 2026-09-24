@@ -56,6 +56,7 @@ public class TransactionImportService {
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
     private final MerchantService merchantService;
+    private final AccountBalanceUpdateService accountBalanceUpdateService;
     private final TransactionImportService self;
 
     @Autowired
@@ -67,6 +68,7 @@ public class TransactionImportService {
                                     TransactionCategorizer categorizer,
                                     CategoryRuleRepository categoryRuleRepository,
                                     MerchantService merchantService,
+                                    AccountBalanceUpdateService accountBalanceUpdateService,
                                     @Lazy TransactionImportService self) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
@@ -76,6 +78,7 @@ public class TransactionImportService {
         this.categorizer = categorizer;
         this.categoryRuleRepository = categoryRuleRepository;
         this.merchantService = merchantService;
+        this.accountBalanceUpdateService = accountBalanceUpdateService;
         this.self = self;
     }
 
@@ -282,15 +285,13 @@ public class TransactionImportService {
     private void updateAccountBalance(Account account, List<TransactionCreateRequest> newTransactions) {
         BigDecimal oldBalance = account.getCurrentBalance();
 
-        Account updatedAccount = account;
-        for (TransactionCreateRequest t : newTransactions) {
-            updatedAccount = updatedAccount.applyTransaction(t);
-        }
-
-        int updatedRows = accountRepository.updateBalance(updatedAccount.getUserId(), updatedAccount.getId(), updatedAccount.getCurrentBalance(), account.getVersion());
-        if (updatedRows == 0) {
-            throw new org.springframework.dao.OptimisticLockingFailureException("Account balance update failed due to concurrent modification");
-        }
+        Account updatedAccount = accountBalanceUpdateService.applyWithRetry(account.getUserId(), account, acc -> {
+            Account result = acc;
+            for (TransactionCreateRequest t : newTransactions) {
+                result = result.applyTransaction(t);
+            }
+            return result;
+        });
 
         log.info("Updated Account ID: {} balance. Old: {}, New: {}", updatedAccount.getId(), oldBalance, updatedAccount.getCurrentBalance());
     }

@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -62,12 +63,28 @@ class TransactionImportServiceTest {
     private CategoryRuleRepository categoryRuleRepository;
     @Mock
     private MerchantService merchantService;
+    @Mock
+    private AccountBalanceUpdateService accountBalanceUpdateService;
 
     @InjectMocks
     private TransactionImportService importService;
 
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 10L;
+
+    /**
+     * PF-854: mimics the real service's success path (apply the transform once, return the
+     * result). Not a blanket {@code @BeforeEach} default, matching this file's existing
+     * per-test-explicit stubbing style -- only tests that actually save transactions need it.
+     */
+    private void stubBalanceUpdateSuccess() {
+        when(accountBalanceUpdateService.applyWithRetry(any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    Account account = invocation.getArgument(1);
+                    UnaryOperator<Account> transform = invocation.getArgument(2);
+                    return transform.apply(account);
+                });
+    }
 
     @Nested
     @DisplayName("previewTransactions")
@@ -185,7 +202,7 @@ class TransactionImportServiceTest {
             TransactionDto dto = TransactionDto.builder().description("Test").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
+            stubBalanceUpdateSuccess();
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), anyString())).thenReturn(Optional.empty());
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
@@ -196,7 +213,7 @@ class TransactionImportServiceTest {
             // assert & verify
             assertEquals(1, result);
             verify(transactionRepository).insertAll(anyList());
-            verify(accountRepository).updateBalance(eq(1L), eq(10L), any(BigDecimal.class), anyLong());
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
             verify(fileImportHistoryRepository).save(any(FileImportHistory.class));
         }
 
@@ -210,7 +227,7 @@ class TransactionImportServiceTest {
             TransactionDto dto = TransactionDto.builder().description("Unlinked Store").amount(BigDecimal.TEN).date(OffsetDateTime.now()).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
+            stubBalanceUpdateSuccess();
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), anyString())).thenReturn(Optional.empty());
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of());
@@ -234,7 +251,7 @@ class TransactionImportServiceTest {
             TransactionDto dto2 = TransactionDto.builder().description("D1").amount(BigDecimal.TEN).date(now).type(TransactionType.INCOME).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
+            stubBalanceUpdateSuccess();
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
@@ -267,7 +284,7 @@ class TransactionImportServiceTest {
 
             // fileName is null case
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
+            stubBalanceUpdateSuccess();
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("T", 1001L));
 
@@ -351,7 +368,7 @@ class TransactionImportServiceTest {
                     .build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.updateBalance(anyLong(), anyLong(), any(), any())).thenReturn(1);
+            stubBalanceUpdateSuccess();
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("Test", 1001L));
 
