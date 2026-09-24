@@ -86,7 +86,9 @@ public class AccountService {
      *
      * @param userId        the user id
      * @param request       the reconcile request
-     * @return the updated account
+     * @return the generated id of the adjustment transaction created to account for the
+     *         difference, or {@code 0} if the target balance already matched (no adjustment
+     *         needed)
      */
     @Transactional
     public int reconcileAccount(Long userId, AccountReconcileRequest request) {
@@ -103,9 +105,11 @@ public class AccountService {
 
         // create an adjustment transaction
         TransactionCreateRequest adjustmentTransaction = createAdjustmentTransaction(account, diff);
-        this.transactionRepository.insert(adjustmentTransaction);
+        int adjustmentTransactionId = this.transactionRepository.insert(adjustmentTransaction);
 
-        return accountRepository.reconcile(userId, request.getAccountId(), request.getNewBalance(), request.getVersion());
+        accountRepository.reconcile(userId, request.getAccountId(), request.getNewBalance(), request.getVersion());
+
+        return adjustmentTransactionId;
     }
 
     /**
