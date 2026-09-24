@@ -20,9 +20,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +37,7 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -58,13 +61,24 @@ class TransactionServiceTest {
     private TransferMatcher transferMatcher;
     @Mock
     private MerchantService merchantService;
+    @Mock
+    private AccountBalanceUpdateService accountBalanceUpdateService;
 
     @InjectMocks
     private TransactionService transactionService;
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
-        lenient().when(accountRepository.updateBalance(anyLong(), anyLong(), any(), anyLong())).thenReturn(1);
+        // PF-854: mimics the real service's success path (apply the transform once, return the
+        // result) so every pre-existing test's balance-dependent assertions keep working without
+        // each one needing its own stub -- tests that care about retry mechanics specifically now
+        // live in AccountBalanceUpdateServiceTest, the shared helper's own dedicated test class.
+        lenient().when(accountBalanceUpdateService.applyWithRetry(any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    Account account = invocation.getArgument(1);
+                    UnaryOperator<Account> transform = invocation.getArgument(2);
+                    return transform.apply(account);
+                });
     }
 
     private static final Long USER_ID = 1L;
@@ -113,7 +127,7 @@ class TransactionServiceTest {
 
             // assert & verify
             verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_IN));
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
         }
 
         @Test
@@ -160,6 +174,55 @@ class TransactionServiceTest {
             assertThrows(ResourceNotFoundException.class, () -> transactionService.markAsTransfer(USER_ID, List.of(1L)));
             verify(transactionRepository, never()).updateAll(any(), any());
         }
+
+        @Test
+        @DisplayName("PF-854 AC: a mid-batch conflict-then-retry on one transaction's account "
+                + "update doesn't disturb any other transaction in the same batch -- uses the "
+                + "REAL AccountBalanceUpdateService (not the class-level mock) so the retry "
+                + "genuinely runs inside markAsTransfer's own loop, not simulated. Representative "
+                + "for all 4 multi-transaction loop sites (markAsTransfer, unmarkAsTransfer, "
+                + "backfillTransferTypes, deleteTransactions): each iteration re-fetches its own "
+                + "account fresh from the repository and carries no state forward from prior "
+                + "iterations, so an internal retry on iteration N is invisible to iterations "
+                + "before or after it by construction, not by coincidence")
+        void shouldRetryMidBatchWithoutDisturbingOtherTransactions() {
+            // arrange -- two transactions on two DIFFERENT accounts; the first account's balance
+            // update conflicts once then succeeds, the second succeeds immediately
+            AccountBalanceUpdateService realAccountBalanceUpdateService = new AccountBalanceUpdateService(accountRepository);
+            TransactionService serviceUnderTest = new TransactionService(
+                    transactionRepository, accountRepository, categoryRepository, categorizer,
+                    categoryRuleRepository, transferMatcher, merchantService, realAccountBalanceUpdateService);
+
+            Account account1 = createMockAccount(USER_ID); // id = ACCOUNT_ID
+            Account account2 = Account.builder().id(NEW_ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("500.00")).version(1L).build();
+            Transaction t1 = Transaction.builder().id(1L).type(TransactionType.INCOME).amount(BigDecimal.TEN).account(account1).build();
+            Transaction t2 = Transaction.builder().id(2L).type(TransactionType.INCOME).amount(BigDecimal.TEN).account(account2).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t1, t2));
+
+            Account account1Refreshed = account1.toBuilder().version(2L).build();
+            when(accountRepository.findById(ACCOUNT_ID))
+                    .thenReturn(Optional.of(account1))
+                    .thenReturn(Optional.of(account1Refreshed));
+            when(accountRepository.findById(NEW_ACCOUNT_ID)).thenReturn(Optional.of(account2));
+
+            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
+                    .thenThrow(new OptimisticLockingFailureException("conflict"))
+                    .thenReturn(1);
+            when(accountRepository.updateBalance(eq(USER_ID), eq(NEW_ACCOUNT_ID), any(BigDecimal.class), anyLong()))
+                    .thenReturn(1);
+
+            // act
+            serviceUnderTest.markAsTransfer(USER_ID, List.of(1L, 2L));
+
+            // assert & verify -- both transactions marked despite account1's mid-batch retry;
+            // account2's single, non-conflicting update was never touched by account1's retry
+            verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.size() == 2
+                    && list.stream().allMatch(t -> t.getType() == TransactionType.TRANSFER_IN)));
+            verify(accountRepository, times(2)).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountRepository, times(1)).updateBalance(eq(USER_ID), eq(NEW_ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountRepository, times(2)).findById(ACCOUNT_ID);
+            verify(accountRepository, times(1)).findById(NEW_ACCOUNT_ID);
+        }
     }
 
     @Nested
@@ -179,7 +242,7 @@ class TransactionServiceTest {
 
             // assert & verify
             verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.INCOME));
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
         }
 
         @Test
@@ -311,7 +374,7 @@ class TransactionServiceTest {
 
             // assert & verify
             verify(transactionRepository).deleteAll(eq(USER_ID), anyList());
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
         }
 
         @Test
@@ -372,50 +435,23 @@ class TransactionServiceTest {
 
             // assert & verify
             assertEquals(1, result);
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
             verify(transactionRepository).insert(any(Transaction.class));
         }
 
         @Test
-        @DisplayName("bug regression: should retry, not fail outright, on a single optimistic-locking "
-                + "conflict (PF-839) -- live-reproduced against the real backend: 8 truly concurrent "
-                + "creates against one account 409ed 6 of 8 times with no retry in place")
-        void shouldRetryAndSucceedAfterOptimisticLockingConflict() {
-            // arrange -- first attempt conflicts (as if another request updated the account first);
-            // the retry re-fetches and finds the account at a newer version
-            Account staleAccount = createMockAccount(USER_ID);
-            Account refreshedAccount = staleAccount.toBuilder()
-                    .version(2L).currentBalance(new BigDecimal("1500.00")).build();
-            when(accountRepository.findById(ACCOUNT_ID))
-                    .thenReturn(Optional.of(staleAccount))
-                    .thenReturn(Optional.of(refreshedAccount));
-            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
-                    .thenThrow(new org.springframework.dao.OptimisticLockingFailureException("conflict"))
-                    .thenReturn(1);
-            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
-
-            TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Test").build();
-
-            // act
-            int result = transactionService.createTransaction(USER_ID, request);
-
-            // assert & verify -- succeeded, and the retry used the refreshed account's version/balance,
-            // not the stale first-read one
-            assertEquals(1, result);
-            verify(accountRepository, times(2)).findById(ACCOUNT_ID);
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), eq(new BigDecimal("1510.00")), eq(2L));
-            verify(transactionRepository).insert(any(Transaction.class));
-        }
-
-        @Test
-        @DisplayName("should throw OptimisticLockingFailureException if every retry attempt still conflicts")
-        void shouldThrowAfterExhaustingRetries() {
+        @DisplayName("should propagate OptimisticLockingFailureException if the balance update "
+                + "conflicts (PF-854) -- the retry mechanics themselves (retry-then-succeed, "
+                + "bounded give-up, account-gone-on-retry-refetch) moved to "
+                + "AccountBalanceUpdateServiceTest along with the retry loop itself; this only "
+                + "confirms createTransaction doesn't insert the transaction when the balance "
+                + "update it depends on ultimately fails")
+        void shouldPropagateOptimisticLockingFailure() {
             // arrange
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
-                    .thenThrow(new org.springframework.dao.OptimisticLockingFailureException("conflict"));
+            doThrow(new OptimisticLockingFailureException("conflict"))
+                    .when(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
@@ -424,9 +460,8 @@ class TransactionServiceTest {
                     .description("Test")
                     .build();
 
-            // act & assert & verify -- gives up after 3 attempts total, not an infinite/unbounded retry
-            assertThrows(org.springframework.dao.OptimisticLockingFailureException.class, () -> transactionService.createTransaction(USER_ID, request));
-            verify(accountRepository, times(3)).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            // act & assert & verify
+            assertThrows(OptimisticLockingFailureException.class, () -> transactionService.createTransaction(USER_ID, request));
             verify(transactionRepository, never()).insert(any(Transaction.class));
         }
 
@@ -439,30 +474,6 @@ class TransactionServiceTest {
 
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
-        }
-
-        @Test
-        @DisplayName("should throw ResourceNotFoundException if the account is gone by the time a "
-                + "retry re-fetches it (PF-818) -- exercises applyTransactionToAccountBalance's "
-                + "own retry-path orElseThrow (PF-839), distinct from the simple single-lookup-miss "
-                + "sites above since it only fires after a real optimistic-locking conflict")
-        void shouldThrowIfAccountGoneOnRetryRefetch() {
-            // arrange -- the first updateBalance attempt conflicts, and the retry's own re-fetch
-            // finds the account has vanished in the meantime
-            Account account = createMockAccount(USER_ID);
-            when(accountRepository.findById(ACCOUNT_ID))
-                    .thenReturn(Optional.of(account))
-                    .thenReturn(Optional.empty());
-            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
-                    .thenThrow(new org.springframework.dao.OptimisticLockingFailureException("conflict"));
-
-            TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Test").build();
-
-            // act & assert & verify
-            assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
-            verify(accountRepository, times(2)).findById(ACCOUNT_ID);
-            verify(transactionRepository, never()).insert(any(Transaction.class));
         }
 
         @Test
@@ -667,7 +678,7 @@ class TransactionServiceTest {
 
             // assert & verify
             assertEquals(1, result);
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
             verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getAmount().equals(BigDecimal.TEN)));
         }
 
@@ -697,10 +708,19 @@ class TransactionServiceTest {
 
             // assert & verify
             assertEquals(1, result);
+
+            // PF-854: the balance is no longer a direct updateBalance() argument -- capture the two
+            // applyWithRetry() transforms (invoked in old-account-then-new-account order, per
+            // updateTransaction's own source) and apply each against its real starting account.
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<UnaryOperator<Account>> transformCaptor = ArgumentCaptor.forClass(UnaryOperator.class);
+            verify(accountBalanceUpdateService, times(2)).applyWithRetry(eq(USER_ID), any(Account.class), transformCaptor.capture());
+            List<UnaryOperator<Account>> transforms = transformCaptor.getAllValues();
+
             // old account loses the transaction's effect: undoing a $10 EXPENSE raises its balance (1000 -> 1010)
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), eq(new BigDecimal("1010.00")), anyLong());
+            assertEquals(new BigDecimal("1010.00"), transforms.get(0).apply(oldAccount).getCurrentBalance());
             // new account gains the transaction's effect: applying a $10 EXPENSE lowers its balance (500 -> 490)
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(NEW_ACCOUNT_ID), eq(new BigDecimal("490.00")), anyLong());
+            assertEquals(new BigDecimal("490.00"), transforms.get(1).apply(newAccount).getCurrentBalance());
             verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getAccount().getId().equals(NEW_ACCOUNT_ID)));
         }
 
@@ -769,7 +789,7 @@ class TransactionServiceTest {
 
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.updateTransaction(USER_ID, request));
-            verify(accountRepository, never()).updateBalance(anyLong(), anyLong(), any(), anyLong());
+            verify(accountBalanceUpdateService, never()).applyWithRetry(any(), any(), any());
         }
 
         @Test
@@ -812,7 +832,7 @@ class TransactionServiceTest {
             transactionService.deleteTransaction(USER_ID, TRANSACTION_ID);
 
             // assert & verify
-            verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
             verify(transactionRepository).deleteById(TRANSACTION_ID, USER_ID);
         }
 
@@ -826,7 +846,7 @@ class TransactionServiceTest {
 
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.deleteTransaction(USER_ID, TRANSACTION_ID));
-            verify(accountRepository, never()).updateBalance(anyLong(), anyLong(), any(), anyLong());
+            verify(accountBalanceUpdateService, never()).applyWithRetry(any(), any(), any());
         }
     }
 
