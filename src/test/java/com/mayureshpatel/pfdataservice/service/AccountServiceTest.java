@@ -133,21 +133,27 @@ class AccountServiceTest {
     @DisplayName("reconcileAccount")
     class ReconcileAccountTests {
         @Test
-        @DisplayName("should create adjustment transaction and reconcile balance")
+        @DisplayName("should return the real generated adjustment-transaction id, not "
+                + "accountRepository.reconcile()'s rows-affected count (PF-837) -- insert() and "
+                + "reconcile() are stubbed to return two DIFFERENT values specifically so this "
+                + "test can't pass by coincidence the way the pre-fix version did (both happened "
+                + "to be 1)")
         void shouldReconcile() {
             // arrange
             BigDecimal target = new BigDecimal("1000.00");
             Long version = 1L;
+            Long realAdjustmentTransactionId = 555L;
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("900.00")).version(version).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.insert(any(TransactionCreateRequest.class))).thenReturn(realAdjustmentTransactionId.intValue());
             when(accountRepository.reconcile(USER_ID, ACCOUNT_ID, target, version)).thenReturn(1);
 
             // act
             int result = accountService.reconcileAccount(USER_ID, request);
 
             // assert & verify
-            assertEquals(1, result);
+            assertEquals(realAdjustmentTransactionId.intValue(), result);
             verify(transactionRepository).insert((TransactionCreateRequest) argThat(req -> ((TransactionCreateRequest) req).getAmount().compareTo(new BigDecimal("100.00")) == 0));
             verify(accountRepository).reconcile(USER_ID, ACCOUNT_ID, target, version);
         }
