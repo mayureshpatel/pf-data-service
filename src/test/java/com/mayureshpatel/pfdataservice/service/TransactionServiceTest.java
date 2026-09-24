@@ -144,6 +144,22 @@ class TransactionServiceTest {
             // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> transactionService.markAsTransfer(USER_ID, List.of(1L)));
         }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException if the transaction's account no longer "
+                + "exists (PF-818) -- representative for this exact defensive shape, also shared "
+                + "unchanged by unmarkAsTransfer and backfillTransferTypes; see PF-818 resolution")
+        void shouldThrowOnAccountNotFound() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction t = Transaction.builder().id(1L).type(TransactionType.INCOME).amount(BigDecimal.TEN).account(account).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> transactionService.markAsTransfer(USER_ID, List.of(1L)));
+            verify(transactionRepository, never()).updateAll(any(), any());
+        }
     }
 
     @Nested
@@ -311,6 +327,21 @@ class TransactionServiceTest {
             // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> transactionService.deleteTransactions(USER_ID, List.of(1L, 2L)));
         }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException if the transaction's account no longer "
+                + "exists (PF-818)")
+        void shouldThrowOnAccountNotFound() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction t = Transaction.builder().id(1L).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> transactionService.deleteTransactions(USER_ID, List.of(1L)));
+            verify(transactionRepository, never()).deleteAll(any(), any());
+        }
     }
 
     @Nested
@@ -408,6 +439,47 @@ class TransactionServiceTest {
 
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
+        }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException if the account is gone by the time a "
+                + "retry re-fetches it (PF-818) -- exercises applyTransactionToAccountBalance's "
+                + "own retry-path orElseThrow (PF-839), distinct from the simple single-lookup-miss "
+                + "sites above since it only fires after a real optimistic-locking conflict")
+        void shouldThrowIfAccountGoneOnRetryRefetch() {
+            // arrange -- the first updateBalance attempt conflicts, and the retry's own re-fetch
+            // finds the account has vanished in the meantime
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID))
+                    .thenReturn(Optional.of(account))
+                    .thenReturn(Optional.empty());
+            when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
+                    .thenThrow(new org.springframework.dao.OptimisticLockingFailureException("conflict"));
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Test").build();
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
+            verify(accountRepository, times(2)).findById(ACCOUNT_ID);
+            verify(transactionRepository, never()).insert(any(Transaction.class));
+        }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException if the requested category doesn't "
+                + "exist (PF-818)")
+        void shouldThrowOnCategoryNotFound() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(categoryRepository.findById(5L)).thenReturn(Optional.empty());
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").categoryId(5L).build();
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
+            verify(transactionRepository, never()).insert(any(Transaction.class));
         }
 
         @Test
@@ -532,6 +604,44 @@ class TransactionServiceTest {
     }
 
     @Nested
+    @DisplayName("updateTransactionsBulk (PF-818)")
+    class UpdateTransactionsBulkTests {
+        @Test
+        @DisplayName("should return 0 without error for a null or empty request list")
+        void shouldReturnZeroForNullOrEmpty() {
+            assertEquals(0, transactionService.updateTransactionsBulk(USER_ID, null));
+            assertEquals(0, transactionService.updateTransactionsBulk(USER_ID, Collections.emptyList()));
+            verify(transactionRepository, never()).findById(anyLong(), anyLong());
+        }
+
+        @Test
+        @DisplayName("should sum each request's own result rather than just reflecting a single "
+                + "element -- two requests each updating exactly 1 row must sum to 2, a total only "
+                + "reachable by genuinely aggregating, not e.g. returning the last result or the "
+                + "element count")
+        void shouldAggregateMultipleRequests() {
+            // arrange -- two independent transactions on the same account, each updated successfully
+            Account account = createMockAccount(USER_ID);
+            Long secondTransactionId = TRANSACTION_ID + 1;
+            Transaction first = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
+            Transaction second = Transaction.builder().id(secondTransactionId).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(first));
+            when(transactionRepository.findById(secondTransactionId, USER_ID)).thenReturn(Optional.of(second));
+            when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
+
+            TransactionUpdateRequest req1 = TransactionUpdateRequest.builder().id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").build();
+            TransactionUpdateRequest req2 = TransactionUpdateRequest.builder().id(secondTransactionId).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").build();
+
+            // act
+            Integer result = transactionService.updateTransactionsBulk(USER_ID, List.of(req1, req2));
+
+            // assert & verify
+            assertEquals(2, result);
+            verify(transactionRepository, times(2)).update(eq(USER_ID), any(Transaction.class));
+        }
+    }
+
+    @Nested
     @DisplayName("updateTransaction")
     class UpdateTransactionTests {
         @Test
@@ -647,6 +757,22 @@ class TransactionServiceTest {
         }
 
         @Test
+        @DisplayName("should throw ResourceNotFoundException if the transaction itself doesn't "
+                + "exist (PF-818) -- distinct from the already-covered target-account-not-found "
+                + "case above: this is the earlier lookup, for the transaction being updated")
+        void shouldThrowOnTransactionNotFound() {
+            // arrange
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.empty());
+
+            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
+                    .id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").build();
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> transactionService.updateTransaction(USER_ID, request));
+            verify(accountRepository, never()).updateBalance(anyLong(), anyLong(), any(), anyLong());
+        }
+
+        @Test
         @DisplayName("should throw AccessDeniedException if the target account belongs to a different user (PF-194)")
         void shouldThrowOnTargetAccountNotOwned() {
             // arrange
@@ -688,6 +814,19 @@ class TransactionServiceTest {
             // assert & verify
             verify(accountRepository).updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong());
             verify(transactionRepository).deleteById(TRANSACTION_ID, USER_ID);
+        }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException if the transaction doesn't exist "
+                + "(PF-818) -- this method's only orElseThrow guards the transaction lookup, not "
+                + "an account lookup, unlike this ticket's original account-not-found framing")
+        void shouldThrowOnTransactionNotFound() {
+            // arrange
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> transactionService.deleteTransaction(USER_ID, TRANSACTION_ID));
+            verify(accountRepository, never()).updateBalance(anyLong(), anyLong(), any(), anyLong());
         }
     }
 
