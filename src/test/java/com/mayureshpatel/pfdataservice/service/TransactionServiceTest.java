@@ -2,8 +2,12 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
@@ -612,6 +616,61 @@ class TransactionServiceTest {
             // assert & verify
             verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory() == null));
         }
+
+        @Test
+        @DisplayName("PF-856: should treat a guessed category id of exactly 0 the same as -1 "
+                + "(leaves the transaction uncategorized), proving the resolveCategory > 0 "
+                + "boundary is correct -- TransactionCategorizer's own contract documents 0 (not "
+                + "just its real -1 sentinel) as a value callers must handle, even though the "
+                + "current implementation never actually produces it. userCategories deliberately "
+                + "includes a (synthetic, unrealistic for a real auto-increment id, but necessary "
+                + "to prove the boundary) category whose id is literally 0 -- a >= 0 mutant would "
+                + "wrongly enter the branch and find it, a correct > 0 check never does")
+        void shouldTreatGuessedCategoryZeroSameAsNoMatch() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            Category zeroIdCategory = Category.builder().id(0L).name("Should Never Match").build();
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(zeroIdCategory));
+            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(0L);
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID).type("INCOME").description("Zero Category").build();
+
+            // act
+            transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory() == null));
+        }
+
+        @Test
+        @DisplayName("PF-856: should select the guessed category by matching its id, not just "
+                + "return the first candidate regardless -- userCategories deliberately has more "
+                + "than one entry, and the guessed id is the SECOND one's, so a mutant that always "
+                + "picks the first would fail this")
+        void shouldSelectGuessedCategoryByIdAmongMultiple() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            Category first = Category.builder().id(10L).name("Groceries").build();
+            Category second = Category.builder().id(20L).name("Dining").build();
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(first, second));
+            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(20L);
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID).type("INCOME").description("Guess Second").build();
+
+            // act
+            transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(transactionRepository).insert((Transaction) argThat(t -> ((Transaction) t).getCategory().getId().equals(20L)));
+        }
     }
 
     @Nested
@@ -854,22 +913,46 @@ class TransactionServiceTest {
     @DisplayName("Lookup Methods")
     class LookupTests {
         @Test
+        @DisplayName("PF-856: should return the repository's actual content, not just confirm it "
+                + "was called -- a mutant that discards the real result and returns empty anyway "
+                + "was previously invisible to this test")
         void shouldGetCountByCategory() {
-            transactionService.getCountByCategory(USER_ID);
+            CategoryTransactionsDto expected = new CategoryTransactionsDto(
+                    CategoryDto.builder().id(5L).name("Groceries").build(), 3);
+            when(transactionRepository.getCountByCategory(USER_ID)).thenReturn(List.of(expected));
+
+            List<CategoryTransactionsDto> result = transactionService.getCountByCategory(USER_ID);
+
+            assertEquals(1, result.size());
+            assertEquals(expected, result.get(0));
             verify(transactionRepository).getCountByCategory(USER_ID);
         }
 
         @Test
+        @DisplayName("PF-856: should return the mapped DTO's real content, not just an empty list")
         void shouldGetCategoriesWithTransactions() {
-            when(transactionRepository.getCategoriesWithTransactions(USER_ID)).thenReturn(List.of());
-            transactionService.getCategoriesWithTransactions(USER_ID);
+            Category category = Category.builder().id(5L).userId(USER_ID).name("Groceries").build();
+            when(transactionRepository.getCategoriesWithTransactions(USER_ID)).thenReturn(List.of(category));
+
+            List<CategoryDto> result = transactionService.getCategoriesWithTransactions(USER_ID);
+
+            assertEquals(1, result.size());
+            assertEquals(5L, result.get(0).id());
+            assertEquals("Groceries", result.get(0).name());
             verify(transactionRepository).getCategoriesWithTransactions(USER_ID);
         }
 
         @Test
+        @DisplayName("PF-856: should return the mapped DTO's real content, not just an empty list")
         void shouldGetMerchantsWithTransactions() {
-            when(transactionRepository.getMerchantsWithTransactions(USER_ID)).thenReturn(List.of());
-            transactionService.getMerchantsWithTransactions(USER_ID);
+            Merchant merchant = Merchant.builder().id(7L).userId(USER_ID).name("Costco").build();
+            when(transactionRepository.getMerchantsWithTransactions(USER_ID)).thenReturn(List.of(merchant));
+
+            List<MerchantDto> result = transactionService.getMerchantsWithTransactions(USER_ID);
+
+            assertEquals(1, result.size());
+            assertEquals(7L, result.get(0).id());
+            assertEquals("Costco", result.get(0).name());
             verify(transactionRepository).getMerchantsWithTransactions(USER_ID);
         }
     }
