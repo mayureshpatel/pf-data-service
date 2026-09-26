@@ -250,6 +250,32 @@ class TransactionServiceTest {
         }
 
         @Test
+        @DisplayName("PF-858: the balance transform should genuinely reclassify without moving "
+                + "money -- TRANSFER_IN and INCOME have the same netChange sign, so undoing the "
+                + "old type and applying the new one nets to the SAME starting balance; capturing "
+                + "and applying the real transform (rather than trusting applyWithRetry was called "
+                + "with some transform) proves it isn't null and computes this correctly")
+        void shouldComputeCorrectBalanceWhenUnmarkingTransferIn() {
+            // arrange
+            Account account = createMockAccount(USER_ID); // balance = 1000.00
+            Transaction t = Transaction.builder().id(1L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.TEN).account(account).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<UnaryOperator<Account>> transformCaptor = ArgumentCaptor.forClass(UnaryOperator.class);
+
+            // act
+            transactionService.unmarkAsTransfer(USER_ID, List.of(1L));
+
+            // assert & verify
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), transformCaptor.capture());
+            Account result = transformCaptor.getValue().apply(account);
+            assertNotNull(result);
+            assertEquals(0, new BigDecimal("1000.00").compareTo(result.getCurrentBalance()));
+        }
+
+        @Test
         @DisplayName("should convert TRANSFER_OUT back to EXPENSE")
         void shouldUnmarkTransferOutCorrectly() {
             // arrange
@@ -298,6 +324,31 @@ class TransactionServiceTest {
             assertEquals(2, corrected);
             verify(transactionRepository).updateAll(eq(USER_ID), argThat(list ->
                     list.size() == 2 && list.stream().allMatch(t -> t.getType() == TransactionType.INCOME)));
+        }
+
+        @Test
+        @DisplayName("PF-858: the balance transform should genuinely reclassify without moving "
+                + "money -- same reasoning as unmarkAsTransfer's equivalent test: TRANSFER_IN and "
+                + "INCOME share the same netChange sign, so undo-then-apply nets to the starting "
+                + "balance")
+        void shouldComputeCorrectBalanceWhenCorrectingMisTypedRow() {
+            // arrange
+            Account account = createMockAccount(USER_ID); // balance = 1000.00
+            Transaction misTyped = Transaction.builder().id(1L).type(TransactionType.TRANSFER_IN).amount(BigDecimal.TEN).account(account).build();
+            when(transactionRepository.findTransferInOnCreditCardAccounts(USER_ID)).thenReturn(List.of(misTyped));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<UnaryOperator<Account>> transformCaptor = ArgumentCaptor.forClass(UnaryOperator.class);
+
+            // act
+            transactionService.backfillTransferTypes(USER_ID);
+
+            // assert & verify
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), transformCaptor.capture());
+            Account result = transformCaptor.getValue().apply(account);
+            assertNotNull(result);
+            assertEquals(0, new BigDecimal("1000.00").compareTo(result.getCurrentBalance()));
         }
 
         @Test
@@ -382,6 +433,31 @@ class TransactionServiceTest {
         }
 
         @Test
+        @DisplayName("PF-858: the balance transform should genuinely reverse the deleted "
+                + "transaction's effect -- capturing and applying the real transform proves it "
+                + "isn't null and subtracts the right amount, not just that applyWithRetry was "
+                + "called with some transform")
+        void shouldComputeCorrectBalanceWhenDeleting() {
+            // arrange
+            Account account = createMockAccount(USER_ID); // balance = 1000.00
+            Transaction t = Transaction.builder().id(1L).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<UnaryOperator<Account>> transformCaptor = ArgumentCaptor.forClass(UnaryOperator.class);
+
+            // act
+            transactionService.deleteTransactions(USER_ID, List.of(1L));
+
+            // assert & verify
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), transformCaptor.capture());
+            Account result = transformCaptor.getValue().apply(account);
+            assertNotNull(result);
+            assertEquals(0, new BigDecimal("990.00").compareTo(result.getCurrentBalance()));
+        }
+
+        @Test
         @DisplayName("should throw AccessDeniedException if any transaction is not owned")
         void shouldThrowOnMismatchedOwner() {
             // arrange
@@ -441,6 +517,33 @@ class TransactionServiceTest {
             assertEquals(1, result);
             verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
             verify(transactionRepository).insert(any(Transaction.class));
+        }
+
+        @Test
+        @DisplayName("PF-858: the balance transform should genuinely apply the new transaction's "
+                + "effect -- capturing and applying the real transform proves it isn't null and "
+                + "adds the right amount, not just that applyWithRetry was called with some "
+                + "transform")
+        void shouldComputeCorrectBalanceWhenCreating() {
+            // arrange
+            Account account = createMockAccount(USER_ID); // balance = 1000.00
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Test").build();
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<UnaryOperator<Account>> transformCaptor = ArgumentCaptor.forClass(UnaryOperator.class);
+
+            // act
+            transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), transformCaptor.capture());
+            Account result = transformCaptor.getValue().apply(account);
+            assertNotNull(result);
+            assertEquals(0, new BigDecimal("1010.00").compareTo(result.getCurrentBalance()));
         }
 
         @Test
@@ -742,6 +845,36 @@ class TransactionServiceTest {
         }
 
         @Test
+        @DisplayName("PF-858: the same-account balance transform should genuinely undo the old "
+                + "effect and apply the new one -- capturing and applying the real transform "
+                + "proves it isn't null and nets to the right value (undo a $1 EXPENSE, apply a "
+                + "$10 INCOME: 1000 -> 1001 -> 1011), not just that applyWithRetry was called with "
+                + "some transform. Distinct from PF-854's own shouldUpdateAccountWhenChanged test, "
+                + "which covers the CROSS-account branch, not this same-account one")
+        void shouldComputeCorrectBalanceWhenUpdatingSameAccount() {
+            // arrange
+            Account account = createMockAccount(USER_ID); // balance = 1000.00
+            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
+
+            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
+                    .id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Updated").build();
+            when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<UnaryOperator<Account>> transformCaptor = ArgumentCaptor.forClass(UnaryOperator.class);
+
+            // act
+            transactionService.updateTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), transformCaptor.capture());
+            Account result = transformCaptor.getValue().apply(account);
+            assertNotNull(result);
+            assertEquals(0, new BigDecimal("1011.00").compareTo(result.getCurrentBalance()));
+        }
+
+        @Test
         @DisplayName("should move a transaction to a different account and update both balances (PF-194)")
         void shouldUpdateAccountWhenChanged() {
             // arrange -- a $10 EXPENSE moving from the old account to a new one
@@ -893,6 +1026,30 @@ class TransactionServiceTest {
             // assert & verify
             verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), any());
             verify(transactionRepository).deleteById(TRANSACTION_ID, USER_ID);
+        }
+
+        @Test
+        @DisplayName("PF-858: the balance transform should genuinely reverse the deleted "
+                + "transaction's effect -- capturing and applying the real transform proves it "
+                + "isn't null and subtracts the right amount, not just that applyWithRetry was "
+                + "called with some transform")
+        void shouldComputeCorrectBalanceWhenDeleting() {
+            // arrange
+            Account account = createMockAccount(USER_ID); // balance = 1000.00
+            Transaction t = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.TEN).type(TransactionType.INCOME).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(t));
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<UnaryOperator<Account>> transformCaptor = ArgumentCaptor.forClass(UnaryOperator.class);
+
+            // act
+            transactionService.deleteTransaction(USER_ID, TRANSACTION_ID);
+
+            // assert & verify
+            verify(accountBalanceUpdateService).applyWithRetry(eq(USER_ID), eq(account), transformCaptor.capture());
+            Account result = transformCaptor.getValue().apply(account);
+            assertNotNull(result);
+            assertEquals(0, new BigDecimal("990.00").compareTo(result.getCurrentBalance()));
         }
 
         @Test
