@@ -14,6 +14,7 @@ import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTra
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,12 +84,25 @@ public class AccountService {
 
     /**
      * Reconciles the account balance with the target balance.
+     * <p>
+     * The conflict-prone {@code reconcile} update runs before the adjustment transaction is
+     * inserted (PF-857) -- reversed from this method's original order. A concurrent modification
+     * between the initial read and the reconcile call means {@code diff} was computed against an
+     * already-stale balance; committing an adjustment transaction sized for that diff before
+     * finding out about the conflict would permanently leave a wrongly-sized transaction behind.
+     * With nothing committed until {@code reconcile} itself succeeds, a conflict here leaves no
+     * partial state to clean up -- {@link OptimisticLockingFailureException} propagates as-is
+     * (handled generically, see {@code GlobalExceptionHandler}) rather than being silently
+     * retried: the whole point of this operation is reconciling against one specific snapshot, so
+     * a caller whose snapshot just went stale needs to know and decide whether to reconcile again
+     * with fresh data, not have that decision made for them.
      *
      * @param userId        the user id
      * @param request       the reconcile request
      * @return the generated id of the adjustment transaction created to account for the
      *         difference, or {@code 0} if the target balance already matched (no adjustment
      *         needed)
+     * @throws OptimisticLockingFailureException if the account was concurrently modified
      */
     @Transactional
     public int reconcileAccount(Long userId, AccountReconcileRequest request) {
@@ -103,13 +117,11 @@ public class AccountService {
             return 0;
         }
 
-        // create an adjustment transaction
-        TransactionCreateRequest adjustmentTransaction = createAdjustmentTransaction(account, diff);
-        int adjustmentTransactionId = this.transactionRepository.insert(adjustmentTransaction);
-
         accountRepository.reconcile(userId, request.getAccountId(), request.getNewBalance(), request.getVersion());
 
-        return adjustmentTransactionId;
+        // create an adjustment transaction -- only reached once reconcile has actually succeeded
+        TransactionCreateRequest adjustmentTransaction = createAdjustmentTransaction(account, diff);
+        return this.transactionRepository.insert(adjustmentTransaction);
     }
 
     /**

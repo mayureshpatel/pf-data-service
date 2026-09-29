@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
@@ -181,6 +182,29 @@ class AccountServiceTest {
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, BigDecimal.TEN, 1L);
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
             assertThrows(ResourceNotFoundException.class, () -> accountService.reconcileAccount(USER_ID, request));
+        }
+
+        @Test
+        @DisplayName("bug regression (PF-857): should not commit an adjustment transaction if "
+                + "reconcile() itself conflicts -- pre-fix, the transaction was inserted BEFORE "
+                + "the conflict-prone reconcile() call, so a concurrent modification left a "
+                + "permanently-committed adjustment transaction sized for a diff computed against "
+                + "a balance that was already stale by the time reconcile() even ran. Proven via "
+                + "revert-and-confirm-fail: reverting the production fix makes this test fail with "
+                + "transactionRepository.insert(...) actually having been called")
+        void shouldNotCommitAdjustmentTransactionWhenReconcileConflicts() {
+            // arrange
+            BigDecimal target = new BigDecimal("1000.00");
+            Long version = 1L;
+            AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("900.00")).version(version).build();
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            doThrow(new OptimisticLockingFailureException("conflict"))
+                    .when(accountRepository).reconcile(USER_ID, ACCOUNT_ID, target, version);
+
+            // act & assert & verify
+            assertThrows(OptimisticLockingFailureException.class, () -> accountService.reconcileAccount(USER_ID, request));
+            verify(transactionRepository, never()).insert(any(TransactionCreateRequest.class));
         }
     }
 
