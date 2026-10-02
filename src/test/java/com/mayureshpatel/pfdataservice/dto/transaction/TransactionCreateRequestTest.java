@@ -56,7 +56,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().accountId(null).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Account ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -65,7 +65,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().accountId(0L).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Account ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -79,7 +79,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().categoryId(0L).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -93,7 +93,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().amount(null).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Starting balance cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Starting balance cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -125,7 +125,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().transactionDate(null).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Transaction date cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Transaction date cannot be null.".equals(v.getMessage())));
         }
     }
 
@@ -139,7 +139,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().description("").build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Description cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Description cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -148,7 +148,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().description("a".repeat(256)).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Description must be less than 255 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Description must be less than 255 characters.".equals(v.getMessage())));
         }
     }
 
@@ -162,7 +162,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().type("").build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Type cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Type cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -171,7 +171,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().type("a".repeat(21)).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Type must be less than 20 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Type must be less than 20 characters.".equals(v.getMessage())));
         }
     }
 
@@ -185,7 +185,7 @@ class TransactionCreateRequestTest {
             TransactionCreateRequest request = createValidBuilder().merchantId(0L).build();
             Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant ID must be a positive number.".equals(v.getMessage())));
         }
     }
 }

@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper;
 import com.mayureshpatel.pfdataservice.repository.account.query.AccountQueries;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +53,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
      */
     public List<Account> findAllByUserId(Long userId) {
         return jdbcClient.sql(AccountQueries.FIND_ALL_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -68,7 +69,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
     public Optional<Account> findByIdAndUserId(Long accountId, Long userId) {
         return jdbcClient.sql(AccountQueries.FIND_BY_ACCOUNT_ID_AND_USER_ID)
                 .param("accountId", accountId)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .optional();
     }
@@ -87,7 +88,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .param("currentBalance", request.getStartingBalance())
                 .param("currencyCode", request.getCurrencyCode())
                 .param("bankName", request.getBankName())
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("createdBy", userId)
                 .param("updatedBy", userId)
                 .update(keyHolder);
@@ -149,7 +150,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
     public int reconcile(Long userId, Long accountId, BigDecimal targetBalance, Long version) {
         int updated = jdbcClient.sql(AccountQueries.RECONCILE)
                 .param("accountId", accountId)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("targetBalance", targetBalance)
                 .param("version", version)
                 .update();
@@ -175,7 +176,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
     public int updateBalance(Long userId, Long accountId, BigDecimal currentBalance, Long version) {
         int updated = jdbcClient.sql(AccountQueries.UPDATE_BALANCE)
                 .param("accountId", accountId)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("currentBalance", currentBalance)
                 .param("version", version)
                 .update();

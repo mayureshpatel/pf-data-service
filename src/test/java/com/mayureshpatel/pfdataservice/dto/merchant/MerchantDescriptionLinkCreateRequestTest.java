@@ -42,7 +42,7 @@ class MerchantDescriptionLinkCreateRequestTest {
 
         Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator.validate(request);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Description cannot be blank.")));
+        assertTrue(violations.stream().anyMatch(v -> "Description cannot be blank.".equals(v.getMessage())));
     }
 
     @Test
@@ -52,7 +52,7 @@ class MerchantDescriptionLinkCreateRequestTest {
 
         Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator.validate(request);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Description must be less than 255 characters.")));
+        assertTrue(violations.stream().anyMatch(v -> "Description must be less than 255 characters.".equals(v.getMessage())));
     }
 
     @Test

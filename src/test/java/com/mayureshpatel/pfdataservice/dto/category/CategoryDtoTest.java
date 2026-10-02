@@ -18,6 +18,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("CategoryDto Tests")
 class CategoryDtoTest {
 
+    private static final String ICON = "icon";
+    private static final String COLOR = "color";
+    private static final String CATEGORY_NAME = "Groceries";
+
     private static Validator validator;
 
     @BeforeAll
@@ -29,7 +33,7 @@ class CategoryDtoTest {
     @Test
     @DisplayName("should correctly map all fields")
     void shouldPopulateFields() {
-        CategoryDto parent = new CategoryDto(1L, 1L, "Parent", CategoryType.EXPENSE, null, "icon", "color");
+        CategoryDto parent = new CategoryDto(1L, 1L, "Parent", CategoryType.EXPENSE, null, ICON, COLOR);
         CategoryDto dto = new CategoryDto(2L, 1L, "Child", CategoryType.EXPENSE, parent, "child-icon", "child-color");
 
         assertEquals(2L, dto.id());
@@ -48,7 +52,7 @@ class CategoryDtoTest {
         @Test
         @DisplayName("should pass with valid data")
         void shouldPassWithValidData() {
-            CategoryDto dto = new CategoryDto(1L, 1L, "Groceries", CategoryType.EXPENSE, null, "icon", "color");
+            CategoryDto dto = new CategoryDto(1L, 1L, CATEGORY_NAME, CategoryType.EXPENSE, null, ICON, COLOR);
             Set<ConstraintViolation<CategoryDto>> violations = validator.validate(dto);
             assertTrue(violations.isEmpty());
         }
@@ -56,46 +60,46 @@ class CategoryDtoTest {
         @Test
         @DisplayName("should fail when name is blank")
         void shouldFailWhenNameIsBlank() {
-            CategoryDto dto = new CategoryDto(1L, 1L, "", CategoryType.EXPENSE, null, "icon", "color");
+            CategoryDto dto = new CategoryDto(1L, 1L, "", CategoryType.EXPENSE, null, ICON, COLOR);
             Set<ConstraintViolation<CategoryDto>> violations = validator.validate(dto);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category name is required")));
+            assertTrue(violations.stream().anyMatch(v -> "Category name is required".equals(v.getMessage())));
         }
 
         @Test
         @DisplayName("should fail when name is too long")
         void shouldFailWhenNameIsTooLong() {
-            CategoryDto dto = new CategoryDto(1L, 1L, "a".repeat(51), CategoryType.EXPENSE, null, "icon", "color");
+            CategoryDto dto = new CategoryDto(1L, 1L, "a".repeat(51), CategoryType.EXPENSE, null, ICON, COLOR);
             Set<ConstraintViolation<CategoryDto>> violations = validator.validate(dto);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category name must be less than 50 characters")));
+            assertTrue(violations.stream().anyMatch(v -> "Category name must be less than 50 characters".equals(v.getMessage())));
         }
 
         @Test
         @DisplayName("should fail when type is null")
         void shouldFailWhenCategoryTypeIsNull() {
-            CategoryDto dto = new CategoryDto(1L, 1L, "Groceries", null, null, "icon", "color");
+            CategoryDto dto = new CategoryDto(1L, 1L, CATEGORY_NAME, null, null, ICON, COLOR);
             Set<ConstraintViolation<CategoryDto>> violations = validator.validate(dto);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category type is required")));
+            assertTrue(violations.stream().anyMatch(v -> "Category type is required".equals(v.getMessage())));
         }
 
         @Test
         @DisplayName("should fail when icon is too long")
         void shouldFailWhenIconIsTooLong() {
-            CategoryDto dto = new CategoryDto(1L, 1L, "Groceries", CategoryType.EXPENSE, null, "a".repeat(51), "color");
+            CategoryDto dto = new CategoryDto(1L, 1L, CATEGORY_NAME, CategoryType.EXPENSE, null, "a".repeat(51), COLOR);
             Set<ConstraintViolation<CategoryDto>> violations = validator.validate(dto);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Icon name must be less than 50 characters")));
+            assertTrue(violations.stream().anyMatch(v -> "Icon name must be less than 50 characters".equals(v.getMessage())));
         }
 
         @Test
         @DisplayName("should fail when color is too long")
         void shouldFailWhenColorIsTooLong() {
-            CategoryDto dto = new CategoryDto(1L, 1L, "Groceries", CategoryType.EXPENSE, null, "icon", "a".repeat(21));
+            CategoryDto dto = new CategoryDto(1L, 1L, CATEGORY_NAME, CategoryType.EXPENSE, null, ICON, "a".repeat(21));
             Set<ConstraintViolation<CategoryDto>> violations = validator.validate(dto);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Color must be less than 20 characters")));
+            assertTrue(violations.stream().anyMatch(v -> "Color must be less than 20 characters".equals(v.getMessage())));
         }
     }
 }

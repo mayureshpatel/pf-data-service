@@ -51,7 +51,7 @@ class FileImportCreateRequestTest {
             FileImportCreateRequest request = createValidBuilder().accountId("").build();
             Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account ID cannot be blank")));
+            assertTrue(violations.stream().anyMatch(v -> "Account ID cannot be blank".equals(v.getMessage())));
         }
     }
 
@@ -65,7 +65,7 @@ class FileImportCreateRequestTest {
             FileImportCreateRequest request = createValidBuilder().fileName("").build();
             Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("File name cannot be blank")));
+            assertTrue(violations.stream().anyMatch(v -> "File name cannot be blank".equals(v.getMessage())));
         }
 
         @Test
@@ -74,7 +74,7 @@ class FileImportCreateRequestTest {
             FileImportCreateRequest request = createValidBuilder().fileName("a".repeat(256)).build();
             Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("File name must be less than 255 characters")));
+            assertTrue(violations.stream().anyMatch(v -> "File name must be less than 255 characters".equals(v.getMessage())));
         }
     }
 
@@ -88,7 +88,7 @@ class FileImportCreateRequestTest {
             FileImportCreateRequest request = createValidBuilder().fileHash("").build();
             Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("File hash cannot be blank")));
+            assertTrue(violations.stream().anyMatch(v -> "File hash cannot be blank".equals(v.getMessage())));
         }
 
         @Test
@@ -97,7 +97,7 @@ class FileImportCreateRequestTest {
             FileImportCreateRequest request = createValidBuilder().fileHash("a".repeat(65)).build();
             Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("File hash must be less than 64 characters")));
+            assertTrue(violations.stream().anyMatch(v -> "File hash must be less than 64 characters".equals(v.getMessage())));
         }
     }
 
@@ -111,7 +111,7 @@ class FileImportCreateRequestTest {
             FileImportCreateRequest request = createValidBuilder().fileContent("").build();
             Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("File content cannot be blank")));
+            assertTrue(violations.stream().anyMatch(v -> "File content cannot be blank".equals(v.getMessage())));
         }
     }
 }

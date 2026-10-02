@@ -10,12 +10,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("AccountType Domain Object Tests")
 class AccountTypeTest {
 
+    private static final String TYPE_CODE = "CHECKING";
+
     @Test
     @DisplayName("Builder should correctly populate all fields")
     void builder_shouldPopulateFields() {
         TableAudit audit = TableAudit.insertAudit(null);
         AccountType type = AccountType.builder()
-                .code("CHECKING")
+                .code(TYPE_CODE)
                 .label("Checking Account")
                 .color("blue")
                 .icon("pi-wallet")
@@ -25,7 +27,7 @@ class AccountTypeTest {
                 .audit(audit)
                 .build();
 
-        assertEquals("CHECKING", type.getCode());
+        assertEquals(TYPE_CODE, type.getCode());
         assertEquals("Checking Account", type.getLabel());
         assertEquals("blue", type.getColor());
         assertEquals("pi-wallet", type.getIcon());
@@ -39,7 +41,7 @@ class AccountTypeTest {
     @DisplayName("toBuilder should create a mutable copy")
     void toBuilder_shouldCreateMutableCopy() {
         AccountType original = AccountType.builder()
-                .code("CHECKING")
+                .code(TYPE_CODE)
                 .active(true)
                 .build();
 
@@ -55,8 +57,8 @@ class AccountTypeTest {
     @Test
     @DisplayName("Equality should be based on code")
     void equality_shouldBeBasedOnCode() {
-        AccountType t1 = AccountType.builder().code("CHECKING").label("A").build();
-        AccountType t2 = AccountType.builder().code("CHECKING").label("B").build();
+        AccountType t1 = AccountType.builder().code(TYPE_CODE).label("A").build();
+        AccountType t2 = AccountType.builder().code(TYPE_CODE).label("B").build();
         AccountType t3 = AccountType.builder().code("SAVINGS").build();
 
         assertEquals(t1, t2);

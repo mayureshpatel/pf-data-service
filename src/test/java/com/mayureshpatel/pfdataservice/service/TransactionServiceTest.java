@@ -99,6 +99,9 @@ class TransactionServiceTest {
     private static final Long ACCOUNT_ID = 10L;
     private static final Long NEW_ACCOUNT_ID = 11L;
     private static final Long TRANSACTION_ID = 100L;
+    private static final String TYPE_INCOME = "INCOME";
+    private static final String DESCRIPTION_COSTCO = "Costco Wholesale #123";
+    private static final String CATEGORY_NAME_GROCERIES = "Groceries";
 
     private Account createMockAccount(Long uid) {
         return Account.builder().id(ACCOUNT_ID).userId(uid).currentBalance(new BigDecimal("1000.00")).version(1L).build();
@@ -566,7 +569,7 @@ class TransactionServiceTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
-                    .type("INCOME")
+                    .type(TYPE_INCOME)
                     .transactionDate(OffsetDateTime.now())
                     .description("Test Description")
                     .categoryId(5L)
@@ -596,7 +599,7 @@ class TransactionServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Test").build();
+                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type(TYPE_INCOME).description("Test").build();
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 
             @SuppressWarnings("unchecked")
@@ -629,7 +632,7 @@ class TransactionServiceTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
-                    .type("INCOME")
+                    .type(TYPE_INCOME)
                     .description("Test")
                     .build();
 
@@ -659,7 +662,7 @@ class TransactionServiceTest {
             when(categoryRepository.findById(5L)).thenReturn(Optional.empty());
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").categoryId(5L).build();
+                    .accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type(TYPE_INCOME).categoryId(5L).build();
 
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.createTransaction(USER_ID, request));
@@ -679,7 +682,7 @@ class TransactionServiceTest {
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).type("INCOME").description("Guess Me").build();
+                    .accountId(ACCOUNT_ID).type(TYPE_INCOME).description("Guess Me").build();
 
             // act
             transactionService.createTransaction(USER_ID, request);
@@ -702,9 +705,9 @@ class TransactionServiceTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
-                    .type("INCOME")
+                    .type(TYPE_INCOME)
                     .transactionDate(OffsetDateTime.now())
-                    .description("Costco Wholesale #123")
+                    .description(DESCRIPTION_COSTCO)
                     .merchantId(9999L)
                     .build();
 
@@ -727,9 +730,9 @@ class TransactionServiceTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
-                    .type("INCOME")
+                    .type(TYPE_INCOME)
                     .transactionDate(OffsetDateTime.now())
-                    .description("Costco Wholesale #123")
+                    .description(DESCRIPTION_COSTCO)
                     .merchantId(9999L)
                     .build();
 
@@ -737,7 +740,7 @@ class TransactionServiceTest {
             transactionService.createTransaction(USER_ID, request);
 
             // assert & verify
-            verify(merchantService).recordDescriptionLink(USER_ID, 9999L, "Costco Wholesale #123");
+            verify(merchantService).recordDescriptionLink(USER_ID, 9999L, DESCRIPTION_COSTCO);
         }
 
         @Test
@@ -751,7 +754,7 @@ class TransactionServiceTest {
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
-                    .type("INCOME")
+                    .type(TYPE_INCOME)
                     .transactionDate(OffsetDateTime.now())
                     .description("No merchant assigned")
                     .build();
@@ -777,7 +780,7 @@ class TransactionServiceTest {
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).type("INCOME").description("No Category").build();
+                    .accountId(ACCOUNT_ID).type(TYPE_INCOME).description("No Category").build();
 
             // act
             transactionService.createTransaction(USER_ID, request);
@@ -806,7 +809,7 @@ class TransactionServiceTest {
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).type("INCOME").description("Zero Category").build();
+                    .accountId(ACCOUNT_ID).type(TYPE_INCOME).description("Zero Category").build();
 
             // act
             transactionService.createTransaction(USER_ID, request);
@@ -825,14 +828,14 @@ class TransactionServiceTest {
             Account account = createMockAccount(USER_ID);
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
-            Category first = Category.builder().id(10L).name("Groceries").build();
+            Category first = Category.builder().id(10L).name(CATEGORY_NAME_GROCERIES).build();
             Category second = Category.builder().id(20L).name("Dining").build();
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(first, second));
             when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(20L);
             when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
 
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .accountId(ACCOUNT_ID).type("INCOME").description("Guess Second").build();
+                    .accountId(ACCOUNT_ID).type(TYPE_INCOME).description("Guess Second").build();
 
             // act
             transactionService.createTransaction(USER_ID, request);
@@ -869,8 +872,8 @@ class TransactionServiceTest {
             when(transactionRepository.findById(secondTransactionId, USER_ID)).thenReturn(Optional.of(second));
             when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
-            TransactionUpdateRequest req1 = TransactionUpdateRequest.builder().id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").build();
-            TransactionUpdateRequest req2 = TransactionUpdateRequest.builder().id(secondTransactionId).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").build();
+            TransactionUpdateRequest req1 = TransactionUpdateRequest.builder().id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type(TYPE_INCOME).build();
+            TransactionUpdateRequest req2 = TransactionUpdateRequest.builder().id(secondTransactionId).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type(TYPE_INCOME).build();
 
             // act
             Integer result = transactionService.updateTransactionsBulk(USER_ID, List.of(req1, req2));
@@ -913,7 +916,7 @@ class TransactionServiceTest {
                     .id(TRANSACTION_ID)
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
-                    .type("INCOME")
+                    .type(TYPE_INCOME)
                     .description("Updated Description")
                     .build();
 
@@ -942,7 +945,7 @@ class TransactionServiceTest {
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
 
             TransactionUpdateRequest request = TransactionUpdateRequest.builder()
-                    .id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").description("Updated").build();
+                    .id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type(TYPE_INCOME).description("Updated").build();
             when(transactionRepository.update(eq(USER_ID), any(Transaction.class))).thenReturn(1);
 
             @SuppressWarnings("unchecked")
@@ -1039,8 +1042,8 @@ class TransactionServiceTest {
                     .id(TRANSACTION_ID)
                     .accountId(ACCOUNT_ID)
                     .amount(BigDecimal.TEN)
-                    .type("INCOME")
-                    .description("Costco Wholesale #123")
+                    .type(TYPE_INCOME)
+                    .description(DESCRIPTION_COSTCO)
                     .merchantId(9999L)
                     .build();
 
@@ -1049,7 +1052,7 @@ class TransactionServiceTest {
 
             // assert & verify
             verify(transactionRepository).update(eq(USER_ID), (Transaction) argThat(t -> ((Transaction) t).getMerchant().getId().equals(9999L)));
-            verify(merchantService).recordDescriptionLink(USER_ID, 9999L, "Costco Wholesale #123");
+            verify(merchantService).recordDescriptionLink(USER_ID, 9999L, DESCRIPTION_COSTCO);
         }
 
         @Test
@@ -1061,7 +1064,7 @@ class TransactionServiceTest {
             when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.empty());
 
             TransactionUpdateRequest request = TransactionUpdateRequest.builder()
-                    .id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type("INCOME").build();
+                    .id(TRANSACTION_ID).accountId(ACCOUNT_ID).amount(BigDecimal.TEN).type(TYPE_INCOME).build();
 
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> transactionService.updateTransaction(USER_ID, request));
@@ -1175,7 +1178,7 @@ class TransactionServiceTest {
                 + "was previously invisible to this test")
         void shouldGetCountByCategory() {
             CategoryTransactionsDto expected = new CategoryTransactionsDto(
-                    CategoryDto.builder().id(5L).name("Groceries").build(), 3);
+                    CategoryDto.builder().id(5L).name(CATEGORY_NAME_GROCERIES).build(), 3);
             when(transactionRepository.getCountByCategory(USER_ID)).thenReturn(List.of(expected));
 
             List<CategoryTransactionsDto> result = transactionService.getCountByCategory(USER_ID);
@@ -1188,14 +1191,14 @@ class TransactionServiceTest {
         @Test
         @DisplayName("PF-856: should return the mapped DTO's real content, not just an empty list")
         void shouldGetCategoriesWithTransactions() {
-            Category category = Category.builder().id(5L).userId(USER_ID).name("Groceries").build();
+            Category category = Category.builder().id(5L).userId(USER_ID).name(CATEGORY_NAME_GROCERIES).build();
             when(transactionRepository.getCategoriesWithTransactions(USER_ID)).thenReturn(List.of(category));
 
             List<CategoryDto> result = transactionService.getCategoriesWithTransactions(USER_ID);
 
             assertEquals(1, result.size());
             assertEquals(5L, result.get(0).id());
-            assertEquals("Groceries", result.get(0).name());
+            assertEquals(CATEGORY_NAME_GROCERIES, result.get(0).name());
             verify(transactionRepository).getCategoriesWithTransactions(USER_ID);
         }
 

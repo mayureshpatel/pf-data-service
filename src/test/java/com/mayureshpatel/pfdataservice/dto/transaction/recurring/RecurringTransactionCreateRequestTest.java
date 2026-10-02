@@ -57,7 +57,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().userId(null).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -66,7 +66,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().userId(0L).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -80,7 +80,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().accountId(null).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Account ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -89,7 +89,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().accountId(0L).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Account ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Account ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -103,7 +103,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().amount(null).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Amount cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Amount cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -135,7 +135,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().frequency(null).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Frequency cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Frequency cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -158,7 +158,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().lastDate(LocalDate.now().plusDays(1)).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Last date must be in the past.")));
+            assertTrue(violations.stream().anyMatch(v -> "Last date must be in the past.".equals(v.getMessage())));
         }
     }
 
@@ -172,7 +172,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().nextDate(null).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Next date cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Next date cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -181,7 +181,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().nextDate(LocalDate.now().minusDays(1)).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Next date must be in the future.")));
+            assertTrue(violations.stream().anyMatch(v -> "Next date must be in the future.".equals(v.getMessage())));
         }
     }
 
@@ -195,7 +195,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().merchantId(null).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -204,7 +204,7 @@ class RecurringTransactionCreateRequestTest {
             RecurringTransactionCreateRequest request = createValidBuilder().merchantId(0L).build();
             Set<ConstraintViolation<RecurringTransactionCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant ID must be a positive number.".equals(v.getMessage())));
         }
     }
 }

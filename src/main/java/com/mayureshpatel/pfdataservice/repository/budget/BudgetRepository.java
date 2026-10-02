@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.dto.budget.BudgetStatusDto;
 import com.mayureshpatel.pfdataservice.dto.budget.BudgetUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetRowMapper;
 import com.mayureshpatel.pfdataservice.repository.budget.mapper.BudgetStatusRowMapper;
 import com.mayureshpatel.pfdataservice.repository.budget.query.BudgetQueries;
@@ -30,6 +31,8 @@ import java.util.Optional;
 public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDeleteSupport {
 
     private static final ZoneOffset UTC_ZONE = ZoneOffset.UTC;
+    private static final String PARAM_MONTH = "month";
+    private static final String PARAM_YEAR = "year";
 
     private final JdbcClient jdbcClient;
     private final BudgetRowMapper rowMapper;
@@ -50,11 +53,11 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
     public int insert(BudgetCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(BudgetQueries.INSERT)
-                .param("userId", request.getUserId())
+                .param(SqlParams.USER_ID, request.getUserId())
                 .param("categoryId", request.getCategoryId())
                 .param("amount", request.getAmount())
-                .param("month", request.getMonth())
-                .param("year", request.getYear())
+                .param(PARAM_MONTH, request.getMonth())
+                .param(PARAM_YEAR, request.getYear())
                 .update(keyHolder);
 
         return keyHolder.getKey().intValue();
@@ -95,9 +98,9 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
      */
     public List<Budget> findByUserIdAndMonthAndYearAndDeletedAtIsNull(Long userId, Integer month, Integer year) {
         return jdbcClient.sql(BudgetQueries.FIND_BY_USER_ID_AND_MONTH_AND_YEAR)
-                .param("userId", userId)
-                .param("month", month)
-                .param("year", year)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_MONTH, month)
+                .param(PARAM_YEAR, year)
                 .query(rowMapper)
                 .list();
     }
@@ -111,7 +114,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
      */
     public List<Budget> findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(Long userId) {
         return jdbcClient.sql(BudgetQueries.FIND_BY_USER_ID_ORDER_BY_YEAR_DESC_MONTH_DESC)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -127,7 +130,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
      */
     public Page<Budget> findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(Long userId, Pageable pageable) {
         long total = jdbcClient.sql(BudgetQueries.COUNT_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(Long.class)
                 .single();
 
@@ -135,7 +138,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
         // -- only append limit/offset when the caller actually wants a bounded page.
         String pageSql = BudgetQueries.FIND_BY_USER_ID_ORDER_BY_YEAR_DESC_MONTH_DESC;
         var jdbcCall = jdbcClient.sql(pageable.isPaged() ? pageSql + " limit :limit offset :offset" : pageSql)
-                .param("userId", userId);
+                .param(SqlParams.USER_ID, userId);
         if (pageable.isPaged()) {
             jdbcCall = jdbcCall.param("limit", pageable.getPageSize()).param("offset", pageable.getOffset());
         }
@@ -154,10 +157,10 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
     public Optional<Budget> findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(
             Long userId, Long categoryId, Integer month, Integer year) {
         return jdbcClient.sql(BudgetQueries.FIND_BY_USER_ID_AND_CATEGORY_ID_AND_MONTH_AND_YEAR)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("categoryId", categoryId)
-                .param("month", month)
-                .param("year", year)
+                .param(PARAM_MONTH, month)
+                .param(PARAM_YEAR, year)
                 .query(rowMapper)
                 .optional();
     }
@@ -184,9 +187,9 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
         OffsetDateTime endDate = startDate.plusMonths(1);
 
         return jdbcClient.sql(BudgetQueries.FIND_BUDGET_STATUS_BY_USER_ID_AND_MONTH_AND_YEAR)
-                .param("userId", userId)
-                .param("month", month)
-                .param("year", year)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_MONTH, month)
+                .param(PARAM_YEAR, year)
                 .param("startDate", startDate)
                 .param("endDate", endDate)
                 .query(budgetStatusRowMapper)

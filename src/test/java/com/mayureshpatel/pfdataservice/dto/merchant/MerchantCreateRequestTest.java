@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("MerchantCreateRequest Validation Tests")
 class MerchantCreateRequestTest {
 
+    private static final String MERCHANT_NAME = "Starbucks";
+
     private Validator validator;
 
     @BeforeEach
@@ -30,7 +32,7 @@ class MerchantCreateRequestTest {
     void shouldPassWithValidData() {
         MerchantCreateRequest request = MerchantCreateRequest.builder()
                 .userId(1L)
-                .name("Starbucks")
+                .name(MERCHANT_NAME)
                 .build();
 
         Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
@@ -42,7 +44,7 @@ class MerchantCreateRequestTest {
     void shouldPassWithLocationFields() {
         MerchantCreateRequest request = MerchantCreateRequest.builder()
                 .userId(1L)
-                .name("Starbucks")
+                .name(MERCHANT_NAME)
                 .city("Atlanta")
                 .state("GA")
                 .postalCode("30301")
@@ -62,12 +64,12 @@ class MerchantCreateRequestTest {
         void shouldFailWhenUserIdIsNull() {
             MerchantCreateRequest request = MerchantCreateRequest.builder()
                     .userId(null)
-                    .name("Starbucks")
+                    .name(MERCHANT_NAME)
                     .build();
 
             Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -75,12 +77,12 @@ class MerchantCreateRequestTest {
         void shouldFailWhenUserIdIsNotPositive() {
             MerchantCreateRequest request = MerchantCreateRequest.builder()
                     .userId(0L)
-                    .name("Starbucks")
+                    .name(MERCHANT_NAME)
                     .build();
 
             Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -98,7 +100,7 @@ class MerchantCreateRequestTest {
 
             Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant name cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant name cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -111,7 +113,7 @@ class MerchantCreateRequestTest {
 
             Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant name must be less than 255 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant name must be less than 255 characters.".equals(v.getMessage())));
         }
     }
 
@@ -124,13 +126,13 @@ class MerchantCreateRequestTest {
         void shouldFailWhenCityIsTooLong() {
             MerchantCreateRequest request = MerchantCreateRequest.builder()
                     .userId(1L)
-                    .name("Starbucks")
+                    .name(MERCHANT_NAME)
                     .city("A".repeat(121))
                     .build();
 
             Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("City must be less than 120 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "City must be less than 120 characters.".equals(v.getMessage())));
         }
 
         @Test
@@ -138,22 +140,22 @@ class MerchantCreateRequestTest {
         void shouldFailWhenPostalCodeIsTooLong() {
             MerchantCreateRequest request = MerchantCreateRequest.builder()
                     .userId(1L)
-                    .name("Starbucks")
+                    .name(MERCHANT_NAME)
                     .postalCode("A".repeat(21))
                     .build();
 
             Set<ConstraintViolation<MerchantCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Postal code must be less than 20 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Postal code must be less than 20 characters.".equals(v.getMessage())));
         }
     }
 
     @Test
     @DisplayName("should test all-args constructor and getters")
     void testAllArgsConstructorAndGetters() {
-        MerchantCreateRequest request = new MerchantCreateRequest(1L, "Starbucks", "Atlanta", "GA", "30301", "USA");
+        MerchantCreateRequest request = new MerchantCreateRequest(1L, MERCHANT_NAME, "Atlanta", "GA", "30301", "USA");
         assertEquals(1L, request.getUserId());
-        assertEquals("Starbucks", request.getName());
+        assertEquals(MERCHANT_NAME, request.getName());
         assertEquals("Atlanta", request.getCity());
         assertEquals("GA", request.getState());
         assertEquals("30301", request.getPostalCode());
@@ -177,7 +179,7 @@ class MerchantCreateRequestTest {
     void testToBuilder() {
         MerchantCreateRequest request = MerchantCreateRequest.builder()
                 .userId(1L)
-                .name("Starbucks")
+                .name(MERCHANT_NAME)
                 .build();
 
         MerchantCreateRequest updated = request.toBuilder().name("Starbucks (Downtown)").build();
@@ -190,7 +192,7 @@ class MerchantCreateRequestTest {
     void testToString() {
         MerchantCreateRequest request = MerchantCreateRequest.builder()
                 .userId(1L)
-                .name("Starbucks")
+                .name(MERCHANT_NAME)
                 .build();
 
         assertNotNull(request.toString());

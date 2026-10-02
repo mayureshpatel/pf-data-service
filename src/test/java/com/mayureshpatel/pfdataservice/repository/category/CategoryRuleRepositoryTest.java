@@ -24,6 +24,8 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
     private CategoryRuleRepository repository;
 
     private static final Long USER_1 = 1L;
+    private static final String KEYWORD_AMZN = "AMZN";
+    private static final String KEYWORD_MKTP = "MKTP";
 
     private CategoryRule.CategoryRuleBuilder baseRuleBuilder() {
         return CategoryRule.builder()
@@ -113,7 +115,7 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
                 + "insertion order")
         void shouldAssembleMultiKeywordSetOnFind() {
             // arrange
-            CategoryRule rule = baseRuleBuilder().keywords(List.of("AMZN", "MKTP")).matchType(MatchType.AND).build();
+            CategoryRule rule = baseRuleBuilder().keywords(List.of(KEYWORD_AMZN, KEYWORD_MKTP)).matchType(MatchType.AND).build();
             repository.insertAndReturnId(rule);
 
             // act
@@ -121,10 +123,10 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             CategoryRule found = result.stream()
-                    .filter(r -> r.getKeywords().contains("AMZN"))
+                    .filter(r -> r.getKeywords().contains(KEYWORD_AMZN))
                     .findFirst()
                     .orElseThrow();
-            assertEquals(List.of("AMZN", "MKTP"), found.getKeywords());
+            assertEquals(List.of(KEYWORD_AMZN, KEYWORD_MKTP), found.getKeywords());
             assertEquals(MatchType.AND, found.getMatchType());
         }
     }
@@ -204,14 +206,14 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
         @DisplayName("PF-315: should insert all of a rule's keywords, not just the first")
         void shouldInsertAllKeywords() {
             // arrange
-            CategoryRule rule = baseRuleBuilder().keywords(List.of("AMZN", "MKTP", "US")).matchType(MatchType.AND).build();
+            CategoryRule rule = baseRuleBuilder().keywords(List.of(KEYWORD_AMZN, KEYWORD_MKTP, "US")).matchType(MatchType.AND).build();
 
             // act
             Long generatedId = repository.insertAndReturnId(rule);
 
             // assert & verify
             CategoryRule persisted = repository.findById(generatedId).orElseThrow();
-            assertEquals(List.of("AMZN", "MKTP", "US"), persisted.getKeywords());
+            assertEquals(List.of(KEYWORD_AMZN, KEYWORD_MKTP, "US"), persisted.getKeywords());
             assertEquals(MatchType.AND, persisted.getMatchType());
         }
 

@@ -16,6 +16,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("AuthenticationRequest validation tests")
 class AuthenticationRequestValidationTest {
 
+    private static final String VALID_PASSWORD = "password123";
+
     private static Validator validator;
 
     @BeforeAll
@@ -28,7 +30,7 @@ class AuthenticationRequestValidationTest {
     void validate_validRequest_noViolations() {
         AuthenticationRequest request = AuthenticationRequest.builder()
                 .username("testuser")
-                .password("password123")
+                .password(VALID_PASSWORD)
                 .build();
 
         Set<ConstraintViolation<AuthenticationRequest>> violations = validator.validate(request);
@@ -46,12 +48,12 @@ class AuthenticationRequestValidationTest {
         void validate_blankUsername_hasViolation() {
             AuthenticationRequest request = AuthenticationRequest.builder()
                     .username("")
-                    .password("password123")
+                    .password(VALID_PASSWORD)
                     .build();
 
             Set<ConstraintViolation<AuthenticationRequest>> violations = validator.validate(request);
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
+            assertThat(violations).anyMatch(v -> "username".equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -59,12 +61,12 @@ class AuthenticationRequestValidationTest {
         void validate_nullUsername_hasViolation() {
             AuthenticationRequest request = AuthenticationRequest.builder()
                     .username(null)
-                    .password("password123")
+                    .password(VALID_PASSWORD)
                     .build();
 
             Set<ConstraintViolation<AuthenticationRequest>> violations = validator.validate(request);
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
+            assertThat(violations).anyMatch(v -> "username".equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -72,13 +74,13 @@ class AuthenticationRequestValidationTest {
         void validate_usernameTooLong_hasViolation() {
             AuthenticationRequest request = AuthenticationRequest.builder()
                     .username("a".repeat(51))
-                    .password("password123")
+                    .password(VALID_PASSWORD)
                     .build();
 
             Set<ConstraintViolation<AuthenticationRequest>> violations = validator.validate(request);
 
             assertThat(violations).anyMatch(v ->
-                    v.getPropertyPath().toString().equals("username") &&
+                    "username".equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("50"));
         }
     }
@@ -98,7 +100,7 @@ class AuthenticationRequestValidationTest {
 
             Set<ConstraintViolation<AuthenticationRequest>> violations = validator.validate(request);
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+            assertThat(violations).anyMatch(v -> "password".equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -111,7 +113,7 @@ class AuthenticationRequestValidationTest {
 
             Set<ConstraintViolation<AuthenticationRequest>> violations = validator.validate(request);
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+            assertThat(violations).anyMatch(v -> "password".equals(v.getPropertyPath().toString()));
         }
     }
 }

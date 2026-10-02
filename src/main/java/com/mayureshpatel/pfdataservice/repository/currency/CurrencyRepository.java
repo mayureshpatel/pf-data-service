@@ -16,13 +16,15 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CurrencyRepository implements JdbcRepository<Currency, String> {
 
+    private static final String PARAM_CODE = "code";
+
     private final JdbcClient jdbcClient;
     private final CurrencyRowMapper rowMapper;
 
     @Override
     public Optional<Currency> findById(String code) {
         return jdbcClient.sql(CurrencyQueries.FIND_BY_CODE)
-                .param("code", code)
+                .param(PARAM_CODE, code)
                 .query(rowMapper)
                 .optional();
     }
@@ -51,7 +53,7 @@ public class CurrencyRepository implements JdbcRepository<Currency, String> {
      */
     public int save(Currency currency) {
         return jdbcClient.sql(CurrencyQueries.SAVE)
-                .param("code", currency.getCode())
+                .param(PARAM_CODE, currency.getCode())
                 .param("name", currency.getName())
                 .param("symbol", currency.getSymbol())
                 .param("isActive", currency.isActive())
@@ -61,7 +63,7 @@ public class CurrencyRepository implements JdbcRepository<Currency, String> {
     @Override
     public int deleteById(String code) {
         return jdbcClient.sql(CurrencyQueries.DELETE)
-                .param("code", code)
+                .param(PARAM_CODE, code)
                 .update();
     }
 
@@ -71,7 +73,7 @@ public class CurrencyRepository implements JdbcRepository<Currency, String> {
      */
     public boolean existsById(String code) {
         Integer count = jdbcClient.sql(CurrencyQueries.EXISTS_BY_CODE)
-                .param("code", code)
+                .param(PARAM_CODE, code)
                 .query(Integer.class)
                 .single();
 

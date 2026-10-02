@@ -16,6 +16,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("RegistrationRequest validation tests")
 class RegistrationRequestValidationTest {
 
+    private static final String FIELD_USERNAME = "username";
+    private static final String FIELD_EMAIL = "email";
+    private static final String FIELD_PASSWORD = "password";
+
     private static Validator validator;
 
     @BeforeAll
@@ -49,7 +53,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().username("").build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
+            assertThat(violations).anyMatch(v -> FIELD_USERNAME.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -58,7 +62,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().username(null).build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
+            assertThat(violations).anyMatch(v -> FIELD_USERNAME.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -67,7 +71,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().username("a".repeat(51)).build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("username"));
+            assertThat(violations).anyMatch(v -> FIELD_USERNAME.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -77,7 +81,7 @@ class RegistrationRequestValidationTest {
                     validator.validate(validRequest().username("user@name").build());
 
             assertThat(violations).anyMatch(v ->
-                    v.getPropertyPath().toString().equals("username") &&
+                    FIELD_USERNAME.equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("letters, numbers, and underscores"));
         }
 
@@ -102,7 +106,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().email("").build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("email"));
+            assertThat(violations).anyMatch(v -> FIELD_EMAIL.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -111,7 +115,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().email(null).build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("email"));
+            assertThat(violations).anyMatch(v -> FIELD_EMAIL.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -121,7 +125,7 @@ class RegistrationRequestValidationTest {
                     validator.validate(validRequest().email("not-an-email").build());
 
             assertThat(violations).anyMatch(v ->
-                    v.getPropertyPath().toString().equals("email") &&
+                    FIELD_EMAIL.equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("valid"));
         }
 
@@ -132,7 +136,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().email(longEmail).build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("email"));
+            assertThat(violations).anyMatch(v -> FIELD_EMAIL.equals(v.getPropertyPath().toString()));
         }
     }
 
@@ -147,7 +151,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().password("").build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+            assertThat(violations).anyMatch(v -> FIELD_PASSWORD.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -156,7 +160,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().password(null).build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+            assertThat(violations).anyMatch(v -> FIELD_PASSWORD.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -165,7 +169,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().password("P@ss1").build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+            assertThat(violations).anyMatch(v -> FIELD_PASSWORD.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -174,7 +178,7 @@ class RegistrationRequestValidationTest {
             Set<ConstraintViolation<RegistrationRequest>> violations =
                     validator.validate(validRequest().password("P1" + "a".repeat(99) + "@").build());
 
-            assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("password"));
+            assertThat(violations).anyMatch(v -> FIELD_PASSWORD.equals(v.getPropertyPath().toString()));
         }
 
         @Test
@@ -184,7 +188,7 @@ class RegistrationRequestValidationTest {
                     validator.validate(validRequest().password("p@ssword1").build());
 
             assertThat(violations).anyMatch(v ->
-                    v.getPropertyPath().toString().equals("password") &&
+                    FIELD_PASSWORD.equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("uppercase"));
         }
 
@@ -195,7 +199,7 @@ class RegistrationRequestValidationTest {
                     validator.validate(validRequest().password("P@SSWORD1").build());
 
             assertThat(violations).anyMatch(v ->
-                    v.getPropertyPath().toString().equals("password") &&
+                    FIELD_PASSWORD.equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("lowercase"));
         }
 
@@ -206,7 +210,7 @@ class RegistrationRequestValidationTest {
                     validator.validate(validRequest().password("P@ssword").build());
 
             assertThat(violations).anyMatch(v ->
-                    v.getPropertyPath().toString().equals("password") &&
+                    FIELD_PASSWORD.equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("digit"));
         }
 
@@ -217,7 +221,7 @@ class RegistrationRequestValidationTest {
                     validator.validate(validRequest().password("Password1").build());
 
             assertThat(violations).anyMatch(v ->
-                    v.getPropertyPath().toString().equals("password") &&
+                    FIELD_PASSWORD.equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("special character"));
         }
     }

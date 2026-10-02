@@ -42,6 +42,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TransactionService {
+    private static final String ACCOUNT_NOT_FOUND = "Account not found";
+
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
@@ -91,7 +93,7 @@ public class TransactionService {
         List<Transaction> updatedTransactions = new ArrayList<>();
         for (Transaction t : transactions) {
             Account account = accountRepository.findById(t.getAccount().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
             TransactionType newType;
             if (t.getType() == TransactionType.INCOME) {
@@ -135,7 +137,7 @@ public class TransactionService {
         List<Transaction> updatedTransactions = new ArrayList<>();
         for (Transaction t : transactions) {
             Account account = accountRepository.findById(t.getAccount().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
             TransactionType newType;
             if (t.getType() == TransactionType.TRANSFER_IN) {
@@ -174,7 +176,7 @@ public class TransactionService {
         List<Transaction> corrected = new ArrayList<>();
         for (Transaction t : misTyped) {
             Account account = accountRepository.findById(t.getAccount().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
             Transaction correctedT = t.toBuilder().type(TransactionType.INCOME).build();
             corrected.add(correctedT);
@@ -241,7 +243,7 @@ public class TransactionService {
 
         for (Transaction t : transactions) {
             Account account = accountRepository.findById(t.getAccount().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
             accountBalanceUpdateService.applyWithRetry(userId, account, acc -> acc.undoTransaction(t));
         }
 
@@ -261,7 +263,7 @@ public class TransactionService {
     @Transactional
     public int createTransaction(Long userId, TransactionCreateRequest request) {
         Account account = accountRepository.findById(request.getAccountId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
         if (!account.getUserId().equals(userId)) {
             throw new AccessDeniedException("You do not own this account");
@@ -339,7 +341,7 @@ public class TransactionService {
         Account targetAccount = currentAccount;
         if (!currentAccount.getId().equals(request.getAccountId())) {
             targetAccount = accountRepository.findById(request.getAccountId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
             if (!targetAccount.getUserId().equals(userId)) {
                 throw new AccessDeniedException("You do not own this account");

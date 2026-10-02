@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class CategoryControllerTest extends BaseControllerTest {
 
+    private static final String BASE_URL = "/api/v1/categories";
     private static final Long CATEGORY_ID = 1L;
 
     /** {@code GET /api/v1/categories} returns the user's categories (or an empty list, not an error, when there are none); the unversioned {@code /api/categories} path (PF-200) correctly 404s rather than resolving to the same handler. */
@@ -44,7 +45,7 @@ class CategoryControllerTest extends BaseControllerTest {
             when(categoryService.getCategoriesByUserId(USER_ID)).thenReturn(List.of(categoryDto));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/categories"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -69,7 +70,7 @@ class CategoryControllerTest extends BaseControllerTest {
             when(categoryService.getCategoriesByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/categories"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(0)));
         }
@@ -131,7 +132,7 @@ class CategoryControllerTest extends BaseControllerTest {
             when(categoryService.createCategory(eq(USER_ID), any(CategoryCreateRequest.class))).thenReturn(CATEGORY_ID.intValue());
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/categories")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -151,7 +152,7 @@ class CategoryControllerTest extends BaseControllerTest {
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/categories")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -178,7 +179,7 @@ class CategoryControllerTest extends BaseControllerTest {
             when(categoryService.updateCategory(eq(USER_ID), any(CategoryUpdateRequest.class))).thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/categories")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -223,7 +224,7 @@ class CategoryControllerTest extends BaseControllerTest {
                     .thenThrow(new RuntimeException("Server error"));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/categories"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError());
         }
 

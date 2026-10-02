@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantTotalRowMapper;
@@ -58,7 +59,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
      */
     public List<Merchant> findAllByUserId(Long userId) {
         return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -81,7 +82,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         String searchParam = hasSearch ? "%" + search.trim() + "%" : null;
 
         long total = jdbcClient.sql(hasSearch ? MerchantQueries.COUNT_BY_USER_ID_AND_SEARCH : MerchantQueries.COUNT_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("search", searchParam)
                 .query(Long.class)
                 .single();
@@ -93,7 +94,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         String orderClause = " order by name " + direction;
 
         Map<String, Object> params = new HashMap<>();
-        params.put("userId", userId);
+        params.put(SqlParams.USER_ID, userId);
         params.put("search", searchParam);
 
         // Pageable.unpaged() (used by test setup that genuinely wants "every merchant") throws
@@ -121,7 +122,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
     public Optional<Merchant> findByIdAndUserId(Long id, Long userId) {
         return jdbcClient.sql(MerchantQueries.FIND_BY_ID_AND_USER_ID)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .optional();
     }
@@ -137,7 +138,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
      */
     public List<MerchantBreakdownDto> findMerchantTotals(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_TOTALS)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("startDate", startDate)
                 .param("endDate", endDate)
                 .query(merchantTotalRowMapper)
@@ -150,7 +151,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
      */
     public List<MerchantReportDataDto> findMerchantReportData(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_REPORT_DATA)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("startDate", startDate)
                 .param("endDate", endDate)
                 .query(merchantReportDataRowMapper)
@@ -164,7 +165,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
     public Long insert(MerchantCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(MerchantQueries.INSERT)
-                .param("userId", request.getUserId())
+                .param(SqlParams.USER_ID, request.getUserId())
                 .param("name", request.getName())
                 .param("city", request.getCity())
                 .param("state", request.getState())
@@ -187,7 +188,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .param("postalCode", request.getPostalCode())
                 .param("country", request.getCountry())
                 .param("id", request.getId())
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 
@@ -200,7 +201,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
     public int delete(Long id, Long userId) {
         return jdbcClient.sql(MerchantQueries.DELETE)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 }

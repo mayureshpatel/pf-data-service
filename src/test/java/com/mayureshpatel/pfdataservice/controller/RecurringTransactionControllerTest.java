@@ -31,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class RecurringTransactionControllerTest extends BaseControllerTest {
 
+    private static final String BASE_URL = "/api/v1/recurring";
     private static final Long RECURRING_ID = 1L;
 
     /** {@code GET /api/v1/recurring/suggestions} delegates to {@code RecurringTransactionService#findSuggestions}. */
@@ -71,7 +72,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
             when(recurringTransactionService.getRecurringTransactions(USER_ID)).thenReturn(List.of(dto));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/recurring"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].id").value(RECURRING_ID));
@@ -102,7 +103,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
                     .thenReturn(RECURRING_ID.intValue());
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/recurring")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -121,7 +122,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/recurring")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -153,7 +154,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
                     .thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/recurring")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -171,7 +172,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/recurring")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -224,7 +225,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
                     .thenThrow(new RuntimeException("Internal error"));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/recurring"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError());
         }
     }

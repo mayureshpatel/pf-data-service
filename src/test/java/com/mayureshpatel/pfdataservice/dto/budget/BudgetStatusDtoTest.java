@@ -12,22 +12,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("BudgetStatusDto Unit Tests")
 class BudgetStatusDtoTest {
 
+    private static final String BUDGETED_AMOUNT = "500.00";
+    private static final String SPENT_AMOUNT = "200.00";
+    private static final String REMAINING_AMOUNT = "300.00";
+
     @Test
     @DisplayName("should correctly map all fields using constructor")
     void shouldPopulateFieldsViaConstructor() {
         CategoryDto category = new CategoryDto(1L, 2L, "Food", null, null, "icon", "color");
         BudgetStatusDto dto = new BudgetStatusDto(
                 category,
-                new BigDecimal("500.00"),
-                new BigDecimal("200.00"),
-                new BigDecimal("300.00"),
+                new BigDecimal(BUDGETED_AMOUNT),
+                new BigDecimal(SPENT_AMOUNT),
+                new BigDecimal(REMAINING_AMOUNT),
                 40.0
         );
 
         assertEquals(category, dto.category());
-        assertEquals(new BigDecimal("500.00"), dto.budgetedAmount());
-        assertEquals(new BigDecimal("200.00"), dto.spentAmount());
-        assertEquals(new BigDecimal("300.00"), dto.remainingAmount());
+        assertEquals(new BigDecimal(BUDGETED_AMOUNT), dto.budgetedAmount());
+        assertEquals(new BigDecimal(SPENT_AMOUNT), dto.spentAmount());
+        assertEquals(new BigDecimal(REMAINING_AMOUNT), dto.remainingAmount());
         assertEquals(40.0, dto.percentageUsed());
     }
 
@@ -37,16 +41,16 @@ class BudgetStatusDtoTest {
         CategoryDto category = new CategoryDto(1L, 2L, "Food", null, null, "icon", "color");
         BudgetStatusDto dto = BudgetStatusDto.builder()
                 .category(category)
-                .budgetedAmount(new BigDecimal("500.00"))
-                .spentAmount(new BigDecimal("200.00"))
-                .remainingAmount(new BigDecimal("300.00"))
+                .budgetedAmount(new BigDecimal(BUDGETED_AMOUNT))
+                .spentAmount(new BigDecimal(SPENT_AMOUNT))
+                .remainingAmount(new BigDecimal(REMAINING_AMOUNT))
                 .percentageUsed(40.0)
                 .build();
 
         assertEquals(category, dto.category());
-        assertEquals(new BigDecimal("500.00"), dto.budgetedAmount());
-        assertEquals(new BigDecimal("200.00"), dto.spentAmount());
-        assertEquals(new BigDecimal("300.00"), dto.remainingAmount());
+        assertEquals(new BigDecimal(BUDGETED_AMOUNT), dto.budgetedAmount());
+        assertEquals(new BigDecimal(SPENT_AMOUNT), dto.spentAmount());
+        assertEquals(new BigDecimal(REMAINING_AMOUNT), dto.remainingAmount());
         assertEquals(40.0, dto.percentageUsed());
     }
 }

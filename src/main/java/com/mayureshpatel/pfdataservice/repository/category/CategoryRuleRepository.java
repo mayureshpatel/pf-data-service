@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.category;
 
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRuleRowMapper;
 import com.mayureshpatel.pfdataservice.repository.category.query.CategoryRuleQueries;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,7 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
      */
     public List<CategoryRule> findByUserId(Long userId) {
         List<CategoryRule> rules = this.jdbcClient.sql(CategoryRuleQueries.FIND_ALL_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
 
@@ -72,7 +73,7 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
 
     private Map<Long, List<String>> findKeywordsByUserId(Long userId) {
         return this.jdbcClient.sql(CategoryRuleQueries.FIND_KEYWORDS_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query((rs, rowNum) -> Map.entry(rs.getLong("rule_id"), rs.getString("keyword")))
                 .list()
                 .stream()
@@ -97,7 +98,7 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
                 .param("minAmount", categoryRule.getMinAmount())
                 .param("maxAmount", categoryRule.getMaxAmount())
                 .param("matchType", categoryRule.getMatchType().name())
-                .param("userId", categoryRule.getUser().getId())
+                .param(SqlParams.USER_ID, categoryRule.getUser().getId())
                 .update(keyHolder);
 
         Long ruleId = keyHolder.getKey().longValue();
@@ -114,7 +115,7 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
                 .param("maxAmount", categoryRule.getMaxAmount())
                 .param("matchType", categoryRule.getMatchType().name())
                 .param("id", categoryRule.getId())
-                .param("userId", categoryRule.getUser().getId())
+                .param(SqlParams.USER_ID, categoryRule.getUser().getId())
                 .update();
 
         // only replace keywords if the parent row actually belonged to this user -- otherwise an
@@ -146,7 +147,7 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
     public int deleteById(Long id, Long userId) {
         return this.jdbcClient.sql(CategoryRuleQueries.DELETE)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 

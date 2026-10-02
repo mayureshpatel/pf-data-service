@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class TagControllerTest extends BaseControllerTest {
 
+    private static final String BASE_URL = "/api/v1/tags";
     private static final Long TAG_ID = 1L;
     private static final Long TRANSACTION_ID = 500L;
 
@@ -44,7 +45,7 @@ class TagControllerTest extends BaseControllerTest {
             when(tagService.getTags(USER_ID)).thenReturn(List.of(tagDto));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/tags"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -59,7 +60,7 @@ class TagControllerTest extends BaseControllerTest {
         void getTags_shouldReturnEmptyList() throws Exception {
             when(tagService.getTags(USER_ID)).thenReturn(Collections.emptyList());
 
-            mockMvc.perform(get("/api/v1/tags"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(0)));
         }
@@ -82,7 +83,7 @@ class TagControllerTest extends BaseControllerTest {
             when(tagService.createTag(eq(USER_ID), any(TagCreateRequest.class))).thenReturn(42L);
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/tags")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -99,7 +100,7 @@ class TagControllerTest extends BaseControllerTest {
             TagCreateRequest request = TagCreateRequest.builder().userId(USER_ID).build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/tags")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -120,7 +121,7 @@ class TagControllerTest extends BaseControllerTest {
             when(tagService.updateTag(eq(USER_ID), any(TagUpdateRequest.class))).thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/tags")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -136,7 +137,7 @@ class TagControllerTest extends BaseControllerTest {
             // arrange -- missing id and name
             TagUpdateRequest request = TagUpdateRequest.builder().build();
 
-            mockMvc.perform(put("/api/v1/tags")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -221,7 +222,7 @@ class TagControllerTest extends BaseControllerTest {
         void getTags_shouldReturn500() throws Exception {
             when(tagService.getTags(anyLong())).thenThrow(new RuntimeException("Database error"));
 
-            mockMvc.perform(get("/api/v1/tags"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError());
         }
     }

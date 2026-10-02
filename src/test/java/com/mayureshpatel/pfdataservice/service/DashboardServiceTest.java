@@ -40,6 +40,7 @@ class DashboardServiceTest {
     @InjectMocks private DashboardService dashboardService;
 
     private static final Long USER_ID = 1L;
+    private static final String AMOUNT = "100.00";
 
     /** {@code getDashboardData} combines income/expense sums and a category breakdown into one {@link DashboardData}, querying the month's date range through 23:59:59 of the last day rather than midnight (PF-196) so late-day activity on the final day isn't dropped. */
     @Nested
@@ -271,7 +272,7 @@ class DashboardServiceTest {
         void shouldReturnContinuousTrend() {
             // arrange
             // Return only one month of data: 2026-03 Income 100
-            Object[] row = new Object[]{2026, 3, "INCOME", new BigDecimal("100.00")};
+            Object[] row = new Object[]{2026, 3, "INCOME", new BigDecimal(AMOUNT)};
             when(transactionRepository.findMonthlySums(eq(USER_ID), any())).thenReturn(List.<Object[]>of(row));
 
             // act
@@ -280,7 +281,7 @@ class DashboardServiceTest {
             // assert & verify
             assertEquals(12, result.size());
             CashFlowTrendDto march = result.stream().filter(t -> t.month() == 3 && t.year() == 2026).findFirst().orElseThrow();
-            assertEquals(new BigDecimal("100.00"), march.income());
+            assertEquals(new BigDecimal(AMOUNT), march.income());
             assertEquals(BigDecimal.ZERO, march.expense());
         }
 
@@ -288,7 +289,7 @@ class DashboardServiceTest {
         @DisplayName("should sum multiple rows for same month (Income and Expense)")
         void shouldSumMonthlyTypes() {
             // arrange
-            Object[] row1 = new Object[]{2026, 3, "INCOME", new BigDecimal("100.00")};
+            Object[] row1 = new Object[]{2026, 3, "INCOME", new BigDecimal(AMOUNT)};
             Object[] row2 = new Object[]{2026, 3, "EXPENSE", new BigDecimal("50.00")};
             when(transactionRepository.findMonthlySums(eq(USER_ID), any())).thenReturn(List.<Object[]>of(row1, row2));
 
@@ -297,7 +298,7 @@ class DashboardServiceTest {
 
             // assert & verify
             CashFlowTrendDto march = result.stream().filter(t -> t.month() == 3 && t.year() == 2026).findFirst().orElseThrow();
-            assertEquals(new BigDecimal("100.00"), march.income());
+            assertEquals(new BigDecimal(AMOUNT), march.income());
             assertEquals(new BigDecimal("50.00"), march.expense());
         }
     }
@@ -398,7 +399,7 @@ class DashboardServiceTest {
         void shouldHandlePastYear() {
             // arrange
             int year = 2020;
-            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(new BigDecimal("100.00"));
+            when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.INCOME))).thenReturn(new BigDecimal(AMOUNT));
             when(transactionRepository.getSumByDateRange(eq(USER_ID), any(), any(), eq(TransactionType.EXPENSE))).thenReturn(new BigDecimal("50.00"));
 
             // act
@@ -406,7 +407,7 @@ class DashboardServiceTest {
 
             // assert & verify
             assertEquals(year, result.year());
-            assertEquals(new BigDecimal("100.00"), result.totalIncome());
+            assertEquals(new BigDecimal(AMOUNT), result.totalIncome());
         }
     }
 

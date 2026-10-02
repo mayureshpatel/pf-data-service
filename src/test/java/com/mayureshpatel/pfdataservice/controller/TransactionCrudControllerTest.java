@@ -35,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class TransactionCrudControllerTest extends BaseControllerTest {
 
+    private static final String BASE_URL = "/api/v1/transactions";
     private static final Long TRANSACTION_ID = 1L;
 
     /** {@code GET /api/v1/transactions/suggestions/transfers} delegates to {@code TransactionService#findPotentialTransfers}. */
@@ -112,7 +113,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
             // Resolve ambiguity by explicitly using TransactionFilter class
             when(transactionService.getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class))).thenReturn(page);
 
-            mockMvc.perform(get("/api/v1/transactions")
+            mockMvc.perform(get(BASE_URL)
                             .param("page", "0")
                             .param("size", "10"))
                     .andExpect(status().isOk())
@@ -125,7 +126,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
             Page<TransactionDto> page = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
             when(transactionService.getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class))).thenReturn(page);
 
-            mockMvc.perform(get("/api/v1/transactions")
+            mockMvc.perform(get(BASE_URL)
                             .param("tagId", "42"))
                     .andExpect(status().isOk());
 
@@ -192,7 +193,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
 
             when(transactionService.createTransaction(eq(USER_ID), any(TransactionCreateRequest.class))).thenReturn(1);
 
-            mockMvc.perform(post("/api/v1/transactions")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -205,7 +206,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         void createTransaction_shouldReturn400() throws Exception {
             TransactionCreateRequest request = TransactionCreateRequest.builder().build(); // Missing required fields
 
-            mockMvc.perform(post("/api/v1/transactions")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -276,7 +277,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
 
             when(transactionService.updateTransaction(eq(USER_ID), any(TransactionUpdateRequest.class))).thenReturn(1);
 
-            mockMvc.perform(put("/api/v1/transactions")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))

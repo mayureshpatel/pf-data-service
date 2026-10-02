@@ -33,6 +33,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TransactionControllerTest extends BaseControllerTest {
 
     private static final Long ACCOUNT_ID = 10L;
+    private static final String FILE_FIELD_NAME = "file";
+    private static final String TEST_CSV_FILENAME = "test.csv";
+    private static final String BANK_CAPITAL_ONE = "CAPITAL_ONE";
+    private static final String UPLOAD_URL = "/api/v1/accounts/{accountId}/upload";
+    private static final String PARAM_BANK_NAME = "bankName";
 
     /** {@code POST /api/v1/accounts/{accountId}/upload} returns parsed previews on a successful multipart upload, a 400 for an empty file, and a 403 (via {@code SecurityService#isAccountOwner}) when the caller doesn't own the target account. */
     @Nested
@@ -44,27 +49,27 @@ class TransactionControllerTest extends BaseControllerTest {
         void uploadTransactions_shouldReturnPreviews() throws Exception {
             // arrange
             MockMultipartFile file = new MockMultipartFile(
-                    "file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "date,description,amount\n2026-03-04,Coffee,5.00".getBytes());
-            String bankName = "CAPITAL_ONE";
+                    FILE_FIELD_NAME, TEST_CSV_FILENAME, MediaType.TEXT_PLAIN_VALUE, "date,description,amount\n2026-03-04,Coffee,5.00".getBytes());
+            String bankName = BANK_CAPITAL_ONE;
             TransactionPreviewDto previewDto = TransactionPreviewDto.builder()
                     .description("Coffee")
                     .amount(new BigDecimal("5.00"))
                     .build();
 
-            when(transactionImportService.previewTransactions(eq(USER_ID), eq(ACCOUNT_ID), eq(bankName), any(InputStream.class), eq("test.csv")))
+            when(transactionImportService.previewTransactions(eq(USER_ID), eq(ACCOUNT_ID), eq(bankName), any(InputStream.class), eq(TEST_CSV_FILENAME)))
                     .thenReturn(List.of(previewDto));
 
             // act & assert & verify
-            mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
+            mockMvc.perform(multipart(UPLOAD_URL, ACCOUNT_ID)
                             .file(file)
-                            .param("bankName", bankName)
+                            .param(PARAM_BANK_NAME, bankName)
                             .with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].description").value("Coffee"));
 
-            verify(transactionImportService).previewTransactions(eq(USER_ID), eq(ACCOUNT_ID), eq(bankName), any(InputStream.class), eq("test.csv"));
+            verify(transactionImportService).previewTransactions(eq(USER_ID), eq(ACCOUNT_ID), eq(bankName), any(InputStream.class), eq(TEST_CSV_FILENAME));
         }
 
         @Test
@@ -72,12 +77,12 @@ class TransactionControllerTest extends BaseControllerTest {
         void uploadTransactions_shouldReturn400WhenFileEmpty() throws Exception {
             // arrange
             MockMultipartFile file = new MockMultipartFile(
-                    "file", "empty.csv", MediaType.TEXT_PLAIN_VALUE, new byte[0]);
+                    FILE_FIELD_NAME, "empty.csv", MediaType.TEXT_PLAIN_VALUE, new byte[0]);
             
             // act & assert & verify
-            mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
+            mockMvc.perform(multipart(UPLOAD_URL, ACCOUNT_ID)
                             .file(file)
-                            .param("bankName", "CAPITAL_ONE")
+                            .param(PARAM_BANK_NAME, BANK_CAPITAL_ONE)
                             .with(csrf()))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.detail").value("File must not be empty"));
@@ -88,13 +93,13 @@ class TransactionControllerTest extends BaseControllerTest {
         @WithCustomMockUser(id = 999L)
         void uploadTransactions_shouldReturn403WhenNotOwner() throws Exception {
             // arrange
-            MockMultipartFile file = new MockMultipartFile("file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
+            MockMultipartFile file = new MockMultipartFile(FILE_FIELD_NAME, TEST_CSV_FILENAME, MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
             when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
 
             // act & assert & verify
-            mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
+            mockMvc.perform(multipart(UPLOAD_URL, ACCOUNT_ID)
                             .file(file)
-                            .param("bankName", "CAPITAL_ONE")
+                            .param(PARAM_BANK_NAME, BANK_CAPITAL_ONE)
                             .with(csrf()))
                     .andExpect(status().isForbidden());
         }
@@ -113,9 +118,9 @@ class TransactionControllerTest extends BaseControllerTest {
                     .description("Test")
                     .amount(new BigDecimal("10.00"))
                     .build();
-            SaveTransactionRequest request = new SaveTransactionRequest(List.of(transaction), "test.csv", "hash123", 10L);
+            SaveTransactionRequest request = new SaveTransactionRequest(List.of(transaction), TEST_CSV_FILENAME, "hash123", 10L);
 
-            when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq("test.csv"), eq("hash123")))
+            when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq(TEST_CSV_FILENAME), eq("hash123")))
                     .thenReturn(1);
 
             // act & assert & verify
@@ -126,7 +131,7 @@ class TransactionControllerTest extends BaseControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(content().string("Successfully saved 1 transactions."));
 
-            verify(transactionImportService).saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq("test.csv"), eq("hash123"));
+            verify(transactionImportService).saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq(TEST_CSV_FILENAME), eq("hash123"));
         }
 
         @Test
@@ -150,7 +155,7 @@ class TransactionControllerTest extends BaseControllerTest {
         @WithCustomMockUser(id = 999L)
         void saveTransactions_shouldReturn403WhenNotOwner() throws Exception {
             // arrange
-            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().build()), "test.csv", "hash", 10L);
+            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().build()), TEST_CSV_FILENAME, "hash", 10L);
             when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
 
             // act & assert & verify
@@ -171,14 +176,14 @@ class TransactionControllerTest extends BaseControllerTest {
         @DisplayName("POST /upload should return 500 when service fails unexpectedly")
         void uploadTransactions_shouldReturn500OnServiceError() throws Exception {
             // arrange
-            MockMultipartFile file = new MockMultipartFile("file", "test.csv", MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
+            MockMultipartFile file = new MockMultipartFile(FILE_FIELD_NAME, TEST_CSV_FILENAME, MediaType.TEXT_PLAIN_VALUE, "test".getBytes());
             when(transactionImportService.previewTransactions(anyLong(), anyLong(), anyString(), any(InputStream.class), anyString()))
                     .thenThrow(new RuntimeException("Import failed"));
 
             // act & assert & verify
-            mockMvc.perform(multipart("/api/v1/accounts/{accountId}/upload", ACCOUNT_ID)
+            mockMvc.perform(multipart(UPLOAD_URL, ACCOUNT_ID)
                             .file(file)
-                            .param("bankName", "CAPITAL_ONE")
+                            .param(PARAM_BANK_NAME, BANK_CAPITAL_ONE)
                             .with(csrf()))
                     .andExpect(status().isInternalServerError());
         }

@@ -36,6 +36,8 @@ import static org.mockito.Mockito.when;
 @DisplayName("CacheConfig Integration Tests")
 class CacheConfigTest {
 
+    private static final String ACCOUNT_TYPE_SAVINGS = "SAVINGS";
+
     @Autowired
     private CurrencyService currencyService;
 
@@ -120,9 +122,9 @@ class CacheConfigTest {
 
             // act -- create, then re-stub the repository to reflect the new row, matching what a
             // real insert-then-reselect would return
-            AccountType savings = AccountType.builder().code("SAVINGS").label("Savings").active(true).build();
+            AccountType savings = AccountType.builder().code(ACCOUNT_TYPE_SAVINGS).label("Savings").active(true).build();
             when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(List.of(checking, savings));
-            accountTypeService.create(AccountTypeCreateRequest.builder().code("SAVINGS").label("Savings").build());
+            accountTypeService.create(AccountTypeCreateRequest.builder().code(ACCOUNT_TYPE_SAVINGS).label("Savings").build());
             List<AccountTypeDto> afterCreate = accountTypeService.getAllActiveAccountTypes();
 
             // assert & verify -- not served from the stale, pre-create cached entry
@@ -135,13 +137,13 @@ class CacheConfigTest {
         void shouldEvictCacheOnDelete() {
             // arrange -- prime the cache with the pre-delete state
             AccountType checking = AccountType.builder().code("CHECKING").label("Checking").active(true).build();
-            AccountType savings = AccountType.builder().code("SAVINGS").label("Savings").active(true).build();
+            AccountType savings = AccountType.builder().code(ACCOUNT_TYPE_SAVINGS).label("Savings").active(true).build();
             when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(List.of(checking, savings));
             accountTypeService.getAllActiveAccountTypes();
 
             // act
             when(accountTypeRepository.findByIsActiveTrueOrderBySortOrder()).thenReturn(List.of(checking));
-            accountTypeService.delete("SAVINGS");
+            accountTypeService.delete(ACCOUNT_TYPE_SAVINGS);
             List<AccountTypeDto> afterDelete = accountTypeService.getAllActiveAccountTypes();
 
             // assert & verify -- not served from the stale, pre-delete cached entry

@@ -55,8 +55,8 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertTrue(result.size() >= 2);
             // Verify order based on sortOrder
-            assertTrue(result.indexOf(result.stream().filter(a -> a.getCode().equals("TST2")).findFirst().get()) <
-                       result.indexOf(result.stream().filter(a -> a.getCode().equals("TST1")).findFirst().get()));
+            assertTrue(result.indexOf(result.stream().filter(a -> "TST2".equals(a.getCode())).findFirst().get()) <
+                       result.indexOf(result.stream().filter(a -> "TST1".equals(a.getCode())).findFirst().get()));
         }
 
         @Test
@@ -76,7 +76,7 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertEquals(1, rows);
             List<AccountType> types = repository.findByIsActiveTrueOrderBySortOrder();
-            assertTrue(types.stream().noneMatch(a -> a.getCode().equals("DEL1")));
+            assertTrue(types.stream().noneMatch(a -> "DEL1".equals(a.getCode())));
         }
 
         @Test

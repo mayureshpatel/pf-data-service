@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("TagCreateRequest Validation Tests")
 class TagCreateRequestTest {
 
+    private static final String TAG_NAME = "Travel";
+
     private static Validator validator;
 
     @BeforeAll
@@ -31,7 +33,7 @@ class TagCreateRequestTest {
     void shouldPassWithValidData() {
         TagCreateRequest request = TagCreateRequest.builder()
                 .userId(1L)
-                .name("Travel")
+                .name(TAG_NAME)
                 .color("#123456")
                 .build();
 
@@ -42,7 +44,7 @@ class TagCreateRequestTest {
     @Test
     @DisplayName("should pass when color is null (optional)")
     void shouldPassWithNullColor() {
-        TagCreateRequest request = TagCreateRequest.builder().userId(1L).name("Travel").color(null).build();
+        TagCreateRequest request = TagCreateRequest.builder().userId(1L).name(TAG_NAME).color(null).build();
         Set<ConstraintViolation<TagCreateRequest>> violations = validator.validate(request);
         assertTrue(violations.isEmpty());
     }
@@ -54,19 +56,19 @@ class TagCreateRequestTest {
         @Test
         @DisplayName("should fail when userId is null")
         void shouldFailWhenUserIdIsNull() {
-            TagCreateRequest request = TagCreateRequest.builder().userId(null).name("Travel").build();
+            TagCreateRequest request = TagCreateRequest.builder().userId(null).name(TAG_NAME).build();
             Set<ConstraintViolation<TagCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
         @DisplayName("should fail when userId is not positive")
         void shouldFailWhenUserIdIsNotPositive() {
-            TagCreateRequest request = TagCreateRequest.builder().userId(0L).name("Travel").build();
+            TagCreateRequest request = TagCreateRequest.builder().userId(0L).name(TAG_NAME).build();
             Set<ConstraintViolation<TagCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -80,7 +82,7 @@ class TagCreateRequestTest {
             TagCreateRequest request = TagCreateRequest.builder().userId(1L).name("").build();
             Set<ConstraintViolation<TagCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Name cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Name cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -89,7 +91,7 @@ class TagCreateRequestTest {
             TagCreateRequest request = TagCreateRequest.builder().userId(1L).name("a".repeat(51)).build();
             Set<ConstraintViolation<TagCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Name cannot exceed 50 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Name cannot exceed 50 characters.".equals(v.getMessage())));
         }
     }
 }

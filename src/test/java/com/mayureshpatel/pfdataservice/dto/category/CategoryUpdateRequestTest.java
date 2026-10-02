@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("CategoryUpdateRequest Validation Tests")
 class CategoryUpdateRequestTest {
 
+    private static final String CATEGORY_NAME = "Groceries";
+
     private static Validator validator;
 
     @BeforeAll
@@ -32,7 +34,7 @@ class CategoryUpdateRequestTest {
         CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                 .id(1L)
                 .userId(1L)
-                .name("Groceries")
+                .name(CATEGORY_NAME)
                 .type("EXPENSE")
                 .color("#FF0000")
                 .icon("shopping-cart")
@@ -53,11 +55,11 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(null)
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -66,11 +68,11 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(0L)
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -84,11 +86,11 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(1L)
                     .userId(null)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -97,11 +99,11 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(1L)
                     .userId(0L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -119,7 +121,7 @@ class CategoryUpdateRequestTest {
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category name cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category name cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -132,7 +134,7 @@ class CategoryUpdateRequestTest {
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category name must be less than 50 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category name must be less than 50 characters.".equals(v.getMessage())));
         }
     }
 
@@ -146,12 +148,12 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(1L)
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .type("a".repeat(21))
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category type must be less than 20 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category type must be less than 20 characters.".equals(v.getMessage())));
         }
     }
 
@@ -165,12 +167,12 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(1L)
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .color("a".repeat(21))
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category color must be less than 20 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category color must be less than 20 characters.".equals(v.getMessage())));
         }
     }
 
@@ -184,12 +186,12 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(1L)
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .icon("a".repeat(51))
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category icon must be less than 50 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category icon must be less than 50 characters.".equals(v.getMessage())));
         }
     }
 
@@ -203,12 +205,12 @@ class CategoryUpdateRequestTest {
             CategoryUpdateRequest request = CategoryUpdateRequest.builder()
                     .id(1L)
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .parentId(0L)
                     .build();
             Set<ConstraintViolation<CategoryUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Parent ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Parent ID must be a positive number.".equals(v.getMessage())));
         }
     }
 }

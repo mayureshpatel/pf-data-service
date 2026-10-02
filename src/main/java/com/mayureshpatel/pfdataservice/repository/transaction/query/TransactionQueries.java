@@ -73,6 +73,16 @@ public final class TransactionQueries {
                     "left join categories parent_categories ON categories.parent_id = parent_categories.id " +
                     "left join merchants ON transactions.merchant_id = merchants.id";
 
+    /**
+     * Concatenation fragments shared by the {@code FIND_*} queries below that build their SQL by
+     * composing {@link #ENRICHED_COLUMNS}/{@link #ENRICHED_JOINS} with a query-specific {@code
+     * where} clause, rather than a self-contained text block.
+     */
+    private static final String SELECT = "select ";
+    private static final String FROM_TRANSACTIONS = " from transactions ";
+    private static final String WHERE_USER_OWNS_ACCOUNT = " where accounts.user_id = :userId";
+    private static final String AND_NOT_DELETED = "   and transactions.deleted_at is null";
+
     // language=SQL
     // PF-308: batch-fetches tags for a whole page of transactions in one query (not per-row),
     // assembled onto each Transaction in Java by TransactionRepository.findAll -- same pattern as
@@ -86,12 +96,12 @@ public final class TransactionQueries {
 
     // language=SQL
     public static final String FIND_BY_ID_WITH_DETAILS =
-            "select " + ENRICHED_COLUMNS + " from transactions " + ENRICHED_JOINS +
+            SELECT + ENRICHED_COLUMNS + FROM_TRANSACTIONS + ENRICHED_JOINS +
                     " where transactions.id = :id and accounts.user_id = :userId and transactions.deleted_at is null";
 
     // language=SQL
     public static final String FIND_ALL_BY_IDS_WITH_DETAILS =
-            "select " + ENRICHED_COLUMNS + " from transactions " + ENRICHED_JOINS +
+            SELECT + ENRICHED_COLUMNS + FROM_TRANSACTIONS + ENRICHED_JOINS +
                     " where transactions.id in (:ids) and accounts.user_id = :userId and transactions.deleted_at is null";
 
     // language=SQL
@@ -112,10 +122,10 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String FIND_BY_USER_ID = "select " + ENRICHED_COLUMNS +
-            " from transactions " + ENRICHED_JOINS +
-            " where accounts.user_id = :userId" +
-            "   and transactions.deleted_at is null" +
+    public static final String FIND_BY_USER_ID = SELECT + ENRICHED_COLUMNS +
+            FROM_TRANSACTIONS + ENRICHED_JOINS +
+            WHERE_USER_OWNS_ACCOUNT +
+            AND_NOT_DELETED +
             " order by transactions.date desc";
 
     // language=SQL
@@ -315,12 +325,12 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String FIND_RECENT_NON_TRANSFER = "select " + ENRICHED_COLUMNS +
-            " from transactions " + ENRICHED_JOINS +
-            " where accounts.user_id = :userId" +
+    public static final String FIND_RECENT_NON_TRANSFER = SELECT + ENRICHED_COLUMNS +
+            FROM_TRANSACTIONS + ENRICHED_JOINS +
+            WHERE_USER_OWNS_ACCOUNT +
             "   and transactions.date >= :startDate" +
             "   and transactions.type not in ('TRANSFER_IN', 'TRANSFER_OUT', 'TRANSFER')" +
-            "   and transactions.deleted_at is null" +
+            AND_NOT_DELETED +
             " order by transactions.date desc";
 
     // language=SQL
@@ -347,12 +357,12 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String FIND_EXPENSES_SINCE = "select " + ENRICHED_COLUMNS +
-            " from transactions " + ENRICHED_JOINS +
-            " where accounts.user_id = :userId" +
+    public static final String FIND_EXPENSES_SINCE = SELECT + ENRICHED_COLUMNS +
+            FROM_TRANSACTIONS + ENRICHED_JOINS +
+            WHERE_USER_OWNS_ACCOUNT +
             "   and transactions.date >= :startDate" +
             "   and transactions.type = 'EXPENSE'" +
-            "   and transactions.deleted_at is null" +
+            AND_NOT_DELETED +
             " order by transactions.date desc";
 
     // language=SQL
@@ -441,10 +451,10 @@ public final class TransactionQueries {
     // ever have produced. Scoped to credit-card accounts specifically (not "any TRANSFER_IN"), so
     // this never touches a genuine markAsTransfer()-confirmed transfer that might exist on some
     // other account type.
-    public static final String FIND_TRANSFER_IN_ON_CREDIT_CARD_ACCOUNTS = "select " + ENRICHED_COLUMNS +
-            " from transactions " + ENRICHED_JOINS +
-            " where accounts.user_id = :userId" +
+    public static final String FIND_TRANSFER_IN_ON_CREDIT_CARD_ACCOUNTS = SELECT + ENRICHED_COLUMNS +
+            FROM_TRANSACTIONS + ENRICHED_JOINS +
+            WHERE_USER_OWNS_ACCOUNT +
             "   and transactions.type = 'TRANSFER_IN'" +
             "   and accounts.type = 'CREDIT_CARD'" +
-            "   and transactions.deleted_at is null";
+            AND_NOT_DELETED;
 }

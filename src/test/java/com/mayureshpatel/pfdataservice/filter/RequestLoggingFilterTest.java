@@ -42,6 +42,9 @@ import static org.mockito.Mockito.when;
 @DisplayName("RequestLoggingFilter Unit Tests")
 class RequestLoggingFilterTest {
 
+    private static final String HTTP_METHOD_GET = "GET";
+    private static final String REQUEST_URI = "/api/v1/accounts";
+
     @Mock
     private HttpServletRequest request;
     @Mock
@@ -78,8 +81,8 @@ class RequestLoggingFilterTest {
         @DisplayName("should log at INFO for a successful response")
         void shouldLogAtInfoForSuccess() throws ServletException, IOException {
             // arrange
-            when(request.getMethod()).thenReturn("GET");
-            when(request.getRequestURI()).thenReturn("/api/v1/accounts");
+            when(request.getMethod()).thenReturn(HTTP_METHOD_GET);
+            when(request.getRequestURI()).thenReturn(REQUEST_URI);
             when(response.getStatus()).thenReturn(200);
 
             // act
@@ -95,7 +98,7 @@ class RequestLoggingFilterTest {
         @DisplayName("should log at WARN for a 4xx response")
         void shouldLogAtWarnForClientError() throws ServletException, IOException {
             // arrange
-            when(request.getMethod()).thenReturn("GET");
+            when(request.getMethod()).thenReturn(HTTP_METHOD_GET);
             when(request.getRequestURI()).thenReturn("/api/v1/accounts/999");
             when(response.getStatus()).thenReturn(404);
 
@@ -131,8 +134,8 @@ class RequestLoggingFilterTest {
         @DisplayName("should include the authenticated username when a real user is present")
         void shouldIncludeAuthenticatedUsername() throws ServletException, IOException {
             // arrange
-            when(request.getMethod()).thenReturn("GET");
-            when(request.getRequestURI()).thenReturn("/api/v1/accounts");
+            when(request.getMethod()).thenReturn(HTTP_METHOD_GET);
+            when(request.getRequestURI()).thenReturn(REQUEST_URI);
             when(response.getStatus()).thenReturn(200);
             SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken("mayuresh", null, Collections.emptyList()));
@@ -148,8 +151,8 @@ class RequestLoggingFilterTest {
         @DisplayName("should log \"anonymous\" when there is no authenticated user")
         void shouldLogAnonymousWhenUnauthenticated() throws ServletException, IOException {
             // arrange
-            when(request.getMethod()).thenReturn("GET");
-            when(request.getRequestURI()).thenReturn("/api/v1/accounts");
+            when(request.getMethod()).thenReturn(HTTP_METHOD_GET);
+            when(request.getRequestURI()).thenReturn(REQUEST_URI);
             when(response.getStatus()).thenReturn(200);
 
             // act
@@ -169,8 +172,8 @@ class RequestLoggingFilterTest {
         @DisplayName("should remove the correlationId MDC key after the request completes, not leak it")
         void shouldRemoveCorrelationIdAfterRequest() throws ServletException, IOException {
             // arrange
-            when(request.getMethod()).thenReturn("GET");
-            when(request.getRequestURI()).thenReturn("/api/v1/accounts");
+            when(request.getMethod()).thenReturn(HTTP_METHOD_GET);
+            when(request.getRequestURI()).thenReturn(REQUEST_URI);
             when(response.getStatus()).thenReturn(200);
 
             // act
@@ -184,8 +187,8 @@ class RequestLoggingFilterTest {
         @DisplayName("should have a correlationId set in MDC while the downstream chain executes")
         void shouldSetCorrelationIdDuringChainExecution() throws ServletException, IOException {
             // arrange -- assertion runs inside the stubbed chain call, mid-act
-            when(request.getMethod()).thenReturn("GET");
-            when(request.getRequestURI()).thenReturn("/api/v1/accounts");
+            when(request.getMethod()).thenReturn(HTTP_METHOD_GET);
+            when(request.getRequestURI()).thenReturn(REQUEST_URI);
             when(response.getStatus()).thenReturn(200);
             doAnswer(invocation -> {
                 assertThat(MDC.get("correlationId")).isNotNull();
@@ -200,8 +203,8 @@ class RequestLoggingFilterTest {
         @DisplayName("should remove correlationId even when the downstream chain throws")
         void shouldRemoveCorrelationIdEvenOnException() throws ServletException, IOException {
             // arrange
-            when(request.getMethod()).thenReturn("GET");
-            when(request.getRequestURI()).thenReturn("/api/v1/accounts");
+            when(request.getMethod()).thenReturn(HTTP_METHOD_GET);
+            when(request.getRequestURI()).thenReturn(REQUEST_URI);
             when(response.getStatus()).thenReturn(500);
             doThrow(new IOException("boom")).when(filterChain).doFilter(request, response);
 

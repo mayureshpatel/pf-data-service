@@ -57,6 +57,9 @@ class RecurringTransactionServiceTest {
 
     private static final Long USER_ID = 1L;
     private static final Long RECURRING_ID = 100L;
+    private static final String MERCHANT_NETFLIX = "Netflix";
+    private static final String LATEST_AMOUNT = "15.49";
+    private static final String METHOD_CALCULATE_NEXT_DATE = "calculateNextDate";
 
     /** {@code getRecurringTransactions} maps every active, next-date-ordered repository row for the user to a {@link RecurringTransactionDto}. */
     @Nested
@@ -214,12 +217,12 @@ class RecurringTransactionServiceTest {
             LocalDate now = LocalDate.now();
             OffsetDateTime offset = OffsetDateTime.now();
             List<Transaction> netflix = List.of(
-                    Transaction.builder().transactionDate(now.minusMonths(5).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description("Netflix").build(),
-                    Transaction.builder().transactionDate(now.minusMonths(4).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description("Netflix").build(),
-                    Transaction.builder().transactionDate(now.minusMonths(3).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description("Netflix").build(),
-                    Transaction.builder().transactionDate(now.minusMonths(2).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("15.49")).description("Netflix").build(),
-                    Transaction.builder().transactionDate(now.minusMonths(1).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("15.49")).description("Netflix").build(),
-                    Transaction.builder().transactionDate(now.atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("15.49")).description("Netflix").build()
+                    Transaction.builder().transactionDate(now.minusMonths(5).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description(MERCHANT_NETFLIX).build(),
+                    Transaction.builder().transactionDate(now.minusMonths(4).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description(MERCHANT_NETFLIX).build(),
+                    Transaction.builder().transactionDate(now.minusMonths(3).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal("13.99")).description(MERCHANT_NETFLIX).build(),
+                    Transaction.builder().transactionDate(now.minusMonths(2).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal(LATEST_AMOUNT)).description(MERCHANT_NETFLIX).build(),
+                    Transaction.builder().transactionDate(now.minusMonths(1).atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal(LATEST_AMOUNT)).description(MERCHANT_NETFLIX).build(),
+                    Transaction.builder().transactionDate(now.atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal(LATEST_AMOUNT)).description(MERCHANT_NETFLIX).build()
             );
 
             when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
@@ -229,12 +232,12 @@ class RecurringTransactionServiceTest {
             List<RecurringSuggestionDto> result = recurringService.findSuggestions(USER_ID);
 
             // assert & verify -- one suggestion, reflecting the current price and the full history
-            long netflixSuggestions = result.stream().filter(s -> "Netflix".equals(s.merchant().name())).count();
+            long netflixSuggestions = result.stream().filter(s -> MERCHANT_NETFLIX.equals(s.merchant().name())).count();
             assertEquals(1, netflixSuggestions, "expected exactly one Netflix suggestion, got: " + result);
 
             RecurringSuggestionDto suggestion = result.stream()
-                    .filter(s -> "Netflix".equals(s.merchant().name())).findFirst().orElseThrow();
-            assertEquals(0, new BigDecimal("15.49").compareTo(suggestion.amount()), "expected the current/most-recent price");
+                    .filter(s -> MERCHANT_NETFLIX.equals(s.merchant().name())).findFirst().orElseThrow();
+            assertEquals(0, new BigDecimal(LATEST_AMOUNT).compareTo(suggestion.amount()), "expected the current/most-recent price");
             assertEquals(6, suggestion.occurrenceCount(), "expected the full history counted, not just the current tier");
             assertEquals(Frequency.MONTHLY, suggestion.frequency());
         }
@@ -316,7 +319,7 @@ class RecurringTransactionServiceTest {
 
     /** The private {@code calculateNextDate} helper (invoked here via reflection) advances a given date by each {@link Frequency}'s own real calendar increment -- a calendar month/week/quarter/year, not a fixed day count. */
     @Nested
-    @DisplayName("calculateNextDate")
+    @DisplayName(METHOD_CALCULATE_NEXT_DATE)
     class CalculateNextDateTests {
         @Test
         @DisplayName("should calculate correct next dates for all frequencies via reflection")
@@ -325,11 +328,11 @@ class RecurringTransactionServiceTest {
             LocalDate last = LocalDate.of(2026, 3, 1);
 
             // act & assert & verify
-            assertEquals(last.plusMonths(1), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.MONTHLY));
-            assertEquals(last.plusWeeks(1), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.WEEKLY));
-            assertEquals(last.plusWeeks(2), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.BI_WEEKLY));
-            assertEquals(last.plusMonths(3), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.QUARTERLY));
-            assertEquals(last.plusYears(1), ReflectionTestUtils.invokeMethod(recurringService, "calculateNextDate", last, Frequency.YEARLY));
+            assertEquals(last.plusMonths(1), ReflectionTestUtils.invokeMethod(recurringService, METHOD_CALCULATE_NEXT_DATE, last, Frequency.MONTHLY));
+            assertEquals(last.plusWeeks(1), ReflectionTestUtils.invokeMethod(recurringService, METHOD_CALCULATE_NEXT_DATE, last, Frequency.WEEKLY));
+            assertEquals(last.plusWeeks(2), ReflectionTestUtils.invokeMethod(recurringService, METHOD_CALCULATE_NEXT_DATE, last, Frequency.BI_WEEKLY));
+            assertEquals(last.plusMonths(3), ReflectionTestUtils.invokeMethod(recurringService, METHOD_CALCULATE_NEXT_DATE, last, Frequency.QUARTERLY));
+            assertEquals(last.plusYears(1), ReflectionTestUtils.invokeMethod(recurringService, METHOD_CALCULATE_NEXT_DATE, last, Frequency.YEARLY));
         }
     }
 

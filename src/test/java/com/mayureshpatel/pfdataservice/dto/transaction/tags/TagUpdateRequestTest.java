@@ -44,7 +44,7 @@ class TagUpdateRequestTest {
             TagUpdateRequest request = TagUpdateRequest.builder().id(null).name("Travel").build();
             Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Tag ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Tag ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -53,7 +53,7 @@ class TagUpdateRequestTest {
             TagUpdateRequest request = TagUpdateRequest.builder().id(0L).name("Travel").build();
             Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Tag ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Tag ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -67,7 +67,7 @@ class TagUpdateRequestTest {
             TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("").build();
             Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Name cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Name cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -76,7 +76,7 @@ class TagUpdateRequestTest {
             TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("a".repeat(51)).build();
             Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Name cannot exceed 50 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Name cannot exceed 50 characters.".equals(v.getMessage())));
         }
     }
 }

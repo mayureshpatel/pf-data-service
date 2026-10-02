@@ -15,6 +15,11 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Account Domain Object Tests")
 class AccountTest {
 
+    private static final String BALANCE_100 = "100.00";
+    private static final String AMOUNT_50 = "50.00";
+    private static final String TYPE_INCOME = "INCOME";
+    private static final String AMOUNT_25 = "25.00";
+
     @Test
     @DisplayName("Constructor should set default balance to ZERO")
     void constructor_shouldSetDefaultBalance() {
@@ -31,10 +36,10 @@ class AccountTest {
         @DisplayName("applyTransaction should increase balance for INCOME")
         void applyTransaction_shouldIncreaseForIncome() {
             // arrange
-            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Account account = Account.builder().currentBalance(new BigDecimal(BALANCE_100)).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
-                    .amount(new BigDecimal("50.00"))
+                    .amount(new BigDecimal(AMOUNT_50))
                     .build();
 
             // act
@@ -48,7 +53,7 @@ class AccountTest {
         @DisplayName("applyTransaction should decrease balance for EXPENSE")
         void applyTransaction_shouldDecreaseForExpense() {
             // arrange
-            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Account account = Account.builder().currentBalance(new BigDecimal(BALANCE_100)).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.EXPENSE)
                     .amount(new BigDecimal("30.00"))
@@ -65,7 +70,7 @@ class AccountTest {
         @DisplayName("applyTransaction should handle ADJUSTMENT (positive)")
         void applyTransaction_shouldHandlePositiveAdjustment() {
             // arrange
-            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Account account = Account.builder().currentBalance(new BigDecimal(BALANCE_100)).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.ADJUSTMENT)
                     .amount(new BigDecimal("10.00"))
@@ -85,14 +90,14 @@ class AccountTest {
             Account account = Account.builder().currentBalance(null).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
-                    .amount(new BigDecimal("50.00"))
+                    .amount(new BigDecimal(AMOUNT_50))
                     .build();
 
             // act
             Account updatedAccount = account.applyTransaction(transaction);
 
             // assert & verify
-            assertEquals(new BigDecimal("50.00"), updatedAccount.getCurrentBalance());
+            assertEquals(new BigDecimal(AMOUNT_50), updatedAccount.getCurrentBalance());
         }
     }
 
@@ -108,14 +113,14 @@ class AccountTest {
             Account account = Account.builder().currentBalance(new BigDecimal("150.00")).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
-                    .amount(new BigDecimal("50.00"))
+                    .amount(new BigDecimal(AMOUNT_50))
                     .build();
 
             // act
             Account updatedAccount = account.undoTransaction(transaction);
 
             // assert & verify
-            assertEquals(new BigDecimal("100.00"), updatedAccount.getCurrentBalance());
+            assertEquals(new BigDecimal(BALANCE_100), updatedAccount.getCurrentBalance());
         }
 
         @Test
@@ -132,7 +137,7 @@ class AccountTest {
             Account updatedAccount = account.undoTransaction(transaction);
 
             // assert & verify
-            assertEquals(new BigDecimal("100.00"), updatedAccount.getCurrentBalance());
+            assertEquals(new BigDecimal(BALANCE_100), updatedAccount.getCurrentBalance());
         }
 
         @Test
@@ -142,7 +147,7 @@ class AccountTest {
             Account account = Account.builder().currentBalance(null).build();
             Transaction transaction = Transaction.builder()
                     .type(TransactionType.INCOME)
-                    .amount(new BigDecimal("50.00"))
+                    .amount(new BigDecimal(AMOUNT_50))
                     .build();
 
             // act
@@ -162,10 +167,10 @@ class AccountTest {
         @DisplayName("applyTransaction (DTO) should handle INCOME correctly")
         void applyTransactionDto_shouldAddIncome() {
             // arrange
-            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Account account = Account.builder().currentBalance(new BigDecimal(BALANCE_100)).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .type("INCOME")
-                    .amount(new BigDecimal("25.00"))
+                    .type(TYPE_INCOME)
+                    .amount(new BigDecimal(AMOUNT_25))
                     .build();
 
             // act
@@ -179,10 +184,10 @@ class AccountTest {
         @DisplayName("applyTransaction (DTO) should handle EXPENSE correctly")
         void applyTransactionDto_shouldSubtractExpense() {
             // arrange
-            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Account account = Account.builder().currentBalance(new BigDecimal(BALANCE_100)).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("EXPENSE")
-                    .amount(new BigDecimal("25.00"))
+                    .amount(new BigDecimal(AMOUNT_25))
                     .build();
 
             // act
@@ -198,15 +203,15 @@ class AccountTest {
             // arrange
             Account account = Account.builder().currentBalance(null).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .type("INCOME")
-                    .amount(new BigDecimal("25.00"))
+                    .type(TYPE_INCOME)
+                    .amount(new BigDecimal(AMOUNT_25))
                     .build();
 
             // act
             Account updatedAccount = account.applyTransaction(request);
 
             // assert & verify
-            assertEquals(new BigDecimal("25.00"), updatedAccount.getCurrentBalance());
+            assertEquals(new BigDecimal(AMOUNT_25), updatedAccount.getCurrentBalance());
         }
     }
 
@@ -219,10 +224,10 @@ class AccountTest {
         @DisplayName("undoTransaction (DTO) should reverse INCOME correctly")
         void undoTransactionDto_shouldSubtractIncome() {
             // arrange
-            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Account account = Account.builder().currentBalance(new BigDecimal(BALANCE_100)).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .type("INCOME")
-                    .amount(new BigDecimal("25.00"))
+                    .type(TYPE_INCOME)
+                    .amount(new BigDecimal(AMOUNT_25))
                     .build();
 
             // act
@@ -236,10 +241,10 @@ class AccountTest {
         @DisplayName("undoTransaction (DTO) should reverse EXPENSE correctly")
         void undoTransactionDto_shouldAddExpense() {
             // arrange
-            Account account = Account.builder().currentBalance(new BigDecimal("100.00")).build();
+            Account account = Account.builder().currentBalance(new BigDecimal(BALANCE_100)).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
                     .type("EXPENSE")
-                    .amount(new BigDecimal("25.00"))
+                    .amount(new BigDecimal(AMOUNT_25))
                     .build();
 
             // act
@@ -255,8 +260,8 @@ class AccountTest {
             // arrange
             Account account = Account.builder().currentBalance(null).build();
             TransactionCreateRequest request = TransactionCreateRequest.builder()
-                    .type("INCOME")
-                    .amount(new BigDecimal("25.00"))
+                    .type(TYPE_INCOME)
+                    .amount(new BigDecimal(AMOUNT_25))
                     .build();
 
             // act

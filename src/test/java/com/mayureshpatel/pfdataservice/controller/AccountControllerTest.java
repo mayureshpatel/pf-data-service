@@ -35,6 +35,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AccountControllerTest extends BaseControllerTest {
 
     private static final Long ACCOUNT_ID = 101L;
+    private static final String BASE_URL = "/api/v1/accounts";
+    private static final String CURRENCY_USD = "USD";
+    private static final String JSON_PATH_TITLE = "$.title";
+    private static final String JSON_PATH_DETAIL = "$.detail";
+    private static final String ACCOUNT_TYPE_SAVINGS = "SAVINGS";
 
     /** {@code GET /api/v1/accounts} returns the user's accounts (or an empty list, not an error, when there are none), and an unhandled service exception surfaces as a generic 500 with the request path echoed in {@code instance}. */
     @Nested
@@ -44,7 +49,7 @@ class AccountControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("GET should return list of accounts")
         void getAccounts_shouldReturnListOfAccounts() throws Exception {
-            String url = "/api/v1/accounts";
+            String url = BASE_URL;
             // arrange
             AccountDto accountDto = new AccountDto(
                     ACCOUNT_ID,
@@ -52,7 +57,7 @@ class AccountControllerTest extends BaseControllerTest {
                     "Checking Account",
                     AccountTypeDto.builder().code("CHECKING").build(),
                     new BigDecimal("1000.00"),
-                    CurrencyDto.builder().code("USD").build(),
+                    CurrencyDto.builder().code(CURRENCY_USD).build(),
                     BankName.CAPITAL_ONE,
                     1L
             );
@@ -79,7 +84,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(Collections.emptyList());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/accounts"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(0)));
@@ -95,11 +100,11 @@ class AccountControllerTest extends BaseControllerTest {
                     .thenThrow(new RuntimeException("Database connection failure"));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/accounts"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError())
-                    .andExpect(jsonPath("$.title").value("Internal Server Error"))
-                    .andExpect(jsonPath("$.detail").value("An unexpected internal error occurred. Please contact support."))
-                    .andExpect(jsonPath("$.instance").value("/api/v1/accounts"));
+                    .andExpect(jsonPath(JSON_PATH_TITLE).value("Internal Server Error"))
+                    .andExpect(jsonPath(JSON_PATH_DETAIL).value("An unexpected internal error occurred. Please contact support."))
+                    .andExpect(jsonPath("$.instance").value(BASE_URL));
         }
     }
 
@@ -114,16 +119,16 @@ class AccountControllerTest extends BaseControllerTest {
             // arrange
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name("Savings")
-                    .type("SAVINGS")
+                    .type(ACCOUNT_TYPE_SAVINGS)
                     .startingBalance(new BigDecimal("500.00"))
-                    .currencyCode("USD")
+                    .currencyCode(CURRENCY_USD)
                     .bankName("DISCOVER")
                     .build();
 
             when(accountService.createAccount(eq(USER_ID), any(AccountCreateRequest.class))).thenReturn(ACCOUNT_ID.intValue());
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/accounts")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -139,19 +144,19 @@ class AccountControllerTest extends BaseControllerTest {
             // arrange - invalid request (blank name, invalid currency)
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name("")
-                    .type("SAVINGS")
+                    .type(ACCOUNT_TYPE_SAVINGS)
                     .startingBalance(new BigDecimal("500.00"))
                     .currencyCode("INVALID")
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/accounts")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.title").value("Bad Request"))
-                    .andExpect(jsonPath("$.detail").value("Validation failed for one or more fields"))
+                    .andExpect(jsonPath(JSON_PATH_TITLE).value("Bad Request"))
+                    .andExpect(jsonPath(JSON_PATH_DETAIL).value("Validation failed for one or more fields"))
                     .andExpect(jsonPath("$.validationErrors", hasSize(2)))
                     .andExpect(jsonPath("$.validationErrors[*].field", containsInAnyOrder("name", "currencyCode")));
         }
@@ -169,8 +174,8 @@ class AccountControllerTest extends BaseControllerTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(ACCOUNT_ID)
                     .name("Updated Savings")
-                    .type("SAVINGS")
-                    .currencyCode("USD")
+                    .type(ACCOUNT_TYPE_SAVINGS)
+                    .currencyCode(CURRENCY_USD)
                     .bankName("SYNOVUS")
                     .version(1L)
                     .build();
@@ -178,7 +183,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.updateAccount(eq(USER_ID), any(AccountUpdateRequest.class))).thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/accounts")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -194,13 +199,13 @@ class AccountControllerTest extends BaseControllerTest {
             // arrange
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .name("Updated Name")
-                    .type("SAVINGS")
-                    .currencyCode("USD")
+                    .type(ACCOUNT_TYPE_SAVINGS)
+                    .currencyCode(CURRENCY_USD)
                     .version(1L)
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/accounts")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -215,8 +220,8 @@ class AccountControllerTest extends BaseControllerTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(ACCOUNT_ID)
                     .name("Unauthorized Update")
-                    .type("SAVINGS")
-                    .currencyCode("USD")
+                    .type(ACCOUNT_TYPE_SAVINGS)
+                    .currencyCode(CURRENCY_USD)
                     .version(1L)
                     .build();
 
@@ -224,13 +229,13 @@ class AccountControllerTest extends BaseControllerTest {
                     .thenThrow(new AccessDeniedException("You do not have permission to access this resource."));
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/accounts")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.title").value("Forbidden"))
-                    .andExpect(jsonPath("$.detail").value("You do not have permission to access this resource."));
+                    .andExpect(jsonPath(JSON_PATH_TITLE).value("Forbidden"))
+                    .andExpect(jsonPath(JSON_PATH_DETAIL).value("You do not have permission to access this resource."));
         }
     }
 
@@ -261,8 +266,8 @@ class AccountControllerTest extends BaseControllerTest {
             mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.title").value("Not Found"))
-                    .andExpect(jsonPath("$.detail").value("Account with ID " + ACCOUNT_ID + " not found"));
+                    .andExpect(jsonPath(JSON_PATH_TITLE).value("Not Found"))
+                    .andExpect(jsonPath(JSON_PATH_DETAIL).value("Account with ID " + ACCOUNT_ID + " not found"));
         }
 
         @Test
@@ -276,7 +281,7 @@ class AccountControllerTest extends BaseControllerTest {
             mockMvc.perform(delete("/api/v1/accounts/{id}", ACCOUNT_ID)
                             .with(csrf()))
                     .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.detail").value("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."));
+                    .andExpect(jsonPath(JSON_PATH_DETAIL).value("Cannot delete account with existing transactions. Please delete or move the 3 transaction(s) first."));
         }
     }
 
@@ -336,7 +341,7 @@ class AccountControllerTest extends BaseControllerTest {
         @WithCustomMockUser(id = 0)
         @DisplayName("Request as different user should use that user's ID")
         void requestWithDifferentUser_shouldUseCorrectId() throws Exception {
-            mockMvc.perform(get("/api/v1/accounts"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk());
 
             verify(accountService).getAllAccountsByUserId(0L);

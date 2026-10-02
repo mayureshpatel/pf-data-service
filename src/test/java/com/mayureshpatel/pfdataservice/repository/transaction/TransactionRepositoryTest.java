@@ -42,6 +42,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
     private JdbcClient jdbcClient;
 
     private static final Long USER_ID = 1L;
+    private static final String AMOUNT = "42.00";
 
     /**
      * {@code findAll(TransactionSpecification, Pageable)} builds its {@code WHERE} clause
@@ -223,7 +224,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // assert & verify -- every grocery-run transaction is linked to the Whole Foods merchant
             assertFalse(result.getContent().isEmpty());
             assertTrue(result.getContent().stream()
-                    .allMatch(t -> t.getMerchant() != null && t.getMerchant().getName().equals("Whole Foods")));
+                    .allMatch(t -> t.getMerchant() != null && "Whole Foods".equals(t.getMerchant().getName())));
         }
 
         @Test
@@ -511,8 +512,8 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // parent categories (e.g. "Food") are excluded by the query's own parent_id filter
             assertEquals(5, result.size());
             assertTrue(result.stream().allMatch(c -> c.getParentId() != null));
-            assertTrue(result.stream().anyMatch(c -> c.getName().equals("Rent")));
-            assertTrue(result.stream().anyMatch(c -> c.getName().equals("Groceries")));
+            assertTrue(result.stream().anyMatch(c -> "Rent".equals(c.getName())));
+            assertTrue(result.stream().anyMatch(c -> "Groceries".equals(c.getName())));
         }
 
         @Test
@@ -529,9 +530,9 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // JSON response as a null array entry)
             assertTrue(result.stream().noneMatch(java.util.Objects::isNull));
             assertEquals(3, result.size());
-            assertTrue(result.stream().anyMatch(m -> m.getName().equals("Whole Foods")));
-            assertTrue(result.stream().anyMatch(m -> m.getName().equals("Shell")));
-            assertTrue(result.stream().anyMatch(m -> m.getName().equals("My Favorite Cafe")));
+            assertTrue(result.stream().anyMatch(m -> "Whole Foods".equals(m.getName())));
+            assertTrue(result.stream().anyMatch(m -> "Shell".equals(m.getName())));
+            assertTrue(result.stream().anyMatch(m -> "My Favorite Cafe".equals(m.getName())));
         }
     }
 
@@ -612,7 +613,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertFalse(result.isEmpty());
             assertTrue(result.stream()
                     .filter(b -> b.category() != null)
-                    .anyMatch(b -> b.category().name().equals("Dining Out")));
+                    .anyMatch(b -> "Dining Out".equals(b.category().name())));
         }
 
         @Test
@@ -621,7 +622,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // arrange -- account 3 is the baseline's CREDIT_CARD account, account 1 is CHECKING
             TransactionCreateRequest onCreditCard = TransactionCreateRequest.builder()
                     .accountId(3L)
-                    .amount(new BigDecimal("42.00"))
+                    .amount(new BigDecimal(AMOUNT))
                     .transactionDate(OffsetDateTime.parse("2026-03-05T00:00:00Z"))
                     .description("Mis-typed refund")
                     .type(TransactionType.TRANSFER_IN.name())
@@ -630,7 +631,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             TransactionCreateRequest onChecking = TransactionCreateRequest.builder()
                     .accountId(1L)
-                    .amount(new BigDecimal("42.00"))
+                    .amount(new BigDecimal(AMOUNT))
                     .transactionDate(OffsetDateTime.parse("2026-03-05T00:00:00Z"))
                     .description("Should not be found")
                     .type(TransactionType.TRANSFER_IN.name())
@@ -675,7 +676,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             // arrange
             TransactionCreateRequest uncategorizedExpense = TransactionCreateRequest.builder()
                     .accountId(1L)
-                    .amount(new BigDecimal("42.00"))
+                    .amount(new BigDecimal(AMOUNT))
                     .transactionDate(OffsetDateTime.parse("2026-03-05T00:00:00Z"))
                     .description("Uncategorized Purchase")
                     .type(TransactionType.EXPENSE.name())
@@ -686,7 +687,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             BigDecimal result = transactionRepository.getUncategorizedExpenseTotals(USER_ID);
 
             // assert & verify
-            assertEquals(0, new BigDecimal("42.00").compareTo(result));
+            assertEquals(0, new BigDecimal(AMOUNT).compareTo(result));
         }
 
         @Test
@@ -724,7 +725,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertFalse(result.isEmpty());
             assertTrue(result.stream()
                     .filter(c -> c.category() != null)
-                    .anyMatch(c -> c.category().name().equals("Groceries")));
+                    .anyMatch(c -> "Groceries".equals(c.category().name())));
         }
 
         @Test

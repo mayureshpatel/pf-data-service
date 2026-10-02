@@ -19,6 +19,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSupport {
 
+    private static final String PARAM_EMAIL = "email";
+    private static final String PARAM_USERNAME = "username";
+
     private final JdbcClient jdbcClient;
     private final UserRowMapper rowMapper;
 
@@ -36,7 +39,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
      */
     public Optional<User> findByEmail(String email) {
         return this.jdbcClient.sql(UserQueries.FIND_BY_EMAIL)
-                .param("email", email)
+                .param(PARAM_EMAIL, email)
                 .query(rowMapper)
                 .optional();
     }
@@ -47,7 +50,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
      */
     public Optional<User> findByUsername(String username) {
         return this.jdbcClient.sql(UserQueries.FIND_BY_USERNAME)
-                .param("username", username)
+                .param(PARAM_USERNAME, username)
                 .query(rowMapper)
                 .optional();
     }
@@ -66,7 +69,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
      */
     public boolean existsByEmail(String email) {
         Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_EMAIL)
-                .param("email", email)
+                .param(PARAM_EMAIL, email)
                 .query(Integer.class)
                 .single();
 
@@ -79,7 +82,7 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
      */
     public boolean existsByUsername(String username) {
         Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_USERNAME)
-                .param("username", username)
+                .param(PARAM_USERNAME, username)
                 .query(Integer.class)
                 .single();
 
@@ -94,8 +97,8 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 : "system";
 
         this.jdbcClient.sql(UserQueries.INSERT)
-                .param("username", user.getUsername())
-                .param("email", user.getEmail())
+                .param(PARAM_USERNAME, user.getUsername())
+                .param(PARAM_EMAIL, user.getEmail())
                 .param("passwordHash", user.getPasswordHash())
                 .param("role", user.getRole() != null ? user.getRole() : "USER")
                 .param("lastUpdatedBy", lastUpdatedBy)
@@ -113,8 +116,8 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 : "system";
 
         return this.jdbcClient.sql(UserQueries.UPDATE)
-                .param("username", user.getUsername())
-                .param("email", user.getEmail())
+                .param(PARAM_USERNAME, user.getUsername())
+                .param(PARAM_EMAIL, user.getEmail())
                 .param("passwordHash", user.getPasswordHash())
                 .param("role", user.getRole() != null ? user.getRole() : "USER")
                 .param("lastUpdatedBy", lastUpdatedBy)

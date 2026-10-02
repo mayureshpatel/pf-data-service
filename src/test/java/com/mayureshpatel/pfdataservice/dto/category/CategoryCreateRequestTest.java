@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("CategoryCreateRequest Validation Tests")
 class CategoryCreateRequestTest {
 
+    private static final String CATEGORY_NAME = "Groceries";
+
     private static Validator validator;
 
     @BeforeAll
@@ -31,7 +33,7 @@ class CategoryCreateRequestTest {
     void shouldPassWithValidData() {
         CategoryCreateRequest request = CategoryCreateRequest.builder()
                 .userId(1L)
-                .name("Groceries")
+                .name(CATEGORY_NAME)
                 .type("EXPENSE")
                 .color("#FF0000")
                 .icon("shopping-cart")
@@ -51,11 +53,11 @@ class CategoryCreateRequestTest {
         void shouldFailWhenUserIdIsNull() {
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(null)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -63,11 +65,11 @@ class CategoryCreateRequestTest {
         void shouldFailWhenUserIdIsNotPositive() {
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(0L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -84,7 +86,7 @@ class CategoryCreateRequestTest {
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category name cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category name cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -96,7 +98,7 @@ class CategoryCreateRequestTest {
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category name must be less than 50 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category name must be less than 50 characters.".equals(v.getMessage())));
         }
     }
 
@@ -109,12 +111,12 @@ class CategoryCreateRequestTest {
         void shouldFailWhenTypeIsTooLong() {
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .type("a".repeat(21))
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category type must be less than 20 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category type must be less than 20 characters.".equals(v.getMessage())));
         }
     }
 
@@ -127,12 +129,12 @@ class CategoryCreateRequestTest {
         void shouldFailWhenColorIsTooLong() {
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .color("a".repeat(21))
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category color must be less than 20 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category color must be less than 20 characters.".equals(v.getMessage())));
         }
     }
 
@@ -145,12 +147,12 @@ class CategoryCreateRequestTest {
         void shouldFailWhenIconIsTooLong() {
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .icon("a".repeat(51))
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category icon must be less than 50 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category icon must be less than 50 characters.".equals(v.getMessage())));
         }
     }
 
@@ -163,12 +165,12 @@ class CategoryCreateRequestTest {
         void shouldFailWhenParentIdIsNotPositive() {
             CategoryCreateRequest request = CategoryCreateRequest.builder()
                     .userId(1L)
-                    .name("Groceries")
+                    .name(CATEGORY_NAME)
                     .parentId(0L)
                     .build();
             Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Parent ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Parent ID must be a positive number.".equals(v.getMessage())));
         }
     }
 }

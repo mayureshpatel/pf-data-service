@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.mapper.RecurringTransactionRowMapper;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.query.RecurringTransactionQueries;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
      */
     public List<RecurringTransaction> findAllByUserId(Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.FIND_ALL_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -47,7 +48,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
      */
     public List<RecurringTransaction> findByUserIdAndActiveTrueOrderByNextDate(Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.FIND_BY_USER_ID_ACTIVE_ORDER_BY_NEXT_DATE)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -69,7 +70,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcClient.sql(RecurringTransactionQueries.INSERT)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("accountId", request.getAccountId())
                 .param("merchantId", request.getMerchantId())
                 .param("amount", request.getAmount())
@@ -96,7 +97,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .param("nextDate", request.getNextDate())
                 .param("active", request.isActive())
                 .param("id", request.getId())
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 
@@ -117,7 +118,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
     public int delete(Long id, Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.DELETE)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 

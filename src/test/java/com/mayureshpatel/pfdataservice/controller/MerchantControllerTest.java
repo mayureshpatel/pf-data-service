@@ -42,6 +42,9 @@ class MerchantControllerTest extends BaseControllerTest {
 
     private static final Long MERCHANT_ID = 101L;
     private static final Long LINK_ID = 201L;
+    private static final String BASE_URL = "/api/v1/merchants";
+    private static final String DESCRIPTION_LINKS_URL = "/api/v1/merchants/{id}/description-links";
+    private static final String DESCRIPTION_STARBUCKS = "STARBUCKS #1";
 
     /** {@code GET /api/v1/merchants} returns a {@link Page} of the caller's merchants, and -- a PF-320 case -- passes an optional {@code search} query param straight through to the service. */
     @Nested
@@ -57,7 +60,7 @@ class MerchantControllerTest extends BaseControllerTest {
             when(merchantService.getAllMerchants(eq(USER_ID), eq(null), any(Pageable.class))).thenReturn(page);
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/merchants"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.content", hasSize(1)))
@@ -75,7 +78,7 @@ class MerchantControllerTest extends BaseControllerTest {
             when(merchantService.getAllMerchants(eq(USER_ID), anyString(), any(Pageable.class))).thenReturn(page);
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/merchants").param("search", "starbucks"))
+            mockMvc.perform(get(BASE_URL).param("search", "starbucks"))
                     .andExpect(status().isOk());
 
             verify(merchantService).getAllMerchants(eq(USER_ID), eq("starbucks"), any(Pageable.class));
@@ -95,7 +98,7 @@ class MerchantControllerTest extends BaseControllerTest {
             when(merchantService.createMerchant(eq(USER_ID), any(MerchantCreateRequest.class))).thenReturn(42L);
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/merchants")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -112,7 +115,7 @@ class MerchantControllerTest extends BaseControllerTest {
             MerchantCreateRequest request = MerchantCreateRequest.builder().userId(USER_ID).name("").build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/merchants")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -141,7 +144,7 @@ class MerchantControllerTest extends BaseControllerTest {
             when(merchantService.updateMerchant(eq(USER_ID), any(MerchantUpdateRequest.class))).thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/merchants")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -158,7 +161,7 @@ class MerchantControllerTest extends BaseControllerTest {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder().id(MERCHANT_ID).name("").build();
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/merchants")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -175,7 +178,7 @@ class MerchantControllerTest extends BaseControllerTest {
                     .thenThrow(new ResourceNotFoundException("Merchant not found."));
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/merchants")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -193,7 +196,7 @@ class MerchantControllerTest extends BaseControllerTest {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder().id(MERCHANT_ID).name("Someone Else's Merchant").build();
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/merchants")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -243,14 +246,14 @@ class MerchantControllerTest extends BaseControllerTest {
         void getDescriptionLinks_shouldReturnLinks() throws Exception {
             // arrange
             MerchantDescriptionLinkDto link = MerchantDescriptionLinkDto.builder()
-                    .id(LINK_ID).merchantId(MERCHANT_ID).description("STARBUCKS #1").build();
+                    .id(LINK_ID).merchantId(MERCHANT_ID).description(DESCRIPTION_STARBUCKS).build();
             when(merchantService.getDescriptionLinks(USER_ID, MERCHANT_ID)).thenReturn(List.of(link));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/merchants/{id}/description-links", MERCHANT_ID))
+            mockMvc.perform(get(DESCRIPTION_LINKS_URL, MERCHANT_ID))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].description").value("STARBUCKS #1"));
+                    .andExpect(jsonPath("$[0].description").value(DESCRIPTION_STARBUCKS));
 
             verify(merchantService).getDescriptionLinks(USER_ID, MERCHANT_ID);
         }
@@ -262,7 +265,7 @@ class MerchantControllerTest extends BaseControllerTest {
             when(securityService.isMerchantOwner(eq(MERCHANT_ID), any())).thenReturn(false);
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/merchants/{id}/description-links", MERCHANT_ID))
+            mockMvc.perform(get(DESCRIPTION_LINKS_URL, MERCHANT_ID))
                     .andExpect(status().isForbidden());
         }
     }
@@ -276,16 +279,16 @@ class MerchantControllerTest extends BaseControllerTest {
         @DisplayName("POST /{id}/description-links should record the link and return 204")
         void addDescriptionLink_shouldRecord() throws Exception {
             // arrange
-            MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest("STARBUCKS #1");
+            MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest(DESCRIPTION_STARBUCKS);
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/merchants/{id}/description-links", MERCHANT_ID)
+            mockMvc.perform(post(DESCRIPTION_LINKS_URL, MERCHANT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNoContent());
 
-            verify(merchantService).recordDescriptionLink(USER_ID, MERCHANT_ID, "STARBUCKS #1");
+            verify(merchantService).recordDescriptionLink(USER_ID, MERCHANT_ID, DESCRIPTION_STARBUCKS);
         }
 
         @Test
@@ -295,7 +298,7 @@ class MerchantControllerTest extends BaseControllerTest {
             MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest("");
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/merchants/{id}/description-links", MERCHANT_ID)
+            mockMvc.perform(post(DESCRIPTION_LINKS_URL, MERCHANT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -309,10 +312,10 @@ class MerchantControllerTest extends BaseControllerTest {
         void addDescriptionLink_shouldReturn403WhenNotOwner() throws Exception {
             // arrange
             when(securityService.isMerchantOwner(eq(MERCHANT_ID), any())).thenReturn(false);
-            MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest("STARBUCKS #1");
+            MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest(DESCRIPTION_STARBUCKS);
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/merchants/{id}/description-links", MERCHANT_ID)
+            mockMvc.perform(post(DESCRIPTION_LINKS_URL, MERCHANT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))

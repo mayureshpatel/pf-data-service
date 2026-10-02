@@ -62,7 +62,7 @@ class TransactionDateFilterTimezoneTest extends TimezoneBoundaryRepositoryTest {
         );
 
         // assert & verify
-        assertTrue(result.getContent().stream().anyMatch(t -> t.getDescription().equals("Hulu")),
+        assertTrue(result.getContent().stream().anyMatch(t -> "Hulu".equals(t.getDescription())),
                 "expected the UTC-midnight transaction to be included when querying its own date, got: "
                         + result.getContent().stream().map(Transaction::getDescription).toList());
     }

@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class CategoryRuleControllerTest extends BaseControllerTest {
 
+    private static final String BASE_URL = "/api/v1/category-rules";
     private static final Long RULE_ID = 1L;
 
     /** {@code GET /api/v1/category-rules} returns the user's rules, or an empty list, not an error, when there are none. */
@@ -50,7 +51,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             when(categoryRuleService.getRules(USER_ID)).thenReturn(List.of(ruleDto));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/category-rules"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -67,7 +68,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             when(categoryRuleService.getRules(USER_ID)).thenReturn(Collections.emptyList());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/category-rules"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(0)));
         }
@@ -92,7 +93,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             when(categoryRuleService.createRule(eq(USER_ID), any(CategoryRuleCreateRequest.class))).thenReturn(42L);
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/category-rules")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -112,7 +113,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/category-rules")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -140,7 +141,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             when(categoryRuleService.updateRule(eq(USER_ID), any(CategoryRuleUpdateRequest.class))).thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/category-rules")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -159,7 +160,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/category-rules")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -251,7 +252,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                     .thenThrow(new RuntimeException("Database error"));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/category-rules"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError());
         }
     }

@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("CapitalOneCsvParser unit tests")
 class CapitalOneCsvParserTest {
 
+    private static final String CSV_HEADER = "Transaction Date,Description,Debit,Credit\n";
+
     private final CapitalOneCsvParser parser = new CapitalOneCsvParser();
     private static final Long ACCOUNT_ID = 1L;
 
@@ -49,7 +51,7 @@ class CapitalOneCsvParserTest {
         @DisplayName("should return EXPENSE when debit > 0 and credit is empty (net = debit - credit > 0)")
         void parse_debitOnly_returnsExpense() {
             // net = 50 - 0 = 50 → EXPENSE
-            String csv = "Transaction Date,Description,Debit,Credit\n" +
+            String csv = CSV_HEADER +
                     "2025-01-15,Coffee Shop,50.00,\n";
 
             List<Transaction> result;
@@ -71,7 +73,7 @@ class CapitalOneCsvParserTest {
             // from a linked account apart from a merchant refund/credit, and pre-emptively
             // classifying either as a transfer both hides real refunds from every total and makes
             // a real transfer's bank-side half un-matchable by TransferMatcher -- see PF-829
-            String csv = "Transaction Date,Description,Debit,Credit\n" +
+            String csv = CSV_HEADER +
                     "2025-01-20,Paycheck,,1000.00\n";
 
             List<Transaction> result;
@@ -88,7 +90,7 @@ class CapitalOneCsvParserTest {
         @Test
         @DisplayName("should return empty stream when CSV has only headers")
         void parse_headersOnly_returnsEmptyStream() {
-            String csv = "Transaction Date,Description,Debit,Credit\n";
+            String csv = CSV_HEADER;
 
             List<Transaction> result;
             try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
@@ -101,7 +103,7 @@ class CapitalOneCsvParserTest {
         @Test
         @DisplayName("should skip rows where the date column is blank")
         void parse_blankDateRow_rowSkipped() {
-            String csv = "Transaction Date,Description,Debit,Credit\n" +
+            String csv = CSV_HEADER +
                     ",Empty Date,10.00,\n" +
                     "2025-01-01,Valid Date,5.00,\n";
 
@@ -117,7 +119,7 @@ class CapitalOneCsvParserTest {
         @Test
         @DisplayName("should handle multiple date formats (yyyy-MM-dd, M/d/yyyy, MM/dd/yyyy)")
         void parse_variousDateFormats_parsedSuccessfully() {
-            String csv = "Transaction Date,Description,Debit,Credit\n" +
+            String csv = CSV_HEADER +
                     "2025-01-15,ISO Format,25.00,\n" +
                     "1/20/2025,US Short Format,,50.00\n" +
                     "01/25/2025,US Long Format,15.00,\n";
@@ -133,7 +135,7 @@ class CapitalOneCsvParserTest {
         @Test
         @DisplayName("should return correct count when multiple records exist")
         void parse_multipleRecords_returnsAllValidTransactions() {
-            String csv = "Transaction Date,Description,Debit,Credit\n" +
+            String csv = CSV_HEADER +
                     "2025-01-01,Expense A,100.00,\n" +
                     "2025-01-02,Income B,,200.00\n" +
                     "2025-01-03,Expense C,50.00,\n";

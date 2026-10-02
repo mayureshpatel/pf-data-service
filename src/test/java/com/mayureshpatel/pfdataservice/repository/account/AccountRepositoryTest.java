@@ -26,6 +26,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
     private AccountRepository accountRepository;
 
     private static final Long USER_1 = 1L;
+    private static final String CURRENCY_USD = "USD";
     private static final Long USER_2 = 2L;
     private static final Long ACCOUNT_1 = 1L; // User 1 Main Checking
 
@@ -100,7 +101,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .name("New Savings")
                     .type("SAVINGS")
                     .startingBalance(new BigDecimal("100.00"))
-                    .currencyCode("USD")
+                    .currencyCode(CURRENCY_USD)
                     .bankName("Test Bank")
                     .build();
 
@@ -126,7 +127,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .id(ACCOUNT_1)
                     .name("Updated Name")
                     .type("CHECKING")
-                    .currencyCode("USD")
+                    .currencyCode(CURRENCY_USD)
                     .bankName("New Bank")
                     .version(account.getVersion())
                     .build();
@@ -149,7 +150,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .id(ACCOUNT_1)
                     .name("Fail")
                     .type("CHECKING")
-                    .currencyCode("USD")
+                    .currencyCode(CURRENCY_USD)
                     .version(999L) // Wrong version
                     .build();
 
@@ -169,7 +170,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
                     .id(ACCOUNT_1)
                     .name("Fail")
                     .type("CHECKING")
-                    .currencyCode("USD")
+                    .currencyCode(CURRENCY_USD)
                     .version(account.getVersion())
                     .build();
 

@@ -19,6 +19,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("SaveTransactionRequest Validation Tests")
 class SaveTransactionRequestTest {
 
+    private static final String FILE_NAME = "file.csv";
+    private static final String FILE_HASH = "hash123";
+
     private static Validator validator;
 
     @BeforeAll
@@ -32,7 +35,7 @@ class SaveTransactionRequestTest {
     void shouldPassWithValidData() {
         TransactionDto transaction = TransactionDto.builder().id(1L).build();
         SaveTransactionRequest request = new SaveTransactionRequest(
-                List.of(transaction), "file.csv", "hash123", 10L
+                List.of(transaction), FILE_NAME, FILE_HASH, 10L
         );
 
         Set<ConstraintViolation<SaveTransactionRequest>> violations = validator.validate(request);
@@ -46,19 +49,19 @@ class SaveTransactionRequestTest {
         @Test
         @DisplayName("should fail when transactions list is null")
         void shouldFailWhenTransactionsIsNull() {
-            SaveTransactionRequest request = new SaveTransactionRequest(null, "file.csv", "hash123", 10L);
+            SaveTransactionRequest request = new SaveTransactionRequest(null, FILE_NAME, FILE_HASH, 10L);
             Set<ConstraintViolation<SaveTransactionRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Transactions list must not be empty")));
+            assertTrue(violations.stream().anyMatch(v -> "Transactions list must not be empty".equals(v.getMessage())));
         }
 
         @Test
         @DisplayName("should fail when transactions list is empty")
         void shouldFailWhenTransactionsIsEmpty() {
-            SaveTransactionRequest request = new SaveTransactionRequest(Collections.emptyList(), "file.csv", "hash123", 10L);
+            SaveTransactionRequest request = new SaveTransactionRequest(Collections.emptyList(), FILE_NAME, FILE_HASH, 10L);
             Set<ConstraintViolation<SaveTransactionRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Transactions list must not be empty")));
+            assertTrue(violations.stream().anyMatch(v -> "Transactions list must not be empty".equals(v.getMessage())));
         }
     }
 
@@ -69,10 +72,10 @@ class SaveTransactionRequestTest {
         @Test
         @DisplayName("should fail when fileName is blank")
         void shouldFailWhenFileNameIsBlank() {
-            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().id(1L).build()), "", "hash123", 10L);
+            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().id(1L).build()), "", FILE_HASH, 10L);
             Set<ConstraintViolation<SaveTransactionRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("File name cannot be blank")));
+            assertTrue(violations.stream().anyMatch(v -> "File name cannot be blank".equals(v.getMessage())));
         }
     }
 
@@ -83,10 +86,10 @@ class SaveTransactionRequestTest {
         @Test
         @DisplayName("should fail when fileHash is blank")
         void shouldFailWhenFileHashIsBlank() {
-            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().id(1L).build()), "file.csv", "", 10L);
+            SaveTransactionRequest request = new SaveTransactionRequest(List.of(TransactionDto.builder().id(1L).build()), FILE_NAME, "", 10L);
             Set<ConstraintViolation<SaveTransactionRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("File hash cannot be blank")));
+            assertTrue(violations.stream().anyMatch(v -> "File hash cannot be blank".equals(v.getMessage())));
         }
     }
 }
