@@ -8,6 +8,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * The request payload for updating an existing {@code Category}, identified by {@code id}.
+ * {@code parentId} can be changed here, unlike most other update DTOs in this package that treat
+ * structural fields as create-only -- re-parenting an existing category is a supported edit.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

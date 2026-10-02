@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code TransactionImportService}'s two-phase preview/save workflow, one {@code @Nested} class per phase below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransactionImportService Unit Tests")
 class TransactionImportServiceTest {
@@ -86,6 +87,13 @@ class TransactionImportServiceTest {
                 });
     }
 
+    /**
+     * {@code previewTransactions} parses the uploaded file, attaches a suggested category per row
+     * from {@code TransactionCategorizer}, and treats a null, zero, or unrecognized-id category
+     * guess all the same way: no suggestion rather than an error. A parsing failure is wrapped as
+     * {@link CsvParsingException}; account-not-found and not-the-owner are checked first, before
+     * any parsing is attempted.
+     */
     @Nested
     @DisplayName("previewTransactions")
     class PreviewTransactionsTests {
@@ -191,6 +199,16 @@ class TransactionImportServiceTest {
         }
     }
 
+    /**
+     * {@code saveTransactions} skips rows that already exist (by file-hash-level or
+     * individual-transaction-level duplicate detection, the latter deduplicating within the batch
+     * itself too), applies the account balance update via {@code accountBalanceUpdateService}
+     * (stubbed here through {@link #stubBalanceUpdateSuccess()}), and records file-import history
+     * only when both a file name and hash were actually supplied. A PF-845 case: a description
+     * with no existing merchant-description link saves with a null {@code merchantId} rather than
+     * creating a new merchant or throwing -- that's the ordinary outcome for anything nobody has
+     * linked yet.
+     */
     @Nested
     @DisplayName("saveTransactions")
     class SaveTransactionsTests {

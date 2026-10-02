@@ -14,6 +14,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@code TagCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request (color included and, separately, color omitted -- it's optional) and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("TagCreateRequest Validation Tests")
 class TagCreateRequestTest {
 
@@ -46,6 +47,7 @@ class TagCreateRequestTest {
         assertTrue(violations.isEmpty());
     }
 
+    /** {@code userId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: userId")
     class UserIdValidationTests {
@@ -68,6 +70,7 @@ class TagCreateRequestTest {
         }
     }
 
+    /** {@code name} must be non-blank and no more than 50 characters. */
     @Nested
     @DisplayName("Field: name")
     class NameValidationTests {

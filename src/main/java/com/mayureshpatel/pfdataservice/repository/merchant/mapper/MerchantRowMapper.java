@@ -10,6 +10,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to a {@link Merchant}, following the same
+ * prefix/{@code hasColumn}-guarded convention as
+ * {@link com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper}.
+ */
 @Component
 public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merchant> {
 

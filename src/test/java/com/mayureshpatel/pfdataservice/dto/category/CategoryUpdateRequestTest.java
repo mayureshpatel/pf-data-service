@@ -14,6 +14,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@link CategoryUpdateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("CategoryUpdateRequest Validation Tests")
 class CategoryUpdateRequestTest {
 
@@ -42,6 +43,7 @@ class CategoryUpdateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code id} must be non-null and positive. */
     @Nested
     @DisplayName("Field: id")
     class IdValidationTests {
@@ -72,6 +74,7 @@ class CategoryUpdateRequestTest {
         }
     }
 
+    /** {@code userId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: userId")
     class UserIdValidationTests {
@@ -102,6 +105,7 @@ class CategoryUpdateRequestTest {
         }
     }
 
+    /** {@code name} must be non-blank and no more than 50 characters. */
     @Nested
     @DisplayName("Field: name")
     class NameValidationTests {
@@ -132,6 +136,7 @@ class CategoryUpdateRequestTest {
         }
     }
 
+    /** {@code type} is optional but capped at 20 characters when present. */
     @Nested
     @DisplayName("Field: type")
     class TypeValidationTests {
@@ -150,6 +155,7 @@ class CategoryUpdateRequestTest {
         }
     }
 
+    /** {@code color} is optional but capped at 20 characters when present. */
     @Nested
     @DisplayName("Field: color")
     class ColorValidationTests {
@@ -168,6 +174,7 @@ class CategoryUpdateRequestTest {
         }
     }
 
+    /** {@code icon} is optional but capped at 50 characters when present. */
     @Nested
     @DisplayName("Field: icon")
     class IconValidationTests {
@@ -186,6 +193,7 @@ class CategoryUpdateRequestTest {
         }
     }
 
+    /** {@code parentId} is optional (for a top-level category) but must be positive when present. */
     @Nested
     @DisplayName("Field: parentId")
     class ParentIdValidationTests {

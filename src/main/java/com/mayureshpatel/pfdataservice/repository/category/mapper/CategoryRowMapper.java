@@ -10,6 +10,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to a {@link Category}, following the same
+ * prefix/{@code hasColumn}-guarded convention as
+ * {@link com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper}. A
+ * subcategory's parent is mapped one level deep via {@link #mapParent}, matching
+ * {@code Category}'s own one-level-of-nesting design.
+ */
 @Component
 public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Category> {
 

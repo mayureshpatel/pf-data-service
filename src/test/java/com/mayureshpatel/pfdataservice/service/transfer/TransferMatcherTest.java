@@ -16,6 +16,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@code TransferMatcher}'s pairwise transfer-detection algorithm, one {@code @Nested} class per matching concern below. */
 @DisplayName("TransferMatcher Unit Tests")
 class TransferMatcherTest {
 
@@ -32,6 +33,12 @@ class TransferMatcherTest {
                 .build();
     }
 
+    /**
+     * {@code findMatches} pairs an EXPENSE with an INCOME of equal amount from two *different*
+     * accounts, within a 3-day window, with confidence decaying 0.1 per day apart (same-day =
+     * 0.9); it never matches same-account or same-type transactions or unequal amounts, and once a
+     * transaction is matched it's removed from consideration for any later pairing in the same run.
+     */
     @Nested
     @DisplayName("findMatches")
     class FindMatchesTests {
@@ -163,6 +170,7 @@ class TransferMatcherTest {
         }
     }
 
+    /** The 3-day matching window is computed from absolute instants, not local calendar dates -- two transactions whose local dates differ by a day can still match if they're close in absolute time across a timezone boundary, and conversely two transactions with close-looking local dates can fail to match if extreme offsets push them genuinely far apart. */
     @Nested
     @DisplayName("findMatches - timezone crossover")
     class TimezoneCrossoverTests {
@@ -205,6 +213,7 @@ class TransferMatcherTest {
         }
     }
 
+    /** The matcher sorts its input before scanning, so an unrelated far-apart transaction sitting between two otherwise-matchable transactions in caller-supplied list order doesn't cause the inner loop's early exit-on-too-far-apart to miss the real match. */
     @Nested
     @DisplayName("findMatches - out-of-order date lists")
     class OutOfOrderDateListTests {
@@ -231,6 +240,7 @@ class TransferMatcherTest {
         }
     }
 
+    /** Documents current, deliberately-unsupported behavior: a withdrawal later deposited as two separate smaller amounts has no single counterpart of equal value, so this pairwise-only algorithm can't detect it as a transfer. */
     @Nested
     @DisplayName("findMatches - multi-transaction splits")
     class MultiTransactionSplitTests {

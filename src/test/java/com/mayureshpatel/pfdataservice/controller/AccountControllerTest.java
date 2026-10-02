@@ -36,6 +36,7 @@ class AccountControllerTest extends BaseControllerTest {
 
     private static final Long ACCOUNT_ID = 101L;
 
+    /** {@code GET /api/v1/accounts} returns the user's accounts (or an empty list, not an error, when there are none), and an unhandled service exception surfaces as a generic 500 with the request path echoed in {@code instance}. */
     @Nested
     @DisplayName("getAccounts")
     class GetAccountsTests {
@@ -102,6 +103,7 @@ class AccountControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/accounts} creates the account and returns its new id, and returns a 400 with every violated field named in {@code validationErrors} (a blank name and an invalid currency code both at once) when the request fails validation. */
     @Nested
     @DisplayName("createAccount")
     class CreateAccountTests {
@@ -155,6 +157,7 @@ class AccountControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PUT /api/v1/accounts} updates the account and returns the affected-row count, returns a 400 with field-level {@code validationErrors} when {@code id} is missing, and returns a 403 when the service throws {@link AccessDeniedException} for an account the caller doesn't own. */
     @Nested
     @DisplayName("updateAccount")
     class UpdateAccountTests {
@@ -231,6 +234,7 @@ class AccountControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/accounts/{id}} returns 204 on success, 404 when the service throws {@link ResourceNotFoundException}, and -- a PF-193 case -- a 409 Conflict (not a generic 500) naming the real blocking transaction count when the service throws {@link IllegalStateException} for an account that still has transactions. */
     @Nested
     @DisplayName("deleteAccount")
     class DeleteAccountTests {
@@ -276,6 +280,7 @@ class AccountControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/accounts/reconcile} returns the affected-row count on success, and a 400 with field-level {@code validationErrors} when {@code version} is missing. */
     @Nested
     @DisplayName("reconcileAccount")
     class ReconcileAccountTests {
@@ -322,6 +327,7 @@ class AccountControllerTest extends BaseControllerTest {
         }
     }
 
+    /** Confirms the controller reads the authenticated user's id from the real security context -- a request from a {@code @WithCustomMockUser}-faked id 0 resolves to user id 0, not the class-level default. */
     @Nested
     @DisplayName("Security Tests")
     class SecurityTests {

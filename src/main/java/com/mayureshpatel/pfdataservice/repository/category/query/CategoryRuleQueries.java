@@ -2,6 +2,12 @@ package com.mayureshpatel.pfdataservice.repository.category.query;
 
 import lombok.NoArgsConstructor;
 
+/**
+ * SQL query constants for {@code CategoryRuleRepository}. A rule's keyword set lives in its own
+ * {@code category_rule_keywords} table (PF-315), fetched and replaced wholesale via the separate
+ * {@code *_KEYWORD*} queries here rather than joined into the rule's own row -- see the inline
+ * comments on {@link #FIND_ALL_BY_USER_ID} and {@link #DELETE_KEYWORDS_BY_RULE_ID} for why.
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class CategoryRuleQueries {
 

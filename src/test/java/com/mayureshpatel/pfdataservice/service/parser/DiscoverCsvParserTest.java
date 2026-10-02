@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Verifies {@code DiscoverCsvParser}'s single-Amount-column and legacy Debit/Credit parsing, one {@code @Nested} class per input shape below. */
 @DisplayName("DiscoverCsvParser unit tests")
 class DiscoverCsvParserTest {
 
@@ -35,6 +36,7 @@ class DiscoverCsvParserTest {
         assertThat(parser.getBankName()).isEqualTo(BankName.DISCOVER);
     }
 
+    /** A null input stream fails fast with {@link NullPointerException} before any parsing begins. */
     @Nested
     @DisplayName("parse() — setup error")
     class SetupErrorTests {
@@ -47,6 +49,14 @@ class DiscoverCsvParserTest {
         }
     }
 
+    /**
+     * A credit-card amount column is sign-inverted from a bank account's: a positive amount is a
+     * charge (EXPENSE) and a negative one is a payment or refund (INCOME, never TRANSFER_IN --
+     * same PF-829 reasoning as {@link CapitalOneCsvParserTest}, since this parser likewise can't
+     * tell a linked-account payment from a merchant refund). The transaction date parses as UTC
+     * midnight regardless of server timezone (PF-197), blank-date rows are skipped, and the
+     * category is always left null (categorization happens elsewhere).
+     */
     @Nested
     @DisplayName("parse() — valid CSV")
     class ValidCsvTests {
@@ -183,6 +193,14 @@ class DiscoverCsvParserTest {
         }
     }
 
+    /**
+     * Parses two real example export files from test resources end-to-end: the current format,
+     * and the pre-July-2022 Debit/Credit-column format (PF-198: every parsed amount must be
+     * genuinely non-zero, not silently zeroed by a missing-column bug). The fixture referenced by
+     * the second test was moved into the already-tracked {@code parser/} resource directory as
+     * part of PF-821, after the original path (an untracked local-only {@code sample-imports/}
+     * directory) returned null on a clean CI checkout and failed this test outright.
+     */
     @Nested
     @DisplayName("parse() — real CSV file")
     class RealCsvTests {
@@ -226,6 +244,7 @@ class DiscoverCsvParserTest {
         }
     }
 
+    /** The older Debit/Credit-column export format (superseded by a single Amount column) still classifies a credit-only row as INCOME rather than TRANSFER_IN, for the same PF-198/PF-829 reasons as {@link ValidCsvTests}. */
     @Nested
     @DisplayName("parse() — legacy Debit/Credit format")
     class LegacyDebitCreditFormatTests {

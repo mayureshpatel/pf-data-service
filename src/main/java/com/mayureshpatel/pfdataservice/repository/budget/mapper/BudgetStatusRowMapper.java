@@ -11,6 +11,12 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * Maps a JDBC {@link ResultSet} row directly to a {@link BudgetStatusDto} -- unlike this
+ * package's other row mappers, this one has no unprefixed/prefixed overload split and always
+ * reads the same fixed column names, since it only ever backs one specific budget-status query
+ * rather than being reused as a nested/embedded mapper elsewhere.
+ */
 @Component
 public class BudgetStatusRowMapper extends JdbcMapperUtils implements RowMapper<BudgetStatusDto> {
 

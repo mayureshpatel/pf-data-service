@@ -14,6 +14,7 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.util.List;
 
+/** The request payload for updating an existing {@code CategoryRule}, identified by {@code id}. */
 @Getter
 @Builder(toBuilder = true)
 @ToString

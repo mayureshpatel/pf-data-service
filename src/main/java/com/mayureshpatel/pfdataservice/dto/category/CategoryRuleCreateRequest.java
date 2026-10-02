@@ -9,6 +9,12 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * The request payload for creating a new {@code CategoryRule} (PF-315/PF-314): matches
+ * transaction descriptions against {@code keywords} per {@code matchType}, optionally narrowed by
+ * an amount range ({@code minAmount}/{@code maxAmount}), and assigns {@code categoryId} when it
+ * matches.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

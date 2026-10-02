@@ -13,6 +13,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link MerchantUpdateRequest}'s jakarta bean-validation constraints, its builder/all-args/no-args construction paths, {@code toBuilder}, and {@code toString}. */
 @DisplayName("MerchantUpdateRequest Validation Tests")
 class MerchantUpdateRequestTest {
 
@@ -36,6 +37,7 @@ class MerchantUpdateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code id} must be non-null and positive. */
     @Nested
     @DisplayName("Field: id")
     class IdValidationTests {
@@ -66,6 +68,7 @@ class MerchantUpdateRequestTest {
         }
     }
 
+    /** {@code name} must be non-blank and no more than 255 characters. */
     @Nested
     @DisplayName("Field: name")
     class NameValidationTests {

@@ -16,6 +16,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link AccountUpdateRequest}'s jakarta bean-validation constraints, its {@code toDomain()} mapping, and per-field validation failures, one {@code @Nested} class per field below. */
 @DisplayName("AccountUpdateRequest Unit Tests")
 class AccountUpdateRequestTest {
 
@@ -65,6 +66,7 @@ class AccountUpdateRequestTest {
         assertEquals(request.getVersion(), account.getVersion());
     }
 
+    /** {@code id} must be non-null and positive. */
     @Nested
     @DisplayName("Field: id")
     class IdValidationTests {
@@ -89,6 +91,7 @@ class AccountUpdateRequestTest {
         }
     }
 
+    /** {@code name} must be non-blank and no more than 100 characters. */
     @Nested
     @DisplayName("Field: name")
     class NameValidationTests {
@@ -114,6 +117,7 @@ class AccountUpdateRequestTest {
         }
     }
 
+    /** {@code type} must be non-blank and no more than 20 characters. */
     @Nested
     @DisplayName("Field: type")
     class TypeValidationTests {
@@ -139,6 +143,7 @@ class AccountUpdateRequestTest {
         }
     }
 
+    /** {@code currencyCode} must be non-blank and exactly 3 characters (an ISO 4217 code). */
     @Nested
     @DisplayName("Field: currencyCode")
     class CurrencyCodeValidationTests {
@@ -165,6 +170,7 @@ class AccountUpdateRequestTest {
         }
     }
 
+    /** {@code bankName} is optional but capped at 50 characters when present. */
     @Nested
     @DisplayName("Field: bankName")
     class BankNameValidationTests {
@@ -179,6 +185,7 @@ class AccountUpdateRequestTest {
         }
     }
 
+    /** {@code version} must be non-null and positive -- it backs the optimistic-locking check on update. */
     @Nested
     @DisplayName("Field: version")
     class VersionValidationTests {

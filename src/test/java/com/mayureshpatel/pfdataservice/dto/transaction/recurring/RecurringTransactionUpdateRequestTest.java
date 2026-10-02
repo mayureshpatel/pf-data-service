@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code RecurringTransactionUpdateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("RecurringTransactionUpdateRequest Validation Tests")
 class RecurringTransactionUpdateRequestTest {
 
@@ -45,6 +46,7 @@ class RecurringTransactionUpdateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code id} must be non-null and positive. */
     @Nested
     @DisplayName("Field: id")
     class IdValidationTests {
@@ -67,6 +69,7 @@ class RecurringTransactionUpdateRequestTest {
         }
     }
 
+    /** {@code accountId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: accountId")
     class AccountIdValidationTests {
@@ -89,6 +92,7 @@ class RecurringTransactionUpdateRequestTest {
         }
     }
 
+    /** {@code amount} must be non-null and within +/-9999999999.99. */
     @Nested
     @DisplayName("Field: amount")
     class AmountValidationTests {
@@ -120,6 +124,7 @@ class RecurringTransactionUpdateRequestTest {
         }
     }
 
+    /** {@code frequency} must be non-null and one of the recognized {@link Frequency} codes. */
     @Nested
     @DisplayName("Field: frequency")
     class FrequencyValidationTests {
@@ -142,6 +147,7 @@ class RecurringTransactionUpdateRequestTest {
         }
     }
 
+    /** {@code nextDate} must be non-null and in the future. */
     @Nested
     @DisplayName("Field: nextDate")
     class NextDateValidationTests {
@@ -164,6 +170,7 @@ class RecurringTransactionUpdateRequestTest {
         }
     }
 
+    /** {@code merchantId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: merchantId")
     class MerchantIdValidationTests {

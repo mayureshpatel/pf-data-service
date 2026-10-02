@@ -58,6 +58,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         return request.getRemoteAddr();
     }
 
+    /**
+     * A per-key request counter that starts full and decrements on each consume. Refill is a
+     * single reset back to {@code maxRequests}, applied the next time a full minute has elapsed
+     * since the last refill -- not a smooth, continuously-draining refill.
+     */
     private static class TokenBucket {
         private final int maxRequests;
         private final AtomicInteger tokens;
@@ -68,6 +73,12 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             this.tokens = new AtomicInteger(maxRequests);
         }
 
+        /**
+         * Refills the bucket if a minute has elapsed, then attempts to take one token.
+         *
+         * @return true if a token was available and consumed; false if the bucket is empty and
+         *     the caller should be rate-limited
+         */
         public synchronized boolean tryConsume() {
             refill();
             if (tokens.get() > 0) {

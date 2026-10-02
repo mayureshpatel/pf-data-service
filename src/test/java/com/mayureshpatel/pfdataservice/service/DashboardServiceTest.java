@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code DashboardService}'s aggregation methods backing the dashboard view, one {@code @Nested} class per method below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DashboardService Unit Tests")
 class DashboardServiceTest {
@@ -40,6 +41,7 @@ class DashboardServiceTest {
 
     private static final Long USER_ID = 1L;
 
+    /** {@code getDashboardData} combines income/expense sums and a category breakdown into one {@link DashboardData}, querying the month's date range through 23:59:59 of the last day rather than midnight (PF-196) so late-day activity on the final day isn't dropped. */
     @Nested
     @DisplayName("getDashboardData")
     class GetDashboardDataTests {
@@ -83,6 +85,7 @@ class DashboardServiceTest {
         }
     }
 
+    /** {@code getCategoryBreakdown} passes repository totals through unmodified for the month, using the same end-of-day (not midnight) date bound as {@link GetDashboardDataTests} (PF-196). */
     @Nested
     @DisplayName("getCategoryBreakdown")
     class GetCategoryBreakdownTests {
@@ -115,6 +118,7 @@ class DashboardServiceTest {
         }
     }
 
+    /** {@code getMerchantBreakdown} passes repository totals through unmodified for the month, using the same end-of-day (not midnight) date bound as {@link GetDashboardDataTests} (PF-196). */
     @Nested
     @DisplayName("getMerchantBreakdown")
     class GetMerchantBreakdownTests {
@@ -147,6 +151,15 @@ class DashboardServiceTest {
         }
     }
 
+    /**
+     * {@code getPulse} computes each period's savings rate as {@code (income - expense) / income},
+     * treating zero income as a zero rate rather than dividing by zero, and derives the previous
+     * period as exactly the prior period of equal length immediately before the current one, with
+     * no overlap -- correct across a year boundary (PF-195; the pre-fix bug anchored the previous
+     * period's end to the current period's end instead of its start) and correct for an explicit
+     * arbitrary date range, not just calendar months. Every period's end boundary lands on
+     * 23:59:59 of its last day, not midnight (PF-196/PF-827).
+     */
     @Nested
     @DisplayName("getPulse")
     class GetPulseTests {
@@ -249,6 +262,7 @@ class DashboardServiceTest {
         }
     }
 
+    /** {@code getCashFlowTrend} always returns exactly 12 months, filling in a zero income/expense entry for any month the repository has no rows for, and summing multiple rows for the same month/type (e.g. more than one INCOME row) rather than only keeping the last one seen. */
     @Nested
     @DisplayName("getCashFlowTrend")
     class GetCashFlowTrendTests {
@@ -288,6 +302,18 @@ class DashboardServiceTest {
         }
     }
 
+    /**
+     * {@code getYtdSummary} sums income/expense from January 1st through the year's end boundary,
+     * with three real fixed bugs verified by name: the *current* year's end boundary is capped at
+     * today rather than running through December 31st (PF-826 -- a leftover incomplete {@code
+     * LocalDate.now()}-to-{@code OffsetDateTime} refactor had silently included months that hadn't
+     * happened yet); a *past* year's end boundary lands on a whole microsecond rather than
+     * {@code ZonedDateTime}'s native nanosecond precision (PF-828 -- Postgres's {@code timestamptz}
+     * is only microsecond-resolution and *rounds* a finer value rather than truncating it, so the
+     * unrounded nanosecond-precision literal {@code 23:59:59.999999999} silently evaluates to
+     * midnight of the *next* day, pulling a January 1st transaction into the wrong year's total).
+     * A future year returns all zeros without querying anything.
+     */
     @Nested
     @DisplayName("getYtdSummary")
     class GetYtdSummaryTests {
@@ -384,6 +410,17 @@ class DashboardServiceTest {
         }
     }
 
+    /**
+     * {@code getActionItems} surfaces a TRANSFER_REVIEW item when {@code
+     * TransactionService#findPotentialTransfers} finds any candidates, and an UNCATEGORIZED item
+     * whenever the uncategorized-expense total is non-zero -- its route links to {@code
+     * /transactions?categoryName=null} specifically, not {@code category=null} (a fixed bug: the
+     * frontend's URL-sync effect only reads the {@code categoryName} param, so the old route
+     * silently filtered nothing and was immediately stripped back off the URL on load), and its
+     * {@code count} is the real uncategorized *transaction* count from a dedicated repository call,
+     * not the dollar total truncated to a long (PF-825 -- confirmed live, this had displayed as
+     * "425239 unresolved items" for a $425,239.61 total). No items at all means an empty list.
+     */
     @Nested
     @DisplayName("getActionItems")
     class GetActionItemsTests {

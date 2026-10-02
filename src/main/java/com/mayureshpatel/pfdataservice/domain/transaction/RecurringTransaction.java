@@ -8,6 +8,13 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 
+/**
+ * A template for a transaction that repeats on a schedule ({@link #frequency}), from which a real
+ * {@code Transaction} is generated each time {@link #nextDate} is reached. Extends
+ * {@code Transaction} to reuse its account/category/amount/merchant fields for the template's own
+ * values -- an inheritance relationship the existing {@code todo} below already flags as worth
+ * reconsidering, not a settled design choice.
+ */
 // todo: maybe make this not extend Transaction?
 @Getter
 @SuperBuilder(toBuilder = true)

@@ -9,6 +9,10 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 
+/**
+ * A user's budgeted spending {@code amount} for one {@code category} in one {@code month}/
+ * {@code year} -- one row per category per calendar month, not a recurring/rolling allocation.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

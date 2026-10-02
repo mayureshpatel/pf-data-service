@@ -59,6 +59,12 @@ public class TransactionImportService {
     private final AccountBalanceUpdateService accountBalanceUpdateService;
     private final TransactionImportService self;
 
+    /**
+     * The {@code @Lazy self} injection exists solely so {@link #saveBulkTransactions} can call
+     * {@link #saveTransactions} through a Spring proxy rather than {@code this} -- a plain
+     * {@code this.saveTransactions(...)} call bypasses Spring AOP entirely, so each request's own
+     * {@code @Transactional} boundary would never actually apply.
+     */
     @Autowired
     public TransactionImportService(TransactionRepository transactionRepository,
                                     AccountRepository accountRepository,

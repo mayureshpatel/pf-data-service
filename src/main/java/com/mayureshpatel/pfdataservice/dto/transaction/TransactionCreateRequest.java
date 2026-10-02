@@ -9,6 +9,17 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
+/**
+ * The request payload for creating a new {@code Transaction}. {@code type} is a plain string
+ * rather than {@link com.mayureshpatel.pfdataservice.domain.transaction.TransactionType} at this
+ * layer -- {@code TransactionService} converts it via {@code TransactionType.valueOf(...)}, whose
+ * {@code IllegalArgumentException} on an unrecognized value is handled generically by
+ * {@code GlobalExceptionHandler} rather than surfacing as a raw deserialization error. Note
+ * {@link #getNetChange()} below does its own independent string comparison against the enum's
+ * names and silently falls through to expense-like (negative) sign behavior for any value it
+ * doesn't recognize, rather than throwing -- only {@code TransactionService}'s explicit
+ * {@code valueOf} call actually rejects a bad type.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

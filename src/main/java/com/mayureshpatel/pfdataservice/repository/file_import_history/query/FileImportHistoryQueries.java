@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.file_import_history.query;
 
 import lombok.NoArgsConstructor;
 
+/** SQL query constants for {@code FileImportHistoryRepository}. */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class FileImportHistoryQueries {
 

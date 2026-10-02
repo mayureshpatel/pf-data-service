@@ -26,6 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * JDBC-backed persistence for {@link Merchant}, including the report-facing spend-breakdown
+ * queries ({@link #findMerchantTotals}/{@link #findMerchantReportData}). Post-PF-845, merchants
+ * are plain user-owned entities with no fragmentation/clustering concept -- see
+ * {@code MerchantQueries}'s own doc for the column-naming history that predates that change.
+ */
 @Repository
 @RequiredArgsConstructor
 public class MerchantRepository implements JdbcRepository<Merchant, Long> {
@@ -43,6 +49,13 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .optional();
     }
 
+    /**
+     * Unpaginated form of {@link #findAllByUserId(Long, String, Pageable)} -- returns every one
+     * of the user's merchants at once, with no search filter.
+     *
+     * @param userId the owning user's id
+     * @return every merchant the user has
+     */
     public List<Merchant> findAllByUserId(Long userId) {
         return jdbcClient.sql(MerchantQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
@@ -100,6 +113,11 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         return new PageImpl<>(content, pageable, total);
     }
 
+    /**
+     * @param id     the merchant id
+     * @param userId the requesting user's id
+     * @return the merchant if it exists and is owned by {@code userId}, otherwise empty
+     */
     public Optional<Merchant> findByIdAndUserId(Long id, Long userId) {
         return jdbcClient.sql(MerchantQueries.FIND_BY_ID_AND_USER_ID)
                 .param("id", id)
@@ -108,6 +126,15 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .optional();
     }
 
+    /**
+     * Dashboard-facing spend-by-merchant breakdown for the given date range (expense transactions
+     * only). See {@link #findMerchantReportData} for the Reports feature's richer equivalent.
+     *
+     * @param userId    the owning user's id
+     * @param startDate the inclusive range start
+     * @param endDate   the exclusive range end
+     * @return one row per merchant with any spend in the range, unordered
+     */
     public List<MerchantBreakdownDto> findMerchantTotals(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_TOTALS)
                 .param("userId", userId)
@@ -130,6 +157,10 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .list();
     }
 
+    /**
+     * @param request the merchant to create
+     * @return the generated merchant id
+     */
     public Long insert(MerchantCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(MerchantQueries.INSERT)
@@ -143,6 +174,11 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
         return keyHolder.getKey().longValue();
     }
 
+    /**
+     * @param request the merchant's new field values
+     * @param userId  the requesting user's id
+     * @return the number of rows updated (0 or 1)
+     */
     public int update(MerchantUpdateRequest request, Long userId) {
         return jdbcClient.sql(MerchantQueries.UPDATE)
                 .param("name", request.getName())

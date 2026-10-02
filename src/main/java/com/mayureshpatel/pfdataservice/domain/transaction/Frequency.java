@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.domain.transaction;
 
 import java.util.Locale;
 
+/** How often a {@link RecurringTransaction}'s {@code nextDate} advances once it fires. */
 public enum Frequency {
     WEEKLY,
     BI_WEEKLY,

@@ -2,6 +2,12 @@ package com.mayureshpatel.pfdataservice.repository.tag.query;
 
 import lombok.NoArgsConstructor;
 
+/**
+ * SQL query constants for {@code TagRepository}, including the transaction-tag junction-table
+ * operations ({@link #FIND_BY_TRANSACTION_ID}, {@link #INSERT_TRANSACTION_TAG},
+ * {@link #DELETE_TRANSACTION_TAG}) moved here from {@code TransactionQueries} (PF-307) since
+ * they're tag-domain functionality despite touching the transactions table too.
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class TagQueries {
 

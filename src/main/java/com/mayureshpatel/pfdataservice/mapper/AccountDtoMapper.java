@@ -7,11 +7,21 @@ import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 import com.mayureshpatel.pfdataservice.dto.currency.CurrencyDto;
 import com.mayureshpatel.pfdataservice.dto.user.UserDto;
 
+/** Converts the {@link Account} domain object into its API-facing {@link AccountDto}. */
 public final class AccountDtoMapper {
 
     private AccountDtoMapper() {
     }
 
+    /**
+     * Hand-builds the nested {@code UserDto}/{@code AccountTypeDto}/{@code CurrencyDto} inline
+     * rather than delegating to their own dedicated mappers -- the existing {@code todo} below
+     * flags this as worth refactoring, not a deliberate inconsistency with the rest of this
+     * package's mappers.
+     *
+     * @param account the domain account to convert, or {@code null}
+     * @return the equivalent DTO, or {@code null} if {@code account} was {@code null}
+     */
     // todo: refactor by using specific dto mappers
     public static AccountDto toDto(Account account) {
         if (account == null) {

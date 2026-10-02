@@ -35,6 +35,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code MerchantService}'s post-PF-845 CRUD and description-link matching, one {@code @Nested} class per method below -- merchants are now identified purely by their own name/location fields, matched to raw statement descriptions via an explicit user-managed link table rather than any auto-create-on-import mechanism. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MerchantService Unit Tests")
 class MerchantServiceTest {
@@ -50,6 +51,7 @@ class MerchantServiceTest {
 
     private static final Long USER_ID = 1L;
 
+    /** {@code getAllMerchants} maps every repository row to a {@link MerchantDto}, passing the optional search term (PF-320) and {@link Pageable} straight through unmodified. */
     @Nested
     @DisplayName("getAllMerchants")
     class GetAllMerchantsTests {
@@ -88,6 +90,7 @@ class MerchantServiceTest {
         }
     }
 
+    /** {@code createMerchant} always inserts with the authenticated caller's own {@code userId}, overriding whatever value the request body happens to carry -- never trusting client-supplied ownership. */
     @Nested
     @DisplayName("createMerchant")
     class CreateMerchantTests {
@@ -126,6 +129,7 @@ class MerchantServiceTest {
         }
     }
 
+    /** {@code updateMerchant} re-checks ownership itself via a user-scoped {@code findByIdAndUserId} lookup -- deliberate defense-in-depth even though {@code @PreAuthorize} is also expected to enforce this -- throwing {@link ResourceNotFoundException} and never calling {@code update()} for a merchant that isn't the caller's. */
     @Nested
     @DisplayName("updateMerchant")
     class UpdateMerchantTests {
@@ -161,6 +165,7 @@ class MerchantServiceTest {
         }
     }
 
+    /** {@code deleteMerchant} enforces the same defense-in-depth ownership re-check as {@link UpdateMerchantTests} before deleting. */
     @Nested
     @DisplayName("deleteMerchant")
     class DeleteMerchantTests {
@@ -191,6 +196,7 @@ class MerchantServiceTest {
         }
     }
 
+    /** {@code findMatchingMerchantId} looks up a single raw description's merchant link and returns it wrapped in an {@code Optional}; a PF-845 case: when no link exists, it returns empty and -- unlike the pre-PF-845 auto-create behavior -- never inserts a new merchant on the caller's behalf. */
     @Nested
     @DisplayName("findMatchingMerchantId")
     class FindMatchingMerchantIdTests {
@@ -225,6 +231,13 @@ class MerchantServiceTest {
         }
     }
 
+    /**
+     * The batch overload of {@code findMatchingMerchantId} resolves as many descriptions as it can
+     * in one repository call; an unlinked description (PF-845) is simply absent from the result
+     * map rather than an error or a triggered auto-create, an empty input list short-circuits
+     * without touching the repository at all, and two raw descriptions differing only by casing or
+     * whitespace both resolve to the same link via normalization before the lookup.
+     */
     @Nested
     @DisplayName("findMatchingMerchantIds (batch)")
     class FindMatchingMerchantIdsBatchTests {
@@ -289,6 +302,7 @@ class MerchantServiceTest {
         }
     }
 
+    /** {@code recordDescriptionLink} upserts using the light-normalized form of the description as the lookup key, while still storing the original raw description on the link row. */
     @Nested
     @DisplayName("recordDescriptionLink")
     class RecordDescriptionLinkTests {
@@ -304,6 +318,7 @@ class MerchantServiceTest {
         }
     }
 
+    /** {@code getDescriptionLinks} requires the merchant to be owned by the caller ({@link ResourceNotFoundException} otherwise) before mapping every linked description to a {@link MerchantDescriptionLinkDto}. */
     @Nested
     @DisplayName("getDescriptionLinks")
     class GetDescriptionLinksTests {
@@ -337,6 +352,7 @@ class MerchantServiceTest {
         }
     }
 
+    /** {@code deleteDescriptionLink} requires the link itself to be owned by the caller ({@link ResourceNotFoundException} otherwise, checked directly against the link row rather than via its merchant) before deleting. */
     @Nested
     @DisplayName("deleteDescriptionLink")
     class DeleteDescriptionLinkTests {

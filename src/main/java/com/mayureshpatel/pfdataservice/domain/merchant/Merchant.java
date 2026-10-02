@@ -6,6 +6,12 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * A normalized merchant identity (e.g. "Starbucks"), decoupled from the raw, inconsistently
+ * formatted description text a bank's CSV export actually contains (e.g.
+ * "SQ *STARBUCKS #4471"). {@link MerchantDescriptionLink} is what maps a specific raw description
+ * to one of these; this class only holds the canonical identity itself.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

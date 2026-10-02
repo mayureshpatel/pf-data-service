@@ -7,6 +7,12 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * A record of one previously-imported CSV statement file, keyed by {@code fileHash} so the same
+ * file can't be imported twice for the same account -- {@code transactionCount} is the number of
+ * transactions that import actually created, kept here rather than recomputed for a quick history
+ * display.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

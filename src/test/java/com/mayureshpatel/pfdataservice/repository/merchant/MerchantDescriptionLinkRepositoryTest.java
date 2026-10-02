@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code MerchantDescriptionLinkRepository} (the post-PF-845 description-to-merchant matching table) against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the normalized-key lookup and user-scoped ownership checks directly rather than mocking them. */
 @Import({MerchantDescriptionLinkRepository.class, MerchantRepository.class})
 @DisplayName("MerchantDescriptionLinkRepository Integration Tests (PostgreSQL)")
 class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
@@ -29,6 +30,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
     private static final Long USER_2 = 2L;
     private static final Long MERCHANT_CAFE = 4L; // baseline's "My Favorite Cafe", owned by user 1
 
+    /** The batch lookup returns a matched description's linked merchant id, simply omits (PF-845, not errors on) an unmatched description, never returns another user's link even for an identical normalized key, and short-circuits to an empty map without querying at all when given no descriptions. */
     @Nested
     @DisplayName("findMerchantIdsByNormalizedDescriptions")
     class FindMerchantIdsByNormalizedDescriptionsTests {
@@ -80,6 +82,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code upsert} creates a new link when the normalized description key is unseen, and -- a PF-845 last-write-wins case -- silently overwrites rather than errors when re-linking an already-linked normalized key to a different merchant, leaving exactly one link pointing at the new merchant with the new raw description. */
     @Nested
     @DisplayName("upsert")
     class UpsertTests {
@@ -117,6 +120,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code findByIdAndUserId} finds a link the caller owns, and returns empty -- not the link -- for the right id under the wrong user. */
     @Nested
     @DisplayName("findByIdAndUserId")
     class FindByIdAndUserIdTests {
@@ -151,6 +155,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code deleteByIdAndUserId} deletes an owned link, and affects zero rows -- leaving the link intact -- when the caller doesn't own it. */
     @Nested
     @DisplayName("deleteByIdAndUserId")
     class DeleteByIdAndUserIdTests {
@@ -187,6 +192,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code findByMerchantIdAndUserId} returns every link for a merchant ordered oldest-first by id, and an empty list for a merchant with none. */
     @Nested
     @DisplayName("findByMerchantIdAndUserId")
     class FindByMerchantIdAndUserIdTests {

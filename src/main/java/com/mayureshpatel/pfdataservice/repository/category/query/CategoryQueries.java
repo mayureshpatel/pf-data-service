@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.category.query;
 
 import lombok.NoArgsConstructor;
 
+/** SQL query constants for {@code CategoryRepository}. */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class CategoryQueries {
 

@@ -8,6 +8,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * The request payload for registering a new user account. Beyond the standard
+ * username/email/password fields, includes a {@link #website} honeypot field for basic bot
+ * rejection -- see its own field-level doc for how that works.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

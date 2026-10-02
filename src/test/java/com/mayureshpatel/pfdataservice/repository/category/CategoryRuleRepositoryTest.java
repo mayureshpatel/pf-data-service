@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code CategoryRuleRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the multi-keyword child-table mapping, priority/specificity ordering, and ownership-scoped writes directly rather than mocking them. */
 @Import(CategoryRuleRepository.class)
 @DisplayName("CategoryRuleRepository Integration Tests (PostgreSQL)")
 class CategoryRuleRepositoryTest extends BaseRepositoryTest {
@@ -32,6 +33,14 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
                 .user(User.builder().id(USER_1).build());
     }
 
+    /**
+     * {@code findByUserId} orders rules by priority descending, then by specificity (combined
+     * keyword length) descending as the tie-breaker (PF-315), then -- a PF-313 fix -- by id
+     * ascending as the final tie-breaker so a full tie (same priority AND same specificity) stays
+     * deterministic rather than falling to whatever order Postgres happens to return. It also
+     * assembles each rule's full multi-keyword set correctly, in insertion order, and enriches
+     * each result with its linked {@link Category}'s own fields (not just the raw category id).
+     */
     @Nested
     @DisplayName("Find Operations")
     class FindTests {
@@ -120,6 +129,7 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code countByCategoryId} counts real rules linked to a category, and returns 0 for a category with none. */
     @Nested
     @DisplayName("Status & Counts")
     class StatusTests {
@@ -144,6 +154,22 @@ class CategoryRuleRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /**
+     * {@code insertAndReturnId} (a PF-314 fix -- the repository previously passed an explicit
+     * {@code NULL} id that bypassed the {@code BIGSERIAL} column's own default instead of
+     * triggering it, throwing {@link org.springframework.dao.DataIntegrityViolationException} on
+     * every call) returns a real generated id and persists every keyword, not just the first
+     * (PF-315), including round-tripping the amount-range columns through real {@code
+     * NUMERIC(19,2)} precision. {@code update} (previously an unconditionally-throwing {@link
+     * UnsupportedOperationException}, also PF-314) wholesale-replaces the keyword set -- growing
+     * or shrinking it, and changing {@code matchType} -- and is scoped to the rule's owning user at
+     * the SQL level: a wrong-user update attempt affects zero rows and leaves both the parent row
+     * and its keyword rows completely untouched, the same defense-in-depth pattern already
+     * established for accounts and merchants. {@code deleteById(id, userId)} deletes correctly and
+     * cascades to the rule's keyword rows (PF-315, {@code ON DELETE CASCADE}); the single-argument
+     * {@code deleteById(id)} is deliberately unsupported, matching {@code CategoryRepository}'s own
+     * insecure-overload convention.
+     */
     @Nested
     @DisplayName("Write Operations")
     class WriteTests {

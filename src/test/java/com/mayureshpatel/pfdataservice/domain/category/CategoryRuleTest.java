@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link CategoryRule}'s Lombok-generated builder (including a PF-315 regression case for a multi-keyword AND rule), {@code toBuilder}, and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("CategoryRule Domain Object Tests")
 class CategoryRuleTest {
 

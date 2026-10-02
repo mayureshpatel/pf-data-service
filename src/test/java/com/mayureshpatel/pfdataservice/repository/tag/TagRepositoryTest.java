@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code TagRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the JDBC Client mapping, ownership-scoped writes, and transaction-tag join table directly rather than mocking them. */
 @Import(TagRepository.class)
 @DisplayName("TagRepository Integration Tests (PostgreSQL)")
 class TagRepositoryTest extends BaseRepositoryTest {
@@ -24,6 +25,20 @@ class TagRepositoryTest extends BaseRepositoryTest {
     private static final Long OTHER_USER = 999L;
     private static final Long BASELINE_TRANSACTION_ID = 1000L; // account_id=1 -> user_id=1
 
+    /**
+     * {@code insertAndReturnId} (a PF-307 fix -- the repository previously returned {@code
+     * update(keyHolder)}'s rows-affected count, never actually reading the generated key back out
+     * of the holder) returns a real generated id; {@code update}/{@code deleteById} are both
+     * scoped to the tag's owning user at the SQL level (PF-307 -- previously matched by id alone,
+     * so any caller who knew or guessed another user's tag id could rename or delete it), affecting
+     * zero rows and leaving the record untouched on a user mismatch; the single-argument {@code
+     * deleteById(id)} is deliberately unsupported, matching the insecure-overload convention
+     * established elsewhere. A duplicate {@code (userId, name)} insert genuinely violates the
+     * schema's own unique constraint, confirmed live against real Postgres rather than assumed
+     * from the schema definition -- this is what lets {@code GlobalExceptionHandler}'s {@link
+     * org.springframework.dao.DataIntegrityViolationException} handler return 400 instead of a
+     * generic 500 for this case.
+     */
     @Nested
     @DisplayName("CRUD Operations")
     class CrudTests {
@@ -181,6 +196,7 @@ class TagRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** A PF-307 addition: {@code insertTransactionTag}/{@code deleteTransactionTag} manage the {@code transaction_tags} join table without disturbing other tags on the same transaction, and deleting a tag itself cascades to remove its join rows too (confirmed live against the real {@code ON DELETE CASCADE}, not assumed from the schema). */
     @Nested
     @DisplayName("Transaction Assignment (PF-307)")
     class TransactionAssignmentTests {

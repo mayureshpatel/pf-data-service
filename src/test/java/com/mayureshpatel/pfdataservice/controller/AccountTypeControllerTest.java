@@ -29,6 +29,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
 
     private static final String TYPE_CODE = "CHECKING";
 
+    /** {@code GET /api/v1/account-types} returns the active account types (or an empty list, not an error, when there are none); the unversioned {@code /api/account-types} path (PF-200) correctly 404s rather than resolving to the same handler. */
     @Nested
     @DisplayName("getAccountTypes")
     class GetAccountTypesTests {
@@ -86,6 +87,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/account-types} (ADMIN-only, per the class-level {@code @WithCustomMockUser} role override) creates a new account type and returns the affected-row count, and returns a 400 with field-level {@code validationErrors} when a required field like {@code code} is missing. */
     @Nested
     @DisplayName("createAccountType")
     @WithCustomMockUser(id = BaseControllerTest.USER_ID, roles = {"ADMIN"})
@@ -138,6 +140,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/account-types/{code}} (ADMIN-only) removes the account type and returns the affected-row count. */
     @Nested
     @DisplayName("deleteAccountType")
     @WithCustomMockUser(id = BaseControllerTest.USER_ID, roles = {"ADMIN"})
@@ -159,6 +162,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
         }
     }
 
+    /** An unexpected exception from the service surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

@@ -8,6 +8,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * The request payload for creating a new {@code Category}. {@code parentId} is optional and makes
+ * the new category a subcategory of an existing one when set.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

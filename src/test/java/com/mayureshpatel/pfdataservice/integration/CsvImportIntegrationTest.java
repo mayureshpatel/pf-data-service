@@ -23,6 +23,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** An end-to-end integration test (real Spring context, real database via {@link BaseIntegrationTest}'s Testcontainers setup, real {@code MockMvc} HTTP calls) of the full CSV-import flow: upload a file to get previews, then submit the approved previews to be saved as real transactions -- verifying the two endpoints actually compose correctly together, not just each in isolation. */
 @AutoConfigureMockMvc
 class CsvImportIntegrationTest extends BaseIntegrationTest {
 

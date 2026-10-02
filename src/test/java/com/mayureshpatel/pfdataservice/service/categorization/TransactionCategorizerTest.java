@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code TransactionCategorizer}'s {@code guessCategory} overloads run registered {@link CategorizationStrategy} beans in {@code getOrder()} order and stop at the first match. */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("TransactionCategorizer Unit Tests")
@@ -40,6 +41,12 @@ class TransactionCategorizerTest {
         categorizer = new TransactionCategorizer(strategies);
     }
 
+    /**
+     * {@code guessCategory(Transaction, ...)} tries strategies in ascending {@code getOrder()}
+     * (not registration order), returns the first non-empty match, and falls back to {@code -1L}
+     * -- never null -- when nothing matches. A null account or null {@code userId} on the
+     * transaction doesn't short-circuit the call; strategies still run, just without that context.
+     */
     @Nested
     @DisplayName("guessCategory (Domain Transaction)")
     class GuessCategoryDomainTests {
@@ -98,6 +105,7 @@ class TransactionCategorizerTest {
         }
     }
 
+    /** The {@link TransactionUpdateRequest} overload of {@code guessCategory} follows the same first-match-wins, {@code -1L}-fallback behavior as {@link GuessCategoryDomainTests}. */
     @Nested
     @DisplayName("guessCategory (Update Request)")
     class GuessCategoryRequestTests {

@@ -8,6 +8,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * The request payload for creating a new {@code Merchant} identity. {@code name} is the only
+ * field the user actually chooses; the address fields exist for display/disambiguation between
+ * same-named merchants, not for any address-specific logic.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

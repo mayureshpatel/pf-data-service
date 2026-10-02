@@ -19,6 +19,13 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Verifies the {@code default} helper methods on the {@code TransactionParser} interface itself
+ * -- {@code isValidRecord}, {@code parseDate}, {@code configureTransactionTypeAndAmount}, and
+ * {@code parseAmount} -- using a minimal anonymous implementation that only overrides the two
+ * abstract methods, so these shared helpers are tested once here rather than redundantly through
+ * every concrete per-bank parser.
+ */
 @DisplayName("TransactionParser interface default methods unit tests")
 class TransactionParserDefaultMethodsTest {
 

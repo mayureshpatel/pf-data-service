@@ -7,6 +7,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * The request payload for creating a new {@code AccountType} lookup row (e.g. "Checking",
+ * "Credit Card"). {@code isAsset} classifies whether the type represents money the user has
+ * (checking, savings) versus money the user owes (credit cards) -- a display/grouping
+ * distinction; net-worth totals are summed directly from each account's own balance regardless of
+ * this flag (see {@code ReportService.getNetWorthOverTime}), so a liability-type account still
+ * needs a negative stored balance to net out correctly.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

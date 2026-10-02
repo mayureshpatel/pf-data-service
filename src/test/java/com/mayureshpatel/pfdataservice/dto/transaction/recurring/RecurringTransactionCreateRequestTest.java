@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code RecurringTransactionCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. Notably absent: despite {@code RecurringTransaction} inheriting a {@code category} field from {@code Transaction}, neither this request nor {@link RecurringTransactionUpdateRequestTest} has a {@code categoryId} field to validate. */
 @DisplayName("RecurringTransactionCreateRequest Validation Tests")
 class RecurringTransactionCreateRequestTest {
 
@@ -46,6 +47,7 @@ class RecurringTransactionCreateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code userId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: userId")
     class UserIdValidationTests {
@@ -68,6 +70,7 @@ class RecurringTransactionCreateRequestTest {
         }
     }
 
+    /** {@code accountId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: accountId")
     class AccountIdValidationTests {
@@ -90,6 +93,7 @@ class RecurringTransactionCreateRequestTest {
         }
     }
 
+    /** {@code amount} must be non-null and within +/-9999999999.99. */
     @Nested
     @DisplayName("Field: amount")
     class AmountValidationTests {
@@ -121,6 +125,7 @@ class RecurringTransactionCreateRequestTest {
         }
     }
 
+    /** {@code frequency} must be non-null and one of the recognized {@link Frequency} codes -- {@code "DAILY"} isn't a supported cadence. */
     @Nested
     @DisplayName("Field: frequency")
     class FrequencyValidationTests {
@@ -143,6 +148,7 @@ class RecurringTransactionCreateRequestTest {
         }
     }
 
+    /** {@code lastDate} must be in the past -- it records the most recent occurrence actually observed, which can't be a future date. Not present on {@link RecurringTransactionUpdateRequestTest}: once set at creation it isn't user-editable. */
     @Nested
     @DisplayName("Field: lastDate")
     class LastDateValidationTests {
@@ -156,6 +162,7 @@ class RecurringTransactionCreateRequestTest {
         }
     }
 
+    /** {@code nextDate} must be non-null and in the future -- the projected date of the next occurrence. */
     @Nested
     @DisplayName("Field: nextDate")
     class NextDateValidationTests {
@@ -178,6 +185,7 @@ class RecurringTransactionCreateRequestTest {
         }
     }
 
+    /** {@code merchantId} must be non-null and positive -- unlike a plain {@code Transaction}, a recurring transaction always requires a known merchant since it's matched/detected by merchant+amount+frequency. */
     @Nested
     @DisplayName("Field: merchantId")
     class MerchantIdValidationTests {

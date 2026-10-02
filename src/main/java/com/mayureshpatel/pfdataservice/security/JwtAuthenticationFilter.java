@@ -18,6 +18,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Extracts and validates a Bearer JWT once per request, populating the
+ * {@link SecurityContextHolder} on success. A request with no {@code Authorization} header, or
+ * one that isn't a Bearer token, is passed through unauthenticated rather than rejected here --
+ * enforcement of which endpoints actually require authentication is left to Spring Security's own
+ * configuration further down the chain. An expired token and any other validation failure
+ * (malformed token, unknown user, signature mismatch) are caught separately so each can return
+ * its own distinct 401 JSON body.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j

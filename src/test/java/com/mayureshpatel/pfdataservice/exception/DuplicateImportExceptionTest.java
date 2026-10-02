@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code DuplicateImportException}'s single message-only constructor. */
 @DisplayName("DuplicateImportException Unit Tests")
 class DuplicateImportExceptionTest {
 
+    /** The constructor sets {@code getMessage()} to the given value. */
     @Nested
     @DisplayName("Constructor: Message only")
     class MessageConstructorTests {

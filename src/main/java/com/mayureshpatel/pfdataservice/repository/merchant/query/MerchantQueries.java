@@ -2,6 +2,13 @@ package com.mayureshpatel.pfdataservice.repository.merchant.query;
 
 import lombok.NoArgsConstructor;
 
+/**
+ * SQL query constants for {@code MerchantRepository}. The {@code representative_merchant_id}/
+ * {@code display_name} column aliases in {@link #FIND_MERCHANT_TOTALS}/
+ * {@link #FIND_MERCHANT_REPORT_DATA} predate PF-845 (when merchant identities could still
+ * fragment into clusters needing a "representative" one); kept as-is post-PF-845 to avoid
+ * breaking the frontend wire contract, even though every merchant is now its own representative.
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class MerchantQueries {
 

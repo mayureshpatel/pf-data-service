@@ -2,6 +2,11 @@ package com.mayureshpatel.pfdataservice.repository.currency.query;
 
 import lombok.NoArgsConstructor;
 
+/**
+ * SQL query constants for {@code CurrencyRepository}. {@link #SAVE} is an upsert (insert-or-update
+ * on conflict) rather than separate {@code INSERT}/{@code UPDATE} constants -- currencies are a
+ * small, admin-maintained lookup table where "save" is the only operation callers actually need.
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class CurrencyQueries {
 

@@ -34,6 +34,7 @@ class TransactionControllerTest extends BaseControllerTest {
 
     private static final Long ACCOUNT_ID = 10L;
 
+    /** {@code POST /api/v1/accounts/{accountId}/upload} returns parsed previews on a successful multipart upload, a 400 for an empty file, and a 403 (via {@code SecurityService#isAccountOwner}) when the caller doesn't own the target account. */
     @Nested
     @DisplayName("uploadTransactions")
     class UploadTransactionsTests {
@@ -99,6 +100,7 @@ class TransactionControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/accounts/{accountId}/transactions} saves the approved previews and returns a human-readable success message, a 400 with field-level {@code validationErrors} for an invalid request body, and a 403 when the caller doesn't own the target account. */
     @Nested
     @DisplayName("saveTransactions")
     class SaveTransactionsTests {
@@ -160,6 +162,7 @@ class TransactionControllerTest extends BaseControllerTest {
         }
     }
 
+    /** An unexpected exception from the import service surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

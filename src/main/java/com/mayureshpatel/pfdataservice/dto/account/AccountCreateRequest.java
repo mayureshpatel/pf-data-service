@@ -7,6 +7,7 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 
+/** The request payload for creating a new {@code Account}. */
 @Getter
 @Builder(toBuilder = true)
 @ToString

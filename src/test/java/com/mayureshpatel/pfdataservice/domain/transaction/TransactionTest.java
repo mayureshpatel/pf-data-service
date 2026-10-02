@@ -9,9 +9,15 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+/** Verifies {@link Transaction}'s ID-based {@code equals}/{@code hashCode}, plus {@link Transaction#getNetChange()} in {@link GetNetChangeTests}. */
 @DisplayName("Transaction Domain Object Tests")
 class TransactionTest {
 
+    /**
+     * {@link Transaction#getNetChange()} forces its sign from {@code type} regardless of how the
+     * stored {@code amount} itself is signed (positive for INCOME/TRANSFER_IN, negative for
+     * EXPENSE/TRANSFER_OUT, unchanged for ADJUSTMENT, zero when {@code amount} is null).
+     */
     @Nested
     @DisplayName("getNetChange logic")
     class GetNetChangeTests {

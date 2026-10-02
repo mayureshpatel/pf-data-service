@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code CsvParsingException}'s two constructors, one {@code @Nested} class each below. */
 @DisplayName("CsvParsingException Unit Tests")
 class CsvParsingExceptionTest {
 
+    /** The message-only constructor sets {@code getMessage()} and leaves {@code getCause()} null. */
     @Nested
     @DisplayName("Constructor: Message only")
     class MessageConstructorTests {
@@ -27,6 +29,7 @@ class CsvParsingExceptionTest {
         }
     }
 
+    /** The message-and-cause constructor sets both {@code getMessage()} and {@code getCause()}. */
     @Nested
     @DisplayName("Constructor: Message and Cause")
     class MessageAndCauseConstructorTests {

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link FileImportHistory}'s Lombok-generated builder, {@code toBuilder}, and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("FileImportHistory Domain Object Tests")
 class FileImportHistoryTest {
 

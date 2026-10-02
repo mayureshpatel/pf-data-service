@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@code RecurringTransactionDto}'s builder maps its arguments 1:1. */
 @DisplayName("RecurringTransactionDto Structure Tests")
 class RecurringTransactionDtoTest {
 

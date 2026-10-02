@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link MerchantDescriptionLink}'s Lombok-generated builder, {@code toBuilder}, and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("MerchantDescriptionLink Domain Object Tests")
 class MerchantDescriptionLinkTest {
 

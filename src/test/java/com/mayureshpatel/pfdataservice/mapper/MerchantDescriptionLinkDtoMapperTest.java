@@ -10,6 +10,7 @@ import java.lang.reflect.Constructor;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code MerchantDescriptionLinkDtoMapper}'s static {@code toDto} mapping (in {@link ToDtoMappingTests}), plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("MerchantDescriptionLinkDtoMapper Unit Tests")
 class MerchantDescriptionLinkDtoMapperTest {
 
@@ -27,6 +28,7 @@ class MerchantDescriptionLinkDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** {@code toDto} returns null for a null source, and maps {@code id}/{@code merchantId}/{@code description} when fully populated -- {@code userId} and {@code normalizedDescription} are deliberately not part of this response DTO's shape. */
     @Nested
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {

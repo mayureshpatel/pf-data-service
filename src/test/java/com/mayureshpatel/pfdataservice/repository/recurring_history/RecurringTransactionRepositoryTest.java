@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code RecurringTransactionRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the JDBC Client mapping and ownership-scoped writes directly rather than mocking them. */
 @Import(RecurringTransactionRepository.class)
 @DisplayName("RecurringTransactionRepository Integration Tests (PostgreSQL)")
 class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
@@ -28,6 +29,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
     private static final Long ACCOUNT_1 = 1L;
     private static final Long MERCHANT_AMAZON = 2L;
 
+    /** {@code findAll}/{@code findAllByUserId}/{@code findById} read correctly against the baseline fixture, and {@code findByUserIdAndActiveTrueOrderByNextDate} returns only active rows, genuinely ordered by {@code nextDate} ascending. */
     @Nested
     @DisplayName("Find Operations")
     class FindTests {
@@ -85,6 +87,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code insert} returns the real database-generated id (checked against a fresh {@code findAllByUserId}/{@code findById}, not just {@code update}'s rows-affected count, which would otherwise coincidentally collide with baseline id 1); {@code update}/{@code delete} (soft) round-trip correctly, and {@code deleteById} is deliberately unsupported -- only the ownership-scoped {@code delete(id, userId)} overload is exposed. */
     @Nested
     @DisplayName("Write Operations")
     class WriteTests {
@@ -164,6 +167,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code countByAccountId} counts real recurring transactions for an account, returns 0 for an account with none, and excludes soft-deleted rows from the count once one is deleted. */
     @Nested
     @DisplayName("Status & Counts")
     class StatusTests {

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link AccountType}'s Lombok-generated builder, {@code toBuilder}, and code-based {@code equals}/{@code hashCode}. */
 @DisplayName("AccountType Domain Object Tests")
 class AccountTypeTest {
 

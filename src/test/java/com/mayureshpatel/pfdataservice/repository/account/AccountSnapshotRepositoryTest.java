@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code AccountSnapshotRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup), exercising the JDBC Client mapping directly rather than mocking it. */
 @Import(AccountSnapshotRepository.class)
 @DisplayName("AccountSnapshotRepository Integration Tests (PostgreSQL)")
 class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
@@ -24,6 +25,7 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
 
     private static final Long ACCOUNT_1 = 1L;
 
+    /** {@code insert} returns the real database-generated id (checked against a fresh {@code findByAccountIdAndSnapshotDate} lookup, not just {@code update}'s rows-affected count), works whether the account is set via a flat {@code accountId} or an embedded {@link Account} object, and {@code delete}/{@code deleteById} both return 0 for a snapshot with no id rather than erroring. */
     @Nested
     @DisplayName("CRUD Operations")
     class CrudTests {

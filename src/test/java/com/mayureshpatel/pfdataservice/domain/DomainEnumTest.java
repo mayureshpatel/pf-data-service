@@ -10,9 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Groups the small, otherwise-homeless behavioral tests for several unrelated domain enums/support types under one file rather than one file each. */
 @DisplayName("Domain Enum and Support Object Tests")
 class DomainEnumTest {
 
+    /** {@link TransactionType}'s {@code isIncome}/{@code isExpense}/{@code isTransfer}/{@code isAdjustment} classification methods. */
     @Nested
     @DisplayName("TransactionType logic")
     class TransactionTypeTests {
@@ -43,6 +45,7 @@ class DomainEnumTest {
         }
     }
 
+    /** {@link Frequency#fromCode(String)}'s case-insensitive lookup and its failure on an unknown code. */
     @Nested
     @DisplayName("Frequency logic")
     class FrequencyTests {
@@ -58,6 +61,7 @@ class DomainEnumTest {
         }
     }
 
+    /** {@link CategoryType#fromValue(String)}'s case-insensitive lookup and its failure on an unknown value. */
     @Nested
     @DisplayName("CategoryType logic")
     class CategoryTypeTests {
@@ -73,6 +77,7 @@ class DomainEnumTest {
         }
     }
 
+    /** {@link BankName#fromString(String)}'s lookup by both its enum name and its display name, plus {@link BankName#getDisplayName()}. */
     @Nested
     @DisplayName("BankName logic")
     class BankNameTests {
@@ -93,6 +98,7 @@ class DomainEnumTest {
         }
     }
 
+    /** {@link Iconography}'s getters/setters and its no-arg constructor. */
     @Nested
     @DisplayName("Iconography logic")
     class IconographyTests {

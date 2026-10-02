@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code AuthenticationService}'s single {@code authenticate} method in {@link AuthenticateTests}. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthenticationService Unit Tests")
 class AuthenticationServiceTest {
@@ -37,6 +38,14 @@ class AuthenticationServiceTest {
     @InjectMocks
     private AuthenticationService authenticationService;
 
+    /**
+     * {@code authenticate} generates a JWT after delegating credential-checking to the
+     * {@code AuthenticationManager}, embedding {@code userId}/{@code email} claims only when the
+     * authenticated principal is this codebase's own {@link CustomUserDetails} -- a generic
+     * {@code UserDetails} (e.g. from a different auth source) still gets a token, just with an
+     * empty claims map. A failed authentication propagates the manager's exception without ever
+     * calling {@code userDetailsService}.
+     */
     @Nested
     @DisplayName("authenticate")
     class AuthenticateTests {

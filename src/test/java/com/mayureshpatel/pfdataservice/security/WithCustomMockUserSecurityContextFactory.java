@@ -15,8 +15,19 @@ import java.util.stream.Collectors;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
+/** Builds the mock {@link SecurityContext} that {@link WithCustomMockUser} installs for an annotated test, wrapping the annotation's id/username/email/roles in a {@link CustomUserDetails} principal. */
 public class WithCustomMockUserSecurityContextFactory implements WithSecurityContextFactory<WithCustomMockUser> {
 
+    /**
+     * An alternate entry point for tests that already have a real {@link User} domain object on
+     * hand (rather than the id/username/email fields {@link WithCustomMockUser} declares) and want
+     * a matching {@link RequestPostProcessor} for a {@code MockMvc} request -- always grants a
+     * fixed single {@code ROLE_USER} authority, unlike {@link #createSecurityContext}'s
+     * annotation-driven roles.
+     *
+     * @param user the domain user to authenticate as
+     * @return a request post-processor that authenticates the request as this user
+     */
     public static RequestPostProcessor customMockUser(User user) {
         CustomUserDetails principal = new CustomUserDetails(user);
         List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));

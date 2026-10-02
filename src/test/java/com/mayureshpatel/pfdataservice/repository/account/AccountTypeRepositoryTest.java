@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code AccountTypeRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup), exercising the JDBC Client mapping directly rather than mocking it. */
 @Import(AccountTypeRepository.class)
 @DisplayName("AccountTypeRepository Integration Tests (PostgreSQL)")
 class AccountTypeRepositoryTest extends BaseRepositoryTest {
@@ -20,6 +21,7 @@ class AccountTypeRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private AccountTypeRepository repository;
 
+    /** {@code findByIsActiveTrueOrderBySortOrder} returns active account types genuinely ordered by their {@code sortOrder} column, not just insertion order, and {@code delete}/{@code deleteByCode} both return 0 for a type with no code set rather than erroring. */
     @Nested
     @DisplayName("CRUD Operations")
     class CrudTests {

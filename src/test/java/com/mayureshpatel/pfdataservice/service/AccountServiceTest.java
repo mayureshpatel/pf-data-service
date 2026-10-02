@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code AccountService}'s CRUD and reconciliation methods, one {@code @Nested} class per method below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AccountService Unit Tests")
 class AccountServiceTest {
@@ -44,6 +45,7 @@ class AccountServiceTest {
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 10L;
 
+    /** {@code getAllAccountsByUserId} maps every repository row for the user into an {@link AccountDto}. */
     @Nested
     @DisplayName("getAllAccountsByUserId")
     class GetAllAccountsByUserIdTests {
@@ -63,6 +65,7 @@ class AccountServiceTest {
         }
     }
 
+    /** {@code createAccount} requires the owning user to exist first, throwing {@link ResourceNotFoundException} otherwise, before delegating the insert to the repository. */
     @Nested
     @DisplayName("createAccount")
     class CreateAccountTests {
@@ -91,6 +94,7 @@ class AccountServiceTest {
         }
     }
 
+    /** {@code updateAccount} requires both the user and, scoped to that user, the account to exist -- throwing {@link ResourceNotFoundException} for whichever is missing -- before delegating the update to the repository. */
     @Nested
     @DisplayName("updateAccount")
     class UpdateAccountTests {
@@ -130,6 +134,17 @@ class AccountServiceTest {
 
     }
 
+    /**
+     * {@code reconcileAccount} inserts an adjustment transaction sized for the gap between the
+     * account's current balance and the requested target (returning that adjustment transaction's
+     * own id, not the repository's rows-affected count from {@code reconcile()} -- a PF-837 bug
+     * this suite's first test deliberately stubs two different return values for so it can't pass
+     * by coincidence), does nothing and returns 0 when the balances already match, and -- a PF-857
+     * fix -- only inserts the adjustment transaction *after* {@code reconcile()} itself succeeds,
+     * so a concurrent modification that makes {@code reconcile()} throw {@link
+     * OptimisticLockingFailureException} never leaves a stale, already-committed adjustment
+     * transaction behind.
+     */
     @Nested
     @DisplayName("reconcileAccount")
     class ReconcileAccountTests {
@@ -208,6 +223,14 @@ class AccountServiceTest {
         }
     }
 
+    /**
+     * {@code deleteAccount} enforces, in order: the user exists ({@link
+     * ResourceNotFoundException}), the account exists ({@link ResourceNotFoundException}), the
+     * user owns it ({@link AccessDeniedException}), and the account has neither transactions nor
+     * dependent recurring transactions (PF-192) -- either one throws {@link
+     * IllegalStateException} naming the actual blocking count, and only a fully clean account
+     * reaches the repository delete.
+     */
     @Nested
     @DisplayName("deleteAccount")
     class DeleteAccountTests {

@@ -11,6 +11,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies the accessors/builders of the three read-side account DTOs -- {@link AccountDto}, {@link AccountTypeDto}, and {@link AccountSnapshotDto} -- map their fields 1:1, grouped here since each is a small, closely-related response shape rather than its own top-level concern. */
 @DisplayName("Account Response DTO Unit Tests")
 class AccountResponseDtoTest {
 

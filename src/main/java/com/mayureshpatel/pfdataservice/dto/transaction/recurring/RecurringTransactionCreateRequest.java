@@ -8,6 +8,12 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * The request payload for creating a new {@code RecurringTransaction} template. {@code merchantId}
+ * is required here even though a real generated {@code Transaction}'s merchant can be null -- the
+ * existing {@code todo} below on this same gap has not been resolved, so this documents the
+ * inconsistency rather than a settled design.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

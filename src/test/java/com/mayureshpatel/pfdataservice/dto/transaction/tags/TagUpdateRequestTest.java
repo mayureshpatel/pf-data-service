@@ -14,6 +14,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@code TagUpdateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("TagUpdateRequest Validation Tests")
 class TagUpdateRequestTest {
 
@@ -33,6 +34,7 @@ class TagUpdateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code id} must be non-null and positive. */
     @Nested
     @DisplayName("Field: id")
     class IdValidationTests {
@@ -55,6 +57,7 @@ class TagUpdateRequestTest {
         }
     }
 
+    /** {@code name} must be non-blank and no more than 50 characters. */
     @Nested
     @DisplayName("Field: name")
     class NameValidationTests {

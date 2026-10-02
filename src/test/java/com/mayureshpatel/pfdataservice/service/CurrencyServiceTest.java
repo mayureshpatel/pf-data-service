@@ -17,6 +17,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code CurrencyService}'s two read methods, one {@code @Nested} class each below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CurrencyService Unit Tests")
 class CurrencyServiceTest {
@@ -29,6 +30,7 @@ class CurrencyServiceTest {
 
     private static final String CURRENCY_CODE = "USD";
 
+    /** {@code getAllActiveCurrencies} passes the repository's active-currency list straight through. */
     @Nested
     @DisplayName("getAllActiveCurrencies")
     class GetAllActiveCurrenciesTests {
@@ -49,6 +51,7 @@ class CurrencyServiceTest {
         }
     }
 
+    /** {@code getCurrencyByCode} returns the matching currency, or throws {@link ResourceNotFoundException} naming the unknown code. */
     @Nested
     @DisplayName("getCurrencyByCode")
     class GetCurrencyByCodeTests {

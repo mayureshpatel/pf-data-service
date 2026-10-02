@@ -14,6 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @TestConfiguration(proxyBeanMethods = false)
 public class TestContainersConfig {
 
+    /** @return a fresh PostgreSQL 16 container, its connection details wired into the Spring context automatically via {@link ServiceConnection}. */
     @Bean
     @ServiceConnection
     public PostgreSQLContainer<?> postgresContainer() {

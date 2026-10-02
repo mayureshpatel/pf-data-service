@@ -7,6 +7,7 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 
+/** The request payload for creating a new {@code Budget} for one category/month/year. */
 @Getter
 @Builder(toBuilder = true)
 @ToString

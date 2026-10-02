@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code UserAlreadyExistsException}'s single message-only constructor. */
 @DisplayName("UserAlreadyExistsException Unit Tests")
 class UserAlreadyExistsExceptionTest {
 
+    /** The constructor sets {@code getMessage()} to the given value. */
     @Nested
     @DisplayName("Constructor: Message only")
     class MessageConstructorTests {

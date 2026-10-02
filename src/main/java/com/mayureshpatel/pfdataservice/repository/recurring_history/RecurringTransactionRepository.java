@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** JDBC-backed persistence for {@link RecurringTransaction} templates. */
 @Repository
 @RequiredArgsConstructor
 public class RecurringTransactionRepository implements JdbcRepository<RecurringTransaction, Long> {
@@ -29,6 +30,10 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return every recurring transaction template the user has, active and inactive alike
+     */
     public List<RecurringTransaction> findAllByUserId(Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
@@ -36,6 +41,10 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return only the user's active templates, soonest-due first
+     */
     public List<RecurringTransaction> findByUserIdAndActiveTrueOrderByNextDate(Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.FIND_BY_USER_ID_ACTIVE_ORDER_BY_NEXT_DATE)
                 .param("userId", userId)
@@ -51,6 +60,11 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .optional();
     }
 
+    /**
+     * @param request the template to create
+     * @param userId  the owning user's id
+     * @return the generated template id
+     */
     public int insert(RecurringTransactionCreateRequest request, Long userId) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
@@ -68,6 +82,11 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
         return keyHolder.getKey().intValue();
     }
 
+    /**
+     * @param request the template's new field values
+     * @param userId  the requesting user's id
+     * @return the number of rows updated (0 or 1)
+     */
     public int update(RecurringTransactionUpdateRequest request, Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.UPDATE)
                 .param("accountId", request.getAccountId())
@@ -86,6 +105,15 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
         throw new UnsupportedOperationException("Use delete(Long id, Long userId)");
     }
 
+    /**
+     * Soft-deletes a template, scoped to its owner. The real delete entry point --
+     * {@link #deleteById(Long)} above always throws, matching this codebase's established pattern
+     * for entities where ownership scoping can't be skipped.
+     *
+     * @param id     the template id
+     * @param userId the requesting user's id
+     * @return the number of rows updated (0 or 1)
+     */
     public int delete(Long id, Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.DELETE)
                 .param("id", id)
@@ -93,6 +121,10 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .update();
     }
 
+    /**
+     * @param accountId the account to check
+     * @return the number of non-deleted recurring templates (across all users) on this account
+     */
     public long countByAccountId(Long accountId) {
         return jdbcClient.sql(RecurringTransactionQueries.COUNT_BY_ACCOUNT_ID)
                 .param("accountId", accountId)

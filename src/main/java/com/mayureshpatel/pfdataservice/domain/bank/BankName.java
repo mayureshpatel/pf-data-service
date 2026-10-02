@@ -2,9 +2,13 @@ package com.mayureshpatel.pfdataservice.domain.bank;
 
 import lombok.Getter;
 
-// decision (2026-09-03 interview, PF-310): an enum-per-bank is the deliberate design at the
-// current scale (5 banks), not an oversight. a lookup/registration mechanism is real effort
-// better spent if and when a 6th bank is actually requested, not preemptively.
+/**
+ * The banks this application knows how to import a CSV statement from, one constant per bank's
+ * own CSV column layout ({@code STANDARD}/{@code UNIVERSAL} are generic formats, not tied to a
+ * specific bank). An enum-per-bank is the deliberate design at the current scale (5 banks), not
+ * an oversight (2026-09-03 interview, PF-310) -- a lookup/registration mechanism is real effort
+ * better spent if and when a 6th bank is actually requested, not preemptively.
+ */
 @Getter
 public enum BankName {
     CAPITAL_ONE("Capital One"),

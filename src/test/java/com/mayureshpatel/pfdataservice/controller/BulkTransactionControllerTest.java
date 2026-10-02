@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Verifies {@code BulkTransactionController}'s single {@code POST /api/v1/transactions/bulk} endpoint delegates to {@code TransactionImportService#saveBulkTransactions} and returns its affected-row count. */
 @WebMvcTest(BulkTransactionController.class)
 class BulkTransactionControllerTest {
 

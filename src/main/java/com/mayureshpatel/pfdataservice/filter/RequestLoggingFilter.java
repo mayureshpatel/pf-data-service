@@ -16,6 +16,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * Logs one line per request (method, URI, status, duration, authenticated user) at a level chosen
+ * by the response status (error/warn/info), and stamps a correlation id onto the SLF4J MDC for
+ * the duration of the request so every log line emitted while handling it can be tied together.
+ */
 @Component
 @Slf4j
 public class RequestLoggingFilter extends OncePerRequestFilter {

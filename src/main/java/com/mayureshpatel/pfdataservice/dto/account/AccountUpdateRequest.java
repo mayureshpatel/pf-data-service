@@ -11,6 +11,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * The request payload for updating an existing {@code Account}'s editable fields (name, type,
+ * currency, bank). {@code currentBalance} is deliberately absent -- balance is only ever changed
+ * via transactions or {@link com.mayureshpatel.pfdataservice.dto.account.AccountReconcileRequest
+ * reconciliation}, never a direct field edit.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

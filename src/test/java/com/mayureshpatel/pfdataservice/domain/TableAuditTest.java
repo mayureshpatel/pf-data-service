@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link TableAudit}'s three static factories each populate only the audit fields relevant to their own lifecycle event, and that {@code toBuilder} can update later fields without disturbing the creation-time ones. */
 @DisplayName("TableAudit Domain Object Tests")
 class TableAuditTest {
 

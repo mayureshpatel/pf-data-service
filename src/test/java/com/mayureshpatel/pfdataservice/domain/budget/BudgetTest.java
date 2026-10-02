@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link Budget}'s Lombok-generated builder, {@code toBuilder}, and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("Budget Domain Object Tests")
 class BudgetTest {
 

@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code JwtService} end-to-end against real generated JWTs (a real {@link ReflectionTestUtils}-injected secret key and expiration, not mocked), one {@code @Nested} class per concern below. */
 @DisplayName("JwtService Unit Tests")
 class JwtServiceTest {
 
@@ -36,6 +37,7 @@ class JwtServiceTest {
                 .build();
     }
 
+    /** {@code generateToken} produces a non-empty token whose subject round-trips back to the original username, both with no extra claims and with a caller-supplied extra-claims map embedded and independently extractable. */
     @Nested
     @DisplayName("Token Generation")
     class TokenGenerationTests {
@@ -86,6 +88,7 @@ class JwtServiceTest {
         }
     }
 
+    /** {@code isTokenValid} is true only when the token's subject matches the given user, and an expired token (a negative injected expiration) throws {@link ExpiredJwtException} rather than just returning false. */
     @Nested
     @DisplayName("Token Validation")
     class TokenValidationTests {
@@ -132,6 +135,7 @@ class JwtServiceTest {
         }
     }
 
+    /** {@code extractUsername} reads the subject claim back out of a generated token. */
     @Nested
     @DisplayName("Claim Extraction")
     class ClaimExtractionTests {

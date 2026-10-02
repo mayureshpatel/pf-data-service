@@ -30,6 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code SecurityService}'s 8 near-identical {@code isXOwner} ownership checks, one {@code @Nested} class per entity type below, each following the same matching-id-true / mismatched-id-false / not-found-false / null-args-false pattern. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SecurityService unit tests")
 class SecurityServiceTest {
@@ -143,6 +144,7 @@ class SecurityServiceTest {
                 .build();
     }
 
+    /** {@code isAccountOwner} is true only for a matching owner, and false for a mismatched owner, a not-found account, or either argument being null -- the fullest-covered of the 8 checks, used as the template the rest follow more tersely. */
     @Nested
     @DisplayName("isAccountOwner")
     class IsAccountOwnerTest {
@@ -215,6 +217,7 @@ class SecurityServiceTest {
         }
     }
 
+    /** {@code isTransactionOwner} is true only when the user-scoped {@code findById(id, userId)} lookup itself returns a row, and false when it's empty or either argument is null -- unlike the other 7 checks, ownership here is enforced by the repository query's own scoping, not a fetch-then-compare. */
     @Nested
     @DisplayName("isTransactionOwner")
     class IsTransactionOwnerTest {
@@ -272,6 +275,7 @@ class SecurityServiceTest {
         }
     }
 
+    /** {@code isCategoryOwner} is true for a matching owner and false for a mismatched one. */
     @Nested
     @DisplayName("isCategoryOwner")
     class IsCategoryOwnerTest {
@@ -300,6 +304,7 @@ class SecurityServiceTest {
         }
     }
 
+    /** {@code isRuleOwner} is true for a matching owner and false for a mismatched one -- checked via {@code rule.getUser().getId()}, since {@code CategoryRule} exposes ownership through a full {@code User} association rather than a flat {@code userId} field like its siblings here. */
     @Nested
     @DisplayName("isRuleOwner")
     class IsRuleOwnerTest {
@@ -328,6 +333,7 @@ class SecurityServiceTest {
         }
     }
 
+    /** {@code isBudgetOwner} is true only for a matching owner, and false for a mismatched owner, a not-found budget, or either argument being null. */
     @Nested
     @DisplayName("isBudgetOwner")
     class IsBudgetOwnerTest {
@@ -375,6 +381,7 @@ class SecurityServiceTest {
         }
     }
 
+    /** {@code isRecurringTransactionOwner} is true only for a matching owner, and false for a mismatched owner, a not-found recurring transaction, or either argument being null. */
     @Nested
     @DisplayName("isRecurringTransactionOwner")
     class IsRecurringTransactionOwnerTest {
@@ -422,6 +429,7 @@ class SecurityServiceTest {
         }
     }
 
+    /** {@code isMerchantOwner} is true only for a matching owner, and false for a mismatched owner, a not-found merchant, or either argument being null. */
     @Nested
     @DisplayName("isMerchantOwner")
     class IsMerchantOwnerTest {
@@ -470,6 +478,7 @@ class SecurityServiceTest {
         }
     }
 
+    /** {@code isTagOwner} is true only for a matching owner, and false for a mismatched owner, a not-found tag, or either argument being null. */
     @Nested
     @DisplayName("isTagOwner")
     class IsTagOwnerTest {

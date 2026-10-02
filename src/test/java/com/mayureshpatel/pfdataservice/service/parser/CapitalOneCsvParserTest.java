@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Verifies {@code CapitalOneCsvParser}'s Debit/Credit-column parsing, one {@code @Nested} class per input shape below. */
 @DisplayName("CapitalOneCsvParser unit tests")
 class CapitalOneCsvParserTest {
 
@@ -33,6 +34,13 @@ class CapitalOneCsvParserTest {
         assertThat(parser.getBankName()).isEqualTo(BankName.CAPITAL_ONE);
     }
 
+    /**
+     * A positive net of debit-minus-credit parses as EXPENSE and a negative net as INCOME -- never
+     * TRANSFER_IN (PF-829: this parser can't distinguish a linked-account payment from a plain
+     * merchant refund, and guessing transfer either hides real refunds from every total or makes a
+     * genuine transfer's other leg unmatchable by {@code TransferMatcher}). Rows with a blank date
+     * are silently skipped, and several date formats parse successfully.
+     */
     @Nested
     @DisplayName("parse() — valid CSV")
     class ValidCsvTests {
@@ -139,6 +147,7 @@ class CapitalOneCsvParserTest {
         }
     }
 
+    /** A null input stream fails fast with {@link NullPointerException}, and a file entirely missing a required amount column (PF-198: distinct from the column being present-but-blank) is rejected outright via {@link com.mayureshpatel.pfdataservice.exception.CsvParsingException} rather than silently defaulted to zero. */
     @Nested
     @DisplayName("parse() — invalid input")
     class InvalidInputTests {

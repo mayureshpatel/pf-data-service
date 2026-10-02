@@ -2,6 +2,12 @@ package com.mayureshpatel.pfdataservice.repository.budget.query;
 
 import lombok.NoArgsConstructor;
 
+/**
+ * SQL query constants for {@code BudgetRepository}, including
+ * {@link #FIND_BUDGET_STATUS_BY_USER_ID_AND_MONTH_AND_YEAR}'s two-part UNION that combines
+ * categories with an actual budget row and categories with spending but no budget for the period,
+ * so a caller sees both "over/under budget" and "unbudgeted spending" categories in one query.
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class BudgetQueries {
 

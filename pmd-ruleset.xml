@@ -198,11 +198,12 @@
         <exclude name="CommentRequired"/>
         <exclude name="CommentSize"/>
     </rule>
-    <!-- Genuine, large-scale gap (727 findings) confirmed real, not fixable as a triage-pass
-         mechanical sweep: writing meaningful "what and why" Javadoc for hundreds of pre-existing
-         methods is its own dedicated effort. Downgraded to non-blocking and tracked as [PF-807]. -->
+    <!-- [PF-807]: the 780-finding backlog (class/enum/interface and public method/constructor
+         Javadoc) was fully backfilled with real "what and why" documentation, so this is back to
+         its normal blocking priority. Fields stay out of scope, a separate pre-existing decision
+         this ticket didn't touch, since this codebase's fields are generally self-explanatory and
+         a blanket per-field Javadoc requirement wouldn't add real value. -->
     <rule ref="category/java/documentation.xml/CommentRequired">
-        <priority>4</priority>
         <properties>
             <property name="fieldCommentRequirement" value="Ignored"/>
         </properties>

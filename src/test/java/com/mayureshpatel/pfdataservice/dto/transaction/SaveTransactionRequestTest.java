@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code SaveTransactionRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("SaveTransactionRequest Validation Tests")
 class SaveTransactionRequestTest {
 
@@ -38,6 +39,7 @@ class SaveTransactionRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code transactions} must be non-null and non-empty -- both fail with the same "must not be empty" message. */
     @Nested
     @DisplayName("Field: transactions")
     class TransactionsValidationTests {
@@ -60,6 +62,7 @@ class SaveTransactionRequestTest {
         }
     }
 
+    /** {@code fileName} must be non-blank. */
     @Nested
     @DisplayName("Field: fileName")
     class FileNameValidationTests {
@@ -73,6 +76,7 @@ class SaveTransactionRequestTest {
         }
     }
 
+    /** {@code fileHash} must be non-blank -- it's the value the import pipeline uses to detect a re-uploaded duplicate file. */
     @Nested
     @DisplayName("Field: fileHash")
     class FileHashValidationTests {

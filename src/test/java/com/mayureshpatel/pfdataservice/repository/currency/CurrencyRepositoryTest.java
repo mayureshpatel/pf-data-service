@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code CurrencyRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup), exercising the JDBC Client mapping directly rather than mocking it. */
 @Import(CurrencyRepository.class)
 @DisplayName("CurrencyRepository Integration Tests (PostgreSQL)")
 class CurrencyRepositoryTest extends BaseRepositoryTest {
@@ -20,6 +21,7 @@ class CurrencyRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private CurrencyRepository repository;
 
+    /** {@code save}/{@code findById}/{@code findAll}/{@code findByIsActive}/{@code existsById}/{@code count}/{@code deleteById} each round-trip correctly against the real database -- {@code Currency}'s primary key is its own ISO code string, not a generated id. */
     @Nested
     @DisplayName("CRUD Operations")
     class CrudTests {

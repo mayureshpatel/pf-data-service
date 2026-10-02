@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link Account}'s default-balance-of-ZERO construction, its four {@code applyTransaction}/{@code undoTransaction} overloads (against both a persisted {@link Transaction} and an in-flight {@link TransactionCreateRequest}), and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("Account Domain Object Tests")
 class AccountTest {
 
@@ -21,6 +22,7 @@ class AccountTest {
         assertEquals(BigDecimal.ZERO, account.getCurrentBalance());
     }
 
+    /** {@link Account#applyTransaction(Transaction)} across each {@link TransactionType}, including a null starting balance. */
     @Nested
     @DisplayName("Transaction Application (Domain Object)")
     class ApplyTransactionDomainTests {
@@ -94,6 +96,7 @@ class AccountTest {
         }
     }
 
+    /** {@link Account#undoTransaction(Transaction)} reverses what {@link ApplyTransactionDomainTests} applies, including a null starting balance. */
     @Nested
     @DisplayName("Transaction Undo (Domain Object)")
     class UndoTransactionDomainTests {
@@ -150,6 +153,7 @@ class AccountTest {
         }
     }
 
+    /** The {@link TransactionCreateRequest} overload of {@link Account#applyTransaction}, exercised against a pre-persistence transaction shape rather than the domain {@link Transaction}. */
     @Nested
     @DisplayName("Transaction Application (DTO)")
     class ApplyTransactionDtoTests {
@@ -206,6 +210,7 @@ class AccountTest {
         }
     }
 
+    /** The {@link TransactionCreateRequest} overload of {@link Account#undoTransaction}, reversing what {@link ApplyTransactionDtoTests} applies. */
     @Nested
     @DisplayName("Transaction Undo (DTO)")
     class UndoTransactionDtoTests {

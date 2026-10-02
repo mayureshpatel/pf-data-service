@@ -2,6 +2,12 @@ package com.mayureshpatel.pfdataservice.repository.merchant.query;
 
 import lombok.NoArgsConstructor;
 
+/**
+ * SQL query constants for {@code MerchantDescriptionLinkRepository}. {@link #UPSERT} backs both
+ * the automatic description-capture path and the explicit add-link endpoint, relying on the
+ * {@code (user_id, normalized_description)} unique index to let a second link for the same
+ * description silently replace the first rather than erroring.
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class MerchantDescriptionLinkQueries {
 

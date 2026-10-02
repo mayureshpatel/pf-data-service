@@ -11,6 +11,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to a {@link FileImportHistory}, following the same
+ * prefix/{@code hasColumn}-guarded convention as {@link AccountRowMapper}, which this class
+ * delegates the embedded {@code account} column set to.
+ */
 @Component
 public class FileImportHistoryRowMapper extends JdbcMapperUtils implements RowMapper<FileImportHistory> {
 

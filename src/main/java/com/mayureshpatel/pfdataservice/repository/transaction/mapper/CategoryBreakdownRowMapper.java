@@ -12,6 +12,12 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to a {@link CategoryBreakdownDto} -- a report-specific
+ * mapper for one spending-by-category aggregation row, always reading the same fixed
+ * {@code category}-prefixed and {@code total} columns rather than following the
+ * reusable-prefix convention of this package's entity-level row mappers.
+ */
 @Component
 public class CategoryBreakdownRowMapper extends JdbcMapperUtils implements RowMapper<CategoryBreakdownDto> {
 

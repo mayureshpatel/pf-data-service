@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code TransactionParserFactory}'s bank-name-to-parser resolution, one {@code @Nested} class for known vs. unknown bank names below. */
 @DisplayName("TransactionParserFactory unit tests")
 class TransactionParserFactoryTest {
 
@@ -23,6 +24,7 @@ class TransactionParserFactoryTest {
         return p;
     }
 
+    /** {@code getTransactionParser} resolves a bank both by its {@link BankName} enum constant and by its human-readable display name, case-insensitively, and all five registered per-bank parsers are independently resolvable. */
     @Nested
     @DisplayName("getTransactionParser() — known banks")
     class KnownBankTests {
@@ -72,6 +74,7 @@ class TransactionParserFactoryTest {
         }
     }
 
+    /** {@code getTransactionParser} throws {@link IllegalArgumentException} both for a name that matches no {@link BankName} at all, and for a recognized bank whose parser simply isn't registered in this factory instance -- naming the missing bank in the latter case. */
     @Nested
     @DisplayName("getTransactionParser() — unknown banks")
     class UnknownBankTests {

@@ -37,6 +37,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
 
     private static final Long TRANSACTION_ID = 1L;
 
+    /** {@code GET /api/v1/transactions/suggestions/transfers} delegates to {@code TransactionService#findPotentialTransfers}. */
     @Nested
     @DisplayName("getTransferSuggestions")
     class GetTransferSuggestionsTests {
@@ -50,6 +51,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/transactions/mark-as-transfer} passes the request body's id list straight through to {@code TransactionService#markAsTransfer}. */
     @Nested
     @DisplayName("markAsTransfer")
     class MarkAsTransferTests {
@@ -66,6 +68,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** A PF-831 addition: {@code POST /api/v1/transactions/unmark-as-transfer} passes the request body's id list straight through to {@code TransactionService#unmarkAsTransfer}. */
     @Nested
     @DisplayName("unmarkAsTransfer (PF-831)")
     class UnmarkAsTransferTests {
@@ -82,6 +85,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** A PF-848 addition: {@code POST /api/v1/transactions/backfill/transfer-types} returns the real corrected-row count from {@code TransactionService#backfillTransferTypes}. */
     @Nested
     @DisplayName("backfillTransferTypes (PF-848)")
     class BackfillTransferTypesTests {
@@ -97,6 +101,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/transactions} returns a {@link Page} built from request query params, and -- a PF-308 case -- a {@code tagId} query param is genuinely parsed into the {@link TransactionFilter} passed to the service, confirmed by inspecting the captured filter rather than just asserting the call happened. */
     @Nested
     @DisplayName("getTransactions")
     class GetTransactionsTests {
@@ -131,6 +136,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/transactions/count-by-category} delegates to {@code TransactionService#getCountByCategory}. */
     @Nested
     @DisplayName("getCountByCategory")
     class GetCountByCategoryTests {
@@ -143,6 +149,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/transactions/existing-categories} delegates to {@code TransactionService#getCategoriesWithTransactions}. */
     @Nested
     @DisplayName("getAllCategoriesWithTransactions")
     class GetAllCategoriesWithTransactionsTests {
@@ -155,6 +162,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/transactions/existing-merchants} delegates to {@code TransactionService#getMerchantsWithTransactions}. */
     @Nested
     @DisplayName("getAllMerchantsWithTransactions")
     class GetAllMerchantsWithTransactionsTests {
@@ -167,6 +175,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/transactions} creates the transaction and returns the affected-row count, and returns a 400 for a request missing required fields. */
     @Nested
     @DisplayName("createTransaction")
     class CreateTransactionTests {
@@ -204,6 +213,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PATCH /api/v1/transactions/bulk} passes the request body's update list straight through to {@code TransactionService#updateTransactionsBulk} and returns its aggregated affected-row count. */
     @Nested
     @DisplayName("updateTransactionsBulk")
     class UpdateTransactionsBulkTests {
@@ -231,6 +241,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/transactions/bulk} passes the request body's id list straight through to {@code TransactionService#deleteTransactions} and returns 204. */
     @Nested
     @DisplayName("deleteTransactionsBulk")
     class DeleteTransactionsBulkTests {
@@ -247,6 +258,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PUT /api/v1/transactions} updates the single transaction and returns the affected-row count. */
     @Nested
     @DisplayName("updateTransaction")
     class UpdateTransactionTests {
@@ -273,6 +285,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/transactions/{id}} returns 204 once {@code securityService.isTransactionOwner} authorizes the request, delegating the actual delete to {@code TransactionService#deleteTransaction}. */
     @Nested
     @DisplayName("deleteTransaction")
     class DeleteTransactionTests {
@@ -288,6 +301,7 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE} returns 404 when an authorized caller's transaction is nonetheless not found -- {@code TransactionService#deleteTransaction} throwing {@link ResourceNotFoundException} after {@code securityService.isTransactionOwner} already passed. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

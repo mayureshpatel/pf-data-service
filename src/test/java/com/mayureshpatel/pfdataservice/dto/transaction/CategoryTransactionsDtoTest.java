@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code CategoryTransactionsDto}'s record accessors map their constructor arguments 1:1. */
 @DisplayName("CategoryTransactionsDto Structure Tests")
 class CategoryTransactionsDtoTest {
 

@@ -13,6 +13,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code FileImportCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("FileImportCreateRequest Validation Tests")
 class FileImportCreateRequestTest {
 
@@ -40,6 +41,7 @@ class FileImportCreateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code accountId} must be non-blank -- unlike other DTOs' numeric account ids, this one is carried as a string. */
     @Nested
     @DisplayName("Field: accountId")
     class AccountIdValidationTests {
@@ -53,6 +55,7 @@ class FileImportCreateRequestTest {
         }
     }
 
+    /** {@code fileName} must be non-blank and no more than 255 characters. */
     @Nested
     @DisplayName("Field: fileName")
     class FileNameValidationTests {
@@ -75,6 +78,7 @@ class FileImportCreateRequestTest {
         }
     }
 
+    /** {@code fileHash} must be non-blank and no more than 64 characters (long enough for a hex-encoded SHA-256 digest). */
     @Nested
     @DisplayName("Field: fileHash")
     class FileHashValidationTests {
@@ -97,6 +101,7 @@ class FileImportCreateRequestTest {
         }
     }
 
+    /** {@code fileContent} must be non-blank -- the raw uploaded file body, carried inline on the request rather than as a separate multipart part. */
     @Nested
     @DisplayName("Field: fileContent")
     class FileContentValidationTests {

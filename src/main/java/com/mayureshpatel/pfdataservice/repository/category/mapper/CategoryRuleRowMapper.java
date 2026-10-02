@@ -12,6 +12,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to a {@link CategoryRule}, following the same
+ * prefix/{@code hasColumn}-guarded convention as
+ * {@link com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper}. The
+ * embedded {@code category} and {@code user} are delegated to {@link CategoryRowMapper} and
+ * {@link UserRowMapper} respectively.
+ */
 @Component
 public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<CategoryRule> {
 
@@ -20,6 +27,12 @@ public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<
         return mapRow(rs, "");
     }
 
+    /**
+     * @param rs     the ResultSet containing the row data
+     * @param prefix the prefix to use for column names
+     * @return the mapped CategoryRule object
+     * @throws SQLException if an error occurs while accessing the ResultSet
+     */
     public static CategoryRule mapRow(ResultSet rs, String prefix) throws SQLException {
         String safePrefix;
         if (prefix == null || prefix.isEmpty()) {

@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.account.query;
 
 import lombok.NoArgsConstructor;
 
+/** SQL query constants for {@code AccountRepository}. */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class AccountQueries {
 

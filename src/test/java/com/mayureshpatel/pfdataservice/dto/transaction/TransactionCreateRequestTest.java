@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link TransactionCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("TransactionCreateRequest Validation Tests")
 class TransactionCreateRequestTest {
 
@@ -45,6 +46,7 @@ class TransactionCreateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code accountId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: accountId")
     class AccountIdValidationTests {
@@ -67,6 +69,7 @@ class TransactionCreateRequestTest {
         }
     }
 
+    /** {@code categoryId} is optional (an import can arrive uncategorized) but must be positive when present. */
     @Nested
     @DisplayName("Field: categoryId")
     class CategoryIdValidationTests {
@@ -80,6 +83,7 @@ class TransactionCreateRequestTest {
         }
     }
 
+    /** {@code amount} must be non-null and within +/-9999999999.99. Its null-check violation message ("Starting balance cannot be null.") is copy-pasted from {@code AccountCreateRequest}'s constraint message rather than written for a transaction amount -- cosmetic, but visible to any API caller that surfaces validation messages directly. */
     @Nested
     @DisplayName("Field: amount")
     class AmountValidationTests {
@@ -111,6 +115,7 @@ class TransactionCreateRequestTest {
         }
     }
 
+    /** {@code transactionDate} must be non-null. */
     @Nested
     @DisplayName("Field: transactionDate")
     class TransactionDateValidationTests {
@@ -124,6 +129,7 @@ class TransactionCreateRequestTest {
         }
     }
 
+    /** {@code description} must be non-blank and no more than 255 characters. */
     @Nested
     @DisplayName("Field: description")
     class DescriptionValidationTests {
@@ -146,6 +152,7 @@ class TransactionCreateRequestTest {
         }
     }
 
+    /** {@code type} (the raw string later resolved to a {@code TransactionType}) must be non-blank and no more than 20 characters. */
     @Nested
     @DisplayName("Field: type")
     class TypeValidationTests {
@@ -168,6 +175,7 @@ class TransactionCreateRequestTest {
         }
     }
 
+    /** {@code merchantId} is optional but must be positive when present. */
     @Nested
     @DisplayName("Field: merchantId")
     class MerchantIdValidationTests {

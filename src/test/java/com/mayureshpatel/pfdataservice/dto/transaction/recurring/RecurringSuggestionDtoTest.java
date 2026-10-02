@@ -10,6 +10,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code RecurringSuggestionDto}'s builder maps its arguments 1:1 -- this DTO represents a detected-but-not-yet-confirmed recurring pattern, carrying an {@code occurrenceCount}/{@code confidenceScore} rather than a persisted recurring transaction's own fields. */
 @DisplayName("RecurringSuggestionDto Structure Tests")
 class RecurringSuggestionDtoTest {
 

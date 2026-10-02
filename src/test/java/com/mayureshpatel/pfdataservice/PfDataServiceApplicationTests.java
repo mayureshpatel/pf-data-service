@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Smoke-tests that the full Spring context loads cleanly, plus a PF-813 regression guard: two independent {@code RequestLoggingFilter} classes (one under {@code filter}, one a stray top-level duplicate) once coexisted, so this asserts exactly one {@code RequestLoggingFilter}-named bean is ever registered, and that it resolves to the real, intended class. */
 class PfDataServiceApplicationTests extends BaseIntegrationTest {
 
     @Autowired

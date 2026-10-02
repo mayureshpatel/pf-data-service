@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/** JDBC-backed persistence for {@link AccountSnapshot}. */
 @Repository
 @RequiredArgsConstructor
 public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot, Long> {

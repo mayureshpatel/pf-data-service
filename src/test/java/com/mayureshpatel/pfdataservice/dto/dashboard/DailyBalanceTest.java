@@ -9,9 +9,11 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code DailyBalance}'s record accessor in {@link StructureTests}. */
 @DisplayName("DailyBalance Unit Tests")
 class DailyBalanceTest {
 
+    /** {@code DailyBalance}'s record accessors map their constructor arguments 1:1. */
     @Nested
     @DisplayName("Record Structure")
     class StructureTests {

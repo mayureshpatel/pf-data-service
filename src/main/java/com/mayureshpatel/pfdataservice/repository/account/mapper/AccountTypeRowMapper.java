@@ -10,6 +10,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to an {@link AccountType}, following the same
+ * prefix/{@code hasColumn}-guarded pattern as {@link AccountRowMapper}.
+ */
 @Component
 public class AccountTypeRowMapper extends JdbcMapperUtils implements RowMapper<AccountType> {
 

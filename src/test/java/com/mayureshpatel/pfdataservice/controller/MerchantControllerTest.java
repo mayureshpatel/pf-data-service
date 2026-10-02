@@ -35,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Verifies {@code MerchantController}'s post-PF-845 CRUD and description-link endpoints, one {@code @Nested} class per endpoint below, including the real {@code @PreAuthorize} + {@code SecurityService#isMerchantOwner} enforcement path (not a service-level exception standing in for it) for every write. */
 @DisplayName("MerchantController Unit Tests")
 @WithCustomMockUser()
 class MerchantControllerTest extends BaseControllerTest {
@@ -42,6 +43,7 @@ class MerchantControllerTest extends BaseControllerTest {
     private static final Long MERCHANT_ID = 101L;
     private static final Long LINK_ID = 201L;
 
+    /** {@code GET /api/v1/merchants} returns a {@link Page} of the caller's merchants, and -- a PF-320 case -- passes an optional {@code search} query param straight through to the service. */
     @Nested
     @DisplayName("getMerchants")
     class GetMerchantsTests {
@@ -80,6 +82,7 @@ class MerchantControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/merchants} creates the merchant and returns its new id, and returns a 400 with field-level {@code validationErrors} for a blank {@code name}. */
     @Nested
     @DisplayName("createMerchant")
     class CreateMerchantTests {
@@ -118,6 +121,14 @@ class MerchantControllerTest extends BaseControllerTest {
         }
     }
 
+    /**
+     * {@code PUT /api/v1/merchants} updates the merchant and returns the affected-row count,
+     * returns a 400 with field-level {@code validationErrors} for a blank {@code name}, a 404
+     * when the service throws {@link ResourceNotFoundException}, and -- unlike the 404 case,
+     * which exercises a service-level exception -- a 403 that's confirmed to come from the real
+     * {@code @PreAuthorize("@ss.isMerchantOwner(...)")} check itself: the service method is
+     * verified never invoked at all when {@code securityService.isMerchantOwner} is stubbed false.
+     */
     @Nested
     @DisplayName("updateMerchant")
     class UpdateMerchantTests {
@@ -193,6 +204,7 @@ class MerchantControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/merchants/{id}} returns 204 on success, and a real {@code @PreAuthorize}-enforced 403 (service never invoked) when {@code securityService.isMerchantOwner} is stubbed false. */
     @Nested
     @DisplayName("deleteMerchant")
     class DeleteMerchantTests {
@@ -221,6 +233,7 @@ class MerchantControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/merchants/{id}/description-links} returns the merchant's linked descriptions, and a real {@code @PreAuthorize}-enforced 403 when {@code securityService.isMerchantOwner} is stubbed false. */
     @Nested
     @DisplayName("getDescriptionLinks")
     class GetDescriptionLinksTests {
@@ -254,6 +267,7 @@ class MerchantControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/merchants/{id}/description-links} records the link and returns 204, returns a 400 (and never calls the service) for a blank description, and a real {@code @PreAuthorize}-enforced 403 (service never invoked) when {@code securityService.isMerchantOwner} is stubbed false. */
     @Nested
     @DisplayName("addDescriptionLink")
     class AddDescriptionLinkTests {
@@ -308,6 +322,7 @@ class MerchantControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/merchants/{id}/description-links/{linkId}} deletes the link and returns 204, and a real {@code @PreAuthorize}-enforced 403 (service never invoked) when {@code securityService.isMerchantOwner} is stubbed false -- note the ownership check here is still against the parent merchant id, not the link id itself. */
     @Nested
     @DisplayName("deleteDescriptionLink")
     class DeleteDescriptionLinkTests {
