@@ -239,7 +239,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertFalse(status.isEmpty());
             BudgetStatusDto rentStatus = status.stream()
-                    .filter(s -> s.category().name().equals("Rent"))
+                    .filter(s -> "Rent".equals(s.category().name()))
                     .findFirst()
                     .orElseThrow();
 
@@ -256,7 +256,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
             List<BudgetStatusDto> status = budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(USER_1, 10, 2025);
 
             // assert & verify
-            assertTrue(status.stream().anyMatch(s -> s.category().name().equals("Rent") && s.budgetedAmount().compareTo(BigDecimal.ZERO) == 0));
+            assertTrue(status.stream().anyMatch(s -> "Rent".equals(s.category().name()) && s.budgetedAmount().compareTo(BigDecimal.ZERO) == 0));
         }
     }
 }

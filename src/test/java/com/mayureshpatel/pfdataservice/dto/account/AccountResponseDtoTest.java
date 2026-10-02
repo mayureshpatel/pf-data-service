@@ -15,11 +15,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Account Response DTO Unit Tests")
 class AccountResponseDtoTest {
 
+    private static final String TYPE_CODE = "SAVINGS";
+    private static final String TYPE_LABEL = "Savings";
+
     @Test
     @DisplayName("AccountDto: should correctly map all fields")
     void accountDtoShouldPopulateFields() {
         UserDto user = new UserDto(1L, "user", "user@example.com");
-        AccountTypeDto type = AccountTypeDto.builder().code("SAVINGS").label("Savings").build();
+        AccountTypeDto type = AccountTypeDto.builder().code(TYPE_CODE).label(TYPE_LABEL).build();
         CurrencyDto currency = new CurrencyDto("USD", "US Dollar", "$", true);
         BankName bank = BankName.CAPITAL_ONE;
         BigDecimal balance = new BigDecimal("100.50");
@@ -39,8 +42,8 @@ class AccountResponseDtoTest {
     @DisplayName("AccountTypeDto: should correctly map all fields via builder")
     void accountTypeDtoShouldPopulateFields() {
         AccountTypeDto dto = AccountTypeDto.builder()
-                .code("SAVINGS")
-                .label("Savings")
+                .code(TYPE_CODE)
+                .label(TYPE_LABEL)
                 .isAsset(true)
                 .sortOrder(1)
                 .isActive(true)
@@ -48,8 +51,8 @@ class AccountResponseDtoTest {
                 .color("#00FF00")
                 .build();
 
-        assertEquals("SAVINGS", dto.code());
-        assertEquals("Savings", dto.label());
+        assertEquals(TYPE_CODE, dto.code());
+        assertEquals(TYPE_LABEL, dto.label());
         assertTrue(dto.isAsset());
         assertEquals(1, dto.sortOrder());
         assertTrue(dto.isActive());
@@ -57,14 +60,14 @@ class AccountResponseDtoTest {
         assertEquals("#00FF00", dto.color());
 
         AccountTypeDto updatedDto = dto.toBuilder().label("Updated Savings").build();
-        assertEquals("SAVINGS", updatedDto.code());
+        assertEquals(TYPE_CODE, updatedDto.code());
         assertEquals("Updated Savings", updatedDto.label());
     }
 
     @Test
     @DisplayName("AccountSnapshotDto: should correctly map all fields")
     void accountSnapshotDtoShouldPopulateFields() {
-        AccountDto account = new AccountDto(1L, null, "Savings", null, null, null, null, 1L);
+        AccountDto account = new AccountDto(1L, null, TYPE_LABEL, null, null, null, null, 1L);
         LocalDate date = LocalDate.now();
         BigDecimal balance = new BigDecimal("1000.00");
 

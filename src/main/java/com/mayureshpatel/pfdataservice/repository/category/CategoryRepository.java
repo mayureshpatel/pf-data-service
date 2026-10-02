@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.category.query.CategoryQueries;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +45,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
      */
     public List<Category> findByUserId(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -55,7 +56,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
      */
     public List<Category> findAllSubCategories(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_SUB_CATEGORIES)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -66,7 +67,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
      */
     public List<Category> findAllParentCategories(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_PARENT_CATEGORIES)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -82,7 +83,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .param("color", request.getColor())
                 .param("icon", request.getIcon())
                 .param("type", request.getType())
-                .param("userId", request.getUserId())
+                .param(SqlParams.USER_ID, request.getUserId())
                 .param("parentId", request.getParentId() != null ? request.getParentId() : null)
                 .update(keyHolder);
 
@@ -102,7 +103,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .param("type", request.getType())
                 .param("parentId", request.getParentId() != null ? request.getParentId() : null)
                 .param("id", request.getId())
-                .param("userId", request.getUserId())
+                .param(SqlParams.USER_ID, request.getUserId())
                 .update();
     }
 
@@ -111,7 +112,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
         if (category.getId() != null) {
             return jdbcClient.sql(CategoryQueries.DELETE)
                     .param("id", category.getId())
-                    .param("userId", category.getUserId())
+                    .param(SqlParams.USER_ID, category.getUserId())
                     .update();
         }
         return 0;
@@ -128,7 +129,7 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
      */
     public long count(Long userId) {
         return jdbcClient.sql(CategoryQueries.COUNT)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(Long.class)
                 .single();
     }

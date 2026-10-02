@@ -12,6 +12,7 @@ import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
 import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
@@ -59,6 +60,14 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     // implicitly cast using the database session's timezone (America/New_York in production --
     // see application.yml). Same root cause as TransactionSpecification's date-range filtering.
     private static final ZoneOffset UTC_ZONE = ZoneOffset.UTC;
+    private static final String PARAM_START_DATE = "startDate";
+    private static final String PARAM_END_DATE = "endDate";
+    private static final String PARAM_ACCOUNT_ID = "accountId";
+    private static final String PARAM_CATEGORY_ID = "categoryId";
+    private static final String PARAM_AMOUNT = "amount";
+    private static final String PARAM_DATE = "date";
+    private static final String PARAM_DESCRIPTION = "description";
+    private static final String PARAM_TYPE = "type";
 
     private final JdbcClient jdbcClient;
     private final TransactionDetailRowMapper rowMapper;
@@ -78,7 +87,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public Optional<Transaction> findById(Long id, Long userId) {
         return jdbcClient.sql(TransactionQueries.FIND_BY_ID_WITH_DETAILS)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .optional();
     }
@@ -100,7 +109,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Transaction> findByUserId(Long userId) {
         return jdbcClient.sql(TransactionQueries.FIND_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -117,9 +126,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<CategoryBreakdownDto> findCategoryTotals(Long userId, OffsetDateTime start, OffsetDateTime end) {
         return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_TOTALS)
-                .param("userId", userId)
-                .param("startDate", start)
-                .param("endDate", end)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_START_DATE, start)
+                .param(PARAM_END_DATE, end)
                 .query(categoryBreakdownRowMapper)
                 .list();
     }
@@ -130,9 +139,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<CategoryReportDataDto> findCategoryReportData(Long userId, OffsetDateTime start, OffsetDateTime end) {
         return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_REPORT_DATA)
-                .param("userId", userId)
-                .param("startDate", start)
-                .param("endDate", end)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_START_DATE, start)
+                .param(PARAM_END_DATE, end)
                 .query(categoryReportDataRowMapper)
                 .list();
     }
@@ -143,9 +152,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<MonthlyReportDataDto> findMonthlyIncomeExpense(Long userId, OffsetDateTime start, OffsetDateTime end) {
         return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_INCOME_EXPENSE)
-                .param("userId", userId)
-                .param("startDate", start)
-                .param("endDate", end)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_START_DATE, start)
+                .param(PARAM_END_DATE, end)
                 .query(monthlyReportDataRowMapper)
                 .list();
     }
@@ -162,9 +171,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Transaction> findExistingForDuplicateCheck(Long accountId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(TransactionQueries.FIND_EXISTING_FOR_DUPLICATE_CHECK)
-                .param("accountId", accountId)
-                .param("startDate", startDate)
-                .param("endDate", endDate)
+                .param(PARAM_ACCOUNT_ID, accountId)
+                .param(PARAM_START_DATE, startDate)
+                .param(PARAM_END_DATE, endDate)
                 .query(rowMapper)
                 .list();
     }
@@ -182,13 +191,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcClient.sql(TransactionQueries.INSERT)
-                .param("accountId", request.getAccountId())
-                .param("categoryId", request.getCategoryId())
-                .param("amount", request.getAmount())
-                .param("date", request.getTransactionDate())
+                .param(PARAM_ACCOUNT_ID, request.getAccountId())
+                .param(PARAM_CATEGORY_ID, request.getCategoryId())
+                .param(PARAM_AMOUNT, request.getAmount())
+                .param(PARAM_DATE, request.getTransactionDate())
                 .param("postDate", request.getPostDate())
-                .param("description", request.getDescription())
-                .param("type", request.getType())
+                .param(PARAM_DESCRIPTION, request.getDescription())
+                .param(PARAM_TYPE, request.getType())
                 .param("merchantId", request.getMerchantId())
                 .update(keyHolder);
 
@@ -211,13 +220,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcClient.sql(TransactionQueries.INSERT)
-                .param("accountId", transaction.getAccount().getId())
-                .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
-                .param("amount", transaction.getAmount())
-                .param("date", transaction.getTransactionDate())
+                .param(PARAM_ACCOUNT_ID, transaction.getAccount().getId())
+                .param(PARAM_CATEGORY_ID, transaction.getCategory() != null ? transaction.getCategory().getId() : null)
+                .param(PARAM_AMOUNT, transaction.getAmount())
+                .param(PARAM_DATE, transaction.getTransactionDate())
                 .param("postDate", transaction.getPostDate())
-                .param("description", transaction.getDescription())
-                .param("type", transaction.getType().name())
+                .param(PARAM_DESCRIPTION, transaction.getDescription())
+                .param(PARAM_TYPE, transaction.getType().name())
                 .param("merchantId", transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
                 .update(keyHolder);
 
@@ -234,15 +243,15 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public int update(Long userId, Transaction transaction) {
         return jdbcClient.sql(TransactionQueries.UPDATE)
                 .param("id", transaction.getId())
-                .param("userId", userId)
-                .param("categoryId", transaction.getCategory() != null ? transaction.getCategory().getId() : null)
-                .param("amount", transaction.getAmount())
-                .param("date", transaction.getTransactionDate())
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_CATEGORY_ID, transaction.getCategory() != null ? transaction.getCategory().getId() : null)
+                .param(PARAM_AMOUNT, transaction.getAmount())
+                .param(PARAM_DATE, transaction.getTransactionDate())
                 .param("postDate", transaction.getPostDate())
-                .param("description", transaction.getDescription())
-                .param("type", transaction.getType().name())
+                .param(PARAM_DESCRIPTION, transaction.getDescription())
+                .param(PARAM_TYPE, transaction.getType().name())
                 .param("merchantId", transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
-                .param("accountId", transaction.getAccount() != null ? transaction.getAccount().getId() : null)
+                .param(PARAM_ACCOUNT_ID, transaction.getAccount() != null ? transaction.getAccount().getId() : null)
                 .update();
     }
 
@@ -324,7 +333,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public int deleteById(Long id, Long userId) {
         return jdbcClient.sql(TransactionQueries.DELETE_BY_ID)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 
@@ -346,7 +355,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public long countByAccountId(Long accountId) {
         return jdbcClient.sql(TransactionQueries.COUNT_BY_ACCOUNT_ID)
-                .param("accountId", accountId)
+                .param(PARAM_ACCOUNT_ID, accountId)
                 .query(Long.class)
                 .single();
     }
@@ -357,7 +366,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public long countByCategoryId(Long categoryId) {
         return jdbcClient.sql(TransactionQueries.COUNT_BY_CATEGORY_ID)
-                .param("categoryId", categoryId)
+                .param(PARAM_CATEGORY_ID, categoryId)
                 .query(Long.class)
                 .single();
     }
@@ -371,7 +380,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<CategoryTransactionsDto> getCountByCategory(Long userId) {
         return jdbcClient.sql(TransactionQueries.COUNT_BY_CATEGORY)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(categoryTransactionsDtoMapper)
                 .list();
     }
@@ -382,7 +391,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Category> getCategoriesWithTransactions(Long userId) {
         return jdbcClient.sql(TransactionQueries.CATEGORIES_WITH_TRANSACTIONS)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(categoryRowMapper)
                 .list();
     }
@@ -393,7 +402,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Merchant> getMerchantsWithTransactions(Long userId) {
         return jdbcClient.sql(TransactionQueries.MERCHANTS_WITH_TRANSACTIONS)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(merchantRowMapper)
                 .list();
     }
@@ -411,12 +420,12 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Object[]> findMonthlySums(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_SUMS)
-                .param("userId", userId)
-                .param("startDate", startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_START_DATE, startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query((rs, rowNum) -> new Object[]{
                         rs.getInt("year"),
                         rs.getInt("month"),
-                        rs.getString("type"),
+                        rs.getString(PARAM_TYPE),
                         rs.getBigDecimal("total")
                 })
                 .list();
@@ -428,7 +437,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public BigDecimal getUncategorizedExpenseTotals(Long userId) {
         return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_TOTALS)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(BigDecimal.class)
                 .optional()
                 .orElse(BigDecimal.ZERO);
@@ -440,7 +449,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public long getUncategorizedExpenseCount(Long userId) {
         return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_COUNT)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(Long.class)
                 .single();
     }
@@ -453,8 +462,8 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Transaction> findRecentNonTransferTransactions(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_RECENT_NON_TRANSFER)
-                .param("userId", userId)
-                .param("startDate", startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_START_DATE, startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query(rowMapper)
                 .list();
     }
@@ -470,7 +479,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Transaction> findTransferInOnCreditCardAccounts(Long userId) {
         return jdbcClient.sql(TransactionQueries.FIND_TRANSFER_IN_ON_CREDIT_CARD_ACCOUNTS)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -487,7 +496,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         if (ids == null || ids.isEmpty()) return List.of();
         return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS_WITH_DETAILS)
                 .param("ids", ids)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -519,8 +528,8 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public BigDecimal getNetFlowAfterDate(Long accountId, LocalDate date) {
         return jdbcClient.sql(TransactionQueries.GET_NET_FLOW_AFTER_DATE)
-                .param("accountId", accountId)
-                .param("date", date.atStartOfDay(UTC_ZONE).toOffsetDateTime())
+                .param(PARAM_ACCOUNT_ID, accountId)
+                .param(PARAM_DATE, date.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query(BigDecimal.class)
                 .optional()
                 .orElse(BigDecimal.ZERO);
@@ -533,8 +542,8 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public List<Transaction> findExpensesSince(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_EXPENSES_SINCE)
-                .param("userId", userId)
-                .param("startDate", startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_START_DATE, startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query(rowMapper)
                 .list();
     }
@@ -627,10 +636,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
      */
     public BigDecimal getSumByDateRange(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
         return jdbcClient.sql(TransactionQueries.GET_SUM_BY_DATE_RANGE)
-                .param("userId", userId)
-                .param("startDate", start)
-                .param("endDate", end)
-                .param("type", type.name())
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_START_DATE, start)
+                .param(PARAM_END_DATE, end)
+                .param(PARAM_TYPE, type.name())
                 .query(BigDecimal.class)
                 .optional()
                 .orElse(BigDecimal.ZERO);

@@ -50,18 +50,11 @@
              as real assertions: a gap in this rule's detection against this project's actual
              test styles, not genuinely un-asserted tests. -->
         <exclude name="UnitTestShouldIncludeAssert"/>
-        <!-- Safe, uniform, purely mechanical fix (swap operand order on a .equals() call) but at
-             172 instances spread across the codebase, too large a sweep for this triage pass to
-             respectably hand-verify one by one. -->
-        <exclude name="LiteralsFirstInComparisons"/>
         <!-- All 7 instances are test-helper ResultSet reads immediately after an
              `INSERT ... RETURNING id`: an unexpectedly-empty ResultSet would already fail the
              test via the next line's SQLException, so real risk is low, but 7 near-identical call
              sites across 2 files still deserve their own focused pass rather than a rushed one. -->
         <exclude name="CheckResultSet"/>
-    </rule>
-    <rule ref="category/java/bestpractices.xml/LiteralsFirstInComparisons">
-        <priority>4</priority>
     </rule>
     <rule ref="category/java/bestpractices.xml/CheckResultSet">
         <priority>4</priority>
@@ -84,10 +77,6 @@
              universally-idiomatic Java line-reading pattern, not the confused-with-`==`
              assignment this rule exists to catch. -->
         <exclude name="AssignmentInOperand"/>
-        <!-- Extracting to named constants is safe in principle but needs a sensible name chosen
-             per call site across roughly 141 instances spanning service/controller/repository/dto
-             code: too large and too judgment-dependent for a mechanical triage-pass sweep. -->
-        <exclude name="AvoidDuplicateLiterals"/>
         <!-- Mixed bag: the 5 CSV-parser instances are false positives (the CSVParser is actually
              closed via a `Stream.onClose()` callback that this rule's analysis doesn't follow
              across the lambda boundary, confirmed directly in StandardCsvParser and
@@ -95,8 +84,16 @@
              genuine, fixable gap. Needs per-instance sorting, not a blanket call either way. -->
         <exclude name="CloseResource"/>
     </rule>
+    <!-- [PF-808]: the 140-finding backlog (after skipAnnotations below removed 16 repeated
+         Spring/OpenAPI annotation literals like @ApiResponse's responseCode, which repeat by
+         convention rather than indicating a real DRY gap) was fully resolved, extracting each
+         remaining literal to a sensibly-named, correctly-scoped constant, so this is back to its
+         normal blocking priority. skipAnnotations stays on since that exemption is still correct
+         going forward, not just a one-time cleanup aid. -->
     <rule ref="category/java/errorprone.xml/AvoidDuplicateLiterals">
-        <priority>4</priority>
+        <properties>
+            <property name="skipAnnotations" value="true"/>
+        </properties>
     </rule>
     <rule ref="category/java/errorprone.xml/CloseResource">
         <priority>4</priority>

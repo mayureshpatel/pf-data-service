@@ -29,6 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class ReportControllerTest extends BaseControllerTest {
 
+    private static final String PARAM_START_DATE = "startDate";
+    private static final String PARAM_END_DATE = "endDate";
+
     /** {@code GET /api/v1/reports/net-worth} returns the service's series for an explicit {@code startDate}/{@code endDate}, and -- unlike the other report endpoints below -- defaults to the trailing 12 months (from the 1st of that starting month through today) when no range is given at all. */
     @Nested
     @DisplayName("getNetWorth")
@@ -45,8 +48,8 @@ class ReportControllerTest extends BaseControllerTest {
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/reports/net-worth")
-                            .param("startDate", start.toString())
-                            .param("endDate", end.toString()))
+                            .param(PARAM_START_DATE, start.toString())
+                            .param(PARAM_END_DATE, end.toString()))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -89,8 +92,8 @@ class ReportControllerTest extends BaseControllerTest {
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/reports/categories")
-                            .param("startDate", start.toString())
-                            .param("endDate", end.toString()))
+                            .param(PARAM_START_DATE, start.toString())
+                            .param(PARAM_END_DATE, end.toString()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].total").value(250.00))
@@ -124,8 +127,8 @@ class ReportControllerTest extends BaseControllerTest {
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/reports/merchants")
-                            .param("startDate", start.toString())
-                            .param("endDate", end.toString()))
+                            .param(PARAM_START_DATE, start.toString())
+                            .param(PARAM_END_DATE, end.toString()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].total").value(75.00))
@@ -151,8 +154,8 @@ class ReportControllerTest extends BaseControllerTest {
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/reports/monthly")
-                            .param("startDate", start.toString())
-                            .param("endDate", end.toString()))
+                            .param(PARAM_START_DATE, start.toString())
+                            .param(PARAM_END_DATE, end.toString()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].income").value(3000.00))

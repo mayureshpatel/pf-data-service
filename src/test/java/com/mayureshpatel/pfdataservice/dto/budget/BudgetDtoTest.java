@@ -12,6 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("BudgetDto Unit Tests")
 class BudgetDtoTest {
 
+    private static final String AMOUNT = "500.00";
+
     @Test
     @DisplayName("should correctly map all fields using constructor")
     void shouldPopulateFieldsViaConstructor() {
@@ -20,7 +22,7 @@ class BudgetDtoTest {
                 1L,
                 2L,
                 category,
-                new BigDecimal("500.00"),
+                new BigDecimal(AMOUNT),
                 10,
                 2024
         );
@@ -28,7 +30,7 @@ class BudgetDtoTest {
         assertEquals(1L, dto.id());
         assertEquals(2L, dto.userId());
         assertEquals(category, dto.category());
-        assertEquals(new BigDecimal("500.00"), dto.amount());
+        assertEquals(new BigDecimal(AMOUNT), dto.amount());
         assertEquals(10, dto.month());
         assertEquals(2024, dto.year());
     }
@@ -41,7 +43,7 @@ class BudgetDtoTest {
                 .id(1L)
                 .userId(2L)
                 .category(category)
-                .amount(new BigDecimal("500.00"))
+                .amount(new BigDecimal(AMOUNT))
                 .month(10)
                 .year(2024)
                 .build();
@@ -49,7 +51,7 @@ class BudgetDtoTest {
         assertEquals(1L, dto.id());
         assertEquals(2L, dto.userId());
         assertEquals(category, dto.category());
-        assertEquals(new BigDecimal("500.00"), dto.amount());
+        assertEquals(new BigDecimal(AMOUNT), dto.amount());
         assertEquals(10, dto.month());
         assertEquals(2024, dto.year());
     }

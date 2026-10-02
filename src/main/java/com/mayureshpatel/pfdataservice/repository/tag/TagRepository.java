@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.tag;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
 import com.mayureshpatel.pfdataservice.repository.tag.query.TagQueries;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
     public Optional<Tag> findById(Long id, Long userId) {
         return jdbcClient.sql(TagQueries.FIND_BY_ID_AND_USER_ID)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .optional();
     }
@@ -47,7 +48,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
      */
     public List<Tag> findAllByUserId(Long userId) {
         return jdbcClient.sql(TagQueries.FIND_ALL_BY_USER_ID)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -66,7 +67,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
         jdbcClient.sql(TagQueries.INSERT)
                 .param("name", tag.getName())
                 .param("color", tag.getColor())
-                .param("userId", tag.getUserId())
+                .param(SqlParams.USER_ID, tag.getUserId())
                 .update(keyHolder);
         return keyHolder.getKey().longValue();
     }
@@ -81,7 +82,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
                 .param("name", tag.getName())
                 .param("color", tag.getColor())
                 .param("id", tag.getId())
-                .param("userId", tag.getUserId())
+                .param(SqlParams.USER_ID, tag.getUserId())
                 .update();
     }
 
@@ -89,7 +90,7 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
     public int deleteById(Long id, Long userId) {
         return jdbcClient.sql(TagQueries.DELETE)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 

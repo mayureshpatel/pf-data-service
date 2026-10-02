@@ -70,12 +70,12 @@ class RegistrationServiceTest {
             assertNotNull(response);
             assertEquals(TOKEN, response.token());
             verify(userService).insert(argThat(user ->
-                    user.getUsername().equals(USERNAME) &&
-                            user.getEmail().equals(EMAIL) &&
-                            user.getPasswordHash().equals(ENCODED_PASSWORD)
+                    USERNAME.equals(user.getUsername()) &&
+                            EMAIL.equals(user.getEmail()) &&
+                            ENCODED_PASSWORD.equals(user.getPasswordHash())
             ));
             verify(jwtService).generateToken(argThat(claims ->
-                    claims.get("email").equals(EMAIL)
+                    EMAIL.equals(claims.get("email"))
             ), any());
         }
 

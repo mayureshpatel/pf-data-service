@@ -40,7 +40,9 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
     private static final Long USER_2 = 2L;
     private static final Long MERCHANT_WHOLE_FOODS = 1L;
     private static final Long MERCHANT_AMAZON = 2L;
-    private static final Long MERCHANT_CAFE = 4L; // "My Favorite Cafe", baseline's own merchant
+    private static final Long MERCHANT_CAFE = 4L; // MERCHANT_NAME_CAFE, baseline's own merchant
+    private static final String MERCHANT_NAME_CAFE = "My Favorite Cafe";
+    private static final String CITY_ATLANTA = "Atlanta";
 
     /**
      * {@code findById}/{@code findAllByUserId} read correctly against the baseline fixture; the
@@ -73,7 +75,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertEquals(4, result.size());
-            assertTrue(result.stream().anyMatch(m -> m.getName().equals("My Favorite Cafe")));
+            assertTrue(result.stream().anyMatch(m -> MERCHANT_NAME_CAFE.equals(m.getName())));
         }
 
         @Test
@@ -103,7 +105,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertEquals(1, matches.getTotalElements());
-            assertEquals("My Favorite Cafe", matches.getContent().get(0).getName());
+            assertEquals(MERCHANT_NAME_CAFE, matches.getContent().get(0).getName());
             assertTrue(noMatches.getContent().isEmpty());
             assertEquals(0, noMatches.getTotalElements());
         }
@@ -131,7 +133,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertTrue(result.isPresent());
-            assertEquals("My Favorite Cafe", result.get().getName());
+            assertEquals(MERCHANT_NAME_CAFE, result.get().getName());
         }
 
         @Test
@@ -163,7 +165,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertFalse(result.isEmpty());
             MerchantBreakdownDto breakdown = result.stream()
-                    .filter(b -> b.displayName().equals("Whole Foods"))
+                    .filter(b -> "Whole Foods".equals(b.displayName()))
                     .findFirst()
                     .orElseThrow();
 
@@ -209,7 +211,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             MerchantCreateRequest request = MerchantCreateRequest.builder()
                     .userId(USER_1)
                     .name("Located Shop")
-                    .city("Atlanta")
+                    .city(CITY_ATLANTA)
                     .state("GA")
                     .postalCode("30301")
                     .country("USA")
@@ -220,7 +222,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             Merchant inserted = repository.findById(id).orElseThrow();
-            assertEquals("Atlanta", inserted.getCity());
+            assertEquals(CITY_ATLANTA, inserted.getCity());
             assertEquals("GA", inserted.getState());
             assertEquals("30301", inserted.getPostalCode());
             assertEquals("USA", inserted.getCountry());
@@ -233,7 +235,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(MERCHANT_CAFE)
                     .name("Updated Cafe")
-                    .city("Atlanta")
+                    .city(CITY_ATLANTA)
                     .build();
 
             // act
@@ -243,7 +245,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             assertEquals(1, rows);
             Merchant updated = repository.findById(MERCHANT_CAFE).orElseThrow();
             assertEquals("Updated Cafe", updated.getName());
-            assertEquals("Atlanta", updated.getCity());
+            assertEquals(CITY_ATLANTA, updated.getCity());
         }
 
         @Test
@@ -262,7 +264,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertEquals(0, rows);
             Merchant unchanged = repository.findById(MERCHANT_CAFE).orElseThrow();
-            assertEquals("My Favorite Cafe", unchanged.getName());
+            assertEquals(MERCHANT_NAME_CAFE, unchanged.getName());
         }
 
         @Test
@@ -322,7 +324,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             MerchantReportDataDto wholeFoods = result.stream()
-                    .filter(r -> r.displayName().equals("Whole Foods"))
+                    .filter(r -> "Whole Foods".equals(r.displayName()))
                     .findFirst()
                     .orElseThrow(() -> new AssertionError("expected a Whole Foods entry, got: " + result));
             assertEquals(1500L, wholeFoods.count(),

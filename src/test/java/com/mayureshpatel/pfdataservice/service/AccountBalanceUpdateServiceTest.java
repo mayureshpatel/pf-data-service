@@ -37,6 +37,7 @@ class AccountBalanceUpdateServiceTest {
 
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 10L;
+    private static final String STARTING_BALANCE = "100.00";
 
     private Account createAccount(BigDecimal balance, Long version) {
         return Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(balance).version(version).build();
@@ -46,7 +47,7 @@ class AccountBalanceUpdateServiceTest {
     @DisplayName("should apply the transform and update the balance on the first attempt when there's no conflict")
     void shouldSucceedOnFirstAttempt() {
         // arrange
-        Account account = createAccount(new BigDecimal("100.00"), 1L);
+        Account account = createAccount(new BigDecimal(STARTING_BALANCE), 1L);
 
         // act
         Account result = accountBalanceUpdateService.applyWithRetry(USER_ID, account, acc -> acc.toBuilder().currentBalance(new BigDecimal("150.00")).build());
@@ -63,7 +64,7 @@ class AccountBalanceUpdateServiceTest {
     void shouldRetryAndSucceedAfterOptimisticLockingConflict() {
         // arrange -- first attempt conflicts (as if another request updated the account first);
         // the retry re-fetches and finds the account at a newer version
-        Account staleAccount = createAccount(new BigDecimal("100.00"), 1L);
+        Account staleAccount = createAccount(new BigDecimal(STARTING_BALANCE), 1L);
         Account refreshedAccount = createAccount(new BigDecimal("120.00"), 2L);
         when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(refreshedAccount));
         when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
@@ -86,7 +87,7 @@ class AccountBalanceUpdateServiceTest {
     @DisplayName("should throw OptimisticLockingFailureException if every retry attempt still conflicts")
     void shouldThrowAfterExhaustingRetries() {
         // arrange
-        Account account = createAccount(new BigDecimal("100.00"), 1L);
+        Account account = createAccount(new BigDecimal(STARTING_BALANCE), 1L);
         when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
         when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
                 .thenThrow(new OptimisticLockingFailureException("conflict"));
@@ -103,7 +104,7 @@ class AccountBalanceUpdateServiceTest {
     void shouldThrowIfAccountGoneOnRetryRefetch() {
         // arrange -- the first attempt conflicts, and by the time the retry re-fetches, the
         // account has vanished
-        Account account = createAccount(new BigDecimal("100.00"), 1L);
+        Account account = createAccount(new BigDecimal(STARTING_BALANCE), 1L);
         when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
         when(accountRepository.updateBalance(eq(USER_ID), eq(ACCOUNT_ID), any(BigDecimal.class), anyLong()))
                 .thenThrow(new OptimisticLockingFailureException("conflict"));

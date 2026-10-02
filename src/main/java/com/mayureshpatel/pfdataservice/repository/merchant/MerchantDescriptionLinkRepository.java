@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.merchant;
 
 import com.mayureshpatel.pfdataservice.domain.merchant.MerchantDescriptionLink;
+import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantDescriptionLinkRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.query.MerchantDescriptionLinkQueries;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class MerchantDescriptionLinkRepository {
 
         Map<String, Long> result = new HashMap<>();
         jdbcClient.sql(MerchantDescriptionLinkQueries.FIND_MERCHANT_IDS_BY_NORMALIZED_DESCRIPTIONS)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("normalizedDescriptions", normalizedDescriptions)
                 .query((rs, rowNum) -> result.put(rs.getString("normalized_description"), rs.getLong("merchant_id")))
                 .list();
@@ -56,7 +57,7 @@ public class MerchantDescriptionLinkRepository {
     public Optional<MerchantDescriptionLink> findByIdAndUserId(Long id, Long userId) {
         return jdbcClient.sql(MerchantDescriptionLinkQueries.FIND_BY_ID_AND_USER_ID)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .optional();
     }
@@ -72,7 +73,7 @@ public class MerchantDescriptionLinkRepository {
      */
     public void upsert(Long userId, Long merchantId, String description, String normalizedDescription) {
         jdbcClient.sql(MerchantDescriptionLinkQueries.UPSERT)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .param("merchantId", merchantId)
                 .param("description", description)
                 .param("normalizedDescription", normalizedDescription)
@@ -90,7 +91,7 @@ public class MerchantDescriptionLinkRepository {
     public List<MerchantDescriptionLink> findByMerchantIdAndUserId(Long merchantId, Long userId) {
         return jdbcClient.sql(MerchantDescriptionLinkQueries.FIND_BY_MERCHANT_ID_AND_USER_ID)
                 .param("merchantId", merchantId)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
     }
@@ -107,7 +108,7 @@ public class MerchantDescriptionLinkRepository {
     public int deleteByIdAndUserId(Long id, Long userId) {
         return jdbcClient.sql(MerchantDescriptionLinkQueries.DELETE_BY_ID_AND_USER_ID)
                 .param("id", id)
-                .param("userId", userId)
+                .param(SqlParams.USER_ID, userId)
                 .update();
     }
 }

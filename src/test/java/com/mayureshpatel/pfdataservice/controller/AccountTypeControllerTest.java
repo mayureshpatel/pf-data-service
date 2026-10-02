@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class AccountTypeControllerTest extends BaseControllerTest {
 
+    private static final String BASE_URL = "/api/v1/account-types";
     private static final String TYPE_CODE = "CHECKING";
 
     /** {@code GET /api/v1/account-types} returns the active account types (or an empty list, not an error, when there are none); the unversioned {@code /api/account-types} path (PF-200) correctly 404s rather than resolving to the same handler. */
@@ -51,7 +52,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
             when(accountTypeService.getAllActiveAccountTypes()).thenReturn(List.of(type));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/account-types"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -78,7 +79,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
             when(accountTypeService.getAllActiveAccountTypes()).thenReturn(Collections.emptyList());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/account-types"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$", hasSize(0)));
@@ -110,7 +111,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
             when(accountTypeService.create(any(AccountTypeCreateRequest.class))).thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/account-types")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -131,7 +132,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/account-types")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -175,7 +176,7 @@ class AccountTypeControllerTest extends BaseControllerTest {
                     .thenThrow(new RuntimeException("Database error"));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/account-types"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.title").value("Internal Server Error"))
                     .andExpect(jsonPath("$.detail").value("An unexpected internal error occurred. Please contact support."));

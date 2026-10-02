@@ -14,6 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("CategoryRule Domain Object Tests")
 class CategoryRuleTest {
 
+    private static final String KEYWORD_AMZN = "AMZN";
+
     @Test
     @DisplayName("Builder should correctly populate all fields")
     void builder_shouldPopulateFields() {
@@ -24,7 +26,7 @@ class CategoryRuleTest {
         CategoryRule rule = CategoryRule.builder()
                 .id(1L)
                 .user(user)
-                .keywords(List.of("AMZN"))
+                .keywords(List.of(KEYWORD_AMZN))
                 .matchType(MatchType.OR)
                 .priority(10)
                 .category(category)
@@ -35,7 +37,7 @@ class CategoryRuleTest {
 
         assertEquals(1L, rule.getId());
         assertEquals(user, rule.getUser());
-        assertEquals(List.of("AMZN"), rule.getKeywords());
+        assertEquals(List.of(KEYWORD_AMZN), rule.getKeywords());
         assertEquals(MatchType.OR, rule.getMatchType());
         assertEquals(10, rule.getPriority());
         assertEquals(category, rule.getCategory());
@@ -49,11 +51,11 @@ class CategoryRuleTest {
     void builder_shouldPopulateMultiKeywordAndRule() {
         CategoryRule rule = CategoryRule.builder()
                 .id(1L)
-                .keywords(List.of("AMZN", "MKTP"))
+                .keywords(List.of(KEYWORD_AMZN, "MKTP"))
                 .matchType(MatchType.AND)
                 .build();
 
-        assertEquals(List.of("AMZN", "MKTP"), rule.getKeywords());
+        assertEquals(List.of(KEYWORD_AMZN, "MKTP"), rule.getKeywords());
         assertEquals(MatchType.AND, rule.getMatchType());
     }
 

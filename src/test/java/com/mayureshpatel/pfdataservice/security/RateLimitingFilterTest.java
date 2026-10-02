@@ -23,6 +23,9 @@ import static org.mockito.Mockito.*;
  */
 class RateLimitingFilterTest {
 
+    private static final String AUTH_URI = "/api/v1/auth/authenticate";
+    private static final String CLIENT_IP = "127.0.0.1";
+
     private RateLimitingFilter filter;
     private HttpServletRequest request;
     private HttpServletResponse response;
@@ -39,8 +42,8 @@ class RateLimitingFilterTest {
     @Test
     @DisplayName("should allow requests under the limit for auth endpoints")
     void shouldAllowUnderLimit() throws Exception {
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");
-        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(request.getRequestURI()).thenReturn(AUTH_URI);
+        when(request.getRemoteAddr()).thenReturn(CLIENT_IP);
 
         for (int i = 0; i < 10; i++) {
             filter.doFilterInternal(request, response, filterChain);
@@ -53,8 +56,8 @@ class RateLimitingFilterTest {
     @Test
     @DisplayName("should block requests over the limit for auth endpoints")
     void shouldBlockOverLimit() throws Exception {
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");
-        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(request.getRequestURI()).thenReturn(AUTH_URI);
+        when(request.getRemoteAddr()).thenReturn(CLIENT_IP);
         
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
@@ -75,7 +78,7 @@ class RateLimitingFilterTest {
     @DisplayName("should not rate limit non-auth endpoints")
     void shouldNotLimitNonAuth() throws Exception {
         when(request.getRequestURI()).thenReturn("/api/v1/accounts");
-        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(request.getRemoteAddr()).thenReturn(CLIENT_IP);
 
         for (int i = 0; i < 15; i++) {
             filter.doFilterInternal(request, response, filterChain);
@@ -88,14 +91,14 @@ class RateLimitingFilterTest {
     @Test
     @DisplayName("should give /register its own, tighter bucket, independent of other auth endpoints")
     void registerEndpoint_hasIndependentTighterLimit() throws Exception {
-        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(request.getRemoteAddr()).thenReturn(CLIENT_IP);
 
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         when(response.getWriter()).thenReturn(pw);
 
         // exhaust /authenticate's 10/min bucket first
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");
+        when(request.getRequestURI()).thenReturn(AUTH_URI);
         for (int i = 0; i < 10; i++) {
             filter.doFilterInternal(request, response, filterChain);
         }
@@ -116,7 +119,7 @@ class RateLimitingFilterTest {
     @Test
     @DisplayName("should use remote address and ignore X-Forwarded-For header")
     void rateLimiter_usesRemoteAddr_ignoringXForwardedFor() throws Exception {
-        when(request.getRequestURI()).thenReturn("/api/v1/auth/authenticate");
+        when(request.getRequestURI()).thenReturn(AUTH_URI);
         when(request.getRemoteAddr()).thenReturn("192.168.1.1");
         
         StringWriter sw = new StringWriter();

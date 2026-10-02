@@ -33,6 +33,9 @@ import static org.mockito.Mockito.*;
 @DisplayName("JwtAuthenticationFilter Unit Tests")
 class JwtAuthenticationFilterTest {
 
+    private static final String HEADER_AUTHORIZATION = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+
     @Mock
     private JwtService jwtService;
     @Mock
@@ -67,7 +70,7 @@ class JwtAuthenticationFilterTest {
         @DisplayName("should skip filter when Authorization header is missing")
         void shouldSkipWhenHeaderMissing() throws ServletException, IOException {
             // arrange
-            when(request.getHeader("Authorization")).thenReturn(null);
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn(null);
 
             // act
             jwtAuthenticationFilter.doFilter(request, response, filterChain);
@@ -82,7 +85,7 @@ class JwtAuthenticationFilterTest {
         @DisplayName("should skip filter when Authorization header does not start with Bearer ")
         void shouldSkipWhenNoBearer() throws ServletException, IOException {
             // arrange
-            when(request.getHeader("Authorization")).thenReturn("Basic dGVzdDp0ZXN0");
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn("Basic dGVzdDp0ZXN0");
 
             // act
             jwtAuthenticationFilter.doFilter(request, response, filterChain);
@@ -105,7 +108,7 @@ class JwtAuthenticationFilterTest {
             // arrange
             String token = "valid.jwt.token";
             String username = "testuser";
-            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn(BEARER_PREFIX + token);
             when(jwtService.extractUsername(token)).thenReturn(username);
             when(userService.loadUserByUsername(username)).thenReturn(userDetails);
             when(jwtService.isTokenValid(token, userDetails)).thenReturn(true);
@@ -132,7 +135,7 @@ class JwtAuthenticationFilterTest {
             UsernamePasswordAuthenticationToken existingAuth = new UsernamePasswordAuthenticationToken("alreadyAuth", null);
             SecurityContextHolder.getContext().setAuthentication(existingAuth);
 
-            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn(BEARER_PREFIX + token);
             when(jwtService.extractUsername(token)).thenReturn(username);
 
             // act
@@ -149,7 +152,7 @@ class JwtAuthenticationFilterTest {
         void shouldSkipWhenUsernameIsNull() throws ServletException, IOException {
             // arrange
             String token = "token.with.no.username";
-            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn(BEARER_PREFIX + token);
             when(jwtService.extractUsername(token)).thenReturn(null);
 
             // act
@@ -167,7 +170,7 @@ class JwtAuthenticationFilterTest {
             // arrange
             String token = "invalid.jwt.token";
             String username = "testuser";
-            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn(BEARER_PREFIX + token);
             when(jwtService.extractUsername(token)).thenReturn(username);
             when(userService.loadUserByUsername(username)).thenReturn(userDetails);
             when(jwtService.isTokenValid(token, userDetails)).thenReturn(false);
@@ -199,7 +202,7 @@ class JwtAuthenticationFilterTest {
         void shouldReturnDetailedBodyOnExpiredToken() throws ServletException, IOException {
             // arrange
             String token = "expired.jwt.token";
-            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn(BEARER_PREFIX + token);
             when(jwtService.extractUsername(token)).thenThrow(new ExpiredJwtException(jwtHeader, claims, "Token expired"));
 
             // act
@@ -216,7 +219,7 @@ class JwtAuthenticationFilterTest {
         void shouldReturnDetailedBodyOnMalformedToken() throws ServletException, IOException {
             // arrange
             String token = "garbage";
-            when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+            when(request.getHeader(HEADER_AUTHORIZATION)).thenReturn(BEARER_PREFIX + token);
             when(jwtService.extractUsername(token)).thenThrow(new RuntimeException("Malformed JWT"));
 
             // act

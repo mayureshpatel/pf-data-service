@@ -23,6 +23,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("DiscoverCsvParser unit tests")
 class DiscoverCsvParserTest {
 
+    private static final String CSV_HEADER = "Trans. Date,Description,Amount\n";
+
     private final DiscoverCsvParser parser = new DiscoverCsvParser();
     private static final Long ACCOUNT_ID = 1L;
 
@@ -64,7 +66,7 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should return empty stream when CSV has only headers")
         void parse_headersOnly_returnsEmptyStream() {
-            String csv = "Trans. Date,Description,Amount\n";
+            String csv = CSV_HEADER;
 
             List<Transaction> result;
             try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
@@ -77,7 +79,7 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should parse positive amount as EXPENSE for credit card")
         void parse_positiveAmount_returnsExpenseTransaction() {
-            String csv = "Trans. Date,Description,Amount\n" +
+            String csv = CSV_HEADER +
                     "1/15/2025,Starbucks,25.00\n";
 
             List<Transaction> result;
@@ -99,7 +101,7 @@ class DiscoverCsvParserTest {
             // has no way to tell them apart or confirm a real transfer's other half exists, so it
             // must not pre-emptively classify it as a transfer (see PF-829: doing so made a real
             // transfer un-matchable, and permanently hid real refunds from every total)
-            String csv = "Trans. Date,Description,Amount\n" +
+            String csv = CSV_HEADER +
                     "1/2/2025,INTERNET PAYMENT - THANK YOU,-843.00\n";
 
             List<Transaction> result;
@@ -116,7 +118,7 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should parse multiple records successfully")
         void parse_multipleRecords_returnsAllTransactions() {
-            String csv = "Trans. Date,Description,Amount\n" +
+            String csv = CSV_HEADER +
                     "1/15/2025,Starbucks,25.00\n" +
                     "1/16/2025,Amazon,50.00\n" +
                     "1/17/2025,Payment,-500.00\n";
@@ -132,7 +134,7 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should handle multiple date formats (M/d/yyyy, MM/dd/yyyy, yyyy-MM-dd)")
         void parse_variousDateFormats_parsedSuccessfully() {
-            String csv = "Trans. Date,Description,Amount\n" +
+            String csv = CSV_HEADER +
                     "1/5/2025,Short Date,10.00\n" +
                     "01/15/2025,Padded Date,20.00\n" +
                     "2025-01-20,ISO Date,30.00\n";
@@ -148,7 +150,7 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should skip rows where the date column is blank")
         void parse_blankDateRow_rowSkipped() {
-            String csv = "Trans. Date,Description,Amount\n" +
+            String csv = CSV_HEADER +
                     ",Empty Date,10.00\n" +
                     "1/15/2025,Valid Date,5.00\n";
 
@@ -164,7 +166,7 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should parse the transaction date as UTC midnight, not shifted by a hardcoded timezone (PF-197)")
         void parse_transactionDate_isUtcMidnight() {
-            String csv = "Trans. Date,Description,Amount\n" +
+            String csv = CSV_HEADER +
                     "3/15/2025,Coffee,5.00\n";
 
             List<Transaction> result;
@@ -180,7 +182,7 @@ class DiscoverCsvParserTest {
         @Test
         @DisplayName("should set category to null for all parsed transactions")
         void parse_validRecord_categoryIsNull() {
-            String csv = "Trans. Date,Description,Amount\n" +
+            String csv = CSV_HEADER +
                     "1/15/2025,Coffee,5.00\n";
 
             List<Transaction> result;

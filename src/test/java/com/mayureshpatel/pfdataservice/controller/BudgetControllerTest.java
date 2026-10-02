@@ -36,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BudgetControllerTest extends BaseControllerTest {
 
     private static final Long BUDGET_ID = 1L;
+    private static final String BASE_URL = "/api/v1/budgets";
+    private static final String PARAM_MONTH = "month";
 
     /** {@code GET /api/v1/budgets} returns the service's result for the given {@code month}/{@code year}, and defaults to the current month/year both when the params are simply omitted and when they're explicitly sent as the literal null. */
     @Nested
@@ -58,8 +60,8 @@ class BudgetControllerTest extends BaseControllerTest {
             when(budgetService.getBudgets(USER_ID, month, year)).thenReturn(List.of(budgetDto));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/budgets")
-                            .param("month", String.valueOf(month))
+            mockMvc.perform(get(BASE_URL)
+                            .param(PARAM_MONTH, String.valueOf(month))
                             .param("year", String.valueOf(year)))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -78,7 +80,7 @@ class BudgetControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/budgets"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk());
 
             verify(budgetService).getBudgets(eq(USER_ID), eq(now.getMonthValue()), eq(now.getYear()));
@@ -93,8 +95,8 @@ class BudgetControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/budgets")
-                            .param("month", (String) null)
+            mockMvc.perform(get(BASE_URL)
+                            .param(PARAM_MONTH, (String) null)
                             .param("year", (String) null))
                     .andExpect(status().isOk());
 
@@ -123,7 +125,7 @@ class BudgetControllerTest extends BaseControllerTest {
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/budgets/status")
-                            .param("month", String.valueOf(month))
+                            .param(PARAM_MONTH, String.valueOf(month))
                             .param("year", String.valueOf(year)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
@@ -204,7 +206,7 @@ class BudgetControllerTest extends BaseControllerTest {
             when(budgetService.create(eq(USER_ID), any(BudgetCreateRequest.class))).thenReturn(BUDGET_ID.intValue());
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/budgets")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -226,12 +228,12 @@ class BudgetControllerTest extends BaseControllerTest {
                     .build();
 
             // act & assert & verify
-            mockMvc.perform(post("/api/v1/budgets")
+            mockMvc.perform(post(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validationErrors[*].field").value(org.hamcrest.Matchers.containsInAnyOrder("categoryId", "month")));
+                    .andExpect(jsonPath("$.validationErrors[*].field").value(org.hamcrest.Matchers.containsInAnyOrder("categoryId", PARAM_MONTH)));
         }
     }
 
@@ -253,7 +255,7 @@ class BudgetControllerTest extends BaseControllerTest {
             when(budgetService.update(eq(USER_ID), any(BudgetUpdateRequest.class))).thenReturn(1);
 
             // act & assert & verify
-            mockMvc.perform(put("/api/v1/budgets")
+            mockMvc.perform(put(BASE_URL)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -307,7 +309,7 @@ class BudgetControllerTest extends BaseControllerTest {
                     .thenThrow(new RuntimeException("Server error"));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/budgets"))
+            mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError());
         }
     }

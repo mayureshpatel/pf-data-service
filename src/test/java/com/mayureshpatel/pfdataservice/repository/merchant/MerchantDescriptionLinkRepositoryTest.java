@@ -27,6 +27,8 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
     private MerchantRepository merchantRepository;
 
     private static final Long USER_1 = 1L;
+    private static final String DESCRIPTION_ORIGINAL = "LOCAL CAFE";
+    private static final String DESCRIPTION_NORMALIZED = "local cafe";
     private static final Long USER_2 = 2L;
     private static final Long MERCHANT_CAFE = 4L; // baseline's "My Favorite Cafe", owned by user 1
 
@@ -39,13 +41,13 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should return the linked merchant id for a matching normalized description")
         void shouldReturnMatch() {
             // arrange
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
 
             // act
-            Map<String, Long> result = repository.findMerchantIdsByNormalizedDescriptions(USER_1, List.of("local cafe"));
+            Map<String, Long> result = repository.findMerchantIdsByNormalizedDescriptions(USER_1, List.of(DESCRIPTION_NORMALIZED));
 
             // assert & verify
-            assertEquals(MERCHANT_CAFE, result.get("local cafe"));
+            assertEquals(MERCHANT_CAFE, result.get(DESCRIPTION_NORMALIZED));
         }
 
         @Test
@@ -62,10 +64,10 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should not return another user's link")
         void shouldNotReturnAnotherUsersLink() {
             // arrange
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
 
             // act
-            Map<String, Long> result = repository.findMerchantIdsByNormalizedDescriptions(USER_2, List.of("local cafe"));
+            Map<String, Long> result = repository.findMerchantIdsByNormalizedDescriptions(USER_2, List.of(DESCRIPTION_NORMALIZED));
 
             // assert & verify
             assertTrue(result.isEmpty());
@@ -91,12 +93,12 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should create a new link")
         void shouldCreateNewLink() {
             // act
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
 
             // assert & verify
             List<MerchantDescriptionLink> links = repository.findByMerchantIdAndUserId(MERCHANT_CAFE, USER_1);
             assertEquals(1, links.size());
-            assertEquals("LOCAL CAFE", links.get(0).getDescription());
+            assertEquals(DESCRIPTION_ORIGINAL, links.get(0).getDescription());
         }
 
         @Test
@@ -106,10 +108,10 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
             // arrange
             Long otherMerchantId = merchantRepository.insert(
                     MerchantCreateRequest.builder().userId(USER_1).name("Other Cafe").build());
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
 
             // act -- same normalized key, different merchant and raw description
-            repository.upsert(USER_1, otherMerchantId, "Local Cafe", "local cafe");
+            repository.upsert(USER_1, otherMerchantId, "Local Cafe", DESCRIPTION_NORMALIZED);
 
             // assert & verify -- one link, now pointing at the new merchant with the new description
             List<MerchantDescriptionLink> cafeLinks = repository.findByMerchantIdAndUserId(MERCHANT_CAFE, USER_1);
@@ -129,7 +131,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should find an owned link")
         void shouldFindOwnedLink() {
             // arrange
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
             Long linkId = repository.findByMerchantIdAndUserId(MERCHANT_CAFE, USER_1).get(0).getId();
 
             // act
@@ -137,14 +139,14 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertTrue(result.isPresent());
-            assertEquals("LOCAL CAFE", result.get().getDescription());
+            assertEquals(DESCRIPTION_ORIGINAL, result.get().getDescription());
         }
 
         @Test
         @DisplayName("should not find another user's link")
         void shouldNotFindAnotherUsersLink() {
             // arrange
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
             Long linkId = repository.findByMerchantIdAndUserId(MERCHANT_CAFE, USER_1).get(0).getId();
 
             // act
@@ -164,7 +166,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should delete an owned link")
         void shouldDeleteOwnedLink() {
             // arrange
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
             Long linkId = repository.findByMerchantIdAndUserId(MERCHANT_CAFE, USER_1).get(0).getId();
 
             // act
@@ -180,7 +182,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
                 + "doesn't own the link")
         void shouldNotDeleteAnotherUsersLink() {
             // arrange
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
             Long linkId = repository.findByMerchantIdAndUserId(MERCHANT_CAFE, USER_1).get(0).getId();
 
             // act
@@ -201,7 +203,7 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should return every link for the merchant, oldest first")
         void shouldReturnLinksOldestFirst() {
             // arrange
-            repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE", "local cafe");
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
             repository.upsert(USER_1, MERCHANT_CAFE, "LOCAL CAFE DOWNTOWN", "local cafe downtown");
 
             // act

@@ -53,6 +53,10 @@ class CategoryRuleServiceTest {
     private static final Long USER_ID = 1L;
     private static final Long RULE_ID = 100L;
     private static final Long CATEGORY_ID = 50L;
+    private static final String KEYWORD_AMAZON = "Amazon";
+    private static final String MIN_AMOUNT = "5.00";
+    private static final String MAX_AMOUNT = "20.00";
+    private static final String DESCRIPTION_TARGET = "Target";
 
     /** {@code getRules} maps every repository row for the user to a {@link CategoryRuleDto}. */
     @Nested
@@ -62,7 +66,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should return list of rule DTOs")
         void shouldReturnRules() {
             // arrange
-            CategoryRule rule = CategoryRule.builder().id(RULE_ID).keywords(List.of("Amazon")).build();
+            CategoryRule rule = CategoryRule.builder().id(RULE_ID).keywords(List.of(KEYWORD_AMAZON)).build();
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of(rule));
 
             // act
@@ -70,7 +74,7 @@ class CategoryRuleServiceTest {
 
             // assert & verify
             assertEquals(1, result.size());
-            assertEquals(List.of("Amazon"), result.get(0).keywords());
+            assertEquals(List.of(KEYWORD_AMAZON), result.get(0).keywords());
         }
     }
 
@@ -96,7 +100,7 @@ class CategoryRuleServiceTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(CATEGORY_ID)
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .priority(1)
                     .build();
 
@@ -105,7 +109,7 @@ class CategoryRuleServiceTest {
 
             // assert & verify
             assertEquals(42L, result);
-            verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getKeywords().equals(List.of("Amazon"))));
+            verify(categoryRuleRepository).insertAndReturnId(argThat(r -> r.getKeywords().equals(List.of(KEYWORD_AMAZON))));
         }
 
         @Test
@@ -121,7 +125,7 @@ class CategoryRuleServiceTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(CATEGORY_ID)
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .priority(null)
                     .build();
 
@@ -145,10 +149,10 @@ class CategoryRuleServiceTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(CATEGORY_ID)
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .priority(1)
-                    .minAmount(new java.math.BigDecimal("5.00"))
-                    .maxAmount(new java.math.BigDecimal("20.00"))
+                    .minAmount(new java.math.BigDecimal(MIN_AMOUNT))
+                    .maxAmount(new java.math.BigDecimal(MAX_AMOUNT))
                     .build();
 
             // act
@@ -156,8 +160,8 @@ class CategoryRuleServiceTest {
 
             // assert & verify
             verify(categoryRuleRepository).insertAndReturnId(argThat(r ->
-                    r.getMinAmount().equals(new java.math.BigDecimal("5.00"))
-                            && r.getMaxAmount().equals(new java.math.BigDecimal("20.00"))));
+                    r.getMinAmount().equals(new java.math.BigDecimal(MIN_AMOUNT))
+                            && r.getMaxAmount().equals(new java.math.BigDecimal(MAX_AMOUNT))));
         }
 
         @Test
@@ -199,7 +203,7 @@ class CategoryRuleServiceTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(USER_ID)
                     .categoryId(CATEGORY_ID)
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .matchType(null)
                     .build();
 
@@ -251,8 +255,8 @@ class CategoryRuleServiceTest {
                     .keywords(List.of("NewKW"))
                     .categoryId(CATEGORY_ID)
                     .priority(5)
-                    .minAmount(new java.math.BigDecimal("5.00"))
-                    .maxAmount(new java.math.BigDecimal("20.00"))
+                    .minAmount(new java.math.BigDecimal(MIN_AMOUNT))
+                    .maxAmount(new java.math.BigDecimal(MAX_AMOUNT))
                     .build();
 
             // act
@@ -262,8 +266,8 @@ class CategoryRuleServiceTest {
             assertEquals(1, result);
             verify(categoryRuleRepository).update(argThat(r -> r.getKeywords().equals(List.of("NewKW"))
                     && r.getPriority() == 5
-                    && r.getMinAmount().equals(new java.math.BigDecimal("5.00"))
-                    && r.getMaxAmount().equals(new java.math.BigDecimal("20.00"))));
+                    && r.getMinAmount().equals(new java.math.BigDecimal(MIN_AMOUNT))
+                    && r.getMaxAmount().equals(new java.math.BigDecimal(MAX_AMOUNT))));
         }
 
         @Test
@@ -356,7 +360,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should return previews for uncategorized transactions matching rules")
         void shouldReturnPreviews() {
             // arrange
-            Transaction t1 = Transaction.builder().description("Amazon").category(null).type(TransactionType.EXPENSE).build();
+            Transaction t1 = Transaction.builder().description(KEYWORD_AMAZON).category(null).type(TransactionType.EXPENSE).build();
             Transaction tAlready = Transaction.builder().description("AlreadyCat").category(Category.builder().build()).build();
             Category targetCat = Category.builder().id(CATEGORY_ID).name("Shopping").build();
 
@@ -370,7 +374,7 @@ class CategoryRuleServiceTest {
 
             // assert & verify
             assertEquals(1, result.size());
-            assertEquals("Amazon", result.get(0).description());
+            assertEquals(KEYWORD_AMAZON, result.get(0).description());
             assertEquals("Shopping", result.get(0).newValue());
         }
 
@@ -438,7 +442,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should handle duplicate categories in map merge")
         void shouldHandleDuplicateCategories() {
             // arrange
-            Transaction t1 = Transaction.builder().description("Target").category(null).type(TransactionType.EXPENSE).build();
+            Transaction t1 = Transaction.builder().description(DESCRIPTION_TARGET).category(null).type(TransactionType.EXPENSE).build();
             Category c1 = Category.builder().id(CATEGORY_ID).name("Cat1").build();
             Category c2 = Category.builder().id(CATEGORY_ID).name("Cat2").build();
 
@@ -464,7 +468,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should apply matching categories to transactions and persist")
         void shouldApplyRules() {
             // arrange
-            Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
+            Transaction t1 = Transaction.builder().id(1L).description(DESCRIPTION_TARGET).category(null).type(TransactionType.EXPENSE).build();
             Transaction tAlready = Transaction.builder().id(2L).description("Already").category(Category.builder().id(10L).build()).type(TransactionType.EXPENSE).build();
             Category targetCat = Category.builder().id(CATEGORY_ID).build();
 
@@ -485,7 +489,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should skip transaction if guess is defensively null or category not in map during apply")
         void shouldSkipOnNoMatch() {
             // arrange
-            Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
+            Transaction t1 = Transaction.builder().id(1L).description(DESCRIPTION_TARGET).category(null).type(TransactionType.EXPENSE).build();
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
             when(transactionRepository.findByUserId(USER_ID)).thenReturn(List.of(t1));
@@ -507,7 +511,7 @@ class CategoryRuleServiceTest {
             // arrange -- same isolation as previewApply's equivalent test: engineers categoryMap
             // to contain a -1L-keyed category so only the guessedCategory <= 0 guard itself (not
             // the coincidental categoryMap.get(...) == null check) can correctly skip this
-            Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
+            Transaction t1 = Transaction.builder().id(1L).description(DESCRIPTION_TARGET).category(null).type(TransactionType.EXPENSE).build();
             Category sentinelCategory = Category.builder().id(-1L).name("Should Never Match").build();
 
             when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
@@ -527,7 +531,7 @@ class CategoryRuleServiceTest {
         @DisplayName("should handle duplicate categories in applyRules map merge")
         void shouldHandleDuplicateCategoriesInApply() {
             // arrange
-            Transaction t1 = Transaction.builder().id(1L).description("Target").category(null).type(TransactionType.EXPENSE).build();
+            Transaction t1 = Transaction.builder().id(1L).description(DESCRIPTION_TARGET).category(null).type(TransactionType.EXPENSE).build();
             Category c1 = Category.builder().id(CATEGORY_ID).name("Cat1").build();
             Category c2 = Category.builder().id(CATEGORY_ID).name("Cat2").build();
 

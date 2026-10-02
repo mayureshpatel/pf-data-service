@@ -50,6 +50,8 @@ class MerchantServiceTest {
     private MerchantService merchantService;
 
     private static final Long USER_ID = 1L;
+    private static final String NORMALIZED_STARBUCKS = "starbucks #1";
+    private static final String DISPLAY_STARBUCKS = "STARBUCKS #1";
 
     /** {@code getAllMerchants} maps every repository row to a {@link MerchantDto}, passing the optional search term (PF-320) and {@link Pageable} straight through unmodified. */
     @Nested
@@ -205,11 +207,11 @@ class MerchantServiceTest {
         @DisplayName("should return the linked merchant's id when a link exists")
         void shouldReturnMatchWhenLinkExists() {
             // arrange
-            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(USER_ID, List.of("starbucks #1")))
-                    .thenReturn(Map.of("starbucks #1", 99L));
+            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(USER_ID, List.of(NORMALIZED_STARBUCKS)))
+                    .thenReturn(Map.of(NORMALIZED_STARBUCKS, 99L));
 
             // act
-            Optional<Long> result = merchantService.findMatchingMerchantId(USER_ID, "STARBUCKS #1");
+            Optional<Long> result = merchantService.findMatchingMerchantId(USER_ID, DISPLAY_STARBUCKS);
 
             // assert & verify
             assertEquals(Optional.of(99L), result);
@@ -246,15 +248,15 @@ class MerchantServiceTest {
         @DisplayName("should resolve descriptions that have a link and never create anything")
         void shouldResolveLinkedDescriptionsOnly() {
             // arrange
-            List<String> descriptions = List.of("STARBUCKS #1", "TARGET #2");
-            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(USER_ID, List.of("starbucks #1", "target #2")))
-                    .thenReturn(Map.of("starbucks #1", 1L, "target #2", 2L));
+            List<String> descriptions = List.of(DISPLAY_STARBUCKS, "TARGET #2");
+            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(USER_ID, List.of(NORMALIZED_STARBUCKS, "target #2")))
+                    .thenReturn(Map.of(NORMALIZED_STARBUCKS, 1L, "target #2", 2L));
 
             // act
             Map<String, Long> result = merchantService.findMatchingMerchantIds(USER_ID, descriptions);
 
             // assert & verify
-            assertEquals(Map.of("STARBUCKS #1", 1L, "TARGET #2", 2L), result);
+            assertEquals(Map.of(DISPLAY_STARBUCKS, 1L, "TARGET #2", 2L), result);
             verify(merchantRepository, never()).insert(any(MerchantCreateRequest.class));
         }
 
@@ -262,15 +264,15 @@ class MerchantServiceTest {
         @DisplayName("PF-845: a description with no link is simply absent from the result, not an error")
         void shouldOmitUnlinkedDescriptions() {
             // arrange
-            List<String> descriptions = List.of("STARBUCKS #1", "UNKNOWN STORE");
-            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(USER_ID, List.of("starbucks #1", "unknown store")))
-                    .thenReturn(Map.of("starbucks #1", 1L));
+            List<String> descriptions = List.of(DISPLAY_STARBUCKS, "UNKNOWN STORE");
+            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(USER_ID, List.of(NORMALIZED_STARBUCKS, "unknown store")))
+                    .thenReturn(Map.of(NORMALIZED_STARBUCKS, 1L));
 
             // act
             Map<String, Long> result = merchantService.findMatchingMerchantIds(USER_ID, descriptions);
 
             // assert & verify
-            assertEquals(Map.of("STARBUCKS #1", 1L), result);
+            assertEquals(Map.of(DISPLAY_STARBUCKS, 1L), result);
             assertFalse(result.containsKey("UNKNOWN STORE"));
         }
 
@@ -314,7 +316,7 @@ class MerchantServiceTest {
             merchantService.recordDescriptionLink(USER_ID, 7L, "  STARBUCKS   #1  ");
 
             // assert & verify
-            verify(descriptionLinkRepository).upsert(USER_ID, 7L, "  STARBUCKS   #1  ", "starbucks #1");
+            verify(descriptionLinkRepository).upsert(USER_ID, 7L, "  STARBUCKS   #1  ", NORMALIZED_STARBUCKS);
         }
     }
 
@@ -330,7 +332,7 @@ class MerchantServiceTest {
             Merchant owned = Merchant.builder().id(7L).userId(USER_ID).name("Starbucks").build();
             when(merchantRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.of(owned));
             MerchantDescriptionLink link = MerchantDescriptionLink.builder()
-                    .id(1L).userId(USER_ID).merchantId(7L).description("STARBUCKS #1").build();
+                    .id(1L).userId(USER_ID).merchantId(7L).description(DISPLAY_STARBUCKS).build();
             when(descriptionLinkRepository.findByMerchantIdAndUserId(7L, USER_ID)).thenReturn(List.of(link));
 
             // act
@@ -338,7 +340,7 @@ class MerchantServiceTest {
 
             // assert & verify
             assertEquals(1, result.size());
-            assertEquals("STARBUCKS #1", result.get(0).description());
+            assertEquals(DISPLAY_STARBUCKS, result.get(0).description());
         }
 
         @Test
@@ -362,7 +364,7 @@ class MerchantServiceTest {
         void shouldDeleteOwnedLink() {
             // arrange
             MerchantDescriptionLink link = MerchantDescriptionLink.builder()
-                    .id(1L).userId(USER_ID).merchantId(7L).description("STARBUCKS #1").build();
+                    .id(1L).userId(USER_ID).merchantId(7L).description(DISPLAY_STARBUCKS).build();
             when(descriptionLinkRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(link));
 
             // act

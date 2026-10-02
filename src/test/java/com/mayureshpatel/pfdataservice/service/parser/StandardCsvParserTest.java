@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("StandardCsvParser unit tests")
 class StandardCsvParserTest {
 
+    private static final String CSV_HEADER = "date,description,amount\n";
+
     private final StandardCsvParser parser = new StandardCsvParser();
     private static final Long ACCOUNT_ID = 1L;
 
@@ -49,7 +51,7 @@ class StandardCsvParserTest {
         @Test
         @DisplayName("should return EXPENSE transaction when amount is negative")
         void parse_negativeAmount_returnsExpenseTransaction() {
-            String csv = "date,description,amount\n" +
+            String csv = CSV_HEADER +
                     "2025-01-15T00:00:00Z,Coffee Shop,-25.50\n";
 
             List<Transaction> result;
@@ -67,7 +69,7 @@ class StandardCsvParserTest {
         @Test
         @DisplayName("should return INCOME transaction when amount is positive")
         void parse_positiveAmount_returnsIncomeTransaction() {
-            String csv = "date,description,amount\n" +
+            String csv = CSV_HEADER +
                     "2025-01-20T00:00:00Z,Paycheck,3000.00\n";
 
             List<Transaction> result;
@@ -84,7 +86,7 @@ class StandardCsvParserTest {
         @Test
         @DisplayName("should return INCOME transaction when amount is zero")
         void parse_zeroAmount_returnsIncomeTransaction() {
-            String csv = "date,description,amount\n" +
+            String csv = CSV_HEADER +
                     "2025-01-01T00:00:00Z,Zero Txn,0.00\n";
 
             List<Transaction> result;
@@ -101,7 +103,7 @@ class StandardCsvParserTest {
         void parse_amountWithDollarAndCommas_parsedCorrectly() {
             // Quote the amount so the CSV parser treats it as a single field (otherwise
             // the comma in "-$1,250.00" would split it into two separate columns)
-            String csv = "date,description,amount\n" +
+            String csv = CSV_HEADER +
                     "2025-01-01T00:00:00Z,Groceries,\"-$1,250.00\"\n";
 
             List<Transaction> result;
@@ -117,7 +119,7 @@ class StandardCsvParserTest {
         @Test
         @DisplayName("should return empty stream when CSV has only headers")
         void parse_headersOnly_returnsEmptyStream() {
-            String csv = "date,description,amount\n";
+            String csv = CSV_HEADER;
 
             List<Transaction> result;
             try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
@@ -130,7 +132,7 @@ class StandardCsvParserTest {
         @Test
         @DisplayName("should return all transactions when multiple records are present")
         void parse_multipleRecords_returnsAllTransactions() {
-            String csv = "date,description,amount\n" +
+            String csv = CSV_HEADER +
                     "2025-01-01T00:00:00Z,Expense,-50.00\n" +
                     "2025-01-02T00:00:00Z,Income,200.00\n";
 
@@ -145,7 +147,7 @@ class StandardCsvParserTest {
         @Test
         @DisplayName("should correctly set the transactionDate from ISO-8601 string")
         void parse_isoDateString_setsTransactionDate() {
-            String csv = "date,description,amount\n" +
+            String csv = CSV_HEADER +
                     "2025-06-15T12:30:00Z,Test,100.00\n";
 
             List<Transaction> result;
@@ -164,7 +166,7 @@ class StandardCsvParserTest {
             // this is the single most likely real-world input for a format the UI itself
             // advertises to users as "Generic format (Date, Description, Amount)" -- a plain
             // date, not a full offset-date-time string.
-            String csv = "date,description,amount\n" +
+            String csv = CSV_HEADER +
                     "2025-06-15,Test,100.00\n";
 
             List<Transaction> result;

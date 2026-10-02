@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("User Domain Object Tests")
 class UserTest {
 
+    private static final String USERNAME = "john_doe";
+
     @Test
     @DisplayName("Builder should create User with correct fields")
     void builder_shouldCreateUser() {
@@ -19,7 +21,7 @@ class UserTest {
         // act
         User user = User.builder()
                 .id(1L)
-                .username("john_doe")
+                .username(USERNAME)
                 .email("john@example.com")
                 .passwordHash("hashed_pass")
                 .audit(audit)
@@ -27,7 +29,7 @@ class UserTest {
 
         // assert & verify
         assertEquals(1L, user.getId());
-        assertEquals("john_doe", user.getUsername());
+        assertEquals(USERNAME, user.getUsername());
         assertEquals("john@example.com", user.getEmail());
         assertEquals("hashed_pass", user.getPasswordHash());
         assertEquals(audit, user.getAudit());
@@ -39,7 +41,7 @@ class UserTest {
         // arrange
         User original = User.builder()
                 .id(1L)
-                .username("john_doe")
+                .username(USERNAME)
                 .build();
 
         // act
@@ -51,7 +53,7 @@ class UserTest {
         assertNotSame(original, modified);
         assertEquals(1L, modified.getId());
         assertEquals("jane_doe", modified.getUsername());
-        assertEquals("john_doe", original.getUsername());
+        assertEquals(USERNAME, original.getUsername());
     }
 
     @Test

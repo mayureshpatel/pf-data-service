@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("CategoryRuleCreateRequest Validation Tests")
 class CategoryRuleCreateRequestTest {
 
+    private static final String KEYWORD_PUBLIX = "PUBLIX";
+
     private static Validator validator;
 
     @BeforeAll
@@ -33,7 +35,7 @@ class CategoryRuleCreateRequestTest {
         CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                 .userId(1L)
                 .categoryId(1L)
-                .keywords(List.of("PUBLIX"))
+                .keywords(List.of(KEYWORD_PUBLIX))
                 .priority(1)
                 .build();
 
@@ -51,11 +53,11 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(null)
                     .categoryId(1L)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -64,11 +66,11 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(0L)
                     .categoryId(1L)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("User ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -82,11 +84,11 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(null)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -95,11 +97,11 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(0L)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Category ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Category ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -117,7 +119,7 @@ class CategoryRuleCreateRequestTest {
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("At least one keyword is required.")));
+            assertTrue(violations.stream().anyMatch(v -> "At least one keyword is required.".equals(v.getMessage())));
         }
 
         @Test
@@ -126,11 +128,11 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keywords(List.of("PUBLIX", ""))
+                    .keywords(List.of(KEYWORD_PUBLIX, ""))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Keyword cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Keyword cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -143,7 +145,7 @@ class CategoryRuleCreateRequestTest {
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Keyword cannot exceed 255 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Keyword cannot exceed 255 characters.".equals(v.getMessage())));
         }
 
         @Test
@@ -169,12 +171,12 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .priority(-1)
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Priority must be a positive number or zero.")));
+            assertTrue(violations.stream().anyMatch(v -> "Priority must be a positive number or zero.".equals(v.getMessage())));
         }
     }
 
@@ -188,7 +190,7 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .minAmount(null)
                     .maxAmount(null)
                     .build();
@@ -202,12 +204,12 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .minAmount(new java.math.BigDecimal("-0.01"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Minimum amount must be a positive number or zero.")));
+            assertTrue(violations.stream().anyMatch(v -> "Minimum amount must be a positive number or zero.".equals(v.getMessage())));
         }
 
         @Test
@@ -216,12 +218,12 @@ class CategoryRuleCreateRequestTest {
             CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
                     .userId(1L)
                     .categoryId(1L)
-                    .keywords(List.of("PUBLIX"))
+                    .keywords(List.of(KEYWORD_PUBLIX))
                     .maxAmount(new java.math.BigDecimal("-0.01"))
                     .build();
             Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Maximum amount must be a positive number or zero.")));
+            assertTrue(violations.stream().anyMatch(v -> "Maximum amount must be a positive number or zero.".equals(v.getMessage())));
         }
     }
 }

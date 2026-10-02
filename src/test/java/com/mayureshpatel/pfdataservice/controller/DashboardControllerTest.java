@@ -26,6 +26,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class DashboardControllerTest extends BaseControllerTest {
 
+    private static final String CATEGORIES_URL = "/api/v1/dashboard/categories";
+    private static final String MERCHANTS_URL = "/api/v1/dashboard/merchants";
+    private static final String PULSE_URL = "/api/v1/dashboard/pulse";
+    private static final String PARAM_YEAR = "year";
+    private static final String PARAM_START_DATE = "startDate";
+    private static final String PARAM_END_DATE = "endDate";
+
     /** {@code GET /api/v1/dashboard/categories} accepts either a {@code month}/{@code year} pair or an explicit {@code startDate}/{@code endDate} range, and falls back to the current month/year whenever only one half of a date pair is supplied -- a partial range is treated the same as no range at all, not as an open-ended one. */
     @Nested
     @DisplayName("getCategoryBreakdown")
@@ -40,9 +47,9 @@ class DashboardControllerTest extends BaseControllerTest {
             when(dashboardService.getCategoryBreakdown(USER_ID, month, year)).thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/categories")
+            mockMvc.perform(get(CATEGORIES_URL)
                             .param("month", String.valueOf(month))
-                            .param("year", String.valueOf(year)))
+                            .param(PARAM_YEAR, String.valueOf(year)))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
@@ -59,9 +66,9 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/categories")
-                            .param("startDate", start.toString())
-                            .param("endDate", end.toString()))
+            mockMvc.perform(get(CATEGORIES_URL)
+                            .param(PARAM_START_DATE, start.toString())
+                            .param(PARAM_END_DATE, end.toString()))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getCategoryBreakdown(eq(USER_ID), any(OffsetDateTime.class), any(OffsetDateTime.class));
@@ -76,8 +83,8 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/categories")
-                            .param("startDate", "2026-01-01"))
+            mockMvc.perform(get(CATEGORIES_URL)
+                            .param(PARAM_START_DATE, "2026-01-01"))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getCategoryBreakdown(USER_ID, now.getMonthValue(), now.getYear());
@@ -92,8 +99,8 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/categories")
-                            .param("endDate", "2026-01-31"))
+            mockMvc.perform(get(CATEGORIES_URL)
+                            .param(PARAM_END_DATE, "2026-01-31"))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getCategoryBreakdown(USER_ID, now.getMonthValue(), now.getYear());
@@ -114,9 +121,9 @@ class DashboardControllerTest extends BaseControllerTest {
             when(dashboardService.getMerchantBreakdown(USER_ID, month, year)).thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/merchants")
+            mockMvc.perform(get(MERCHANTS_URL)
                             .param("month", String.valueOf(month))
-                            .param("year", String.valueOf(year)))
+                            .param(PARAM_YEAR, String.valueOf(year)))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getMerchantBreakdown(USER_ID, month, year);
@@ -132,9 +139,9 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/merchants")
-                            .param("startDate", start.toString())
-                            .param("endDate", end.toString()))
+            mockMvc.perform(get(MERCHANTS_URL)
+                            .param(PARAM_START_DATE, start.toString())
+                            .param(PARAM_END_DATE, end.toString()))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getMerchantBreakdown(eq(USER_ID), any(OffsetDateTime.class), any(OffsetDateTime.class));
@@ -149,8 +156,8 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/merchants")
-                            .param("endDate", "2026-01-31"))
+            mockMvc.perform(get(MERCHANTS_URL)
+                            .param(PARAM_END_DATE, "2026-01-31"))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getMerchantBreakdown(USER_ID, now.getMonthValue(), now.getYear());
@@ -165,7 +172,7 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/merchants"))
+            mockMvc.perform(get(MERCHANTS_URL))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getMerchantBreakdown(USER_ID, now.getMonthValue(), now.getYear());
@@ -180,8 +187,8 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(List.of());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/merchants")
-                            .param("startDate", "2026-01-01"))
+            mockMvc.perform(get(MERCHANTS_URL)
+                            .param(PARAM_START_DATE, "2026-01-01"))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getMerchantBreakdown(USER_ID, now.getMonthValue(), now.getYear());
@@ -202,9 +209,9 @@ class DashboardControllerTest extends BaseControllerTest {
             when(dashboardService.getPulse(USER_ID, month, year)).thenReturn(DashboardPulseDto.builder().build());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/pulse")
+            mockMvc.perform(get(PULSE_URL)
                             .param("month", String.valueOf(month))
-                            .param("year", String.valueOf(year)))
+                            .param(PARAM_YEAR, String.valueOf(year)))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getPulse(USER_ID, month, year);
@@ -220,9 +227,9 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(DashboardPulseDto.builder().build());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/pulse")
-                            .param("startDate", start.toString())
-                            .param("endDate", end.toString()))
+            mockMvc.perform(get(PULSE_URL)
+                            .param(PARAM_START_DATE, start.toString())
+                            .param(PARAM_END_DATE, end.toString()))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getPulse(eq(USER_ID), any(OffsetDateTime.class), any(OffsetDateTime.class));
@@ -237,8 +244,8 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(DashboardPulseDto.builder().build());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/pulse")
-                            .param("startDate", "2026-01-01"))
+            mockMvc.perform(get(PULSE_URL)
+                            .param(PARAM_START_DATE, "2026-01-01"))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getPulse(USER_ID, now.getMonthValue(), now.getYear());
@@ -253,8 +260,8 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(DashboardPulseDto.builder().build());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/pulse")
-                            .param("endDate", "2026-01-31"))
+            mockMvc.perform(get(PULSE_URL)
+                            .param(PARAM_END_DATE, "2026-01-31"))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getPulse(USER_ID, now.getMonthValue(), now.getYear());
@@ -269,7 +276,7 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenReturn(DashboardPulseDto.builder().build());
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/pulse"))
+            mockMvc.perform(get(PULSE_URL))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getPulse(USER_ID, now.getMonthValue(), now.getYear());
@@ -309,7 +316,7 @@ class DashboardControllerTest extends BaseControllerTest {
 
             // act & assert & verify
             mockMvc.perform(get("/api/v1/dashboard/ytd")
-                            .param("year", String.valueOf(year)))
+                            .param(PARAM_YEAR, String.valueOf(year)))
                     .andExpect(status().isOk());
 
             verify(dashboardService).getYtdSummary(USER_ID, year);
@@ -362,7 +369,7 @@ class DashboardControllerTest extends BaseControllerTest {
                     .thenThrow(new RuntimeException("Computation error"));
 
             // act & assert & verify
-            mockMvc.perform(get("/api/v1/dashboard/pulse"))
+            mockMvc.perform(get(PULSE_URL))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.title").value("Internal Server Error"));
         }

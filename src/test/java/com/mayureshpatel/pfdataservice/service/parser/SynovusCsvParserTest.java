@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("SynovusCsvParser unit tests")
 class SynovusCsvParserTest {
 
+    private static final String CSV_HEADER = "Date,Description,Credit,Debit\n";
+
     private final SynovusCsvParser parser = new SynovusCsvParser();
     private static final Long ACCOUNT_ID = 1L;
 
@@ -49,7 +51,7 @@ class SynovusCsvParserTest {
         @DisplayName("should return INCOME when credit > 0 and debit is 0 (net = credit + debit > 0)")
         void parse_creditOnly_returnsIncome() {
             // net = 500 + 0 = 500 → INCOME
-            String csv = "Date,Description,Credit,Debit\n" +
+            String csv = CSV_HEADER +
                     "1/15/2025,Salary Deposit,500.00,0\n";
 
             List<Transaction> result;
@@ -68,7 +70,7 @@ class SynovusCsvParserTest {
         @DisplayName("should return EXPENSE when debit is negative and credit is 0 (net = credit + debit < 0)")
         void parse_debitNegative_returnsExpense() {
             // net = 0 + (-50) = -50 → EXPENSE
-            String csv = "Date,Description,Credit,Debit\n" +
+            String csv = CSV_HEADER +
                     "1/20/2025,Grocery Store,0,-50.00\n";
 
             List<Transaction> result;
@@ -85,7 +87,7 @@ class SynovusCsvParserTest {
         @Test
         @DisplayName("should return empty stream when CSV has only headers")
         void parse_headersOnly_returnsEmptyStream() {
-            String csv = "Date,Description,Credit,Debit\n";
+            String csv = CSV_HEADER;
 
             List<Transaction> result;
             try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, toStream(csv))) {
@@ -98,7 +100,7 @@ class SynovusCsvParserTest {
         @Test
         @DisplayName("should skip rows where the date column is blank")
         void parse_blankDateRow_rowSkipped() {
-            String csv = "Date,Description,Credit,Debit\n" +
+            String csv = CSV_HEADER +
                     ",Empty Date,100.00,0\n" +
                     "1/01/2025,Valid Date,200.00,0\n";
 
@@ -113,7 +115,7 @@ class SynovusCsvParserTest {
         @Test
         @DisplayName("should parse multiple records and return all valid transactions")
         void parse_multipleRecords_returnsAll() {
-            String csv = "Date,Description,Credit,Debit\n" +
+            String csv = CSV_HEADER +
                     "1/01/2025,Income,300.00,0\n" +
                     "1/02/2025,Expense,0,-75.00\n";
 
@@ -185,7 +187,7 @@ class SynovusCsvParserTest {
         void parse_twoDigitYearDate_parsesCorrectDate() {
             // the pattern list's [M/d/yy] alternative was only ever incidentally exercised by
             // the tab-separated test above, which never asserted the actual parsed date value
-            String csv = "Date,Description,Credit,Debit\n" +
+            String csv = CSV_HEADER +
                     "3/5/25,Two-Digit Year,10.00,0\n";
 
             List<Transaction> result;

@@ -77,7 +77,7 @@ class AuthenticationServiceTest {
             assertEquals(token, response.token());
             verify(authenticationManager).authenticate(any());
             verify(jwtService).generateToken(argThat(claims ->
-                    claims.get("userId").equals(1L) && claims.get("email").equals("test@example.com")
+                    claims.get("userId").equals(1L) && "test@example.com".equals(claims.get("email"))
             ), eq(userDetails));
         }
 

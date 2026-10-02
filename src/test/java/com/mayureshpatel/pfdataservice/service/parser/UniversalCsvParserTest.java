@@ -22,6 +22,8 @@ import static org.mockito.Mockito.verify;
 @DisplayName("UniversalCsvParser Unit Tests")
 class UniversalCsvParserTest {
 
+    private static final String AMOUNT = "50.00";
+
     private final UniversalCsvParser parser = new UniversalCsvParser();
 
     @Test
@@ -57,7 +59,7 @@ class UniversalCsvParserTest {
             try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
                 Transaction t = result.findFirst().orElseThrow();
                 assertEquals("Purchase", t.getDescription());
-                assertEquals(new BigDecimal("50.00"), t.getAmount());
+                assertEquals(new BigDecimal(AMOUNT), t.getAmount());
             }
 
             String csv2 = "date,payee,amount ($)\n03/01/2026,Store,10.00";
@@ -120,7 +122,7 @@ class UniversalCsvParserTest {
             try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
                 List<Transaction> txns = result.toList();
                 assertEquals(2, txns.size());
-                assertEquals(new BigDecimal("50.00"), txns.get(0).getAmount());
+                assertEquals(new BigDecimal(AMOUNT), txns.get(0).getAmount());
                 assertEquals(TransactionType.EXPENSE, txns.get(0).getType());
                 assertEquals(new BigDecimal("1000.00"), txns.get(1).getAmount());
                 assertEquals(TransactionType.INCOME, txns.get(1).getType());
@@ -196,7 +198,7 @@ class UniversalCsvParserTest {
             String csv = "Date,Description,debit\n03/01/2026,Test,50.00";
             try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
                 Transaction t = result.findFirst().orElseThrow();
-                assertEquals(new BigDecimal("50.00"), t.getAmount());
+                assertEquals(new BigDecimal(AMOUNT), t.getAmount());
                 assertEquals(TransactionType.EXPENSE, t.getType());
             }
         }
@@ -207,7 +209,7 @@ class UniversalCsvParserTest {
             String csv = "Date,Description,credit\n03/01/2026,Test,50.00";
             try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
                 Transaction t = result.findFirst().orElseThrow();
-                assertEquals(new BigDecimal("50.00"), t.getAmount());
+                assertEquals(new BigDecimal(AMOUNT), t.getAmount());
                 assertEquals(TransactionType.INCOME, t.getType());
             }
         }
@@ -229,7 +231,7 @@ class UniversalCsvParserTest {
             String csv = "Date,Description,Debit,Credit\n03/01/2026,Test,50.00,0.00";
             try (Stream<Transaction> result = parser.parse(1L, new ByteArrayInputStream(csv.getBytes()))) {
                 Transaction t = result.findFirst().orElseThrow();
-                assertEquals(new BigDecimal("50.00"), t.getAmount());
+                assertEquals(new BigDecimal(AMOUNT), t.getAmount());
                 assertEquals(TransactionType.EXPENSE, t.getType());
             }
         }

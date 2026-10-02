@@ -14,6 +14,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("CustomUserDetails unit tests")
 class CustomUserDetailsTest {
 
+    private static final String USERNAME = "testuser";
+    private static final String PASSWORD_HASH = "hashedPassword";
+    private static final String EMAIL = "test@example.com";
+
     /** The constructor copies id/username/password/email straight from the wrapped {@code User}, and defaults to exactly one {@code ROLE_USER} authority when the user's own role isn't set. */
     @Nested
     @DisplayName("Constructor and Mapping")
@@ -25,9 +29,9 @@ class CustomUserDetailsTest {
             // arrange
             User user = User.builder()
                     .id(1L)
-                    .username("testuser")
-                    .passwordHash("hashedPassword")
-                    .email("test@example.com")
+                    .username(USERNAME)
+                    .passwordHash(PASSWORD_HASH)
+                    .email(EMAIL)
                     .build();
 
             // act
@@ -35,9 +39,9 @@ class CustomUserDetailsTest {
 
             // assert & verify
             assertThat(userDetails.getId()).isEqualTo(1L);
-            assertThat(userDetails.getUsername()).isEqualTo("testuser");
-            assertThat(userDetails.getPassword()).isEqualTo("hashedPassword");
-            assertThat(userDetails.getEmail()).isEqualTo("test@example.com");
+            assertThat(userDetails.getUsername()).isEqualTo(USERNAME);
+            assertThat(userDetails.getPassword()).isEqualTo(PASSWORD_HASH);
+            assertThat(userDetails.getEmail()).isEqualTo(EMAIL);
         }
 
         @Test
@@ -46,9 +50,9 @@ class CustomUserDetailsTest {
             // arrange
             User user = User.builder()
                     .id(1L)
-                    .username("testuser")
-                    .passwordHash("hashedPassword")
-                    .email("test@example.com")
+                    .username(USERNAME)
+                    .passwordHash(PASSWORD_HASH)
+                    .email(EMAIL)
                     .build();
 
             // act
@@ -72,9 +76,9 @@ class CustomUserDetailsTest {
             // arrange
             User user = User.builder()
                     .id(1L)
-                    .username("testuser")
-                    .passwordHash("hashedPassword")
-                    .email("test@example.com")
+                    .username(USERNAME)
+                    .passwordHash(PASSWORD_HASH)
+                    .email(EMAIL)
                     .build();
 
             // act

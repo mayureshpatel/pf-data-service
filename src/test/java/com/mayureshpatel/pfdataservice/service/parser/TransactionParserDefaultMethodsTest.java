@@ -29,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("TransactionParser interface default methods unit tests")
 class TransactionParserDefaultMethodsTest {
 
+    private static final String COLUMN_AMOUNT = "Amount";
+
     private final TransactionParser parser = new TransactionParser() {
         @Override
         public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
@@ -87,12 +89,12 @@ class TransactionParserDefaultMethodsTest {
 
         List<CSVRecord> records = csvParser.getRecords();
 
-        assertThat(parser.parseAmount(records.get(0), "Amount")).isEqualByComparingTo("1234.56");
-        assertThat(parser.parseAmount(records.get(1), "Amount")).isEqualByComparingTo("-100.00");
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(records.get(2), "Amount"))
+        assertThat(parser.parseAmount(records.get(0), COLUMN_AMOUNT)).isEqualByComparingTo("1234.56");
+        assertThat(parser.parseAmount(records.get(1), COLUMN_AMOUNT)).isEqualByComparingTo("-100.00");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(records.get(2), COLUMN_AMOUNT))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid amount format");
-        assertThat(parser.parseAmount(records.get(3), "Amount")).isEqualByComparingTo("0"); // Empty string case
+        assertThat(parser.parseAmount(records.get(3), COLUMN_AMOUNT)).isEqualByComparingTo("0"); // Empty string case
     }
 
     @Test

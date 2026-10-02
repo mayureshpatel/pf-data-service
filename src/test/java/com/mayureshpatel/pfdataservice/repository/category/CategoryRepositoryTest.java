@@ -160,7 +160,7 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
             assertEquals("Streaming", inserted.getName());
             assertEquals(CAT_FOOD, inserted.getParentId());
             List<Category> subs = categoryRepository.findAllSubCategories(USER_1);
-            assertTrue(subs.stream().anyMatch(c -> c.getName().equals("Streaming")));
+            assertTrue(subs.stream().anyMatch(c -> "Streaming".equals(c.getName())));
         }
 
         @Test

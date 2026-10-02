@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("MerchantUpdateRequest Validation Tests")
 class MerchantUpdateRequestTest {
 
+    private static final String MERCHANT_NAME = "Starbucks";
+
     private Validator validator;
 
     @BeforeEach
@@ -30,7 +32,7 @@ class MerchantUpdateRequestTest {
     void shouldPassWithValidData() {
         MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                 .id(1L)
-                .name("Starbucks")
+                .name(MERCHANT_NAME)
                 .build();
 
         Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
@@ -46,12 +48,12 @@ class MerchantUpdateRequestTest {
         void shouldFailWhenIdIsNull() {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(null)
-                    .name("Starbucks")
+                    .name(MERCHANT_NAME)
                     .build();
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant ID cannot be null.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant ID cannot be null.".equals(v.getMessage())));
         }
 
         @Test
@@ -59,12 +61,12 @@ class MerchantUpdateRequestTest {
         void shouldFailWhenIdIsNotPositive() {
             MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                     .id(0L)
-                    .name("Starbucks")
+                    .name(MERCHANT_NAME)
                     .build();
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant ID must be a positive number.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant ID must be a positive number.".equals(v.getMessage())));
         }
     }
 
@@ -82,7 +84,7 @@ class MerchantUpdateRequestTest {
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant name cannot be blank.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant name cannot be blank.".equals(v.getMessage())));
         }
 
         @Test
@@ -95,16 +97,16 @@ class MerchantUpdateRequestTest {
 
             Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Merchant name must be less than 255 characters.")));
+            assertTrue(violations.stream().anyMatch(v -> "Merchant name must be less than 255 characters.".equals(v.getMessage())));
         }
     }
 
     @Test
     @DisplayName("should test all-args constructor and getters")
     void testAllArgsConstructorAndGetters() {
-        MerchantUpdateRequest request = new MerchantUpdateRequest(1L, "Starbucks", "Atlanta", "GA", "30301", "USA");
+        MerchantUpdateRequest request = new MerchantUpdateRequest(1L, MERCHANT_NAME, "Atlanta", "GA", "30301", "USA");
         assertEquals(1L, request.getId());
-        assertEquals("Starbucks", request.getName());
+        assertEquals(MERCHANT_NAME, request.getName());
         assertEquals("Atlanta", request.getCity());
         assertEquals("GA", request.getState());
         assertEquals("30301", request.getPostalCode());
@@ -128,7 +130,7 @@ class MerchantUpdateRequestTest {
     void testToBuilder() {
         MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                 .id(1L)
-                .name("Starbucks")
+                .name(MERCHANT_NAME)
                 .build();
 
         MerchantUpdateRequest updated = request.toBuilder().name("Starbucks (Downtown)").build();
@@ -141,7 +143,7 @@ class MerchantUpdateRequestTest {
     void testToString() {
         MerchantUpdateRequest request = MerchantUpdateRequest.builder()
                 .id(1L)
-                .name("Starbucks")
+                .name(MERCHANT_NAME)
                 .build();
 
         assertNotNull(request.toString());

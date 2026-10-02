@@ -30,7 +30,7 @@ class PfDataServiceApplicationTests extends BaseIntegrationTest {
         String[] beanNames = applicationContext.getBeanNamesForType(OncePerRequestFilter.class);
         List<String> requestLoggingFilterBeans = Arrays.stream(beanNames)
                 .filter(name -> applicationContext.getType(name) != null
-                        && applicationContext.getType(name).getSimpleName().equals("RequestLoggingFilter"))
+                        && "RequestLoggingFilter".equals(applicationContext.getType(name).getSimpleName()))
                 .toList();
 
         // assert & verify

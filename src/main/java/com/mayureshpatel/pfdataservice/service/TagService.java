@@ -29,6 +29,8 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class TagService {
 
+    private static final String TAG_NOT_FOUND = "Tag not found";
+
     private final TagRepository tagRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -77,7 +79,7 @@ public class TagService {
     @Transactional
     public int updateTag(Long userId, TagUpdateRequest request) {
         Tag tag = tagRepository.findById(request.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(TAG_NOT_FOUND));
 
         if (!tag.getUserId().equals(userId)) {
             throw new AccessDeniedException("You do not own this tag");
@@ -101,7 +103,7 @@ public class TagService {
     @Transactional
     public void deleteTag(Long userId, Long tagId) {
         Tag tag = tagRepository.findById(tagId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(TAG_NOT_FOUND));
 
         if (!tag.getUserId().equals(userId)) {
             throw new AccessDeniedException("You do not own this tag");
@@ -121,7 +123,7 @@ public class TagService {
     @Transactional
     public void assignToTransaction(Long userId, Long tagId, Long transactionId) {
         tagRepository.findById(tagId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(TAG_NOT_FOUND));
         transactionRepository.findById(transactionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
@@ -139,7 +141,7 @@ public class TagService {
     @Transactional
     public void removeFromTransaction(Long userId, Long tagId, Long transactionId) {
         tagRepository.findById(tagId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(TAG_NOT_FOUND));
         transactionRepository.findById(transactionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 

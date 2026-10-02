@@ -44,6 +44,8 @@ class TagServiceTest {
     private static final Long USER_ID = 1L;
     private static final Long TAG_ID = 100L;
     private static final Long TRANSACTION_ID = 200L;
+    private static final String TAG_NAME_TRAVEL = "Travel";
+    private static final String TAG_NAME_NEW = "New";
 
     /** {@code getTags} maps every repository row for the user to a {@link TagDto}. */
     @Nested
@@ -53,7 +55,7 @@ class TagServiceTest {
         @DisplayName("should return list of tag DTOs")
         void shouldReturnTags() {
             // arrange
-            Tag tag = Tag.builder().id(TAG_ID).userId(USER_ID).name("Travel").color("#123").build();
+            Tag tag = Tag.builder().id(TAG_ID).userId(USER_ID).name(TAG_NAME_TRAVEL).color("#123").build();
             when(tagRepository.findAllByUserId(USER_ID)).thenReturn(List.of(tag));
 
             // act
@@ -61,7 +63,7 @@ class TagServiceTest {
 
             // assert & verify
             assertEquals(1, result.size());
-            assertEquals("Travel", result.get(0).name());
+            assertEquals(TAG_NAME_TRAVEL, result.get(0).name());
         }
     }
 
@@ -79,7 +81,7 @@ class TagServiceTest {
 
             TagCreateRequest request = TagCreateRequest.builder()
                     .userId(USER_ID)
-                    .name("Travel")
+                    .name(TAG_NAME_TRAVEL)
                     .color("#123456")
                     .build();
 
@@ -89,7 +91,7 @@ class TagServiceTest {
             // assert & verify
             assertEquals(42L, result);
             verify(tagRepository).insertAndReturnId(argThat(t ->
-                    t.getName().equals("Travel") && t.getColor().equals("#123456") && t.getUserId().equals(USER_ID)));
+                    TAG_NAME_TRAVEL.equals(t.getName()) && "#123456".equals(t.getColor()) && t.getUserId().equals(USER_ID)));
         }
 
         @Test
@@ -97,7 +99,7 @@ class TagServiceTest {
         void shouldThrowOnUserNotFound() {
             // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
-            TagCreateRequest request = TagCreateRequest.builder().userId(USER_ID).name("Travel").build();
+            TagCreateRequest request = TagCreateRequest.builder().userId(USER_ID).name(TAG_NAME_TRAVEL).build();
 
             // act & assert
             assertThrows(ResourceNotFoundException.class, () -> tagService.createTag(USER_ID, request));
@@ -116,14 +118,14 @@ class TagServiceTest {
             when(tagRepository.findById(TAG_ID)).thenReturn(Optional.of(existing));
             when(tagRepository.update(any())).thenReturn(1);
 
-            TagUpdateRequest request = TagUpdateRequest.builder().id(TAG_ID).name("New").color("#FFF").build();
+            TagUpdateRequest request = TagUpdateRequest.builder().id(TAG_ID).name(TAG_NAME_NEW).color("#FFF").build();
 
             // act
             int result = tagService.updateTag(USER_ID, request);
 
             // assert & verify
             assertEquals(1, result);
-            verify(tagRepository).update(argThat(t -> t.getName().equals("New") && t.getColor().equals("#FFF")));
+            verify(tagRepository).update(argThat(t -> TAG_NAME_NEW.equals(t.getName()) && "#FFF".equals(t.getColor())));
         }
 
         @Test
@@ -131,7 +133,7 @@ class TagServiceTest {
         void shouldThrowOnTagNotFound() {
             // arrange
             when(tagRepository.findById(TAG_ID)).thenReturn(Optional.empty());
-            TagUpdateRequest request = TagUpdateRequest.builder().id(TAG_ID).name("New").build();
+            TagUpdateRequest request = TagUpdateRequest.builder().id(TAG_ID).name(TAG_NAME_NEW).build();
 
             // act & assert
             assertThrows(ResourceNotFoundException.class, () -> tagService.updateTag(USER_ID, request));
@@ -143,7 +145,7 @@ class TagServiceTest {
             // arrange
             Tag existing = Tag.builder().id(TAG_ID).userId(999L).name("Old").build();
             when(tagRepository.findById(TAG_ID)).thenReturn(Optional.of(existing));
-            TagUpdateRequest request = TagUpdateRequest.builder().id(TAG_ID).name("New").build();
+            TagUpdateRequest request = TagUpdateRequest.builder().id(TAG_ID).name(TAG_NAME_NEW).build();
 
             // act & assert
             assertThrows(AccessDeniedException.class, () -> tagService.updateTag(USER_ID, request));

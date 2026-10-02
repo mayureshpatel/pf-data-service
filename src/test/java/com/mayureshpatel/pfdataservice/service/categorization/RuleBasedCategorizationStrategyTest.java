@@ -19,6 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("RuleBasedCategorizationStrategy Unit Tests")
 class RuleBasedCategorizationStrategyTest {
 
+    private static final String KEYWORD_AMAZON = "Amazon";
+    private static final String MAX_AMOUNT = "20.00";
+    private static final String MIN_AMOUNT = "5.00";
+
     private final RuleBasedCategorizationStrategy strategy = new RuleBasedCategorizationStrategy();
 
     /**
@@ -41,7 +45,7 @@ class RuleBasedCategorizationStrategyTest {
             // arrange
             Transaction t = Transaction.builder().description("AMAZON MARKETPLACE").build();
             CategoryRule rule = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(10L).build())
                     .build();
 
@@ -62,7 +66,7 @@ class RuleBasedCategorizationStrategyTest {
         void shouldNotMatch() {
             // arrange
             Transaction t = Transaction.builder().description("Unknown").build();
-            CategoryRule rule = CategoryRule.builder().keywords(List.of("Amazon")).build();
+            CategoryRule rule = CategoryRule.builder().keywords(List.of(KEYWORD_AMAZON)).build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(rule))
                     .build();
@@ -157,13 +161,13 @@ class RuleBasedCategorizationStrategyTest {
         void shouldPickTheRangeThatMatchesTheTransactionAmount() {
             // arrange
             CategoryRule underTwenty = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(1L).build()) // Household
                     .priority(0)
-                    .maxAmount(new java.math.BigDecimal("20.00"))
+                    .maxAmount(new java.math.BigDecimal(MAX_AMOUNT))
                     .build();
             CategoryRule overOneHundred = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(2L).build()) // Electronics
                     .priority(0)
                     .minAmount(new java.math.BigDecimal("100.00"))
@@ -191,12 +195,12 @@ class RuleBasedCategorizationStrategyTest {
                 + "(inclusive)")
         void shouldMatchAtMinBoundaryInclusive() {
             // arrange
-            Transaction t = Transaction.builder().description("Amazon").amount(new java.math.BigDecimal("5.00")).build();
+            Transaction t = Transaction.builder().description(KEYWORD_AMAZON).amount(new java.math.BigDecimal(MIN_AMOUNT)).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(10L).build())
-                    .minAmount(new java.math.BigDecimal("5.00"))
-                    .maxAmount(new java.math.BigDecimal("20.00"))
+                    .minAmount(new java.math.BigDecimal(MIN_AMOUNT))
+                    .maxAmount(new java.math.BigDecimal(MAX_AMOUNT))
                     .build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(rule))
@@ -214,12 +218,12 @@ class RuleBasedCategorizationStrategyTest {
                 + "(inclusive)")
         void shouldMatchAtMaxBoundaryInclusive() {
             // arrange
-            Transaction t = Transaction.builder().description("Amazon").amount(new java.math.BigDecimal("20.00")).build();
+            Transaction t = Transaction.builder().description(KEYWORD_AMAZON).amount(new java.math.BigDecimal(MAX_AMOUNT)).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(10L).build())
-                    .minAmount(new java.math.BigDecimal("5.00"))
-                    .maxAmount(new java.math.BigDecimal("20.00"))
+                    .minAmount(new java.math.BigDecimal(MIN_AMOUNT))
+                    .maxAmount(new java.math.BigDecimal(MAX_AMOUNT))
                     .build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(rule))
@@ -236,9 +240,9 @@ class RuleBasedCategorizationStrategyTest {
         @DisplayName("PF-314: keyword match alone remains sufficient when a rule has no range set")
         void shouldMatchOnKeywordAloneWhenNoRangeSet() {
             // arrange -- amount is wildly large, but the rule sets no range at all
-            Transaction t = Transaction.builder().description("Amazon").amount(new java.math.BigDecimal("99999.00")).build();
+            Transaction t = Transaction.builder().description(KEYWORD_AMAZON).amount(new java.math.BigDecimal("99999.00")).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(10L).build())
                     .build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
@@ -257,11 +261,11 @@ class RuleBasedCategorizationStrategyTest {
                 + "is unknown (null) -- there's nothing to compare the range against")
         void shouldNotMatchRangeRuleWhenTransactionAmountIsNull() {
             // arrange
-            Transaction t = Transaction.builder().description("Amazon").amount(null).build();
+            Transaction t = Transaction.builder().description(KEYWORD_AMAZON).amount(null).build();
             CategoryRule rule = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(10L).build())
-                    .minAmount(new java.math.BigDecimal("5.00"))
+                    .minAmount(new java.math.BigDecimal(MIN_AMOUNT))
                     .build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(rule))
@@ -420,13 +424,13 @@ class RuleBasedCategorizationStrategyTest {
         void shouldRespectAmountRangeForRequest() {
             // arrange
             TransactionUpdateRequest req = TransactionUpdateRequest.builder()
-                    .description("Amazon")
+                    .description(KEYWORD_AMAZON)
                     .amount(new java.math.BigDecimal("500.00"))
                     .build();
             CategoryRule tooNarrow = CategoryRule.builder()
-                    .keywords(List.of("Amazon"))
+                    .keywords(List.of(KEYWORD_AMAZON))
                     .category(Category.builder().id(20L).build())
-                    .maxAmount(new java.math.BigDecimal("20.00"))
+                    .maxAmount(new java.math.BigDecimal(MAX_AMOUNT))
                     .build();
             CategorizationStrategy.CategorizationContext context = CategorizationStrategy.CategorizationContext.builder()
                     .rules(List.of(tooNarrow))

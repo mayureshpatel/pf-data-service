@@ -20,6 +20,11 @@ import java.util.Set;
 @Component
 public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Category> {
 
+    private static final String COL_NAME = "name";
+    private static final String COL_TYPE = "type";
+    private static final String COL_COLOR = "color";
+    private static final String COL_ICON = "icon";
+
     @Override
     public Category mapRow(@NonNull ResultSet rs, int rowNum) throws SQLException {
         return mapRow(rs, "");
@@ -49,17 +54,17 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
         Category.CategoryBuilder parentBuilder = Category.builder();
         parentBuilder.id(parentId);
 
-        if (hasColumn(safePrefix + "name", availableColumns)) {
-            parentBuilder.name(rs.getString(safePrefix + "name"));
+        if (hasColumn(safePrefix + COL_NAME, availableColumns)) {
+            parentBuilder.name(rs.getString(safePrefix + COL_NAME));
         }
-        if (hasColumn(safePrefix + "type", availableColumns)) {
-            parentBuilder.type(rs.getString(safePrefix + "type"));
+        if (hasColumn(safePrefix + COL_TYPE, availableColumns)) {
+            parentBuilder.type(rs.getString(safePrefix + COL_TYPE));
         }
-        if (hasColumn(safePrefix + "color", availableColumns)) {
-            parentBuilder.color(rs.getString(safePrefix + "color"));
+        if (hasColumn(safePrefix + COL_COLOR, availableColumns)) {
+            parentBuilder.color(rs.getString(safePrefix + COL_COLOR));
         }
-        if (hasColumn(safePrefix + "icon", availableColumns)) {
-            parentBuilder.icon(rs.getString(safePrefix + "icon"));
+        if (hasColumn(safePrefix + COL_ICON, availableColumns)) {
+            parentBuilder.icon(rs.getString(safePrefix + COL_ICON));
         }
         return parentBuilder.build();
     }
@@ -95,8 +100,8 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
         if (hasColumn(safePrefix + "user_id", availableColumns)) {
             builder.userId(getLongOrNull(rs, safePrefix + "user_id"));
         }
-        if (hasColumn(safePrefix + "name", availableColumns)) {
-            builder.name(rs.getString(safePrefix + "name"));
+        if (hasColumn(safePrefix + COL_NAME, availableColumns)) {
+            builder.name(rs.getString(safePrefix + COL_NAME));
         }
         if (hasColumn( safePrefix + "parent_id", availableColumns)) {
             long parentId = rs.getLong(safePrefix + "parent_id");
@@ -106,14 +111,14 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
                 builder.parent(mapParent(parentId, rs, safePrefix + "category_parent", availableColumns));
             }
         }
-        if (hasColumn(safePrefix + "color", availableColumns)) {
-            builder.color(rs.getString(safePrefix + "color"));
+        if (hasColumn(safePrefix + COL_COLOR, availableColumns)) {
+            builder.color(rs.getString(safePrefix + COL_COLOR));
         }
-        if (hasColumn(safePrefix + "icon", availableColumns)) {
-            builder.icon(rs.getString(safePrefix + "icon"));
+        if (hasColumn(safePrefix + COL_ICON, availableColumns)) {
+            builder.icon(rs.getString(safePrefix + COL_ICON));
         }
-        if (hasColumn(safePrefix + "type", availableColumns)) {
-            builder.type(rs.getString(safePrefix + "type"));
+        if (hasColumn(safePrefix + COL_TYPE, availableColumns)) {
+            builder.type(rs.getString(safePrefix + COL_TYPE));
         }
         builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
 
