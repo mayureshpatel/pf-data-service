@@ -19,8 +19,6 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -38,13 +36,6 @@ import java.util.stream.Stream;
 @Component
 @Slf4j
 public class UniversalCsvParser implements TransactionParser {
-
-    private static final Pattern DATE_PATTERN = Pattern.compile("^(transaction\\s*date|trans\\s*date|date)$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern POST_DATE_PATTERN = Pattern.compile("^(post\\s*date|posted\\s*date)$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern DESC_PATTERN = Pattern.compile("^(description|original\\s*description|memo|payee|merchant)$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("^(amount|amount\\s*\\(?\\$\\)?)$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern DEBIT_PATTERN = Pattern.compile("^(debit|debit\\s*\\(?\\$\\)?)$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern CREDIT_PATTERN = Pattern.compile("^(credit|credit\\s*\\(?\\$\\)?)$", Pattern.CASE_INSENSITIVE);
 
     // common date formats to try
     private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
@@ -73,44 +64,16 @@ public class UniversalCsvParser implements TransactionParser {
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
         try {
-            // first, just parse the header to find columns
-            CSVParser parser = CSVFormat.DEFAULT.builder()
-                    .setHeader()
-                    .setSkipHeaderRecord(true)
-                    .setIgnoreHeaderCase(true)
-                    .setTrim(true)
-                    .get()
-                    .parse(reader);
+            CSVParser parser = openHeaderParser(reader);
+            UniversalCsvColumnDetector.ColumnMapping mapping = UniversalCsvColumnDetector.detect(parser.getHeaderMap());
+            ParseOutcome outcome = parseRecords(parser, mapping);
+            closeQuietlyLogging(parser, reader);
 
-            Map<String, Integer> headerMap = parser.getHeaderMap();
-            ColumnMapping mapping = identifyColumns(headerMap);
-
-            java.util.List<Transaction> transactions = new java.util.ArrayList<>();
-            java.util.List<String> errors = new java.util.ArrayList<>();
-
-            for (CSVRecord record : parser) {
-                try {
-                    Transaction t = parseRecord(record, mapping);
-                    if (t != null) {
-                        transactions.add(t);
-                    }
-                } catch (Exception e) {
-                    errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
-                }
+            if (!outcome.errors().isEmpty()) {
+                throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join("; ", outcome.errors()));
             }
 
-            try {
-                parser.close();
-                reader.close();
-            } catch (Exception e) {
-                log.error("Error closing CSV resources", e);
-            }
-
-            if (!errors.isEmpty()) {
-                throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join("; ", errors));
-            }
-
-            return transactions.stream();
+            return outcome.transactions().stream();
 
         } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
             throw e;
@@ -125,56 +88,55 @@ public class UniversalCsvParser implements TransactionParser {
     }
 
     /**
-     * Identifies column mappings based on header names.
-     *
-     * @param headerMap Map of header names to column indices
-     * @return ColumnMapping object with identified column names
+     * Just parses the header to find columns (PF-809: extracted from {@link #parse}).
      */
-    private ColumnMapping identifyColumns(Map<String, Integer> headerMap) {
-        String dateCol = null;
-        String postDateCol = null;
-        String descCol = null;
-        String amountCol = null;
-        String debitCol = null;
-        String creditCol = null;
+    private CSVParser openHeaderParser(BufferedReader reader) throws java.io.IOException {
+        return CSVFormat.DEFAULT.builder()
+                .setHeader()
+                .setSkipHeaderRecord(true)
+                .setIgnoreHeaderCase(true)
+                .setTrim(true)
+                .get()
+                .parse(reader);
+    }
 
-        for (String col : headerMap.keySet()) {
-            String cleanCol = col.trim();
-            if (dateCol == null && DATE_PATTERN.matcher(cleanCol).matches()) {
-                dateCol = col;
-            } else if (postDateCol == null && POST_DATE_PATTERN.matcher(cleanCol).matches()) {
-                postDateCol = col;
-            } else if (descCol == null && DESC_PATTERN.matcher(cleanCol).matches()) {
-                descCol = col;
-            } else if (amountCol == null && AMOUNT_PATTERN.matcher(cleanCol).matches()) {
-                amountCol = col;
-            } else if (debitCol == null && DEBIT_PATTERN.matcher(cleanCol).matches()) {
-                debitCol = col;
-            } else if (creditCol == null && CREDIT_PATTERN.matcher(cleanCol).matches()) {
-                creditCol = col;
+    /**
+     * A parsed file's successfully-mapped transactions alongside any per-row errors (PF-809:
+     * extracted from {@link #parse}) -- collected together rather than thrown immediately, so a
+     * malformed row doesn't prevent every other row's error from also being reported.
+     */
+    private record ParseOutcome(List<Transaction> transactions, List<String> errors) {
+    }
+
+    private ParseOutcome parseRecords(CSVParser parser, UniversalCsvColumnDetector.ColumnMapping mapping) {
+        List<Transaction> transactions = new java.util.ArrayList<>();
+        List<String> errors = new java.util.ArrayList<>();
+
+        for (CSVRecord record : parser) {
+            try {
+                Transaction t = parseRecord(record, mapping);
+                if (t != null) {
+                    transactions.add(t);
+                }
+            } catch (Exception e) {
+                errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
             }
         }
 
-        // fallback: if "date" not found but "post date" is, use post date as date
-        if (dateCol == null && postDateCol != null) {
-            dateCol = postDateCol;
-        }
+        return new ParseOutcome(transactions, errors);
+    }
 
-        if (dateCol == null) {
-            throw new IllegalArgumentException("Could not find a valid 'Date' column in CSV headers.");
+    /**
+     * Unlike this codebase's other CSV parsers, a close failure here is only logged, not raised as
+     * its own parse failure (PF-809: extracted from {@link #parse}, behavior unchanged).
+     */
+    private void closeQuietlyLogging(CSVParser parser, BufferedReader reader) {
+        try {
+            parser.close();
+            reader.close();
+        } catch (Exception e) {
+            log.error("Error closing CSV resources", e);
         }
-        if (descCol == null) {
-            throw new IllegalArgumentException("Could not find a valid 'Description' column in CSV headers.");
-        }
-        // need either amount or (debit and credit)
-        if (amountCol == null && debitCol == null && creditCol == null) {
-            throw new IllegalArgumentException("Could not find valid 'Amount' or 'Debit/Credit' columns.");
-        }
-
-        log.info("Universal Parser Mapped Columns - Date: {}, PostDate: {}, Desc: {}, Amount: {}, Debit: {}, Credit: {}",
-                dateCol, postDateCol, descCol, amountCol, debitCol, creditCol);
-
-        return new ColumnMapping(dateCol, postDateCol, descCol, amountCol, debitCol, creditCol);
     }
 
     /**
@@ -184,65 +146,70 @@ public class UniversalCsvParser implements TransactionParser {
      * @param mapping Column mapping configuration
      * @return Parsed Transaction object
      */
-    private Transaction parseRecord(CSVRecord record, ColumnMapping mapping) {
-        // parse date
-        LocalDate localDate = parseDate(record.get(mapping.dateCol));
+    private Transaction parseRecord(CSVRecord record, UniversalCsvColumnDetector.ColumnMapping mapping) {
+        LocalDate localDate = parseDate(record.get(mapping.dateCol()));
         if (localDate == null) return null;
         OffsetDateTime date = localDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
 
-        OffsetDateTime postDate = null;
-        if (mapping.postDateCol != null && !mapping.postDateCol.equals(mapping.dateCol)) {
-            LocalDate localPostDate = parseDate(record.get(mapping.postDateCol));
-            if (localPostDate != null) {
-                postDate = localPostDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC);
-            }
-        }
-
-        // parse description
-        String description = record.get(mapping.descCol);
-
-        // parse amount and transaction type
-        BigDecimal amount = BigDecimal.ZERO;
-        TransactionType type = TransactionType.EXPENSE; // default
-
-        if (mapping.debitCol != null && mapping.creditCol != null) {
-            // two column strategy
-            String debitStr = record.get(mapping.debitCol);
-            String creditStr = record.get(mapping.creditCol);
-
-            BigDecimal debit = parseAmount(debitStr);
-            BigDecimal credit = parseAmount(creditStr);
-
-            if (debit.compareTo(BigDecimal.ZERO) > 0) {
-                amount = debit;
-            } else if (credit.compareTo(BigDecimal.ZERO) > 0) {
-                amount = credit;
-                type = TransactionType.INCOME;
-            }
-        } else if (mapping.amountCol != null) {
-            // single amount strategy
-            BigDecimal rawAmount = parseAmount(record.get(mapping.amountCol));
-
-            if (rawAmount.compareTo(BigDecimal.ZERO) < 0) {
-                amount = rawAmount.abs();
-            } else {
-                type = TransactionType.INCOME;
-                amount = rawAmount;
-            }
-        } else if (mapping.debitCol != null) {
-            amount = parseAmount(record.get(mapping.debitCol));
-        } else if (mapping.creditCol != null) {
-            amount = parseAmount(record.get(mapping.creditCol));
-            type = TransactionType.INCOME;
-        }
+        OffsetDateTime postDate = resolvePostDate(record, mapping);
+        String description = record.get(mapping.descCol());
+        AmountResult amountResult = resolveAmountAndType(record, mapping);
 
         return Transaction.builder()
                 .transactionDate(date)
                 .postDate(postDate)
                 .description(description)
-                .amount(amount)
-                .type(type)
+                .amount(amountResult.amount())
+                .type(amountResult.type())
                 .build();
+    }
+
+    /**
+     * The post date column, independent of the main transaction date (PF-809: extracted from
+     * {@link #parseRecord}) -- {@code null} when there's no distinct post-date column, or its own
+     * value doesn't parse.
+     */
+    private OffsetDateTime resolvePostDate(CSVRecord record, UniversalCsvColumnDetector.ColumnMapping mapping) {
+        if (mapping.postDateCol() == null || mapping.postDateCol().equals(mapping.dateCol())) {
+            return null;
+        }
+        LocalDate localPostDate = parseDate(record.get(mapping.postDateCol()));
+        return localPostDate != null ? localPostDate.atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null;
+    }
+
+    private record AmountResult(BigDecimal amount, TransactionType type) {
+    }
+
+    /**
+     * Resolves the signed amount and its implied {@link TransactionType} from whichever
+     * amount-column strategy this file uses (PF-809: extracted from {@link #parseRecord}) --
+     * a single signed amount column, or separate debit/credit columns, matching
+     * {@link UniversalCsvColumnDetector}'s own validation that at least one of these is present.
+     */
+    private AmountResult resolveAmountAndType(CSVRecord record, UniversalCsvColumnDetector.ColumnMapping mapping) {
+        if (mapping.debitCol() != null && mapping.creditCol() != null) {
+            BigDecimal debit = parseAmount(record.get(mapping.debitCol()));
+            BigDecimal credit = parseAmount(record.get(mapping.creditCol()));
+            if (debit.compareTo(BigDecimal.ZERO) > 0) {
+                return new AmountResult(debit, TransactionType.EXPENSE);
+            } else if (credit.compareTo(BigDecimal.ZERO) > 0) {
+                return new AmountResult(credit, TransactionType.INCOME);
+            }
+            return new AmountResult(BigDecimal.ZERO, TransactionType.EXPENSE);
+        }
+        if (mapping.amountCol() != null) {
+            BigDecimal rawAmount = parseAmount(record.get(mapping.amountCol()));
+            return rawAmount.compareTo(BigDecimal.ZERO) < 0
+                    ? new AmountResult(rawAmount.abs(), TransactionType.EXPENSE)
+                    : new AmountResult(rawAmount, TransactionType.INCOME);
+        }
+        if (mapping.debitCol() != null) {
+            return new AmountResult(parseAmount(record.get(mapping.debitCol())), TransactionType.EXPENSE);
+        }
+        if (mapping.creditCol() != null) {
+            return new AmountResult(parseAmount(record.get(mapping.creditCol())), TransactionType.INCOME);
+        }
+        return new AmountResult(BigDecimal.ZERO, TransactionType.EXPENSE);
     }
 
     /**
@@ -293,20 +260,5 @@ public class UniversalCsvParser implements TransactionParser {
             }
         }
         throw new IllegalArgumentException("Unknown date format: " + dateStr);
-    }
-
-    /**
-     * The resolved header names for a parsed file's columns, as identified by
-     * {@link #identifyColumns}. Any field may be null except {@code dateCol} and {@code descCol},
-     * which {@link #identifyColumns} guarantees are set before returning.
-     */
-    private record ColumnMapping(
-            String dateCol,
-            String postDateCol,
-            String descCol,
-            String amountCol,
-            String debitCol,
-            String creditCol
-    ) {
     }
 }

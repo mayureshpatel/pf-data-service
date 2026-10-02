@@ -7,7 +7,7 @@ import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +39,7 @@ public class ReportService {
 
     private final AccountRepository accountRepository;
     private final SnapshotService snapshotService;
-    private final TransactionRepository transactionRepository;
+    private final TransactionReportRepository transactionReportRepository;
     private final MerchantRepository merchantRepository;
 
     /**
@@ -102,7 +102,7 @@ public class ReportService {
      * @return one entry per category with spend in range (including uncategorized), highest total first
      */
     public List<CategoryReportDataDto> getCategoryReportData(Long userId, LocalDate startDate, LocalDate endDate) {
-        return transactionRepository.findCategoryReportData(userId, toStartOfDayUtc(startDate), toExclusiveEndUtc(endDate));
+        return transactionReportRepository.findCategoryReportData(userId, toStartOfDayUtc(startDate), toExclusiveEndUtc(endDate));
     }
 
     /**
@@ -131,7 +131,7 @@ public class ReportService {
      * @return one entry per month with matching activity, oldest first
      */
     public List<MonthlyReportDataDto> getMonthlyReportData(Long userId, LocalDate startDate, LocalDate endDate) {
-        return transactionRepository.findMonthlyIncomeExpense(userId, toStartOfDayUtc(startDate), toExclusiveEndUtc(endDate));
+        return transactionReportRepository.findMonthlyIncomeExpense(userId, toStartOfDayUtc(startDate), toExclusiveEndUtc(endDate));
     }
 
     /**

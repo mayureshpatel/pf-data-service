@@ -31,12 +31,7 @@ public class AccountTypeRowMapper extends JdbcMapperUtils implements RowMapper<A
      * @throws SQLException if an error occurs while accessing the ResultSet
      */
     public static AccountType mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
         AccountType.AccountTypeBuilder builder = AccountType.builder();

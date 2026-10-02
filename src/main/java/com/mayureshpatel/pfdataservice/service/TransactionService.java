@@ -235,19 +235,32 @@ public class TransactionService {
             throw new ResourceNotFoundException("One or more transactions not found");
         }
 
+        verifyOwnership(userId, transactions);
+        undoBalanceEffects(userId, transactions);
+
+        transactionRepository.deleteAll(userId, transactions);
+    }
+
+    /**
+     * (PF-809: extracted from {@link #deleteTransactions}).
+     */
+    private void verifyOwnership(Long userId, List<Transaction> transactions) {
         for (Transaction t : transactions) {
             if (t.getAccount() == null || !userId.equals(t.getAccount().getUserId())) {
                 throw new AccessDeniedException("You do not own transaction " + t.getId());
             }
         }
+    }
 
+    /**
+     * (PF-809: extracted from {@link #deleteTransactions}).
+     */
+    private void undoBalanceEffects(Long userId, List<Transaction> transactions) {
         for (Transaction t : transactions) {
             Account account = accountRepository.findById(t.getAccount().getId())
                     .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
             accountBalanceUpdateService.applyWithRetry(userId, account, acc -> acc.undoTransaction(t));
         }
-
-        transactionRepository.deleteAll(userId, transactions);
     }
 
     /**
@@ -338,15 +351,7 @@ public class TransactionService {
         }
 
         Account currentAccount = transaction.getAccount();
-        Account targetAccount = currentAccount;
-        if (!currentAccount.getId().equals(request.getAccountId())) {
-            targetAccount = accountRepository.findById(request.getAccountId())
-                    .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
-
-            if (!targetAccount.getUserId().equals(userId)) {
-                throw new AccessDeniedException("You do not own this account");
-            }
-        }
+        Account targetAccount = resolveTargetAccount(userId, currentAccount, request.getAccountId());
 
         // merchant assignment is exactly what the caller sent -- null means "left blank." Nothing
         // auto-creates a merchant from the description anymore (PF-845).
@@ -364,13 +369,7 @@ public class TransactionService {
 
         updatedT = resolveCategory(userId, updatedT, request.getCategoryId());
 
-        Transaction updatedTForBalance = updatedT;
-        if (currentAccount.getId().equals(targetAccount.getId())) {
-            accountBalanceUpdateService.applyWithRetry(userId, currentAccount, acc -> acc.undoTransaction(transaction).applyTransaction(updatedTForBalance));
-        } else {
-            accountBalanceUpdateService.applyWithRetry(userId, currentAccount, acc -> acc.undoTransaction(transaction));
-            accountBalanceUpdateService.applyWithRetry(userId, targetAccount, acc -> acc.applyTransaction(updatedTForBalance));
-        }
+        applyBalanceChanges(userId, currentAccount, targetAccount, transaction, updatedT);
 
         int updatedRowCount = transactionRepository.update(userId, updatedT);
 
@@ -380,6 +379,38 @@ public class TransactionService {
         }
 
         return updatedRowCount;
+    }
+
+    /**
+     * Resolves the target account, re-verifying ownership only when it's actually changing
+     * (PF-809: extracted from {@link #updateTransaction}).
+     */
+    private Account resolveTargetAccount(Long userId, Account currentAccount, Long requestedAccountId) {
+        if (currentAccount.getId().equals(requestedAccountId)) {
+            return currentAccount;
+        }
+
+        Account targetAccount = accountRepository.findById(requestedAccountId)
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
+
+        if (!targetAccount.getUserId().equals(userId)) {
+            throw new AccessDeniedException("You do not own this account");
+        }
+        return targetAccount;
+    }
+
+    /**
+     * Undoes the transaction's old balance effect and applies its new one -- combined into one
+     * retry-wrapped update when the account didn't change, split into two when it did (PF-809:
+     * extracted from {@link #updateTransaction}).
+     */
+    private void applyBalanceChanges(Long userId, Account currentAccount, Account targetAccount, Transaction original, Transaction updated) {
+        if (currentAccount.getId().equals(targetAccount.getId())) {
+            accountBalanceUpdateService.applyWithRetry(userId, currentAccount, acc -> acc.undoTransaction(original).applyTransaction(updated));
+        } else {
+            accountBalanceUpdateService.applyWithRetry(userId, currentAccount, acc -> acc.undoTransaction(original));
+            accountBalanceUpdateService.applyWithRetry(userId, targetAccount, acc -> acc.applyTransaction(updated));
+        }
     }
 
     /**

@@ -36,17 +36,24 @@ public class RecurringTransactionRowMapper extends JdbcMapperUtils implements Ro
      * @throws SQLException if an error occurs while accessing the ResultSet
      */
     public RecurringTransaction mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
         RecurringTransaction.RecurringTransactionBuilder builder = RecurringTransaction.builder();
         builder.id(rs.getLong(safePrefix + "id"));
 
+        mapRelationFields(builder, rs, safePrefix, availableColumns);
+        mapScheduleFields(builder, rs, safePrefix, availableColumns);
+        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+
+        return builder.build();
+    }
+
+    /**
+     * The embedded-relation columns (PF-809: extracted from {@link #mapRow(ResultSet, String)}),
+     * each independently optional.
+     */
+    private void mapRelationFields(RecurringTransaction.RecurringTransactionBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (hasColumn(safePrefix + "user_id", availableColumns)) {
             builder.userId(rs.getLong(safePrefix + "user_id"));
         }
@@ -59,6 +66,13 @@ public class RecurringTransactionRowMapper extends JdbcMapperUtils implements Ro
         if (hasColumn(safePrefix + "frequency", availableColumns)) {
             builder.frequency(rs.getString(safePrefix + "frequency"));
         }
+    }
+
+    /**
+     * The scheduling/amount columns (PF-809: extracted from {@link #mapRow(ResultSet, String)}),
+     * each independently optional.
+     */
+    private void mapScheduleFields(RecurringTransaction.RecurringTransactionBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (hasColumn(safePrefix + "last_date", availableColumns)) {
             builder.lastDate(getLocalDate(rs, safePrefix + "last_date"));
         }
@@ -71,8 +85,5 @@ public class RecurringTransactionRowMapper extends JdbcMapperUtils implements Ro
         if (hasColumn(safePrefix + "active", availableColumns)) {
             builder.active(rs.getBoolean(safePrefix + "active"));
         }
-        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
-
-        return builder.build();
     }
 }

@@ -8,7 +8,7 @@ import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReportRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ class ReportServiceTest {
     private SnapshotService snapshotService;
 
     @Mock
-    private TransactionRepository transactionRepository;
+    private TransactionReportRepository transactionReportRepository;
 
     @Mock
     private MerchantRepository merchantRepository;
@@ -179,13 +179,13 @@ class ReportServiceTest {
         @DisplayName("getCategoryReportData anchors the caller-inclusive end date to UTC midnight of the *next* day")
         void shouldAnchorCategoryReportDateBoundsHalfOpen() {
             // arrange
-            when(transactionRepository.findCategoryReportData(eq(USER_ID), any(), any())).thenReturn(List.of());
+            when(transactionReportRepository.findCategoryReportData(eq(USER_ID), any(), any())).thenReturn(List.of());
 
             // act
             reportService.getCategoryReportData(USER_ID, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
             // assert & verify
-            verify(transactionRepository).findCategoryReportData(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
+            verify(transactionReportRepository).findCategoryReportData(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
             assertEquals(OffsetDateTime.parse("2026-03-01T00:00:00Z"), startCaptor.getValue());
             assertEquals(OffsetDateTime.parse("2026-04-01T00:00:00Z"), endCaptor.getValue(),
                     "the caller's inclusive endDate (3/31) must become the exclusive bound 4/1, "
@@ -211,13 +211,13 @@ class ReportServiceTest {
         @DisplayName("getMonthlyReportData anchors the caller-inclusive end date to UTC midnight of the *next* day")
         void shouldAnchorMonthlyReportDateBoundsHalfOpen() {
             // arrange
-            when(transactionRepository.findMonthlyIncomeExpense(eq(USER_ID), any(), any())).thenReturn(List.of());
+            when(transactionReportRepository.findMonthlyIncomeExpense(eq(USER_ID), any(), any())).thenReturn(List.of());
 
             // act
             reportService.getMonthlyReportData(USER_ID, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
             // assert & verify
-            verify(transactionRepository).findMonthlyIncomeExpense(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
+            verify(transactionReportRepository).findMonthlyIncomeExpense(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
             assertEquals(OffsetDateTime.parse("2026-03-01T00:00:00Z"), startCaptor.getValue());
             assertEquals(OffsetDateTime.parse("2026-04-01T00:00:00Z"), endCaptor.getValue());
         }
@@ -227,7 +227,7 @@ class ReportServiceTest {
         void shouldPassThroughCategoryReportRows() {
             // arrange
             List<CategoryReportDataDto> rows = List.of(new CategoryReportDataDto(null, new BigDecimal("42.00"), 3L));
-            when(transactionRepository.findCategoryReportData(eq(USER_ID), any(), any())).thenReturn(rows);
+            when(transactionReportRepository.findCategoryReportData(eq(USER_ID), any(), any())).thenReturn(rows);
 
             // act
             List<CategoryReportDataDto> result = reportService.getCategoryReportData(
@@ -259,7 +259,7 @@ class ReportServiceTest {
             // arrange
             List<MonthlyReportDataDto> rows = List.of(
                     new MonthlyReportDataDto(2026, 1, new BigDecimal("100.00"), new BigDecimal("60.00")));
-            when(transactionRepository.findMonthlyIncomeExpense(eq(USER_ID), any(), any())).thenReturn(rows);
+            when(transactionReportRepository.findMonthlyIncomeExpense(eq(USER_ID), any(), any())).thenReturn(rows);
 
             // act
             List<MonthlyReportDataDto> result = reportService.getMonthlyReportData(

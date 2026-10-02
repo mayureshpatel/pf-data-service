@@ -145,16 +145,27 @@
              which runs later/asynchronously relative to the surrounding try/catch: this rule's
              control-flow analysis treats it as if it were caught synchronously, which it can't be. -->
         <exclude name="ExceptionAsFlowControl"/>
-        <!-- Real complexity signal, most concentrated in the CSV parser classes (bank-format
-             parsing logic) plus a few Transaction-related service/repository classes: genuine
-             refactoring candidates, not a mechanical fix. -->
-        <exclude name="CyclomaticComplexity"/>
-        <exclude name="NPathComplexity"/>
-        <exclude name="CognitiveComplexity"/>
-        <exclude name="GodClass"/>
-        <!-- Flags the same 3 classes ExcessiveImports did (TransactionRepository,
-             TransactionImportService, TransactionService) with a more substantive metric:
-             genuine split candidates worth a real look. -->
+        <!-- [PF-809]: CyclomaticComplexity/NPathComplexity/CognitiveComplexity/GodClass's combined
+             54-finding backlog (CSV parsers, the RowMapper family, TransactionSpecification,
+             several services) was fully resolved via named-helper-method extraction, splitting
+             UniversalCsvParser's column-detection into its own class (resolving its GodClass
+             flag), and splitting RecurringTransactionService's pattern-detection into
+             RecurringSuggestionFinder (a method-level complexity fix elsewhere unexpectedly
+             lowered this class's own Tight Class Cohesion enough to newly trip GodClass, resolved
+             the same way). All 4 are back to their normal blocking priority below. -->
+        <!-- [PF-809]: TransactionRepository's three Report/Dashboard-aggregation methods, plus
+             their three dedicated row mappers, were split out into TransactionReportRepository, a
+             genuine architectural improvement (33 down to 25). TransactionService and
+             TransactionImportService were reviewed too but found genuinely cohesive around real
+             invariants, not an accidental grab bag: every transaction mutation keeps the owning
+             account's balance in sync, and CSV import is one multi-phase pipeline, each needing
+             the same core collaborators throughout. Forcing a further split would only redistribute
+             the same coupling onto new classes, not reduce it. The 3 newly-flagged test classes are
+             the same story one level removed: BaseControllerTest's coupling is its own explicitly
+             documented purpose (one shared Spring context cached across every controller test, see
+             its own class comment), and the other two simply provide thorough coverage of
+             production classes already confirmed genuinely complex above. Still excluded, now 6
+             instances rather than the original 3. -->
         <exclude name="CouplingBetweenObjects"/>
         <!-- The 1 instance (TransactionCrudController) needs a real API-shape change (a
              filter/request object) to fix properly, not a mechanical edit. -->
@@ -166,18 +177,6 @@
              the boundary. That's the correct, deliberate shape for this kind of boundary, not the
              silent-swallow anti-pattern this rule exists to catch. -->
         <exclude name="AvoidCatchingGenericException"/>
-    </rule>
-    <rule ref="category/java/design.xml/CyclomaticComplexity">
-        <priority>4</priority>
-    </rule>
-    <rule ref="category/java/design.xml/NPathComplexity">
-        <priority>4</priority>
-    </rule>
-    <rule ref="category/java/design.xml/CognitiveComplexity">
-        <priority>4</priority>
-    </rule>
-    <rule ref="category/java/design.xml/GodClass">
-        <priority>4</priority>
     </rule>
     <rule ref="category/java/design.xml/CouplingBetweenObjects">
         <priority>4</priority>

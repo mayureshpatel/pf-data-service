@@ -45,12 +45,7 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
             return null;
         }
 
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Category.CategoryBuilder parentBuilder = Category.builder();
         parentBuilder.id(parentId);
 
@@ -78,39 +73,42 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
      * @throws SQLException if an error occurs while accessing the ResultSet
      */
     public static Category mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
-        Category.CategoryBuilder builder = Category.builder();
-        if (hasColumn(safePrefix + "id", availableColumns)) {
-            Long id = getLongOrNull(rs, safePrefix + "id");
-            if (id == null) {
-                return null;
-            }
-            builder.id(id);
-        } else {
+        Long id = requireId(rs, safePrefix, availableColumns);
+        if (id == null) {
             return null;
         }
 
+        Category.CategoryBuilder builder = Category.builder().id(id);
+        mapOptionalFields(builder, rs, safePrefix, availableColumns);
+        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+
+        return builder.build();
+    }
+
+    /**
+     * The one required column (PF-809: extracted from {@link #mapRow(ResultSet, String)}) --
+     * {@code null} whether the column is simply absent from the query or present but itself
+     * {@code null}, since either way there's no category to map.
+     */
+    private static Long requireId(ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
+        return hasColumn(safePrefix + "id", availableColumns) ? getLongOrNull(rs, safePrefix + "id") : null;
+    }
+
+    /**
+     * Every column besides {@code id} and the audit trail, each independently optional
+     * (PF-809: extracted from {@link #mapRow(ResultSet, String)}).
+     */
+    private static void mapOptionalFields(Category.CategoryBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (hasColumn(safePrefix + "user_id", availableColumns)) {
             builder.userId(getLongOrNull(rs, safePrefix + "user_id"));
         }
         if (hasColumn(safePrefix + COL_NAME, availableColumns)) {
             builder.name(rs.getString(safePrefix + COL_NAME));
         }
-        if (hasColumn( safePrefix + "parent_id", availableColumns)) {
-            long parentId = rs.getLong(safePrefix + "parent_id");
-            builder.parentId(parentId);
-
-            if (parentId != 0) {
-                builder.parent(mapParent(parentId, rs, safePrefix + "category_parent", availableColumns));
-            }
-        }
+        mapParentReference(builder, rs, safePrefix, availableColumns);
         if (hasColumn(safePrefix + COL_COLOR, availableColumns)) {
             builder.color(rs.getString(safePrefix + COL_COLOR));
         }
@@ -120,8 +118,20 @@ public class CategoryRowMapper extends JdbcMapperUtils implements RowMapper<Cate
         if (hasColumn(safePrefix + COL_TYPE, availableColumns)) {
             builder.type(rs.getString(safePrefix + COL_TYPE));
         }
-        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+    }
 
-        return builder.build();
+    /**
+     * {@code parent_id} plus, when it's non-zero, the one-level-deep {@link #mapParent} hydration
+     * (PF-809: extracted from {@link #mapOptionalFields}).
+     */
+    private static void mapParentReference(Category.CategoryBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
+        if (!hasColumn(safePrefix + "parent_id", availableColumns)) {
+            return;
+        }
+        long parentId = rs.getLong(safePrefix + "parent_id");
+        builder.parentId(parentId);
+        if (parentId != 0) {
+            builder.parent(mapParent(parentId, rs, safePrefix + "category_parent", availableColumns));
+        }
     }
 }

@@ -33,12 +33,7 @@ public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merc
      * @throws SQLException if there is an error accessing ResultSet
      */
     public static Merchant mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
         Merchant.MerchantBuilder builder = Merchant.builder();

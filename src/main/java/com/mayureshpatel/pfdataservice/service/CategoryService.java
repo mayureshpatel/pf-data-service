@@ -90,27 +90,38 @@ public class CategoryService {
             throw new AccessDeniedException("Access denied");
         }
 
-        if (request.getParentId() != null) {
-            if (request.getParentId() == 0) {
-                throw new IllegalArgumentException("Parent category ID cannot be zero.");
-            }
-
-            if (request.getParentId().equals(request.getId())) {
-                throw new IllegalArgumentException("Category cannot be its own parent");
-            }
-
-            Category parent = categoryRepository.findById(request.getParentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
-
-            if (!parent.getUserId().equals(userId)) {
-                throw new AccessDeniedException("Access denied to parent category");
-            }
-        }
+        validateNewParent(userId, request);
 
         CategoryUpdateRequest securedRequest = request.toBuilder()
                 .userId(userId)
                 .build();
         return this.categoryRepository.update(securedRequest);
+    }
+
+    /**
+     * Validates the new parent, if {@code request} is actually changing it (PF-809: extracted
+     * from {@link #updateCategory}): it can't be zero, can't be the category's own id, and must
+     * exist and belong to {@code userId}.
+     */
+    private void validateNewParent(Long userId, CategoryUpdateRequest request) {
+        if (request.getParentId() == null) {
+            return;
+        }
+
+        if (request.getParentId() == 0) {
+            throw new IllegalArgumentException("Parent category ID cannot be zero.");
+        }
+
+        if (request.getParentId().equals(request.getId())) {
+            throw new IllegalArgumentException("Category cannot be its own parent");
+        }
+
+        Category parent = categoryRepository.findById(request.getParentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
+
+        if (!parent.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Access denied to parent category");
+        }
     }
 
     /**
@@ -133,27 +144,31 @@ public class CategoryService {
             throw new AccessDeniedException("Access denied");
         }
 
-        long subcategoryCount = this.categoryRepository.countByParentId(categoryId);
-        if (subcategoryCount > 0) {
-            throw new IllegalStateException("Cannot delete category with subcategories. Please reassign or delete subcategories first.");
-        }
-
-        long transactionCount = this.transactionRepository.countByCategoryId(categoryId);
-        if (transactionCount > 0) {
-            throw new IllegalStateException("Cannot delete category with associated transactions. Please reassign or delete transactions first.");
-        }
-
-        long categoryRuleCount = this.categoryRuleRepository.countByCategoryId(categoryId);
-        if (categoryRuleCount > 0) {
-            throw new IllegalStateException("Cannot delete category with associated category rules. Please reassign or delete those rules first.");
-        }
-
-        long budgetCount = this.budgetRepository.countByCategoryIdAndDeletedAtIsNull(categoryId);
-        if (budgetCount > 0) {
-            throw new IllegalStateException("Cannot delete category with an associated budget. Please delete the budget first.");
-        }
+        requireNoDependents(categoryId);
 
         return categoryRepository.delete(category);
+    }
+
+    /**
+     * Refuses to delete a category that still has subcategories, transactions, category rules, or
+     * a budget assigned to it (PF-809: extracted from {@link #deleteCategory}) -- each is a
+     * dependent record that would otherwise be left pointing at a deleted category.
+     */
+    private void requireNoDependents(Long categoryId) {
+        requireZeroCount(this.categoryRepository.countByParentId(categoryId),
+                "Cannot delete category with subcategories. Please reassign or delete subcategories first.");
+        requireZeroCount(this.transactionRepository.countByCategoryId(categoryId),
+                "Cannot delete category with associated transactions. Please reassign or delete transactions first.");
+        requireZeroCount(this.categoryRuleRepository.countByCategoryId(categoryId),
+                "Cannot delete category with associated category rules. Please reassign or delete those rules first.");
+        requireZeroCount(this.budgetRepository.countByCategoryIdAndDeletedAtIsNull(categoryId),
+                "Cannot delete category with an associated budget. Please delete the budget first.");
+    }
+
+    private void requireZeroCount(long count, String errorMessage) {
+        if (count > 0) {
+            throw new IllegalStateException(errorMessage);
+        }
     }
 
     /**

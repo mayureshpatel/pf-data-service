@@ -27,12 +27,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * at UTC midnight on a range's start date falls *before* that non-UTC-shifted lower bound and is
  * silently excluded from a query for "that exact date."
  */
-@Import(TransactionRepository.class)
+@Import({TransactionRepository.class, TransactionReportRepository.class})
 @DisplayName("TransactionRepository Date Filter Timezone Boundary (PF-828)")
 class TransactionDateFilterTimezoneTest extends TimezoneBoundaryRepositoryTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private TransactionReportRepository transactionReportRepository;
 
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_1 = 1L;
@@ -84,7 +87,7 @@ class TransactionDateFilterTimezoneTest extends TimezoneBoundaryRepositoryTest {
         transactionRepository.insert(firstOfMonth);
 
         // act
-        List<Object[]> sums = transactionRepository.findMonthlySums(USER_ID, LocalDate.of(2026, 6, 1));
+        List<Object[]> sums = transactionReportRepository.findMonthlySums(USER_ID, LocalDate.of(2026, 6, 1));
 
         // assert & verify -- bucketed as June (month=6), not phantom-bucketed into May (month=5)
         boolean bucketedInJune = sums.stream().anyMatch(row ->

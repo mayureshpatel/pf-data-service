@@ -5,7 +5,7 @@ import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.dashboard.*;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +35,7 @@ public class DashboardService {
 
     private static final ZoneId UTC_ZONE = java.time.ZoneOffset.UTC;
 
-    private final TransactionRepository transactionRepository;
+    private final TransactionReportRepository transactionReportRepository;
     private final MerchantRepository merchantRepository;
     private final TransactionService transactionService;
 
@@ -51,10 +51,10 @@ public class DashboardService {
         OffsetDateTime startOfMonth = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, UTC_ZONE).toOffsetDateTime();
         OffsetDateTime endOfMonth = endOfMonth(startOfMonth);
 
-        BigDecimal totalIncome = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.INCOME);
-        BigDecimal totalExpenses = this.transactionRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.EXPENSE);
+        BigDecimal totalIncome = transactionReportRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.INCOME);
+        BigDecimal totalExpenses = transactionReportRepository.getSumByDateRange(userId, startOfMonth, endOfMonth, TransactionType.EXPENSE);
 
-        List<CategoryBreakdownDto> breakdown = this.transactionRepository.findCategoryTotals(userId, startOfMonth, endOfMonth);
+        List<CategoryBreakdownDto> breakdown = transactionReportRepository.findCategoryTotals(userId, startOfMonth, endOfMonth);
 
         return DashboardData.builder()
                 .totalIncome(totalIncome)
@@ -88,7 +88,7 @@ public class DashboardService {
      * @return the category breakdown for that range
      */
     public List<CategoryBreakdownDto> getCategoryBreakdown(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
-        return transactionRepository.findCategoryTotals(userId, startDate, endDate);
+        return transactionReportRepository.findCategoryTotals(userId, startDate, endDate);
     }
 
     /**
@@ -199,7 +199,7 @@ public class DashboardService {
      */
     public List<CashFlowTrendDto> getCashFlowTrend(Long userId) {
         LocalDate startDate = LocalDate.now().minusMonths(11).withDayOfMonth(1); // last 12 months
-        List<Object[]> results = transactionRepository.findMonthlySums(userId, startDate);
+        List<Object[]> results = transactionReportRepository.findMonthlySums(userId, startDate);
 
         Map<String, CashFlowTrendDto> trendMap = results.stream().collect(Collectors.toMap(
                 row -> ((Number) row[0]).intValue() + "-" + ((Number) row[1]).intValue(), // key: "2025-11"
@@ -301,9 +301,9 @@ public class DashboardService {
         // documented and rendered as an item count), not the dollar total; that mistake used to
         // put a truncated dollar sum into this field, e.g. "425239 unresolved items" for a real
         // $425,239.61 total against 2,935 actual uncategorized transactions -- see PF-825.
-        BigDecimal uncategorizedSum = transactionRepository.getUncategorizedExpenseTotals(userId);
+        BigDecimal uncategorizedSum = transactionReportRepository.getUncategorizedExpenseTotals(userId);
         if (uncategorizedSum != null && uncategorizedSum.compareTo(BigDecimal.ZERO) > 0) {
-            long uncategorizedCount = transactionRepository.getUncategorizedExpenseCount(userId);
+            long uncategorizedCount = transactionReportRepository.getUncategorizedExpenseCount(userId);
             actions.add(new ActionItemDto(
                     ActionItemDto.ActionType.UNCATEGORIZED,
                     uncategorizedCount,
@@ -350,7 +350,7 @@ public class DashboardService {
      * @return the sum, or zero if there were no matching transactions
      */
     private BigDecimal getSum(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
-        BigDecimal sum = transactionRepository.getSumByDateRange(userId, start, end, type);
+        BigDecimal sum = transactionReportRepository.getSumByDateRange(userId, start, end, type);
         return sum != null ? sum : BigDecimal.ZERO;
     }
 

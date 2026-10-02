@@ -5,9 +5,6 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
-import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
-import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
-import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
@@ -16,10 +13,7 @@ import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.category.mapper.CategoryRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
 import com.mayureshpatel.pfdataservice.repository.tag.mapper.TagRowMapper;
-import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
-import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryTransactionsRowMapper;
-import com.mayureshpatel.pfdataservice.repository.transaction.mapper.MonthlyReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.TransactionDetailRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
 import com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification;
@@ -44,12 +38,14 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * JDBC-backed persistence for {@link Transaction} -- this codebase's largest and most heavily
- * used repository, backing everything from basic CRUD and CSV-import batch inserts to the
- * dashboard pulse widget and every Reports tab's server-side aggregation. Tags are fetched and
- * attached separately in Java rather than joined (see {@link #findTagsByTransactionIds}), and
- * every method taking a {@link LocalDate} converts it to an explicit UTC
- * {@link OffsetDateTime} before it reaches SQL -- see the {@link #UTC_ZONE} field comment for why.
+ * JDBC-backed persistence for {@link Transaction} -- CRUD, CSV-import batch inserts, pagination/
+ * filtering, and the handful of aggregate lookups too small to warrant their own repository.
+ * Dashboard/Reports' own larger aggregation queries live in
+ * {@link TransactionReportRepository} instead (PF-809: split out once this class's CBO grew past
+ * PMD's threshold). Tags are fetched and attached separately in Java rather than joined (see
+ * {@link #findTagsByTransactionIds}), and every method taking a {@link LocalDate} converts it to
+ * an explicit UTC {@link OffsetDateTime} before it reaches SQL -- see the {@link #UTC_ZONE} field
+ * comment for why.
  */
 @Repository("jdbcTransactionRepository")
 @RequiredArgsConstructor
@@ -71,12 +67,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
 
     private final JdbcClient jdbcClient;
     private final TransactionDetailRowMapper rowMapper;
-    private final CategoryBreakdownRowMapper categoryBreakdownRowMapper;
     private final CategoryTransactionsRowMapper categoryTransactionsDtoMapper;
     private final CategoryRowMapper categoryRowMapper;
     private final MerchantRowMapper merchantRowMapper;
-    private final CategoryReportDataRowMapper categoryReportDataRowMapper;
-    private final MonthlyReportDataRowMapper monthlyReportDataRowMapper;
 
     @Override
     public Optional<Transaction> findById(Long id) {
@@ -111,51 +104,6 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return jdbcClient.sql(TransactionQueries.FIND_BY_USER_ID)
                 .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
-                .list();
-    }
-
-    /**
-     * Dashboard-facing spend-by-category breakdown for the given range (expense transactions
-     * only, uncategorized included as its own bucket). See {@link #findCategoryReportData} for the
-     * Reports feature's richer equivalent, which deliberately excludes uncategorized instead.
-     *
-     * @param userId the owning user's id
-     * @param start  the inclusive range start
-     * @param end    the exclusive range end
-     * @return one row per category (including uncategorized) with any spend in the range, highest first
-     */
-    public List<CategoryBreakdownDto> findCategoryTotals(Long userId, OffsetDateTime start, OffsetDateTime end) {
-        return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_TOTALS)
-                .param(SqlParams.USER_ID, userId)
-                .param(PARAM_START_DATE, start)
-                .param(PARAM_END_DATE, end)
-                .query(categoryBreakdownRowMapper)
-                .list();
-    }
-
-    /**
-     * PF-823: Reports' Categories tab data for the given range, aggregated fully server-side --
-     * no row cap, unlike the client-side approach it replaces.
-     */
-    public List<CategoryReportDataDto> findCategoryReportData(Long userId, OffsetDateTime start, OffsetDateTime end) {
-        return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_REPORT_DATA)
-                .param(SqlParams.USER_ID, userId)
-                .param(PARAM_START_DATE, start)
-                .param(PARAM_END_DATE, end)
-                .query(categoryReportDataRowMapper)
-                .list();
-    }
-
-    /**
-     * PF-823: Reports' Cash Flow tab data for the given range, one row per month with income and
-     * expense already pivoted side by side.
-     */
-    public List<MonthlyReportDataDto> findMonthlyIncomeExpense(Long userId, OffsetDateTime start, OffsetDateTime end) {
-        return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_INCOME_EXPENSE)
-                .param(SqlParams.USER_ID, userId)
-                .param(PARAM_START_DATE, start)
-                .param(PARAM_END_DATE, end)
-                .query(monthlyReportDataRowMapper)
                 .list();
     }
 
@@ -408,53 +356,6 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     /**
-     * Dashboard pulse widget's trailing-months income/expense totals, one row per
-     * (year, month, type) rather than {@link #findMonthlyIncomeExpense}'s pre-pivoted shape --
-     * open-ended from {@code startDate} to now, not bounded by an explicit end like the Reports
-     * feature's equivalent.
-     *
-     * @param userId    the owning user's id
-     * @param startDate the inclusive start of the trailing window
-     * @return raw {@code [year, month, type, total]} rows; not mapped to a DTO since callers
-     *         reduce this further before it ever reaches the API boundary
-     */
-    public List<Object[]> findMonthlySums(Long userId, LocalDate startDate) {
-        return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_SUMS)
-                .param(SqlParams.USER_ID, userId)
-                .param(PARAM_START_DATE, startDate.atStartOfDay(UTC_ZONE).toOffsetDateTime())
-                .query((rs, rowNum) -> new Object[]{
-                        rs.getInt("year"),
-                        rs.getInt("month"),
-                        rs.getString(PARAM_TYPE),
-                        rs.getBigDecimal("total")
-                })
-                .list();
-    }
-
-    /**
-     * @param userId the owning user's id
-     * @return the total of all uncategorized expense transactions, or zero if there are none
-     */
-    public BigDecimal getUncategorizedExpenseTotals(Long userId) {
-        return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_TOTALS)
-                .param(SqlParams.USER_ID, userId)
-                .query(BigDecimal.class)
-                .optional()
-                .orElse(BigDecimal.ZERO);
-    }
-
-    /**
-     * @param userId the owning user's id
-     * @return the number of uncategorized expense transactions
-     */
-    public long getUncategorizedExpenseCount(Long userId) {
-        return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_COUNT)
-                .param(SqlParams.USER_ID, userId)
-                .query(Long.class)
-                .single();
-    }
-
-    /**
      * @param userId    the owning user's id
      * @param startDate the inclusive start of the window
      * @return fully hydrated transactions since {@code startDate}, excluding all three transfer
@@ -569,22 +470,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .query(Long.class)
                 .single();
 
-        String sortClause = " order by transactions.date desc";
-        if (pageable.getSort().isSorted()) {
-            Sort.Order order = pageable.getSort().iterator().next();
-            String col = switch (order.getProperty()) {
-                case "date" -> "transactions.date";
-                case "description" -> "transactions.description";
-                case "merchant.name" -> "merchants.name";
-                case "category.name" -> "categories.name";
-                case "amount" -> "transactions.amount";
-                case "type" -> "transactions.type";
-                case "account.name" -> "accounts.name";
-                default -> "transactions.date";
-            };
-            String direction = order.getDirection().isAscending() ? "asc" : "desc";
-            sortClause = " order by " + col + " " + direction;
-        }
+        String sortClause = resolveSortClause(pageable);
 
         String pageSql = "select " + TransactionQueries.ENRICHED_COLUMNS + " " + baseFrom + sortClause +
                 " limit :limit offset :offset";
@@ -598,17 +484,55 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .query(rowMapper)
                 .list();
 
-        Map<Long, List<Tag>> tagsByTransactionId = findTagsByTransactionIds(
-                content.stream().map(Transaction::getId).toList());
+        return new PageImpl<>(attachTags(content), pageable, total);
+    }
+
+    /**
+     * Resolves the requested sort into a real SQL {@code order by} clause, falling back to
+     * most-recent-first when nothing's requested (PF-809: extracted from {@link #findAll}).
+     */
+    private String resolveSortClause(Pageable pageable) {
+        if (!pageable.getSort().isSorted()) {
+            return " order by transactions.date desc";
+        }
+
+        Sort.Order order = pageable.getSort().iterator().next();
+        String col = resolveSortColumn(order.getProperty());
+        String direction = order.getDirection().isAscending() ? "asc" : "desc";
+        return " order by " + col + " " + direction;
+    }
+
+    /**
+     * Maps a page-request's public sort property name to its real, qualified SQL column
+     * (PF-809: extracted from {@link #resolveSortClause}).
+     */
+    private String resolveSortColumn(String property) {
+        return switch (property) {
+            case "date" -> "transactions.date";
+            case "description" -> "transactions.description";
+            case "merchant.name" -> "merchants.name";
+            case "category.name" -> "categories.name";
+            case "amount" -> "transactions.amount";
+            case "type" -> "transactions.type";
+            case "account.name" -> "accounts.name";
+            default -> "transactions.date";
+        };
+    }
+
+    /**
+     * Attaches each transaction's tags, fetched in one batched query rather than one per row
+     * (PF-809: extracted from {@link #findAll}; see {@link #findTagsByTransactionIds}).
+     */
+    private List<Transaction> attachTags(List<Transaction> content) {
+        List<Long> transactionIds = content.stream().map(Transaction::getId).toList();
+        Map<Long, List<Tag>> tagsByTransactionId = findTagsByTransactionIds(transactionIds);
         // plain loop, not stream().map() -- Transaction's @SuperBuilder toBuilder() return type
         // doesn't unify cleanly through a method-reference/lambda type witness in a stream here
         List<Transaction> withTags = new java.util.ArrayList<>(content.size());
         for (Transaction t : content) {
             withTags.add(t.toBuilder().tags(tagsByTransactionId.getOrDefault(t.getId(), List.of())).build());
         }
-        content = withTags;
-
-        return new PageImpl<>(content, pageable, total);
+        return withTags;
     }
 
     /**
@@ -625,24 +549,5 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list()
                 .stream()
                 .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
-    }
-
-    /**
-     * @param userId the owning user's id
-     * @param start  the inclusive range start
-     * @param end    the inclusive range end
-     * @param type   the transaction type to sum (e.g. only {@code EXPENSE})
-     * @return the total for transactions of this type in the range, or zero if there are none
-     */
-    public BigDecimal getSumByDateRange(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
-        return jdbcClient.sql(TransactionQueries.GET_SUM_BY_DATE_RANGE)
-                .param(SqlParams.USER_ID, userId)
-                .param(PARAM_START_DATE, start)
-                .param(PARAM_END_DATE, end)
-                .param(PARAM_TYPE, type.name())
-                .query(BigDecimal.class)
-                .optional()
-                .orElse(BigDecimal.ZERO);
-
     }
 }

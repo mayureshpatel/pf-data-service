@@ -20,28 +20,39 @@ public final class CategoryDtoMapper {
      */
     public static CategoryDto toDto(Category category) {
         if (category == null) return null;
-        
-        CategoryDto parentDto = null;
-        if (category.getParentId() != null && category.getParentId() != 0) {
-            parentDto = CategoryDto.builder()
-                    .id(category.getParentId())
-                    .userId(category.getParent().getUserId() != null ? category.getParent().getUserId() : null)
-                    .name(category.getParent().getName())
-                    .type(category.getParent().getType() != null ? CategoryType.fromValue(category.getParent().getType()) : null)
-                    .parent(null)
-                    .icon(category.getParent().getIcon() != null ? category.getParent().getIcon() : null)
-                    .color(category.getParent().getColor() != null ? category.getParent().getColor() : null)
-                    .build();
-        }
+
+        boolean hasParent = category.getParentId() != null && category.getParentId() != 0;
+        CategoryDto parentDto = hasParent ? toParentDto(category) : null;
 
         return new CategoryDto(
                 category.getId(),
-                category.getUserId() != null ? category.getUserId() : null,
+                category.getUserId(),
                 category.getName(),
-                category.getType() != null ? CategoryType.fromValue(category.getType()) : null,
+                toType(category.getType()),
                 parentDto,
-                category.getIcon() != null ? category.getIcon() : null,
-                category.getColor() != null ? category.getColor() : null
+                category.getIcon(),
+                category.getColor()
         );
+    }
+
+    /**
+     * The parent category's own one-level-deep DTO (PF-809: extracted from
+     * {@link #toDto(Category)}), built directly from the parent's own fields rather than a
+     * recursive {@code toDto} call, since its own {@code parent} always stays {@code null}.
+     */
+    private static CategoryDto toParentDto(Category category) {
+        return CategoryDto.builder()
+                .id(category.getParentId())
+                .userId(category.getParent().getUserId())
+                .name(category.getParent().getName())
+                .type(toType(category.getParent().getType()))
+                .parent(null)
+                .icon(category.getParent().getIcon())
+                .color(category.getParent().getColor())
+                .build();
+    }
+
+    private static CategoryType toType(String type) {
+        return type != null ? CategoryType.fromValue(type) : null;
     }
 }
