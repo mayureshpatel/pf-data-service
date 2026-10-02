@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code ReportService}'s report-building methods, one {@code @Nested} class per method (or closely related group) below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ReportService Unit Tests")
 class ReportServiceTest {
@@ -50,6 +51,13 @@ class ReportServiceTest {
 
     private static final Long USER_ID = 1L;
 
+    /**
+     * {@code getNetWorthOverTime} sums every account's month-end balance (via {@link
+     * SnapshotService#calculateEndOfMonthBalance}, not a persisted snapshot) into one data point
+     * per calendar month in the range, including a zero-net-worth point for a user with no
+     * accounts, and excludes an account from any month-end that falls before the account's own
+     * creation date -- except the creation month-end itself, which is included.
+     */
     @Nested
     @DisplayName("getNetWorthOverTime")
     class GetNetWorthOverTimeTests {
@@ -153,6 +161,13 @@ class ReportServiceTest {
         }
     }
 
+    /**
+     * A PF-823 regression suite: all three report-data methods convert the caller's
+     * caller-inclusive {@code LocalDate} end bound into an exclusive UTC-midnight-of-the-next-day
+     * {@code OffsetDateTime} before querying, so that same-day activity on the end date itself
+     * isn't silently dropped by a half-open repository query -- and each method otherwise passes
+     * repository rows straight through unmodified.
+     */
     @Nested
     @DisplayName("getCategoryReportData / getMerchantReportData / getMonthlyReportData (PF-823)")
     class ReportDataDateBoundaryTests {

@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class DashboardControllerTest extends BaseControllerTest {
 
+    /** {@code GET /api/v1/dashboard/categories} accepts either a {@code month}/{@code year} pair or an explicit {@code startDate}/{@code endDate} range, and falls back to the current month/year whenever only one half of a date pair is supplied -- a partial range is treated the same as no range at all, not as an open-ended one. */
     @Nested
     @DisplayName("getCategoryBreakdown")
     class GetCategoryBreakdownTests {
@@ -99,6 +100,7 @@ class DashboardControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/dashboard/merchants} follows the same month/year-vs-date-range and partial-date-falls-back-to-current-month rules as {@link GetCategoryBreakdownTests}, including when no parameters are supplied at all. */
     @Nested
     @DisplayName("getMerchantBreakdown")
     class GetMerchantBreakdownTests {
@@ -186,6 +188,7 @@ class DashboardControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/dashboard/pulse} follows the same month/year-vs-date-range and partial-date-falls-back-to-current-month rules as {@link GetCategoryBreakdownTests}, including when no parameters are supplied at all. */
     @Nested
     @DisplayName("getPulse")
     class GetPulseTests {
@@ -273,6 +276,7 @@ class DashboardControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/dashboard/trend/cashflow} takes no parameters -- it always returns the fixed 12-month trailing trend. */
     @Nested
     @DisplayName("getCashFlowTrend")
     class GetCashFlowTrendTests {
@@ -291,6 +295,7 @@ class DashboardControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/dashboard/ytd} uses the given {@code year} param, or the current year when it's omitted. */
     @Nested
     @DisplayName("getYtdSummary")
     class GetYtdSummaryTests {
@@ -325,6 +330,7 @@ class DashboardControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/dashboard/actions} takes no parameters -- it always returns the current action items for the authenticated user. */
     @Nested
     @DisplayName("getActionItems")
     class GetActionItemsTests {
@@ -343,6 +349,7 @@ class DashboardControllerTest extends BaseControllerTest {
         }
     }
 
+    /** An unexpected exception from the dashboard service surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

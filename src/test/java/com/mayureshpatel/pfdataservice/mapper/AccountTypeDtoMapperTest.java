@@ -12,6 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code AccountTypeDtoMapper}'s single-object and list {@code toDto} overloads, plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("AccountTypeDtoMapper Unit Tests")
 class AccountTypeDtoMapperTest {
 
@@ -29,6 +30,7 @@ class AccountTypeDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** The single-object {@code toDto} returns null for a null source, maps every field when fully populated, and leaves {@code icon}/{@code color} null when the source leaves them null. */
     @Nested
     @DisplayName("Method: toDto(AccountType)")
     class ToDtoMappingTests {
@@ -95,6 +97,7 @@ class AccountTypeDtoMapperTest {
         }
     }
 
+    /** The list {@code toDto} overload maps every element, and returns an empty (not null) list for an empty source. */
     @Nested
     @DisplayName("Method: toDto(List<AccountType>)")
     class ToDtoListMappingTests {

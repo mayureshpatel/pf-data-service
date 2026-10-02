@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code BudgetRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the JDBC Client mapping and aggregation queries directly rather than mocking them. */
 @Import(BudgetRepository.class)
 @DisplayName("BudgetRepository Integration Tests (PostgreSQL)")
 class BudgetRepositoryTest extends BaseRepositoryTest {
@@ -30,6 +31,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
     private static final Long USER_1 = 1L;
     private static final Long CAT_RENT = 6L; // From baseline
 
+    /** {@code insert} returns the real database-generated id (checked against a fresh lookup, not just {@code update}'s rows-affected count), {@code update}/{@code delete} (soft) round-trip correctly, and both delete paths return 0 for a budget with no id or an id that doesn't exist rather than erroring. */
     @Nested
     @DisplayName("CRUD Operations")
     class CrudTests {
@@ -110,6 +112,16 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /**
+     * {@code findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc} returns genuinely
+     * year/month-descending-ordered results, both in its unpaginated {@link List} form and its
+     * paginated {@link Page} form -- the paged {@code Page}'s total element count matches the
+     * unpaginated list's own size, and a PF-320 fix: calling it with {@code Pageable.unpaged()}
+     * returns every row rather than throwing (unpaged's {@code getPageSize()}/{@code getOffset()}
+     * both throw {@link UnsupportedOperationException}, a bug first caught in this class's sibling,
+     * {@code MerchantRepositoryTest}). {@code countByCategoryIdAndDeletedAtIsNull} excludes
+     * soft-deleted rows from its count.
+     */
     @Nested
     @DisplayName("Query Operations")
     class QueryTests {
@@ -205,6 +217,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code findBudgetStatusByUserIdAndMonthAndYear} aggregates real spending from the baseline transaction fixture against each budgeted category's amount -- computing {@code remainingAmount} and {@code percentageUsed} correctly -- and includes a category with spending but no budget row at all, reporting a zero {@code budgetedAmount} for it rather than omitting it. */
     @Nested
     @DisplayName("Budget Status (Aggregation)")
     class StatusTests {

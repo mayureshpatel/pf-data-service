@@ -14,6 +14,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@link AccountTypeCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("AccountTypeCreateRequest Unit Tests")
 class AccountTypeCreateRequestTest {
 
@@ -42,6 +43,7 @@ class AccountTypeCreateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code code} must be non-null and no more than 20 characters. */
     @Nested
     @DisplayName("Field: code")
     class CodeValidationTests {
@@ -66,6 +68,7 @@ class AccountTypeCreateRequestTest {
         }
     }
 
+    /** {@code label} must be non-null and no more than 50 characters. */
     @Nested
     @DisplayName("Field: label")
     class LabelValidationTests {
@@ -90,6 +93,7 @@ class AccountTypeCreateRequestTest {
         }
     }
 
+    /** {@code icon} is optional but capped at 50 characters when present. */
     @Nested
     @DisplayName("Field: icon")
     class IconValidationTests {
@@ -104,6 +108,7 @@ class AccountTypeCreateRequestTest {
         }
     }
 
+    /** {@code color} is optional but capped at 20 characters when present. */
     @Nested
     @DisplayName("Field: color")
     class ColorValidationTests {
@@ -118,6 +123,7 @@ class AccountTypeCreateRequestTest {
         }
     }
 
+    /** {@code sortOrder} must be non-null and zero or positive. */
     @Nested
     @DisplayName("Field: sortOrder")
     class SortOrderValidationTests {

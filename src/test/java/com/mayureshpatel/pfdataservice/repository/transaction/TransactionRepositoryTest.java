@@ -30,6 +30,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code TransactionRepository} -- the largest and most heavily-queried repository in this codebase -- against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising dynamic filtering, aggregation, and batch writes directly rather than mocking them. */
 @Import(TransactionRepository.class)
 @DisplayName("TransactionRepository Integration Tests (PostgreSQL)")
 class TransactionRepositoryTest extends BaseRepositoryTest {
@@ -42,6 +43,31 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
     private static final Long USER_ID = 1L;
 
+    /**
+     * {@code findAll(TransactionSpecification, Pageable)} builds its {@code WHERE} clause
+     * dynamically from whichever {@link TransactionSpecification.TransactionFilter} fields are
+     * non-null: type, amount range, an inclusive start/end date range (confirmed to include
+     * activity later in the day on the end date itself, not just before midnight), and
+     * case-insensitive substring matches on category name, description, and merchant name. The
+     * literal string {@code "null"} is a special sentinel for the category filter meaning
+     * "uncategorized," and the {@code TRANSFER} pseudo-type expands into an {@code IN} clause
+     * matching both {@code TRANSFER_IN} and {@code TRANSFER_OUT} rows. A PF-308 case: filtering by
+     * tag id uses an {@code EXISTS} subquery rather than a {@code JOIN}, so a transaction carrying
+     * multiple tags isn't duplicated in the results, and every result's own {@code tags} list is
+     * populated -- empty, not null, when none are assigned. Soft-deleted transactions never appear,
+     * pagination caps page content at the requested size with stable, non-overlapping consecutive
+     * pages, and an attempted SQL-injection payload in the {@link Sort} property/direction is
+     * handled safely rather than crashing or executing. Beyond the dynamic specification, this
+     * class also covers several fixed-query finder methods: {@code findByUserId} (joins across all
+     * of a user's accounts, not just one), {@code findRecentNonTransferTransactions}, {@code
+     * findExpensesSince}, {@code findExistingForDuplicateCheck}, {@code findAllById} (user-scoped,
+     * empty-input-safe), and {@code getCategoriesWithTransactions}/{@code
+     * getMerchantsWithTransactions} (each excluding parent categories or merchant-less transactions
+     * respectively -- the merchants one is a confirmed regression test: the underlying query
+     * previously had no {@code merchants.id is not null} guard, so a user with any merchant-less
+     * transaction got a literal null element in the list, which {@code MerchantDtoMapper} would
+     * have passed straight through into the JSON response as a null array entry).
+     */
     @Nested
     @DisplayName("Dynamic Filtering (Specification)")
     class FilterTests {
@@ -509,6 +535,19 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /**
+     * {@code getSumByDateRange}/{@code findCategoryTotals}/{@code findMonthlySums}/{@code
+     * getUncategorizedExpenseTotals}/{@code getNetFlowAfterDate} each aggregate real baseline
+     * transaction amounts correctly over a date range or category. A PF-848 case: {@code
+     * findTransferInOnCreditCardAccounts} finds TRANSFER_IN rows only on credit-card accounts,
+     * never on a checking account carrying the same (mis-typed) value. A PF-828 regression case:
+     * {@code getSumByDateRange}'s end boundary doesn't round a sub-microsecond-precision instant up
+     * into the next day -- Postgres's {@code timestamptz} is only microsecond-resolution and
+     * *rounds* (not truncates) anything finer, so a naively-constructed 9-digit-nanosecond "end of
+     * Dec 31" boundary would silently become midnight Jan 1 and pull a next-year transaction into
+     * the prior year's sum; this test uses the maximum exact-microsecond value instead and confirms
+     * live via {@code psql} which literal actually round-trips unchanged.
+     */
     @Nested
     @DisplayName("Aggregations")
     class AggregationTests {
@@ -671,6 +710,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code getCountByCategory}/{@code countByAccountId}/{@code countByCategoryId} each count real baseline transactions correctly for the given category or account. */
     @Nested
     @DisplayName("Status & Counts")
     class StatusTests {
@@ -708,6 +748,22 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /**
+     * {@code findById(id, userId)}/{@code update}/{@code deleteById(id, userId)} are all
+     * ownership-scoped; the single-argument {@code findById(id)}/{@code deleteById(id)} overloads
+     * are deliberately unsupported, matching the insecure-overload convention established
+     * elsewhere. {@code updateAll}/{@code insertAll}/{@code deleteAll} operate on a batch in one
+     * call -- {@code insertAll} is confirmed to correctly chunk a batch past its internal 500-row
+     * limit (tested with 1,050 rows), and both {@code insertAll} and {@code deleteAll} handle an
+     * empty or null-id-containing input without failing. A fixed bug: the single-entity {@code
+     * insert(Transaction)} overload (distinct from {@code insert(TransactionCreateRequest)} --
+     * different parameter type, not an override of it) previously had no implementation of its own,
+     * so {@code TransactionService#createTransaction}'s call silently bound to {@code
+     * JdbcRepository}'s throwing default and failed every single-transaction create; it now
+     * persists a fully-resolved {@link Transaction} (account/category/merchant already set, as
+     * {@code TransactionService} builds it) and returns its real generated id, and tolerates a
+     * transaction with no category or merchant set without throwing.
+     */
     @Nested
     @DisplayName("Write Operations")
     class WriteTests {
@@ -876,6 +932,20 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /**
+     * A PF-823 fix: {@code findCategoryReportData} and {@code findMonthlyIncomeExpense} both
+     * aggregate every matching transaction, not just the newest (or, for the monthly case,
+     * oldest-dropping) 1000 -- proven the same way as {@code MerchantRepositoryTest}'s equivalent
+     * case, by bulk-seeding 1,500 real rows directly via one set-based SQL {@code INSERT} ({@link
+     * #seedBulkGroceryTransactions()}) and asserting the real count, dollar total, and that the
+     * oldest seeded month is present and correctly summed (the old bug sorted date descending and
+     * kept only the newest 1000, silently dropping the oldest ~500 days). {@code
+     * findCategoryReportData} also excludes uncategorized transactions entirely via its inner join
+     * to categories (matching the old client-side aggregation's equivalent filter), and {@code
+     * findMonthlyIncomeExpense} excludes transfer legs from both income and expense -- a month
+     * containing only a TRANSFER_OUT/TRANSFER_IN pair (the real "pay off the credit card from the
+     * bank account" pattern) produces no row at all, not a zero-valued one.
+     */
     @Nested
     @DisplayName("PF-823: Reports server-side aggregation (Categories, Cash Flow)")
     class ReportDataAggregation {

@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code TransactionPreviewDto}'s builder maps its arguments 1:1 -- this DTO represents an unsaved, parsed-but-not-yet-imported row, carrying a suggested category/merchant rather than a persisted one. */
 @DisplayName("TransactionPreviewDto Structure Tests")
 class TransactionPreviewDtoTest {
 

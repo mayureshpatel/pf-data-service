@@ -24,6 +24,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/** JDBC-backed persistence for {@link Budget}, including the budget-status aggregation query. */
 @Repository("jdbcBudgetRepository")
 @RequiredArgsConstructor
 public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDeleteSupport {
@@ -42,6 +43,10 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .optional();
     }
 
+    /**
+     * @param request the budget to create
+     * @return the generated budget id
+     */
     public int insert(BudgetCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(BudgetQueries.INSERT)
@@ -55,6 +60,10 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
         return keyHolder.getKey().intValue();
     }
 
+    /**
+     * @param request the amount to update, identified by {@code request.getId()}
+     * @return the number of rows updated (0 or 1)
+     */
     public int update(BudgetUpdateRequest request) {
         return jdbcClient.sql(BudgetQueries.UPDATE)
                 .param("amount", request.getAmount())
@@ -78,6 +87,12 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .update();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @param month  the budget month (1-12)
+     * @param year   the budget year
+     * @return every non-deleted budget the user has for that specific month/year
+     */
     public List<Budget> findByUserIdAndMonthAndYearAndDeletedAtIsNull(Long userId, Integer month, Integer year) {
         return jdbcClient.sql(BudgetQueries.FIND_BY_USER_ID_AND_MONTH_AND_YEAR)
                 .param("userId", userId)
@@ -87,6 +102,13 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .list();
     }
 
+    /**
+     * Unpaginated form of {@link #findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(Long, Pageable)}
+     * -- returns every one of the user's non-deleted budgets across all periods at once.
+     *
+     * @param userId the owning user's id
+     * @return every non-deleted budget the user has, most recent period first
+     */
     public List<Budget> findByUserIdAndDeletedAtIsNullOrderByYearDescMonthDesc(Long userId) {
         return jdbcClient.sql(BudgetQueries.FIND_BY_USER_ID_ORDER_BY_YEAR_DESC_MONTH_DESC)
                 .param("userId", userId)
@@ -122,6 +144,13 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
         return new PageImpl<>(content, pageable, total);
     }
 
+    /**
+     * @param userId     the owning user's id
+     * @param categoryId the budgeted category
+     * @param month      the budget month (1-12)
+     * @param year       the budget year
+     * @return the matching budget, if one exists (at most one, per the unique period/category pair)
+     */
     public Optional<Budget> findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(
             Long userId, Long categoryId, Integer month, Integer year) {
         return jdbcClient.sql(BudgetQueries.FIND_BY_USER_ID_AND_CATEGORY_ID_AND_MONTH_AND_YEAR)
@@ -133,6 +162,16 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .optional();
     }
 
+    /**
+     * Combines each budgeted category's target amount with its actual spending for the period --
+     * see {@link com.mayureshpatel.pfdataservice.repository.budget.query.BudgetQueries#FIND_BUDGET_STATUS_BY_USER_ID_AND_MONTH_AND_YEAR}
+     * for how unbudgeted-but-spent categories are folded in too.
+     *
+     * @param userId the owning user's id
+     * @param month  the reporting month (1-12)
+     * @param year   the reporting year
+     * @return one status row per category with either a budget or spending in the period
+     */
     public List<BudgetStatusDto> findBudgetStatusByUserIdAndMonthAndYear(Long userId, Integer month, Integer year) {
         // explicit UTC bounds for the spending CTE, rather than EXTRACT(YEAR/MONTH FROM t.date)
         // -- EXTRACT() on a timestamptz implicitly converts using the database session's
@@ -154,6 +193,10 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
                 .list();
     }
 
+    /**
+     * @param categoryId the category to check
+     * @return the number of non-deleted budgets (across all users/periods) referencing this category
+     */
     public long countByCategoryIdAndDeletedAtIsNull(Long categoryId) {
         return jdbcClient.sql(BudgetQueries.COUNT_BY_CATEGORY_ID)
                 .param("categoryId", categoryId)

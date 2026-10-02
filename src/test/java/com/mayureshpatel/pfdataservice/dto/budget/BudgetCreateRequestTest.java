@@ -15,6 +15,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@link BudgetCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("BudgetCreateRequest Unit Tests")
 class BudgetCreateRequestTest {
 
@@ -41,6 +42,7 @@ class BudgetCreateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code userId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: userId")
     class UserIdValidationTests {
@@ -65,6 +67,7 @@ class BudgetCreateRequestTest {
         }
     }
 
+    /** {@code categoryId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: categoryId")
     class CategoryIdValidationTests {
@@ -89,6 +92,7 @@ class BudgetCreateRequestTest {
         }
     }
 
+    /** {@code amount} must be non-null and within +/-9999999999.99. */
     @Nested
     @DisplayName("Field: amount")
     class AmountValidationTests {
@@ -123,6 +127,7 @@ class BudgetCreateRequestTest {
         }
     }
 
+    /** {@code month} must be non-null and between 1 and 12 -- zero fails two separate constraints ({@code @Positive} and a {@code @DecimalMin} of 1) at once. */
     @Nested
     @DisplayName("Field: month")
     class MonthValidationTests {
@@ -159,6 +164,7 @@ class BudgetCreateRequestTest {
         }
     }
 
+    /** {@code year} must be non-null and between 1900 and 9999. */
     @Nested
     @DisplayName("Field: year")
     class YearValidationTests {

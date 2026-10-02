@@ -42,6 +42,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * JDBC-backed persistence for {@link Transaction} -- this codebase's largest and most heavily
+ * used repository, backing everything from basic CRUD and CSV-import batch inserts to the
+ * dashboard pulse widget and every Reports tab's server-side aggregation. Tags are fetched and
+ * attached separately in Java rather than joined (see {@link #findTagsByTransactionIds}), and
+ * every method taking a {@link LocalDate} converts it to an explicit UTC
+ * {@link OffsetDateTime} before it reaches SQL -- see the {@link #UTC_ZONE} field comment for why.
+ */
 @Repository("jdbcTransactionRepository")
 @RequiredArgsConstructor
 public class TransactionRepository implements JdbcRepository<Transaction, Long>, SoftDeleteSupport {
@@ -82,6 +90,14 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * Every non-deleted transaction for a user, fully hydrated (account, category, merchant), most
+     * recent first. Unlike {@link #findAll(TransactionSpecification.FilterResult, Pageable)}, this
+     * has no filtering or pagination -- used where the full set is genuinely needed.
+     *
+     * @param userId the owning user's id
+     * @return every non-deleted transaction the user has
+     */
     public List<Transaction> findByUserId(Long userId) {
         return jdbcClient.sql(TransactionQueries.FIND_BY_USER_ID)
                 .param("userId", userId)
@@ -89,6 +105,16 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * Dashboard-facing spend-by-category breakdown for the given range (expense transactions
+     * only, uncategorized included as its own bucket). See {@link #findCategoryReportData} for the
+     * Reports feature's richer equivalent, which deliberately excludes uncategorized instead.
+     *
+     * @param userId the owning user's id
+     * @param start  the inclusive range start
+     * @param end    the exclusive range end
+     * @return one row per category (including uncategorized) with any spend in the range, highest first
+     */
     public List<CategoryBreakdownDto> findCategoryTotals(Long userId, OffsetDateTime start, OffsetDateTime end) {
         return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_TOTALS)
                 .param("userId", userId)
@@ -124,6 +150,16 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * Fetches an account's transactions in a date window for CSV-import duplicate detection --
+     * candidates are compared against incoming rows in Java, not matched via SQL, so this simply
+     * narrows the candidate set to a plausible range rather than doing exact matching itself.
+     *
+     * @param accountId the account being imported into
+     * @param startDate the inclusive window start
+     * @param endDate   the inclusive window end
+     * @return every transaction on the account within the window
+     */
     public List<Transaction> findExistingForDuplicateCheck(Long accountId, OffsetDateTime startDate, OffsetDateTime endDate) {
         return jdbcClient.sql(TransactionQueries.FIND_EXISTING_FOR_DUPLICATE_CHECK)
                 .param("accountId", accountId)
@@ -133,6 +169,15 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * Inserts a single transaction from its raw create-request shape -- as opposed to
+     * {@link #insert(Transaction)}, an unrelated overload (not an override of this one) for
+     * inserting an already-resolved domain object. See that method's own doc for why the two
+     * exist separately.
+     *
+     * @param request the transaction to create
+     * @return the generated transaction id
+     */
     public int insert(TransactionCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
@@ -179,6 +224,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return keyHolder.getKey().intValue();
     }
 
+    /**
+     * Updates a transaction's editable fields, ownership-scoped via {@code userId}.
+     *
+     * @param userId      the requesting user's id
+     * @param transaction the transaction's new field values, identified by {@code transaction.getId()}
+     * @return the number of rows updated (0 or 1)
+     */
     public int update(Long userId, Transaction transaction) {
         return jdbcClient.sql(TransactionQueries.UPDATE)
                 .param("id", transaction.getId())
@@ -194,6 +246,14 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .update();
     }
 
+    /**
+     * Bulk-inserts transactions (e.g. a CSV import batch) in chunks of 500 rows per statement via
+     * {@link #insertChunk} -- one multi-row {@code INSERT} per chunk rather than one round-trip per
+     * transaction, since CSV imports can easily be thousands of rows.
+     *
+     * @param requestList the transactions to create; {@code null} or empty is a no-op
+     * @return the total number of rows inserted across all chunks
+     */
     public Integer insertAll(List<TransactionCreateRequest> requestList) {
         if (requestList == null || requestList.isEmpty()) {
             return 0;
@@ -245,6 +305,15 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .update();
     }
 
+    /**
+     * Bulk form of {@link #update(Long, Transaction)} -- unlike {@link #insertAll}, this is a
+     * plain per-row loop, not a batched multi-row statement (an {@code UPDATE} can't be
+     * multi-valued the way an {@code INSERT} can).
+     *
+     * @param userId      the requesting user's id
+     * @param requestList the transactions to update, each identified by its own id
+     * @return the total number of rows updated
+     */
     public Integer updateAll(Long userId, List<Transaction> requestList) {
         return requestList.stream()
                 .map(t -> this.update(userId, t))
@@ -271,6 +340,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .single();
     }
 
+    /**
+     * @param accountId the account to check
+     * @return the number of non-deleted transactions on this account
+     */
     public long countByAccountId(Long accountId) {
         return jdbcClient.sql(TransactionQueries.COUNT_BY_ACCOUNT_ID)
                 .param("accountId", accountId)
@@ -278,6 +351,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .single();
     }
 
+    /**
+     * @param categoryId the category to check
+     * @return the number of non-deleted transactions (across all users) assigned this category
+     */
     public long countByCategoryId(Long categoryId) {
         return jdbcClient.sql(TransactionQueries.COUNT_BY_CATEGORY_ID)
                 .param("categoryId", categoryId)
@@ -285,6 +362,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .single();
     }
 
+    /**
+     * Per-category transaction counts for a user (including each category's parent, for display
+     * grouping) -- backs the Categories feature's per-category usage indicator.
+     *
+     * @param userId the owning user's id
+     * @return one row per category the user has transactions in, most-used first
+     */
     public List<CategoryTransactionsDto> getCountByCategory(Long userId) {
         return jdbcClient.sql(TransactionQueries.COUNT_BY_CATEGORY)
                 .param("userId", userId)
@@ -292,6 +376,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return every subcategory the user has at least one transaction assigned to, alphabetical
+     */
     public List<Category> getCategoriesWithTransactions(Long userId) {
         return jdbcClient.sql(TransactionQueries.CATEGORIES_WITH_TRANSACTIONS)
                 .param("userId", userId)
@@ -299,6 +387,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return every merchant the user has at least one transaction assigned to, alphabetical
+     */
     public List<Merchant> getMerchantsWithTransactions(Long userId) {
         return jdbcClient.sql(TransactionQueries.MERCHANTS_WITH_TRANSACTIONS)
                 .param("userId", userId)
@@ -306,6 +398,17 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * Dashboard pulse widget's trailing-months income/expense totals, one row per
+     * (year, month, type) rather than {@link #findMonthlyIncomeExpense}'s pre-pivoted shape --
+     * open-ended from {@code startDate} to now, not bounded by an explicit end like the Reports
+     * feature's equivalent.
+     *
+     * @param userId    the owning user's id
+     * @param startDate the inclusive start of the trailing window
+     * @return raw {@code [year, month, type, total]} rows; not mapped to a DTO since callers
+     *         reduce this further before it ever reaches the API boundary
+     */
     public List<Object[]> findMonthlySums(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_SUMS)
                 .param("userId", userId)
@@ -319,6 +422,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return the total of all uncategorized expense transactions, or zero if there are none
+     */
     public BigDecimal getUncategorizedExpenseTotals(Long userId) {
         return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_TOTALS)
                 .param("userId", userId)
@@ -327,6 +434,10 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .orElse(BigDecimal.ZERO);
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return the number of uncategorized expense transactions
+     */
     public long getUncategorizedExpenseCount(Long userId) {
         return jdbcClient.sql(TransactionQueries.GET_UNCATEGORIZED_EXPENSE_COUNT)
                 .param("userId", userId)
@@ -334,6 +445,12 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .single();
     }
 
+    /**
+     * @param userId    the owning user's id
+     * @param startDate the inclusive start of the window
+     * @return fully hydrated transactions since {@code startDate}, excluding all three transfer
+     *         types, most recent first
+     */
     public List<Transaction> findRecentNonTransferTransactions(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_RECENT_NON_TRANSFER)
                 .param("userId", userId)
@@ -342,6 +459,15 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * PF-848: every {@code TRANSFER_IN} transaction on one of the user's credit-card accounts --
+     * the exact set the old mis-typing heuristic (fixed by PF-829) could have produced, used to
+     * find backfill candidates. Never matches a genuine {@code markAsTransfer()}-confirmed
+     * transfer on a non-credit-card account.
+     *
+     * @param userId the owning user's id
+     * @return the user's {@code TRANSFER_IN} transactions on credit-card accounts
+     */
     public List<Transaction> findTransferInOnCreditCardAccounts(Long userId) {
         return jdbcClient.sql(TransactionQueries.FIND_TRANSFER_IN_ON_CREDIT_CARD_ACCOUNTS)
                 .param("userId", userId)
@@ -349,6 +475,14 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * Batch, ownership-scoped, fully hydrated lookup by id.
+     *
+     * @param userId the requesting user's id
+     * @param ids    the transaction ids to fetch; {@code null} or empty returns an empty list
+     * @return the matching transactions owned by {@code userId} (silently skips any id that
+     *         doesn't exist or isn't owned by the user)
+     */
     public List<Transaction> findAllById(Long userId, List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS_WITH_DETAILS)
@@ -358,12 +492,31 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * Plain per-row loop over {@link #deleteById(Long, Long)} -- transactions with a {@code null}
+     * id (not yet persisted) are silently skipped rather than erroring.
+     *
+     * @param userId       the requesting user's id
+     * @param transactions the transactions to delete
+     */
     public void deleteAll(Long userId, List<Transaction> transactions) {
         transactions.forEach(t -> {
             if (t.getId() != null) deleteById(t.getId(), userId);
         });
     }
 
+    /**
+     * Net effect on an account's balance from every non-deleted transaction strictly after
+     * {@code date}, computed directly in SQL. Note this trusts each transaction's raw stored
+     * {@code amount} sign for income/expense (adds income, subtracts expense) rather than forcing
+     * it via {@code abs()} the way {@link Transaction#getNetChange()} does in Java -- the two are
+     * only guaranteed to agree if amounts are always stored consistent with their type, which
+     * nothing at the persistence layer currently enforces.
+     *
+     * @param accountId the account to sum
+     * @param date      the exclusive lower bound
+     * @return the net flow since {@code date}, or zero if there are no matching transactions
+     */
     public BigDecimal getNetFlowAfterDate(Long accountId, LocalDate date) {
         return jdbcClient.sql(TransactionQueries.GET_NET_FLOW_AFTER_DATE)
                 .param("accountId", accountId)
@@ -373,6 +526,11 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .orElse(BigDecimal.ZERO);
     }
 
+    /**
+     * @param userId    the owning user's id
+     * @param startDate the inclusive start of the window
+     * @return fully hydrated expense transactions since {@code startDate}, most recent first
+     */
     public List<Transaction> findExpensesSince(Long userId, LocalDate startDate) {
         return jdbcClient.sql(TransactionQueries.FIND_EXPENSES_SINCE)
                 .param("userId", userId)
@@ -381,6 +539,17 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list();
     }
 
+    /**
+     * The main transaction-list query: filtered (via {@code filter}, built by
+     * {@link TransactionSpecification}), sorted (whitelisted column mapping below -- an
+     * unrecognized {@code pageable} sort property silently falls back to date-descending rather
+     * than erroring), and paginated. Tags are fetched separately per page and attached afterward
+     * (see {@link #findTagsByTransactionIds}), not joined into the main query.
+     *
+     * @param filter   the WHERE clause and bind parameters to apply
+     * @param pageable the requested page, size, and sort
+     * @return the requested page of matching transactions, each with its tags attached
+     */
     public Page<Transaction> findAll(TransactionSpecification.FilterResult filter, Pageable pageable) {
         String baseFrom = "from transactions " +
                 TransactionQueries.ENRICHED_JOINS + " " +
@@ -449,6 +618,13 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
     }
 
+    /**
+     * @param userId the owning user's id
+     * @param start  the inclusive range start
+     * @param end    the inclusive range end
+     * @param type   the transaction type to sum (e.g. only {@code EXPENSE})
+     * @return the total for transactions of this type in the range, or zero if there are none
+     */
     public BigDecimal getSumByDateRange(Long userId, OffsetDateTime start, OffsetDateTime end, TransactionType type) {
         return jdbcClient.sql(TransactionQueries.GET_SUM_BY_DATE_RANGE)
                 .param("userId", userId)

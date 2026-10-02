@@ -69,6 +69,7 @@ class RequestLoggingFilterTest {
         MDC.clear();
     }
 
+    /** The log level follows the response status: INFO below 400, WARN for a 4xx, ERROR for a 5xx. */
     @Nested
     @DisplayName("logging level by response status")
     class LogLevelTests {
@@ -121,6 +122,7 @@ class RequestLoggingFilterTest {
         }
     }
 
+    /** The log message includes the real authenticated username when one is present in the security context, and the literal string {@code "anonymous"} otherwise. */
     @Nested
     @DisplayName("authenticated user id in the log message")
     class UserIdTests {
@@ -158,6 +160,7 @@ class RequestLoggingFilterTest {
         }
     }
 
+    /** The {@code correlationId} MDC key is set for the duration of the downstream chain call (verified from inside a stubbed chain invocation) and removed afterward -- even when the chain itself throws -- so it never leaks into logging for a later, unrelated request. */
     @Nested
     @DisplayName("correlation id MDC handling")
     class CorrelationIdTests {

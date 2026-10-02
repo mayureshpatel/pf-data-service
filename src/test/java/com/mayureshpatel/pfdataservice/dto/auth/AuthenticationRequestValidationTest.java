@@ -12,6 +12,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Verifies {@link AuthenticationRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("AuthenticationRequest validation tests")
 class AuthenticationRequestValidationTest {
 
@@ -35,6 +36,7 @@ class AuthenticationRequestValidationTest {
         assertThat(violations).isEmpty();
     }
 
+    /** {@code username} must be non-blank and no more than 50 characters. */
     @Nested
     @DisplayName("Field: username")
     class UsernameValidationTests {
@@ -81,6 +83,7 @@ class AuthenticationRequestValidationTest {
         }
     }
 
+    /** {@code password} must be non-blank. */
     @Nested
     @DisplayName("Field: password")
     class PasswordValidationTests {

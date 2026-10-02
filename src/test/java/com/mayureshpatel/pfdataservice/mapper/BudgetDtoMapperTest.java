@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code BudgetDtoMapper}'s static {@code toDto} mapping (in {@link ToDtoMappingTests}), plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("BudgetDtoMapper Unit Tests")
 class BudgetDtoMapperTest {
 
@@ -29,6 +30,7 @@ class BudgetDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** {@code toDto} returns null for a null source, maps every field (nesting the category into its own sub-DTO) when fully populated, and leaves {@code userId}/{@code category} null without throwing when the source leaves them null. */
     @Nested
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {

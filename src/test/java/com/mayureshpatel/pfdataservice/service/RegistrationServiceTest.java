@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code RegistrationService}'s single {@code register} method in {@link RegisterTests}. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RegistrationService Unit Tests")
 class RegistrationServiceTest {
@@ -37,6 +38,12 @@ class RegistrationServiceTest {
     private static final String ENCODED_PASSWORD = "encoded-password";
     private static final String TOKEN = "jwt-token";
 
+    /**
+     * {@code register} rejects an already-taken username or email before ever encoding the
+     * password or inserting the user, and silently rejects the request outright (throwing
+     * {@link IllegalArgumentException}, checking nothing else first) when the anti-bot honeypot
+     * field is non-blank -- a blank honeypot is the normal case and registers as usual.
+     */
     @Nested
     @DisplayName("register")
     class RegisterTests {

@@ -2,6 +2,14 @@ package com.mayureshpatel.pfdataservice.repository.transaction.query;
 
 import lombok.NoArgsConstructor;
 
+/**
+ * SQL query constants for {@code TransactionRepository} -- by far this codebase's largest query
+ * class, backing everything from basic CRUD to the dashboard pulse widget and the Reports feature's
+ * category/cash-flow breakdowns. {@link #ENRICHED_COLUMNS}/{@link #ENRICHED_JOINS} are shared
+ * building blocks composed into most of the {@code FIND_*} queries below that need a fully
+ * hydrated transaction (account, category, merchant all joined in), rather than every such query
+ * repeating the same column list and joins independently.
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class TransactionQueries {
 

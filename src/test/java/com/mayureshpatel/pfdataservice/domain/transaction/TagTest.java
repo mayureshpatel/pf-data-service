@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link Tag}'s Lombok-generated builder, {@code toBuilder}, and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("Tag Domain Object Tests")
 class TagTest {
 

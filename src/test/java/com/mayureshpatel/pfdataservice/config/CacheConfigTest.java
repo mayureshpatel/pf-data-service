@@ -67,6 +67,7 @@ class CacheConfigTest {
         }
     }
 
+    /** Repeated {@code getAllActiveCurrencies} calls are served from the cache after the first one -- the repository is invoked exactly once across three calls. */
     @Nested
     @DisplayName("currencies cache")
     class CurrenciesCacheTests {
@@ -89,6 +90,7 @@ class CacheConfigTest {
         }
     }
 
+    /** A PF-322 addition: repeated {@code getAllActiveAccountTypes} calls are served from the cache after the first, and both {@code create} and {@code delete} evict it -- confirmed by re-stubbing the repository to reflect the new state and asserting the very next list call reflects it immediately, rather than serving a stale pre-write cached entry. */
     @Nested
     @DisplayName("account types cache (PF-322)")
     class AccountTypesCacheTests {

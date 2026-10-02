@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code TagService}'s CRUD and its transaction-assignment methods, one {@code @Nested} class per method below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TagService Unit Tests")
 class TagServiceTest {
@@ -44,6 +45,7 @@ class TagServiceTest {
     private static final Long TAG_ID = 100L;
     private static final Long TRANSACTION_ID = 200L;
 
+    /** {@code getTags} maps every repository row for the user to a {@link TagDto}. */
     @Nested
     @DisplayName("getTags")
     class GetTagsTests {
@@ -63,6 +65,7 @@ class TagServiceTest {
         }
     }
 
+    /** {@code createTag} requires the user to exist ({@link ResourceNotFoundException}) before passing the request's fields through to the inserted tag. */
     @Nested
     @DisplayName("createTag")
     class CreateTagTests {
@@ -101,6 +104,7 @@ class TagServiceTest {
         }
     }
 
+    /** {@code updateTag} requires the tag to exist ({@link ResourceNotFoundException}) and be owned by the caller ({@link AccessDeniedException}) before delegating to the repository. */
     @Nested
     @DisplayName("updateTag")
     class UpdateTagTests {
@@ -146,6 +150,7 @@ class TagServiceTest {
         }
     }
 
+    /** {@code deleteTag} requires the tag to exist ({@link ResourceNotFoundException}) and be owned by the caller ({@link AccessDeniedException}) before delegating to the repository. */
     @Nested
     @DisplayName("deleteTag")
     class DeleteTagTests {
@@ -179,6 +184,7 @@ class TagServiceTest {
         }
     }
 
+    /** {@code assignToTransaction} requires both the tag and the transaction to be owned by the caller (each independently checked via their own user-scoped {@code findById} overload) before inserting the join row, throwing {@link ResourceNotFoundException} for whichever one fails ownership. */
     @Nested
     @DisplayName("assignToTransaction")
     class AssignToTransactionTests {
@@ -225,6 +231,7 @@ class TagServiceTest {
         }
     }
 
+    /** {@code removeFromTransaction} enforces the same dual ownership check as {@link AssignToTransactionTests} before deleting the join row. */
     @Nested
     @DisplayName("removeFromTransaction")
     class RemoveFromTransactionTests {

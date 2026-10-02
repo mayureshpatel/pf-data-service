@@ -6,6 +6,12 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * A user-defined label attachable to transactions (many-to-many), orthogonal to
+ * {@link com.mayureshpatel.pfdataservice.domain.category.Category} -- a transaction has exactly
+ * one category but any number of tags, for cross-cutting groupings a single category hierarchy
+ * can't express (e.g. "Tax Deductible", "Vacation 2026").
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

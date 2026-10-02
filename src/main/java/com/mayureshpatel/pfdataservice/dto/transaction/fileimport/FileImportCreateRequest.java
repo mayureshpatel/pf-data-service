@@ -6,6 +6,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * A request shape for recording a file-import history entry directly from upload-time fields.
+ * Currently unused: {@code FileImportHistoryRepository.insert(FileImportCreateRequest)}, the only
+ * method that accepts this DTO, has no callers -- the real CSV-import flow goes through
+ * {@code FileImportHistoryRepository.save(FileImportHistory)} instead, populated with the actual
+ * post-parse {@code transactionCount} rather than this DTO's hardcoded {@code 0}.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

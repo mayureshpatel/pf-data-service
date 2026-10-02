@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/** The request payload for creating a new {@code Tag}. */
 @Getter
 @Builder(toBuilder = true)
 @ToString

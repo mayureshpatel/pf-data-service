@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code CategoryRuleService}'s CRUD and its two bulk-recategorization methods, one {@code @Nested} class per method below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CategoryRuleService Unit Tests")
 class CategoryRuleServiceTest {
@@ -53,6 +54,7 @@ class CategoryRuleServiceTest {
     private static final Long RULE_ID = 100L;
     private static final Long CATEGORY_ID = 50L;
 
+    /** {@code getRules} maps every repository row for the user to a {@link CategoryRuleDto}. */
     @Nested
     @DisplayName("getRules")
     class GetRulesTests {
@@ -72,6 +74,12 @@ class CategoryRuleServiceTest {
         }
     }
 
+    /**
+     * {@code createRule} requires the user and, scoped to that user, the category to exist first,
+     * then passes the request's fields through to the inserted rule -- defaulting a null
+     * {@code priority} to {@code 0} and a null {@code matchType} to {@code OR} (PF-315) -- and
+     * carries {@code minAmount}/{@code maxAmount} through unchanged when set (PF-314).
+     */
     @Nested
     @DisplayName("createRule")
     class CreateRuleTests {
@@ -223,6 +231,7 @@ class CategoryRuleServiceTest {
         }
     }
 
+    /** {@code updateRule} requires the rule to exist ({@link ResourceNotFoundException}), be owned by the caller ({@link AccessDeniedException}, checked via the rule's {@code getUser()} association rather than a flat user id field), and its new category to exist, before delegating to the repository. */
     @Nested
     @DisplayName("updateRule")
     class UpdateRuleTests {
@@ -291,6 +300,7 @@ class CategoryRuleServiceTest {
         }
     }
 
+    /** {@code deleteRule} requires the rule to exist ({@link ResourceNotFoundException}) and be owned by the caller ({@link AccessDeniedException}) before delegating to the repository. */
     @Nested
     @DisplayName("deleteRule")
     class DeleteRuleTests {
@@ -327,6 +337,18 @@ class CategoryRuleServiceTest {
         }
     }
 
+    /**
+     * {@code previewApply} runs {@code TransactionCategorizer} against every already-uncategorized
+     * transaction and reports what category each would be assigned, without persisting anything.
+     * Both the categorizer's documented-but-never-actually-observed null return and its real
+     * no-match sentinel ({@code -1L}) are guarded against directly by a {@code guessedCategory <=
+     * 0} check -- verified here with a deliberately engineered {@code -1L}-keyed category present
+     * in the id-to-category map (PF-204), proving the guard itself skips the sentinel rather than
+     * it merely happening to miss the map. A guessed id that doesn't correspond to any of the
+     * user's current categories (e.g. one deleted after its rule was created) is likewise skipped,
+     * and a duplicate category id appearing twice in the user's category list doesn't produce a
+     * duplicate preview.
+     */
     @Nested
     @DisplayName("previewApply")
     class PreviewApplyTests {
@@ -434,6 +456,7 @@ class CategoryRuleServiceTest {
         }
     }
 
+    /** {@code applyRules} performs the same categorization and guard logic as {@link PreviewApplyTests}, but actually persists the matched transactions via a single {@code updateAll} call and returns the number of transactions changed -- 0, with {@code updateAll} never invoked, when nothing matches. */
     @Nested
     @DisplayName("applyRules")
     class ApplyRulesTests {

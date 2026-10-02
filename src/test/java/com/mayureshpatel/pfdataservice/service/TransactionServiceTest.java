@@ -47,6 +47,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Verifies {@code TransactionService}'s CRUD, transfer-marking, bulk operations, and lookup
+ * methods, one {@code @Nested} class per method below. Every method that touches an account
+ * balance does so through {@code AccountBalanceUpdateService#applyWithRetry}, mocked here (via
+ * {@link #setUp()}) to simply apply its transform once rather than exercise the real retry loop --
+ * that retry behavior has its own dedicated {@code AccountBalanceUpdateServiceTest} -- so this
+ * class's own balance-correctness tests instead capture and apply the real {@link UnaryOperator}
+ * transform passed to {@code applyWithRetry} (a PF-858 pattern) to prove the transform itself
+ * computes the right new balance, not merely that the method was called with *some* transform.
+ */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TransactionService Unit Tests")
 class TransactionServiceTest {
@@ -94,6 +104,7 @@ class TransactionServiceTest {
         return Account.builder().id(ACCOUNT_ID).userId(uid).currentBalance(new BigDecimal("1000.00")).version(1L).build();
     }
 
+    /** {@code findPotentialTransfers} passes the user's recent non-transfer transactions straight through to {@code TransferMatcher#findMatches} and returns its suggestions unmodified. */
     @Nested
     @DisplayName("findPotentialTransfers")
     class FindPotentialTransfersTests {
@@ -113,6 +124,19 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * {@code markAsTransfer} reclassifies each given transaction's type -- INCOME to TRANSFER_IN,
+     * EXPENSE to TRANSFER_OUT -- in one batched {@code updateAll} call, re-deriving each affected
+     * account's balance along the way; ownership of every transaction (via its account) and
+     * existence of every referenced account (PF-818) are both checked before anything is written.
+     * The suite's last test uses the real, non-mocked {@code AccountBalanceUpdateService} (a PF-854
+     * acceptance case) to prove that a mid-batch optimistic-locking conflict-then-retry on one
+     * transaction's account doesn't disturb any other transaction processed in the same call --
+     * each loop iteration re-fetches its own account fresh and carries no state from prior
+     * iterations, so this holds by construction across all four of this service's similar
+     * multi-transaction loops (this method, {@code unmarkAsTransfer}, {@code
+     * backfillTransferTypes}, {@code deleteTransactions}), not merely by coincidence in this one.
+     */
     @Nested
     @DisplayName("markAsTransfer")
     class MarkAsTransferTests {
@@ -229,6 +253,14 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * A PF-831 addition: {@code unmarkAsTransfer} is {@code markAsTransfer}'s inverse, converting
+     * TRANSFER_IN back to INCOME and TRANSFER_OUT back to EXPENSE, with the same ownership/account-
+     * existence checks. A PF-858 balance-correctness case: since TRANSFER_IN and INCOME share the
+     * same {@code getNetChange()} sign, undoing the old type's effect and applying the new type's
+     * effect nets back to the exact same starting balance -- verified by capturing and applying the
+     * real transform, not just asserting it was called.
+     */
     @Nested
     @DisplayName("unmarkAsTransfer (PF-831)")
     class UnmarkAsTransferTests {
@@ -304,6 +336,15 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * A PF-848 addition: {@code backfillTransferTypes} finds every TRANSFER_IN row sitting on a
+     * credit-card account -- a shape that shouldn't exist, since a credit card's own parsers never
+     * produce TRANSFER_IN (see e.g. {@code CapitalOneCsvParserTest}'s PF-829 cases) -- and corrects
+     * each one to INCOME in one batched call, returning the corrected count; a user with nothing to
+     * fix gets 0 back and {@code updateAll} is never invoked. The same PF-858 undo-then-apply
+     * balance-correctness proof as {@link UnmarkAsTransferTests} applies here too, since this is
+     * the same TRANSFER_IN-to-INCOME reclassification.
+     */
     @Nested
     @DisplayName("backfillTransferTypes (PF-848)")
     class BackfillTransferTypesTests {
@@ -366,6 +407,7 @@ class TransactionServiceTest {
         }
     }
 
+    /** {@code getTransactions} maps a repository {@link Page} of domain transactions to a page of {@link TransactionDto}, accepting either a single {@link TransactionType} filter or a full {@code TransactionSpecification.TransactionFilter}. */
     @Nested
     @DisplayName("getTransactions")
     class GetTransactionsTests {
@@ -403,6 +445,14 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * {@code deleteTransactions} short-circuits without any repository call for a null or empty id
+     * list; otherwise it reverses each deleted transaction's effect on its own account's balance
+     * (PF-858-verified via the captured real transform, e.g. undoing a $10.00 INCOME on a
+     * $1000.00-balance account nets to $990.00) and requires every transaction to both belong to
+     * the caller ({@link AccessDeniedException} if any doesn't) and have an account that still
+     * exists ({@link ResourceNotFoundException}, PF-818) before anything is deleted.
+     */
     @Nested
     @DisplayName("deleteTransactions")
     class DeleteTransactionsTests {
@@ -487,6 +537,22 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * {@code createTransaction} requires the account to exist, and the given category (if any) to
+     * exist (PF-818); applies the new transaction's effect to the account balance (PF-858-verified
+     * via the captured real transform) and propagates, without inserting the transaction, if that
+     * balance update ultimately conflicts (PF-854 -- the retry mechanics themselves live in {@code
+     * AccountBalanceUpdateServiceTest}, this only confirms the dependency). An explicitly provided
+     * {@code merchantId} is always honored over auto-deriving one from the description (a fixed
+     * PF-395 bug that had made the frontend's merchant picker a no-op), and assigning one with a
+     * non-blank description also auto-records a description-to-merchant link (PF-845) -- skipped
+     * entirely when no merchant is assigned. When no category is given, it's guessed via {@code
+     * TransactionCategorizer}; a guessed id of {@code null} *or exactly {@code 0}* (PF-856: the
+     * categorizer's own documented contract names both as "no match" even though only {@code -1}
+     * is ever actually produced today) leaves the transaction uncategorized rather than erroring,
+     * and a real guessed id is matched against the user's categories by id, not just defaulted to
+     * the first one in the list.
+     */
     @Nested
     @DisplayName("createTransaction")
     class CreateTransactionTests {
@@ -776,6 +842,7 @@ class TransactionServiceTest {
         }
     }
 
+    /** A PF-818 addition: {@code updateTransactionsBulk} returns 0 without any repository call for a null or empty request list, and otherwise genuinely sums each individual update's own affected-row result -- verified with two independently-updated transactions, since a total of 2 is only reachable by real aggregation, not by e.g. returning the last result or the element count. */
     @Nested
     @DisplayName("updateTransactionsBulk (PF-818)")
     class UpdateTransactionsBulkTests {
@@ -814,6 +881,23 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * {@code updateTransaction} requires the transaction itself (PF-818) and, when the account is
+     * being changed, the target account (PF-194) to exist, and the target account to be owned by
+     * the caller -- each throwing {@link ResourceNotFoundException} or {@link
+     * AccessDeniedException} as appropriate before any write. When the account doesn't change, one
+     * {@code applyWithRetry} call undoes the old values' effect and applies the new ones' on that
+     * same account (PF-858-verified: undoing a $1.00 EXPENSE then applying a $10.00 INCOME nets
+     * $1000.00 to $1011.00, not just confirmed as "some transform" -- distinct from the
+     * cross-account case below). When the account *does* change (PF-194), two separate {@code
+     * applyWithRetry} calls run in old-account-then-new-account order, each captured and verified
+     * independently: the old account loses the transaction's effect (undoing a $10.00 EXPENSE
+     * raises it from $1000.00 to $1010.00) and the new account gains it (applying that same
+     * EXPENSE lowers it from $500.00 to $490.00). An explicit {@code merchantId} is always honored
+     * over auto-deriving one (PF-395, confirmed live via the bulk-edit dialog's Reassign Merchant
+     * field previously being a no-op) and also records a description link, same as {@link
+     * CreateTransactionTests}.
+     */
     @Nested
     @DisplayName("updateTransaction")
     class UpdateTransactionTests {
@@ -1009,6 +1093,14 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * The single-transaction {@code deleteTransaction} reverses that one transaction's effect on
+     * its account's balance (PF-858-verified via the captured real transform, same $1000.00-to-
+     * $990.00 shape as {@link DeleteTransactionsTests}'s bulk equivalent) and requires the
+     * transaction itself to exist first (PF-818) -- this method's only lookup guards the
+     * transaction, not a separate account lookup, unlike the framing in the ticket this suite
+     * traces back to.
+     */
     @Nested
     @DisplayName("deleteTransaction")
     class DeleteTransactionTests {
@@ -1066,6 +1158,14 @@ class TransactionServiceTest {
         }
     }
 
+    /**
+     * {@code getCountByCategory}, {@code getCategoriesWithTransactions}, and {@code
+     * getMerchantsWithTransactions} each map repository rows to their DTO shape; a PF-856 fix to
+     * these tests themselves asserts the real mapped content (ids, names, the actual {@code
+     * CategoryTransactionsDto} value), not merely that the repository method was invoked -- a prior
+     * version of this suite would have let a mutant that discarded the real result and returned an
+     * empty list pass undetected.
+     */
     @Nested
     @DisplayName("Lookup Methods")
     class LookupTests {

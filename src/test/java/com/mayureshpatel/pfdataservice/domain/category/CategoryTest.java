@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link Category}'s Lombok-generated builder and ID-based {@code equals}/{@code hashCode}, plus {@link Category#isSubCategory()} in {@link IsSubCategoryTests}. */
 @DisplayName("Category Domain Object Tests")
 class CategoryTest {
 
+    /** {@link Category#isSubCategory()} treats both a null and a zero {@code parentId} as "no parent," not just null. */
     @Nested
     @DisplayName("isSubCategory logic")
     class IsSubCategoryTests {

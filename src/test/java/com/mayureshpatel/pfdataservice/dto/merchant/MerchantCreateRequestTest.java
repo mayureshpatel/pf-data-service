@@ -13,6 +13,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link MerchantCreateRequest}'s jakarta bean-validation constraints, its builder/all-args/no-args construction paths, {@code toBuilder}, and {@code toString}. Post-PF-845, a merchant is identified purely by its own {@code name}/{@code city}/{@code state}/{@code postalCode}/{@code country} fields -- there's no clean-name/original-name split to validate here. */
 @DisplayName("MerchantCreateRequest Validation Tests")
 class MerchantCreateRequestTest {
 
@@ -52,6 +53,7 @@ class MerchantCreateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code userId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: userId")
     class UserIdValidationTests {
@@ -82,6 +84,7 @@ class MerchantCreateRequestTest {
         }
     }
 
+    /** {@code name} must be non-blank (a PF-845 regression case: unlike the pre-PF-845 shape, this codebase no longer derives a display name from an unstructured description, so a merchant is always deliberately named) and no more than 255 characters. */
     @Nested
     @DisplayName("Field: name")
     class NameValidationTests {
@@ -112,6 +115,7 @@ class MerchantCreateRequestTest {
         }
     }
 
+    /** {@code city} (<=120 characters) and {@code postalCode} (<=20 characters) are both optional but length-capped when present; {@code state}/{@code country} carry no length constraint of their own. */
     @Nested
     @DisplayName("Field: location")
     class LocationValidationTests {

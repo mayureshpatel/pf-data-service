@@ -14,6 +14,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code CategoryDto}'s record accessors map their constructor arguments 1:1, plus its own bean-validation annotations in {@link ValidationTests} -- unlike most DTOs in this codebase, this response record is itself validated, not just its request-side counterparts. */
 @DisplayName("CategoryDto Tests")
 class CategoryDtoTest {
 
@@ -40,6 +41,7 @@ class CategoryDtoTest {
         assertEquals("child-color", dto.color());
     }
 
+    /** {@code name} (non-blank, <=50 chars), {@code type} (non-null), {@code icon} (<=50 chars), and {@code color} (<=20 chars) constraints. */
     @Nested
     @DisplayName("Validation Tests")
     class ValidationTests {

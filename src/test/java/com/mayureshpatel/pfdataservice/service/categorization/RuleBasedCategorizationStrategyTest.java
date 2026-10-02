@@ -15,11 +15,23 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@code RuleBasedCategorizationStrategy}'s keyword/range/match-type rule matching against both a persisted {@link Transaction} and an in-flight {@link TransactionUpdateRequest}, plus its fixed {@code getOrder()}. */
 @DisplayName("RuleBasedCategorizationStrategy Unit Tests")
 class RuleBasedCategorizationStrategyTest {
 
     private final RuleBasedCategorizationStrategy strategy = new RuleBasedCategorizationStrategy();
 
+    /**
+     * {@code categorize(Transaction, ...)} matches a rule when its keywords appear
+     * case-insensitively in the description (PF-315: AND requires every keyword, OR requires at
+     * least one, and an empty keyword list never matches rather than vacuously matching everything
+     * under AND) and, when the rule sets an amount range, only when the transaction's amount falls
+     * within it inclusive of both boundaries (PF-314: a null transaction amount never matches a
+     * ranged rule; a rule with no range set matches on keyword alone). When multiple rules match,
+     * the first one in the supplied list wins (PF-313) -- the strategy trusts the caller's list
+     * order as priority order rather than re-sorting, since the real repository query already
+     * delivers rules in priority order.
+     */
     @Nested
     @DisplayName("categorize (Domain)")
     class CategorizeDomainTests {
@@ -369,6 +381,7 @@ class RuleBasedCategorizationStrategyTest {
         }
     }
 
+    /** The {@link TransactionUpdateRequest} overload of {@code categorize} applies the same keyword, amount-range, and AND/OR matching rules as {@link CategorizeDomainTests} for an edited-but-not-yet-persisted transaction. */
     @Nested
     @DisplayName("categorize (Request)")
     class CategorizeRequestTests {

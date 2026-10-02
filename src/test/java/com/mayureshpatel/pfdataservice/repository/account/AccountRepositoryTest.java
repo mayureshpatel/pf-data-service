@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code AccountRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the JDBC Client mapping, optimistic locking, and user-scoped ownership checks directly rather than mocking them. */
 @Import(AccountRepository.class)
 @DisplayName("AccountRepository Integration Tests (PostgreSQL)")
 class AccountRepositoryTest extends BaseRepositoryTest {
@@ -28,6 +29,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
     private static final Long USER_2 = 2L;
     private static final Long ACCOUNT_1 = 1L; // User 1 Main Checking
 
+    /** {@code findAll}/{@code findById}/{@code findAllByUserId}/{@code findByIdAndUserId} each read correctly against the baseline fixture, and {@code findByIdAndUserId} returns empty -- not the account -- when the id exists but belongs to a different user. */
     @Nested
     @DisplayName("Find Operations")
     class FindTests {
@@ -86,6 +88,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code insert} returns the real database-generated id (checked against a fresh {@code count()}/{@code findById}, not just {@code update}'s rows-affected count, which is always 1 on a successful single-row insert and would otherwise coincidentally collide with baseline account 1); {@code update} enforces optimistic locking via {@code version} and user-scoped ownership, affecting zero rows on either mismatch rather than throwing; {@code deleteById} soft-deletes. */
     @Nested
     @DisplayName("Write Operations")
     class WriteTests {
@@ -190,6 +193,7 @@ class AccountRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code updateBalance} and {@code reconcile} both enforce optimistic locking, but differently: {@code updateBalance} affecting zero rows on a mismatch versus {@code reconcile} throwing {@link OptimisticLockingFailureException} outright, for either a wrong version or a wrong owning user. */
     @Nested
     @DisplayName("Balance Operations")
     class BalanceTests {

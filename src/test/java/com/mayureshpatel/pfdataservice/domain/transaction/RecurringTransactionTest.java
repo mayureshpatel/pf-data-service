@@ -10,6 +10,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link RecurringTransaction}'s Lombok-generated builder -- including the fields it inherits from {@link Transaction} -- {@code toBuilder}, and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("RecurringTransaction Domain Object Tests")
 class RecurringTransactionTest {
 

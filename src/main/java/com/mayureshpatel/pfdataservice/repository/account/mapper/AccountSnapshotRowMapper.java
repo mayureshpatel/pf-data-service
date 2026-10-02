@@ -10,6 +10,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to an {@link AccountSnapshot}, following the same
+ * prefix/{@code hasColumn}-guarded pattern as {@link com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper}.
+ */
 @Component
 public class AccountSnapshotRowMapper extends JdbcMapperUtils implements RowMapper<AccountSnapshot> {
 

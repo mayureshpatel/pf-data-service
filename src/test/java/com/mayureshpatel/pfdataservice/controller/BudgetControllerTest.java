@@ -37,6 +37,7 @@ class BudgetControllerTest extends BaseControllerTest {
 
     private static final Long BUDGET_ID = 1L;
 
+    /** {@code GET /api/v1/budgets} returns the service's result for the given {@code month}/{@code year}, and defaults to the current month/year both when the params are simply omitted and when they're explicitly sent as the literal null. */
     @Nested
     @DisplayName("getBudgets")
     class GetBudgetsTests {
@@ -101,6 +102,7 @@ class BudgetControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/budgets/status} returns the service's budgeted/spent/remaining breakdown for the given {@code month}/{@code year}, defaulting to the current month/year when omitted. */
     @Nested
     @DisplayName("getBudgetStatus")
     class GetBudgetStatusTests {
@@ -146,6 +148,7 @@ class BudgetControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/budgets/all} returns a {@link Page} of budgets, and -- a PF-320 case -- genuinely honors the request's {@code page}/{@code size} query params, confirmed by inspecting the {@link Pageable} actually passed to the service. */
     @Nested
     @DisplayName("getAllBudgets")
     class GetAllBudgetsTests {
@@ -181,6 +184,7 @@ class BudgetControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/budgets} creates the budget and returns its new id, and returns a 400 naming every violated field at once (a missing {@code categoryId} and an out-of-range {@code month} together) when the request fails validation. */
     @Nested
     @DisplayName("createBudget")
     class CreateBudgetTests {
@@ -231,6 +235,7 @@ class BudgetControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PUT /api/v1/budgets} updates the budget and returns the affected-row count. */
     @Nested
     @DisplayName("updateBudget")
     class UpdateBudgetTests {
@@ -259,6 +264,7 @@ class BudgetControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/budgets/{id}} returns 204 on success. */
     @Nested
     @DisplayName("deleteBudget")
     class DeleteBudgetTests {
@@ -275,6 +281,7 @@ class BudgetControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE} returns 404 when the service throws {@link ResourceNotFoundException}; an unexpected exception elsewhere surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

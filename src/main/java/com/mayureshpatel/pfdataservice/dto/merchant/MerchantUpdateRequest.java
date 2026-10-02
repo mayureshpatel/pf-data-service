@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+/** The request payload for updating an existing {@code Merchant}'s identity, identified by {@code id}. */
 @Getter
 @Builder(toBuilder = true)
 @ToString

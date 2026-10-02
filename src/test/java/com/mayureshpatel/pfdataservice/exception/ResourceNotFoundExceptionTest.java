@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code ResourceNotFoundException}'s three constructors: the plain message, the resource-name/field-name/field-value formatted-message overload (e.g. {@code "Account not found with id: '123'"}), and the message-and-cause overload. */
 @DisplayName("ResourceNotFoundException Unit Tests")
 class ResourceNotFoundExceptionTest {
 

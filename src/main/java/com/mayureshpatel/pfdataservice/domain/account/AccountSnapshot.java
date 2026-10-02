@@ -9,6 +9,11 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * A point-in-time balance reading for an account, one per {@code accountId}/{@code snapshotDate}
+ * pair. Exists specifically to back historical/trend reporting (e.g. net worth over time) without
+ * having to replay the full transaction history from an account's origin on every request.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

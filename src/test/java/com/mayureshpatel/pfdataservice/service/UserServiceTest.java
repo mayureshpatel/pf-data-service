@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code UserService}'s existence checks, persistence, lookups, and Spring Security's {@code loadUserByUsername} integration point, one {@code @Nested} class per concern below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("UserService Unit Tests")
 class UserServiceTest {
@@ -38,6 +39,7 @@ class UserServiceTest {
     private static final String EMAIL = "test@example.com";
     private static final Long USER_ID = 1L;
 
+    /** {@code isUserExistsByUsername}, {@code isUserExistsByEmail}, and {@code existsById} each delegate straight to the matching repository check. */
     @Nested
     @DisplayName("Existence Checks")
     class ExistenceTests {
@@ -84,6 +86,7 @@ class UserServiceTest {
         }
     }
 
+    /** {@code insert} delegates straight to the repository; {@code updateProfile} re-fetches the existing user first so the update preserves fields it doesn't touch (e.g. {@code role}), and throws {@link ResourceNotFoundException} if that user no longer exists. */
     @Nested
     @DisplayName("Persistence Operations")
     class PersistenceTests {
@@ -144,6 +147,7 @@ class UserServiceTest {
         }
     }
 
+    /** {@code findByUsername}, {@code findByEmail}, {@code findById}, and {@code findAll} each delegate straight to the matching repository read. */
     @Nested
     @DisplayName("Lookup Operations")
     class LookupTests {
@@ -208,6 +212,7 @@ class UserServiceTest {
         }
     }
 
+    /** {@code loadUserByUsername} (the {@code UserDetailsService} contract method Spring Security calls during authentication) wraps the found user in {@link CustomUserDetails}, or throws {@link UsernameNotFoundException} when no such user exists. */
     @Nested
     @DisplayName("loadUserByUsername")
     class LoadUserByUsernameTests {

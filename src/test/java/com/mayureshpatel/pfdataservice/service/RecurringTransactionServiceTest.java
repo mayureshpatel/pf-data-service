@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code RecurringTransactionService}'s pattern-detection (finding candidate recurring transactions from raw history) and CRUD (managing already-confirmed ones), one {@code @Nested} class per method below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RecurringTransactionService Unit Tests")
 class RecurringTransactionServiceTest {
@@ -57,6 +58,7 @@ class RecurringTransactionServiceTest {
     private static final Long USER_ID = 1L;
     private static final Long RECURRING_ID = 100L;
 
+    /** {@code getRecurringTransactions} maps every active, next-date-ordered repository row for the user to a {@link RecurringTransactionDto}. */
     @Nested
     @DisplayName("getRecurringTransactions")
     class GetRecurringTransactionsTests {
@@ -81,10 +83,23 @@ class RecurringTransactionServiceTest {
         }
     }
 
+    /**
+     * {@code findSuggestions} groups expense history by merchant/description and proposes a
+     * recurring pattern wherever the intervals between occurrences are stable enough to classify
+     * into one of {@link Frequency}'s buckets (weekly through yearly, including a PF-205 quarterly
+     * bucket); an unstable interval, too few grouped transactions, or an interval average that
+     * falls in a genuinely unclassified gap between buckets all correctly produce no suggestion for
+     * that group, and null names/descriptions/merchants are tolerated without throwing. A PF-834
+     * fix: a single subscription whose price changed partway through its history (e.g. a Netflix
+     * plan upgrade) merges into exactly one suggestion reflecting the current price and the full
+     * occurrence count, not one conflicting suggestion per price tier. A PF-835 fix: the reported
+     * confidence score is a genuine 0-100 percentage that never exceeds 100, not the old formula's
+     * un-rescaled raw value that could read above 1.0 without being a real percentage.
+     */
     @Nested
     @DisplayName("findSuggestions")
     class FindSuggestionsTests {
-        
+
         @Test
         @DisplayName("should detect various stable intervals (Weekly, Monthly, Bi-Weekly, Quarterly, Yearly)")
         void shouldDetectAllFrequencies() {
@@ -255,6 +270,7 @@ class RecurringTransactionServiceTest {
         }
     }
 
+    /** The private {@code detectFrequency} helper (invoked here via reflection) classifies a stable ~90-day interval as QUARTERLY (PF-205), and correctly returns null -- not the nearest bucket -- for a stable interval that falls in a deliberately unclassified gap between two buckets (e.g. ~20 days, between BI_WEEKLY's and MONTHLY's ranges). */
     @Nested
     @DisplayName("detectFrequency")
     class DetectFrequencyTests {
@@ -298,6 +314,7 @@ class RecurringTransactionServiceTest {
         }
     }
 
+    /** The private {@code calculateNextDate} helper (invoked here via reflection) advances a given date by each {@link Frequency}'s own real calendar increment -- a calendar month/week/quarter/year, not a fixed day count. */
     @Nested
     @DisplayName("calculateNextDate")
     class CalculateNextDateTests {
@@ -316,10 +333,16 @@ class RecurringTransactionServiceTest {
         }
     }
 
+    /**
+     * {@code createRecurringTransaction} checks, in order: the user exists, the account exists and
+     * is owned by that user, and -- when a merchant id is given -- the merchant exists, each
+     * throwing {@link ResourceNotFoundException} or (for the account-ownership case) {@link
+     * AccessDeniedException} before ever reaching the repository insert.
+     */
     @Nested
     @DisplayName("createRecurringTransaction")
     class CreateRecurringTransactionTests {
-        
+
         @Test
         @DisplayName("should create successfully when everything is valid")
         void shouldCreate() {
@@ -374,10 +397,17 @@ class RecurringTransactionServiceTest {
         }
     }
 
+    /**
+     * {@code updateRecurringTransaction} checks, in order: the recurring transaction exists and is
+     * owned by the caller, then -- when present on the request -- the new account exists and is
+     * owned by the caller, then the new merchant exists, each throwing {@link
+     * ResourceNotFoundException} or {@link AccessDeniedException} as appropriate before delegating
+     * to the repository.
+     */
     @Nested
     @DisplayName("updateRecurringTransaction")
     class UpdateRecurringTransactionTests {
-        
+
         @Test
         @DisplayName("should update successfully when ownership and account are valid")
         void shouldUpdate() {
@@ -444,10 +474,11 @@ class RecurringTransactionServiceTest {
         }
     }
 
+    /** {@code deleteRecurringTransaction} requires the recurring transaction to be owned by the caller ({@link AccessDeniedException} otherwise) before delegating the delete to the repository. */
     @Nested
     @DisplayName("deleteRecurringTransaction")
     class DeleteRecurringTransactionTests {
-        
+
         @Test
         @DisplayName("should delete successfully if owned")
         void shouldDelete() {
@@ -472,6 +503,15 @@ class RecurringTransactionServiceTest {
         }
     }
 
+    /**
+     * A PF-816 mutation-testing gap: PiTest's ConditionalsBoundaryMutator flipped each of
+     * {@code detectFrequency}'s five range comparisons' {@code >=}/{@code <=} boundaries and every
+     * flip still passed the existing suite, since nothing exercised an average interval landing
+     * exactly on a boundary. Since {@code detectFrequency} is private, these go through the public
+     * {@code findSuggestions} entry point with a constructed transaction group whose intervals
+     * average out to each exact boundary value, parameterized across all 10 boundary points (both
+     * ends of all 5 frequency ranges) plus the nearest achievable value just outside each one.
+     */
     @Nested
     @DisplayName("detectFrequency boundary values (PF-816)")
     class DetectFrequencyBoundaryTests {

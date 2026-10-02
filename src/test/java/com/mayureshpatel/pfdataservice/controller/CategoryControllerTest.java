@@ -31,6 +31,7 @@ class CategoryControllerTest extends BaseControllerTest {
 
     private static final Long CATEGORY_ID = 1L;
 
+    /** {@code GET /api/v1/categories} returns the user's categories (or an empty list, not an error, when there are none); the unversioned {@code /api/categories} path (PF-200) correctly 404s rather than resolving to the same handler. */
     @Nested
     @DisplayName("getCategories")
     class GetCategoriesTests {
@@ -74,6 +75,7 @@ class CategoryControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/categories/parents} delegates to {@code CategoryService#getParentCategories}. */
     @Nested
     @DisplayName("getParentCategories")
     class GetParentCategoriesTests {
@@ -92,6 +94,7 @@ class CategoryControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/categories/children} delegates to {@code CategoryService#getChildCategories}. */
     @Nested
     @DisplayName("getChildCategories")
     class GetChildCategoriesTests {
@@ -110,6 +113,7 @@ class CategoryControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/categories} creates the category and returns its new id, and returns a 400 with field-level {@code validationErrors} for a blank {@code name}. */
     @Nested
     @DisplayName("createCategory")
     class CreateCategoryTests {
@@ -156,6 +160,7 @@ class CategoryControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PUT /api/v1/categories} updates the category and returns the affected-row count. */
     @Nested
     @DisplayName("updateCategory")
     class UpdateCategoryTests {
@@ -184,6 +189,7 @@ class CategoryControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/categories/{id}} removes the category and returns the affected-row count. */
     @Nested
     @DisplayName("deleteCategory")
     class DeleteCategoryTests {
@@ -204,6 +210,7 @@ class CategoryControllerTest extends BaseControllerTest {
         }
     }
 
+    /** An unexpected exception surfaces as a generic 500; a PF-193 case -- {@code DELETE} returns a 409 Conflict (not a 500) naming the real reason when the service throws {@link IllegalStateException} for a category with dependents, and a 404 when it throws {@link ResourceNotFoundException}. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

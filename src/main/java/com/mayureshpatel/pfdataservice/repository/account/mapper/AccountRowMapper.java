@@ -11,6 +11,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to an {@link Account}. The static, prefixed
+ * {@link #mapRow(ResultSet, String)} overload (as opposed to the plain {@link RowMapper} method)
+ * is what lets a query embed an account's columns under a prefix (e.g. {@code account_id}) when
+ * joining it into a richer result -- every column read is also guarded by
+ * {@code hasColumn}/{@code getAvailableColumns}, so a query that doesn't select every account
+ * column still maps whatever subset it does select rather than throwing.
+ */
 @Component
 public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Account> {
 

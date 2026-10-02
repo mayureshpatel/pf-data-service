@@ -11,6 +11,7 @@ import java.lang.reflect.Constructor;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code CategoryDtoMapper}'s static {@code toDto} mapping (in {@link ToDtoMappingTests}), plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("CategoryDtoMapper Unit Tests")
 class CategoryDtoMapperTest {
 
@@ -28,6 +29,7 @@ class CategoryDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** {@code toDto} returns null for a null source, maps every field (including resolving the string {@code type} to its {@link CategoryType} enum) when fully populated, nests the parent category when {@code parentId} is set, and leaves every optional field null without throwing when the source leaves them null. */
     @Nested
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {

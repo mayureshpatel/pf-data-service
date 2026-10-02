@@ -8,6 +8,12 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * The request payload for reconciling an account to a known-correct {@code newBalance} (e.g.
+ * after checking a real bank statement). {@code version} is the optimistic-locking token the
+ * caller last read -- required so a reconcile against a stale balance fails loudly instead of
+ * silently overwriting a concurrent change.
+ */
 @Data
 @Builder
 @NoArgsConstructor

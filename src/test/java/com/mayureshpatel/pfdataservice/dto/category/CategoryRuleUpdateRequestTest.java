@@ -15,6 +15,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@link CategoryRuleUpdateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("CategoryRuleUpdateRequest Validation Tests")
 class CategoryRuleUpdateRequestTest {
 
@@ -40,6 +41,7 @@ class CategoryRuleUpdateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code id} must be non-null and positive. */
     @Nested
     @DisplayName("Field: id")
     class IdValidationTests {
@@ -70,6 +72,7 @@ class CategoryRuleUpdateRequestTest {
         }
     }
 
+    /** {@code categoryId} must be non-null and positive. */
     @Nested
     @DisplayName("Field: categoryId")
     class CategoryIdValidationTests {
@@ -100,6 +103,7 @@ class CategoryRuleUpdateRequestTest {
         }
     }
 
+    /** {@code keywords} (a PF-315 multi-keyword rule change) must be non-empty, and each individual keyword in the list must be non-blank and no more than 255 characters. */
     @Nested
     @DisplayName("Field: keywords (PF-315)")
     class KeywordsValidationTests {
@@ -143,6 +147,7 @@ class CategoryRuleUpdateRequestTest {
         }
     }
 
+    /** {@code priority} must be zero or positive. */
     @Nested
     @DisplayName("Field: priority")
     class PriorityValidationTests {
@@ -161,6 +166,7 @@ class CategoryRuleUpdateRequestTest {
         }
     }
 
+    /** {@code minAmount}/{@code maxAmount} (a PF-314 amount-range rule filter) are both optional -- a null pair means no range is set -- but each must be zero or positive when present. */
     @Nested
     @DisplayName("Field: minAmount / maxAmount (PF-314)")
     class AmountRangeValidationTests {

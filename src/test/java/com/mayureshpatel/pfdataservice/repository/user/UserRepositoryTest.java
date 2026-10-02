@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code UserRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the JDBC Client mapping directly rather than mocking it. */
 @Import(UserRepository.class)
 @DisplayName("UserRepository Integration Tests (PostgreSQL)")
 class UserRepositoryTest extends BaseRepositoryTest {
@@ -23,6 +24,7 @@ class UserRepositoryTest extends BaseRepositoryTest {
     private static final String TEST_USER = "testuser";
     private static final String TEST_EMAIL = "test@example.com";
 
+    /** {@code findAll}/{@code findById}/{@code findByEmail}/{@code findByUsername} each read correctly against the baseline fixture. */
     @Nested
     @DisplayName("Find Operations")
     class FindTests {
@@ -71,6 +73,7 @@ class UserRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code existsByEmail}/{@code existsByUsername}/{@code existsById} each correctly distinguish a real baseline user from a nonexistent one. */
     @Nested
     @DisplayName("Existence Checks")
     class ExistenceTests {
@@ -96,6 +99,7 @@ class UserRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code insert}/{@code update}/{@code delete} (soft) round-trip correctly, and {@code delete} returns 0 for a user with no id rather than erroring. */
     @Nested
     @DisplayName("Write Operations")
     class WriteTests {

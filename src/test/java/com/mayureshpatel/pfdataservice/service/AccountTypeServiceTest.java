@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code AccountTypeService}'s three methods, one {@code @Nested} class each below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AccountTypeService Unit Tests")
 class AccountTypeServiceTest {
@@ -30,6 +31,7 @@ class AccountTypeServiceTest {
 
     private static final String TYPE_CODE = "CHECKING";
 
+    /** {@code getAllActiveAccountTypes} maps every active, sort-ordered repository row to an {@link AccountTypeDto}. */
     @Nested
     @DisplayName("getAllActiveAccountTypes")
     class GetAllActiveAccountTypesTests {
@@ -51,6 +53,7 @@ class AccountTypeServiceTest {
         }
     }
 
+    /** {@code create} is a thin pass-through to the repository, returning its inserted-row count unchanged. */
     @Nested
     @DisplayName("create")
     class CreateTests {
@@ -71,6 +74,7 @@ class AccountTypeServiceTest {
         }
     }
 
+    /** {@code delete} is a thin pass-through to the repository, returning its deleted-row count unchanged. */
     @Nested
     @DisplayName("delete")
     class DeleteTests {

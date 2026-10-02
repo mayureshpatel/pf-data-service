@@ -9,6 +9,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link AccountSnapshot}'s Lombok-generated builder, {@code toBuilder}, and ID-based {@code equals}/{@code hashCode}. */
 @DisplayName("AccountSnapshot Domain Object Tests")
 class AccountSnapshotTest {
 

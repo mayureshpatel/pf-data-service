@@ -8,9 +8,11 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code MonthlySpending}'s record accessor in {@link StructureTests}. */
 @DisplayName("MonthlySpending Unit Tests")
 class MonthlySpendingTest {
 
+    /** {@code MonthlySpending}'s record accessors map their constructor arguments 1:1. */
     @Nested
     @DisplayName("Record Structure")
     class StructureTests {

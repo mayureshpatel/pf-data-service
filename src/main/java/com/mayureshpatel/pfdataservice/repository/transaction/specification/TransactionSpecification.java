@@ -12,6 +12,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Builds the dynamic {@code WHERE} clause + bind parameters for
+ * {@code TransactionRepository}'s filtered/paginated transaction queries, one condition per
+ * non-null {@link TransactionFilter} field. Always scopes to {@code userId} and excludes deleted
+ * transactions, regardless of which optional filters are set.
+ */
 public final class TransactionSpecification {
 
     // sentinel the frontend sends as a literal categoryName value to mean "uncategorized"
@@ -21,10 +27,24 @@ public final class TransactionSpecification {
     private TransactionSpecification() {
     }
 
+    /**
+     * Thin public entry point delegating to {@link #buildWhereClause} -- the two names exist so
+     * callers can read either "build me a filter result" or "with this filter applied" at the
+     * call site, whichever reads better in context; both do the same thing.
+     *
+     * @param userId the requesting user's id, always applied as a scoping condition
+     * @param filter the optional filter fields to translate into SQL conditions
+     * @return the composed WHERE clause and its bind parameters
+     */
     public static FilterResult withFilter(Long userId, TransactionFilter filter) {
         return buildWhereClause(userId, filter);
     }
 
+    /**
+     * @param userId the requesting user's id, always applied as a scoping condition
+     * @param filter the optional filter fields to translate into SQL conditions
+     * @return the composed WHERE clause and its bind parameters
+     */
     public static FilterResult buildWhereClause(Long userId, TransactionFilter filter) {
         List<String> conditions = new ArrayList<>();
         Map<String, Object> parameters = new HashMap<>();

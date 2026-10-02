@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code FileImportHistoryRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup), exercising the JDBC Client mapping directly rather than mocking it. */
 @Import(FileImportHistoryRepository.class)
 @DisplayName("FileImportHistoryRepository Integration Tests (PostgreSQL)")
 class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
@@ -23,6 +24,7 @@ class FileImportHistoryRepositoryTest extends BaseRepositoryTest {
 
     private static final Long ACCOUNT_1 = 1L;
 
+    /** {@code insert} (via {@link FileImportCreateRequest}) and {@code save} (via a domain {@link FileImportHistory}, including one built from an embedded {@link Account}) both return the real database-generated id, checked against a fresh {@code findByAccountIdAndFileHash} lookup, not just {@code update}'s rows-affected count. */
     @Nested
     @DisplayName("CRUD Operations")
     class CrudTests {

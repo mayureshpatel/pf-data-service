@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code TransactionDtoMapper}'s static {@code toDto} mapping (in {@link ToDtoMappingTests}), plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("TransactionDtoMapper Unit Tests")
 class TransactionDtoMapperTest {
 
@@ -30,6 +31,7 @@ class TransactionDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** {@code toDto} returns null for a null source, and maps the core scalar fields ({@code id}/{@code amount}/{@code date}/{@code description}/{@code type}) when fully populated. */
     @Nested
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {

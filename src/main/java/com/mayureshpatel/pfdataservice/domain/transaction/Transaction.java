@@ -13,6 +13,13 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+/**
+ * A single financial transaction on an {@link Account} -- the core domain object this application
+ * exists to manage. {@link #type} determines how {@link #getNetChange()} signs {@link #amount}
+ * when applying it to an account balance; {@link #postDate} is tracked separately from
+ * {@link #transactionDate} because banks frequently post a transaction one or more days after it
+ * was actually made.
+ */
 @Getter
 @SuperBuilder(toBuilder = true)
 @ToString

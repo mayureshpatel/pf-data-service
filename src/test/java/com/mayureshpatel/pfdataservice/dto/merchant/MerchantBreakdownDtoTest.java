@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code MerchantBreakdownDto}'s record accessors map their constructor arguments 1:1. */
 @DisplayName("MerchantBreakdownDto Structure Tests")
 class MerchantBreakdownDtoTest {
 

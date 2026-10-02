@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code CategoryRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the JDBC Client mapping and parent/subcategory queries directly rather than mocking them. */
 @Import(CategoryRepository.class)
 @DisplayName("CategoryRepository Integration Tests (PostgreSQL)")
 class CategoryRepositoryTest extends BaseRepositoryTest {
@@ -27,6 +28,7 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
     private static final Long CAT_FOOD = 2L; // Parent category in baseline
     private static final Long CAT_GROCERIES = 7L; // Sub-category of Food
 
+    /** {@code findAll}/{@code findById}/{@code findByUserId} read correctly against the baseline fixture, and {@code findAllParentCategories}/{@code findAllSubCategories} correctly partition by whether {@code parentId} is set -- despite their names, both methods actually filter to subcategories (rows that DO have a parent), confirmed directly against each test's own assertion. */
     @Nested
     @DisplayName("Find Operations")
     class FindTests {
@@ -86,6 +88,7 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code countByParentId} counts real subcategories for a parent, and returns 0 for a category that has no children of its own (even though it's itself a subcategory). */
     @Nested
     @DisplayName("Status & Counts")
     class StatusTests {
@@ -110,6 +113,7 @@ class CategoryRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code insert} returns the real database-generated id (checked against a fresh {@code count}/{@code findById}, not just {@code update}'s rows-affected count, which would otherwise coincidentally collide with baseline category 1), works for both a top-level and a sub-category; {@code update}/{@code delete} round-trip correctly, {@code delete} returns 0 for a category with no id, and {@code deleteById} is deliberately unsupported -- the repository only exposes the full-entity {@code delete(Category)} overload. */
     @Nested
     @DisplayName("Write Operations")
     class WriteTests {

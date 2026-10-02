@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** JDBC-backed persistence for {@link Category}, including its parent/subcategory hierarchy. */
 @Repository("jdbcCategoryRepository")
 @RequiredArgsConstructor
 public class CategoryRepository implements JdbcRepository<Category, Long> {
@@ -37,6 +38,10 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return every category the user has (parent and subcategories alike)
+     */
     public List<Category> findByUserId(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
@@ -44,6 +49,10 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return only the user's subcategories (those with a {@code parentId} set)
+     */
     public List<Category> findAllSubCategories(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_SUB_CATEGORIES)
                 .param("userId", userId)
@@ -51,6 +60,10 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .list();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return only the user's top-level categories (those with no {@code parentId})
+     */
     public List<Category> findAllParentCategories(Long userId) {
         return jdbcClient.sql(CategoryQueries.FIND_ALL_PARENT_CATEGORIES)
                 .param("userId", userId)
@@ -58,6 +71,10 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .list();
     }
 
+    /**
+     * @param request the category to create, with {@code parentId} set to make it a subcategory
+     * @return the generated category id
+     */
     public int insert(CategoryCreateRequest request) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(CategoryQueries.INSERT)
@@ -72,6 +89,11 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
         return keyHolder.getKey().intValue();
     }
 
+    /**
+     * @param request the category's new field values, including {@code parentId} if it's being
+     *                re-parented
+     * @return the number of rows updated (0 or 1)
+     */
     public int update(CategoryUpdateRequest request) {
         return jdbcClient.sql(CategoryQueries.UPDATE)
                 .param("name", request.getName())
@@ -100,6 +122,10 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
         throw new UnsupportedOperationException("Use delete(Category category) to ensure userId is provided");
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return the total number of categories (parent and subcategories) the user has
+     */
     public long count(Long userId) {
         return jdbcClient.sql(CategoryQueries.COUNT)
                 .param("userId", userId)
@@ -107,6 +133,10 @@ public class CategoryRepository implements JdbcRepository<Category, Long> {
                 .single();
     }
 
+    /**
+     * @param parentId the parent category to check
+     * @return the number of subcategories with this {@code parentId}
+     */
     public long countByParentId(Long parentId) {
         return jdbcClient.sql(CategoryQueries.COUNT_BY_PARENT_ID)
                 .param("parentId", parentId)

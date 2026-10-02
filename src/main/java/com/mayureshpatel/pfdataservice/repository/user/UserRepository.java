@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** JDBC-backed persistence for {@link User}. */
 @Repository
 @RequiredArgsConstructor
 public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSupport {
@@ -29,6 +30,10 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 .optional();
     }
 
+    /**
+     * @param email the email to look up
+     * @return the matching non-deleted user, if one exists
+     */
     public Optional<User> findByEmail(String email) {
         return this.jdbcClient.sql(UserQueries.FIND_BY_EMAIL)
                 .param("email", email)
@@ -36,6 +41,10 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 .optional();
     }
 
+    /**
+     * @param username the username to look up
+     * @return the matching non-deleted user, if one exists
+     */
     public Optional<User> findByUsername(String username) {
         return this.jdbcClient.sql(UserQueries.FIND_BY_USERNAME)
                 .param("username", username)
@@ -51,6 +60,10 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
     }
 
 
+    /**
+     * @param email the email to check
+     * @return whether a non-deleted user with this email exists
+     */
     public boolean existsByEmail(String email) {
         Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_EMAIL)
                 .param("email", email)
@@ -60,6 +73,10 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
         return count > 0;
     }
 
+    /**
+     * @param username the username to check
+     * @return whether a non-deleted user with this username exists
+     */
     public boolean existsByUsername(String username) {
         Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_USERNAME)
                 .param("username", username)
@@ -121,6 +138,10 @@ public class UserRepository implements JdbcRepository<User, Long>, SoftDeleteSup
                 .update();
     }
 
+    /**
+     * @param id the user id to check
+     * @return whether a non-deleted user with this id exists
+     */
     public boolean existsById(Long id) {
         Integer count = this.jdbcClient.sql(UserQueries.EXISTS_BY_ID)
                 .param("id", id)

@@ -10,6 +10,7 @@ import java.lang.reflect.Constructor;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code MerchantDtoMapper}'s static {@code toDto} mapping (in {@link ToDtoMappingTests}), plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("MerchantDtoMapper Unit Tests")
 class MerchantDtoMapperTest {
 
@@ -27,6 +28,7 @@ class MerchantDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** {@code toDto} returns null for a null source, maps every field (post-PF-845's own name/city/state/postalCode/country shape) when fully populated, and leaves every location field null without throwing when the source leaves them unset. */
     @Nested
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {

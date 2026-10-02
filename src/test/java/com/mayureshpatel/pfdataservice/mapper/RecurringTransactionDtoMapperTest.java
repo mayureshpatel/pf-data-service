@@ -12,6 +12,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code RecurringTransactionDtoMapper}'s static {@code toDto} mapping (in {@link ToDtoMappingTests}), plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("RecurringTransactionDtoMapper Unit Tests")
 class RecurringTransactionDtoMapperTest {
 
@@ -29,6 +30,7 @@ class RecurringTransactionDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** {@code toDto} returns null for a null source, maps every field (including resolving the raw string {@code frequency} to its {@link com.mayureshpatel.pfdataservice.domain.transaction.Frequency} enum) when fully populated, and leaves {@code userId} null without throwing when the source leaves it null. */
     @Nested
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {

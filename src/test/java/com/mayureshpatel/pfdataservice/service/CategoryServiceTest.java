@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code CategoryService}'s CRUD and lookup methods, one {@code @Nested} class per method below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CategoryService Unit Tests")
 class CategoryServiceTest {
@@ -51,6 +52,7 @@ class CategoryServiceTest {
     private static final Long CATEGORY_ID = 10L;
     private static final Long PARENT_ID = 5L;
 
+    /** {@code getCategoriesByUserId} maps every repository row for the user to a {@link CategoryDto}. */
     @Nested
     @DisplayName("getCategoriesByUserId")
     class GetCategoriesByUserIdTests {
@@ -70,6 +72,12 @@ class CategoryServiceTest {
         }
     }
 
+    /**
+     * {@code createCategory} requires the user to exist ({@link ResourceNotFoundException}) and,
+     * when a parent is given, requires that parent to exist and be owned by the caller -- except a
+     * {@code parentId} of {@code 0} is treated as "no parent" rather than triggering that lookup at
+     * all, consistent with {@link Category#isSubCategory()}'s own null-or-zero convention.
+     */
     @Nested
     @DisplayName("createCategory")
     class CreateCategoryTests {
@@ -168,6 +176,14 @@ class CategoryServiceTest {
         }
     }
 
+    /**
+     * {@code updateCategory} requires the category to exist ({@link ResourceNotFoundException})
+     * and be owned by the caller ({@link AccessDeniedException}); a parent id of exactly {@code 0}
+     * is rejected with {@link IllegalArgumentException} (unlike create, where it's simply treated
+     * as no parent), and a category can't be set as its own parent, also {@link
+     * IllegalArgumentException}. A real, non-zero parent id must itself exist and be owned by the
+     * caller, same as on create.
+     */
     @Nested
     @DisplayName("updateCategory")
     class UpdateCategoryTests {
@@ -287,6 +303,12 @@ class CategoryServiceTest {
         }
     }
 
+    /**
+     * {@code deleteCategory} enforces ownership first, then checks four kinds of dependents in a
+     * fixed order -- subcategories (PF-191), transactions, category rules, then budgets -- each
+     * throwing {@link IllegalStateException} naming which kind blocked the delete, short-circuiting
+     * before checking any later kind once an earlier one is found.
+     */
     @Nested
     @DisplayName("deleteCategory")
     class DeleteCategoryTests {
@@ -391,6 +413,7 @@ class CategoryServiceTest {
         }
     }
 
+    /** Despite its name, this nested class exercises {@code getCategoriesByUserId} again on an empty result -- {@code CategoryService} doesn't actually expose a separate {@code getCategoriesGrouped} method. */
     @Nested
     @DisplayName("getCategoriesGrouped")
     class GetCategoriesGroupedTests {
@@ -409,6 +432,7 @@ class CategoryServiceTest {
         }
     }
 
+    /** {@code getChildCategories} maps every repository row from {@code findAllSubCategories} to a {@link CategoryDto}. */
     @Nested
     @DisplayName("getChildCategories")
     class GetChildCategoriesTests {

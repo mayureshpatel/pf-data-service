@@ -32,6 +32,7 @@ class TagControllerTest extends BaseControllerTest {
     private static final Long TAG_ID = 1L;
     private static final Long TRANSACTION_ID = 500L;
 
+    /** {@code GET /api/v1/tags} returns the user's tags, or an empty list, not an error, when there are none. */
     @Nested
     @DisplayName("getTags")
     class GetTagsTests {
@@ -64,6 +65,7 @@ class TagControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/tags} creates the tag and returns its new id, and returns a 400 with field-level {@code validationErrors} for a missing {@code name}. */
     @Nested
     @DisplayName("createTag")
     class CreateTagTests {
@@ -106,6 +108,7 @@ class TagControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PUT /api/v1/tags} updates the tag and returns the affected-row count, and returns a 400 naming both violated fields ({@code id} and {@code name}) at once when the request is otherwise empty. */
     @Nested
     @DisplayName("updateTag")
     class UpdateTagTests {
@@ -142,6 +145,7 @@ class TagControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/tags/{id}} returns 204 on success, and 404 when the service throws {@link ResourceNotFoundException}. */
     @Nested
     @DisplayName("deleteTag")
     class DeleteTagTests {
@@ -167,6 +171,7 @@ class TagControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/tags/{tagId}/transactions/{transactionId}} returns 204 on success, and 404 when the service throws {@link ResourceNotFoundException} for either id not being owned by the caller. */
     @Nested
     @DisplayName("assignToTransaction")
     class AssignToTransactionTests {
@@ -192,6 +197,7 @@ class TagControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/tags/{tagId}/transactions/{transactionId}} returns 204 on success. */
     @Nested
     @DisplayName("removeFromTransaction")
     class RemoveFromTransactionTests {
@@ -206,6 +212,7 @@ class TagControllerTest extends BaseControllerTest {
         }
     }
 
+    /** An unexpected exception from the service surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

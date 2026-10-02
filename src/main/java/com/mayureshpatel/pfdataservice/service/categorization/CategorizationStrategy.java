@@ -18,6 +18,11 @@ import java.util.Optional;
  */
 public interface CategorizationStrategy {
 
+    /**
+     * The user-scoped data a {@link CategorizationStrategy} needs to make its decision --
+     * assembled once by the caller and passed to every strategy in turn, rather than each
+     * strategy independently re-fetching the same user's rules/categories.
+     */
     @Getter
     @Builder
     class CategorizationContext {

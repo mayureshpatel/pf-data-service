@@ -1,5 +1,14 @@
 package com.mayureshpatel.pfdataservice.domain.transaction;
 
+/**
+ * The kind of financial event a {@link Transaction} represents, and specifically how its
+ * {@code amount} should be signed when applied to an account balance (see
+ * {@link Transaction#getNetChange()}). {@code TRANSFER_IN}/{@code TRANSFER_OUT} are the two legs
+ * actually stored for a transfer between two of the user's own accounts; plain {@code TRANSFER}
+ * is never itself stored on a transaction -- it's a filter-only value that
+ * {@code TransactionSpecification} expands into all three transfer variants, letting a caller ask
+ * for "any transfer" without knowing about the leg-level distinction.
+ */
 public enum TransactionType {
     INCOME,
     EXPENSE,

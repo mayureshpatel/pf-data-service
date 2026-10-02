@@ -33,6 +33,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
 
     private static final Long RECURRING_ID = 1L;
 
+    /** {@code GET /api/v1/recurring/suggestions} delegates to {@code RecurringTransactionService#findSuggestions}. */
     @Nested
     @DisplayName("getSuggestions")
     class GetSuggestionsTests {
@@ -53,6 +54,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/recurring} returns the user's confirmed recurring transactions. */
     @Nested
     @DisplayName("getRecurringTransactions")
     class GetRecurringTransactionsTests {
@@ -78,6 +80,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/recurring} creates the recurring transaction and returns its new id, and returns a 400 naming every violated field at once when the request is otherwise empty. */
     @Nested
     @DisplayName("createRecurringTransaction")
     class CreateRecurringTransactionTests {
@@ -128,6 +131,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PUT /api/v1/recurring} updates the recurring transaction and returns the affected-row count, and returns a 400 naming every violated field at once when the request is otherwise empty. */
     @Nested
     @DisplayName("updateRecurringTransaction")
     class UpdateRecurringTransactionTests {
@@ -177,6 +181,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/recurring/{id}} returns 204 on success. */
     @Nested
     @DisplayName("deleteRecurringTransaction")
     class DeleteRecurringTransactionTests {
@@ -193,6 +198,7 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE} returns 404 when the service throws {@link ResourceNotFoundException}; an unexpected exception elsewhere surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

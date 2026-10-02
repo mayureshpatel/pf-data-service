@@ -14,6 +14,7 @@ public record ActionItemDto(
         String message,
         String route
 ) {
+    /** The kind of dashboard action item being surfaced, one per distinct nudge the UI can show. */
     public enum ActionType {
         TRANSFER_REVIEW,
         UNCATEGORIZED,

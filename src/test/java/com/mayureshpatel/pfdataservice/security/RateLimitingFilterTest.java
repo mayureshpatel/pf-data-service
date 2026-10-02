@@ -13,6 +13,14 @@ import java.io.StringWriter;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Verifies {@code RateLimitingFilter}'s per-IP-per-endpoint token-bucket behavior against a real
+ * (non-mocked) filter instance: requests under an endpoint's limit pass through, the next one over
+ * it gets a 429, non-{@code /api/v1/auth/*} endpoints are never limited at all, {@code /register}
+ * has its own independent, tighter bucket from {@code /authenticate} (exhausting one doesn't affect
+ * the other), and the bucket key is derived from {@code getRemoteAddr()} -- an {@code
+ * X-Forwarded-For} header is deliberately ignored, so spoofing it can't be used to dodge the limit.
+ */
 class RateLimitingFilterTest {
 
     private RateLimitingFilter filter;

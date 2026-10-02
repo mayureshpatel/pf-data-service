@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Verifies {@code UserDto}'s record accessor in {@link StructureTests}. */
 @DisplayName("UserDto structure tests")
 class UserDtoTest {
 
+    /** {@code UserDto}'s record accessors map their constructor arguments 1:1. */
     @Nested
     @DisplayName("Structure")
     class StructureTests {

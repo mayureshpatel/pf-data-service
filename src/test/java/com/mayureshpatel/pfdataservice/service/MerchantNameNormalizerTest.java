@@ -9,11 +9,13 @@ import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+/** Verifies {@code MerchantNameNormalizer#normalize}'s case, reference-code, and location-suffix stripping heuristics used to collapse a raw statement description into a clean merchant display name, one {@code @Nested} class per heuristic below. */
 @DisplayName("MerchantNameNormalizer Unit Tests")
 class MerchantNameNormalizerTest {
 
     private final MerchantNameNormalizer normalizer = new MerchantNameNormalizer();
 
+    /** Output is always title-cased regardless of the input's original casing, and an already-clean name is left stable rather than re-derived differently. */
     @Nested
     @DisplayName("case normalization")
     class CaseNormalization {
@@ -37,6 +39,7 @@ class MerchantNameNormalizerTest {
         }
     }
 
+    /** A trailing hash-prefixed reference code is stripped, and so are multiple trailing numeric groups -- not just the last one. */
     @Nested
     @DisplayName("trailing reference code / number stripping")
     class ReferenceCodeStripping {
@@ -68,6 +71,13 @@ class MerchantNameNormalizerTest {
         }
     }
 
+    /**
+     * A trailing recognized US state code is stripped, alone or combined with a preceding number.
+     * This is a deliberately aggressive, accepted-tradeoff heuristic (per the PF-EPIC-021 design
+     * interview): a genuine trailing word that happens to match a state code still gets stripped
+     * (e.g. {@code "ACME CO"}), while a trailing two-letter word that ISN'T a recognized state code
+     * is correctly left alone.
+     */
     @Nested
     @DisplayName("location suffix stripping")
     class LocationSuffixStripping {
@@ -128,6 +138,16 @@ class MerchantNameNormalizerTest {
         }
     }
 
+    /**
+     * A PF-832 fix: once a trailing state code confirms a record is genuinely location-suffixed,
+     * normalization reaches backward past an intervening city name (one or two words) to strip a
+     * store number that would otherwise survive -- the city itself is left in place (still
+     * out-of-scope per the PF-EPIC-021 design) and this reach-back is deliberately gated on a real
+     * trailing state code actually being present, so a merchant name that simply starts with a
+     * number (e.g. {@code "24 Hour Fitness"}) is never touched. Confirmed live: this exact shape
+     * had split one real merchant chain across 15 separate records depending on whether a given
+     * statement happened to include a trailing city.
+     */
     @Nested
     @DisplayName("PF-832: store number followed by a city, before the trailing state code")
     class NumberBlockedByCity {
@@ -211,6 +231,7 @@ class MerchantNameNormalizerTest {
         }
     }
 
+    /** When every stripping rule combined would leave nothing (e.g. an input that's purely a reference number, or a number plus a state code), the original un-stripped name is returned instead of a blank result. */
     @Nested
     @DisplayName("fallback for names that would normalize to empty")
     class EmptyNormalizationFallback {
@@ -244,6 +265,7 @@ class MerchantNameNormalizerTest {
         }
     }
 
+    /** A null or blank input returns an empty string rather than throwing. */
     @Nested
     @DisplayName("null and blank input handling")
     class NullAndBlankHandling {

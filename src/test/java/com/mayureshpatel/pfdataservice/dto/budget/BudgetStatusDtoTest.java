@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code BudgetStatusDto}'s record accessors map their arguments 1:1, whether built via its canonical constructor or its builder. */
 @DisplayName("BudgetStatusDto Unit Tests")
 class BudgetStatusDtoTest {
 

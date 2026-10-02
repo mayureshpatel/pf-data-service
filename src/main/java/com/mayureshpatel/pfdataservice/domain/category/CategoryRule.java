@@ -10,6 +10,12 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * A user-defined auto-categorization rule: when a transaction's description matches this rule's
+ * {@link #keywords} (combined per {@link #matchType}) and its amount falls within the optional
+ * {@link #minAmount}/{@link #maxAmount} bounds, it's assigned this rule's {@link #category}.
+ * {@link #priority} breaks ties when more than one rule matches the same transaction.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

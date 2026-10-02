@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@link User}'s Lombok-generated builder, {@code toBuilder}, ID-based {@code equals}/{@code hashCode}, and that its {@code toString} surfaces the username while excluding the audit trail. */
 @DisplayName("User Domain Object Tests")
 class UserTest {
 

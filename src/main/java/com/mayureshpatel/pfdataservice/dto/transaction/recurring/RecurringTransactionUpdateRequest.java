@@ -8,6 +8,15 @@ import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * The request payload for updating an existing {@code RecurringTransaction} template, identified
+ * by {@code id}. Unlike its sibling
+ * {@link com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest}, there's no
+ * {@code categoryId} field here (nor on {@link RecurringTransactionCreateRequest}) even though
+ * {@code RecurringTransaction} inherits a {@code category} field from {@code Transaction} -- the
+ * class-level {@code todo} below on that inheritance relationship not matching the database
+ * structure is the same open design question this DTO's gap traces back to.
+ */
 //todo: recurring transaction should be a subclass of transaction; the database does not reflect this
 @Getter
 @Builder(toBuilder = true)

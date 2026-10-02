@@ -16,6 +16,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * JDBC-backed persistence for {@link CategoryRule}. A rule's keyword set lives in a separate
+ * {@code category_rule_keywords} table (PF-315) and is assembled onto the rule in Java by this
+ * class rather than joined in SQL -- see {@link #findKeywordsByRuleId} for why.
+ */
 @Repository
 @RequiredArgsConstructor
 public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long> {
@@ -32,6 +37,12 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
                 .map(rule -> rule.toBuilder().keywords(findKeywordsByRuleId(id)).build());
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return every category rule the user has, each with its keyword set already attached, in
+     *         priority order (see {@code CategoryRuleQueries.FIND_ALL_BY_USER_ID} for the
+     *         specificity tie-break logic)
+     */
     public List<CategoryRule> findByUserId(Long userId) {
         List<CategoryRule> rules = this.jdbcClient.sql(CategoryRuleQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
@@ -71,6 +82,13 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
                         Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
     }
 
+    /**
+     * Inserts the rule row, then its keyword set as separate {@code category_rule_keywords} rows
+     * (see {@link #insertKeywords}).
+     *
+     * @param categoryRule the rule to create, with its keywords already populated
+     * @return the generated rule id
+     */
     public Long insertAndReturnId(CategoryRule categoryRule) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         this.jdbcClient.sql(CategoryRuleQueries.INSERT)
@@ -137,6 +155,10 @@ public class CategoryRuleRepository implements JdbcRepository<CategoryRule, Long
         throw new UnsupportedOperationException("Use deleteById with userId");
     }
 
+    /**
+     * @param categoryId the category to check
+     * @return the number of rules (across all users) assigning this category
+     */
     public long countByCategoryId(Long categoryId) {
         return this.jdbcClient.sql(CategoryRuleQueries.COUNT_BY_CATEGORY_ID)
                 .param("categoryId", categoryId)

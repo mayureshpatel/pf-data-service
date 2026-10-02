@@ -48,6 +48,11 @@ public class MerchantDescriptionLinkRepository {
         return result;
     }
 
+    /**
+     * @param id     the link id
+     * @param userId the requesting user's id
+     * @return the link if it exists and is owned by {@code userId}, otherwise empty
+     */
     public Optional<MerchantDescriptionLink> findByIdAndUserId(Long id, Long userId) {
         return jdbcClient.sql(MerchantDescriptionLinkQueries.FIND_BY_ID_AND_USER_ID)
                 .param("id", id)

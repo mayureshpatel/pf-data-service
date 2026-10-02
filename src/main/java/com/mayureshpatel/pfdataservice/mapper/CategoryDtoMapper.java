@@ -4,11 +4,20 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 
+/** Converts the {@link Category} domain object into its API-facing {@link CategoryDto}. */
 public final class CategoryDtoMapper {
 
     private CategoryDtoMapper() {
     }
 
+    /**
+     * Also hand-builds the parent category's own DTO one level deep when {@code category} is a
+     * subcategory, but stops there -- the parent DTO's own {@code parent} is always {@code null},
+     * since this codebase's category hierarchy only ever goes one level deep in practice.
+     *
+     * @param category the domain category to convert, or {@code null}
+     * @return the equivalent DTO, or {@code null} if {@code category} was {@code null}
+     */
     public static CategoryDto toDto(Category category) {
         if (category == null) return null;
         

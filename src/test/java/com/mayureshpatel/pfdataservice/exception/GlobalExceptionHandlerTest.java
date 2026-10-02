@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code GlobalExceptionHandler}'s handler methods directly (no {@code MockMvc}, each called as a plain method against a {@link MockHttpServletRequest}), confirming each maps to the right HTTP status and {@link ProblemDetail} body -- one {@code @Nested} class splitting this application's own custom exceptions from the standard Spring/Jakarta ones it also maps. */
 @DisplayName("GlobalExceptionHandler Unit Tests")
 class GlobalExceptionHandlerTest {
 
@@ -43,6 +44,7 @@ class GlobalExceptionHandlerTest {
         request.setRequestURI("/api/test");
     }
 
+    /** {@link ResourceNotFoundException}, {@link CsvParsingException}, {@link DuplicateImportException}, and {@link UserAlreadyExistsException} each map to their documented status and detail message. */
     @Nested
     @DisplayName("Custom Domain Exceptions")
     class CustomExceptionTests {
@@ -96,6 +98,15 @@ class GlobalExceptionHandlerTest {
         }
     }
 
+    /**
+     * Every remaining handler maps its exception type to its documented status and detail message,
+     * including two PF-193 cases ({@link IllegalStateException} as 409, not the generic 500) and
+     * {@link org.springframework.security.authentication.BadCredentialsException} as 401), an
+     * {@link AccessDeniedException} with a null message falling back to a generic detail string
+     * rather than echoing {@code null}, and both {@link MethodArgumentNotValidException} and
+     * {@link ConstraintViolationException} attaching a structured {@code validationErrors} list
+     * built from mocked field/property violations.
+     */
     @Nested
     @DisplayName("Standard Spring Exceptions")
     class StandardExceptionTests {

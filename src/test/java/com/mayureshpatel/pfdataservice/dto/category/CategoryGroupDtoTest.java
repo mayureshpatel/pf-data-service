@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code CategoryGroupDto}'s record accessors map their constructor arguments 1:1. */
 @DisplayName("CategoryGroupDto Tests")
 class CategoryGroupDtoTest {
 

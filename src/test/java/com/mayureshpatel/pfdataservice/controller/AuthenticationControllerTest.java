@@ -24,6 +24,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
 
     private static final String AUTH_TOKEN = "mocked-jwt-token";
 
+    /** {@code POST /authenticate} returns the issued token on valid credentials, and a 400 with field-level {@code validationErrors} on a missing username. */
     @Nested
     @DisplayName("authenticate")
     class AuthenticateTests {
@@ -74,6 +75,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /register} succeeds for a genuinely anonymous, unauthenticated caller (PF-183 -- this endpoint deliberately has no principal to authorize against), returns a 400 with field-level {@code validationErrors} on an invalid email, and returns a 400 (not a 201) when the service rejects the request for the anti-bot honeypot field being filled. */
     @Nested
     @DisplayName("register")
     class RegisterTests {
@@ -150,6 +152,7 @@ class AuthenticationControllerTest extends BaseControllerTest {
         }
     }
 
+    /** An unexpected exception from the authentication service surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all, not the underlying exception's own message. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

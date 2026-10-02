@@ -11,6 +11,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Set;
 
+/**
+ * Maps a JDBC {@link ResultSet} row to a {@link Budget}, following the same
+ * prefix/{@code hasColumn}-guarded convention used throughout this package's sibling row mappers
+ * (see {@link com.mayureshpatel.pfdataservice.repository.account.mapper.AccountRowMapper} for the
+ * fullest-documented example). The embedded {@code category} is delegated to
+ * {@link CategoryRowMapper}.
+ */
 @Component
 public class BudgetRowMapper extends JdbcMapperUtils implements RowMapper<Budget> {
 

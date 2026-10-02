@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Verifies {@code SynovusCsvParser}'s Credit/Debit-column parsing across Synovus's several real export variants, one {@code @Nested} class per input shape below. */
 @DisplayName("SynovusCsvParser unit tests")
 class SynovusCsvParserTest {
 
@@ -34,6 +35,12 @@ class SynovusCsvParserTest {
         assertThat(parser.getBankName()).isEqualTo(BankName.SYNOVUS);
     }
 
+    /**
+     * A positive credit-plus-debit net parses as INCOME and a negative net as EXPENSE; blank-date
+     * rows are skipped, a 2-digit year (PF-214) and several real export quirks -- quoted fields
+     * with metadata and a footer row, tab-separated output, and a leading byte-order mark -- all
+     * parse correctly.
+     */
     @Nested
     @DisplayName("parse() — valid CSV")
     class ValidCsvTests {
@@ -191,6 +198,7 @@ class SynovusCsvParserTest {
         }
     }
 
+    /** A null input stream fails fast with {@link NullPointerException} before any parsing begins. */
     @Nested
     @DisplayName("parse() — invalid input")
     class InvalidInputTests {

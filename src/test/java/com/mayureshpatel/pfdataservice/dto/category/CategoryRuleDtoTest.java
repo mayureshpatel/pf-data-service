@@ -11,6 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+/** Verifies {@code CategoryRuleDto}'s record accessors map their arguments 1:1, whether built via its canonical constructor or its builder. */
 @DisplayName("CategoryRuleDto Tests")
 class CategoryRuleDtoTest {
 

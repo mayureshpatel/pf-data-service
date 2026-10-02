@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.user.query;
 
 import lombok.NoArgsConstructor;
 
+/** SQL query constants for {@code UserRepository}. */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class UserQueries {
 

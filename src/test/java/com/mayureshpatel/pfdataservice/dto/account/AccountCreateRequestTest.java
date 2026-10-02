@@ -17,6 +17,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@link AccountCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("AccountCreateRequest Unit Tests")
 class AccountCreateRequestTest {
 
@@ -43,6 +44,7 @@ class AccountCreateRequestTest {
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
+    /** {@code name} must be non-blank and no more than 100 characters. */
     @Nested
     @DisplayName("Field: name")
     class NameValidationTests {
@@ -68,6 +70,7 @@ class AccountCreateRequestTest {
         }
     }
 
+    /** {@code type} must be non-blank and no more than 20 characters. */
     @Nested
     @DisplayName("Field: type")
     class TypeValidationTests {
@@ -93,6 +96,7 @@ class AccountCreateRequestTest {
         }
     }
 
+    /** {@code startingBalance} must be non-null and within +/-9999999999.99. */
     @Nested
     @DisplayName("Field: startingBalance")
     class StartingBalanceValidationTests {
@@ -127,6 +131,7 @@ class AccountCreateRequestTest {
         }
     }
 
+    /** {@code currencyCode} must be non-blank and exactly 3 characters (an ISO 4217 code). */
     @Nested
     @DisplayName("Field: currencyCode")
     class CurrencyCodeValidationTests {
@@ -153,6 +158,7 @@ class AccountCreateRequestTest {
         }
     }
 
+    /** {@code bankName} is optional (null is valid) but capped at 50 characters when present. */
     @Nested
     @DisplayName("Field: bankName")
     class BankNameValidationTests {

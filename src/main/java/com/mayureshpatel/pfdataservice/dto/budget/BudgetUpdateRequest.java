@@ -10,6 +10,11 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 
+/**
+ * The request payload for updating an existing {@code Budget}'s amount, identified by {@code id}.
+ * Deliberately narrower than {@link BudgetCreateRequest} -- category/month/year aren't editable
+ * here; moving a budget to a different category or month is a new budget, not an edit of this one.
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Verifies {@code StandardCsvParser}'s single-Amount-column parsing (this codebase's own generic {@code date,description,amount} format), one {@code @Nested} class per input shape below. */
 @DisplayName("StandardCsvParser unit tests")
 class StandardCsvParserTest {
 
@@ -34,6 +35,13 @@ class StandardCsvParserTest {
         assertThat(parser.getBankName()).isEqualTo(BankName.STANDARD);
     }
 
+    /**
+     * A negative amount parses as EXPENSE, positive or zero as INCOME; a dollar sign and
+     * thousands-comma inside a quoted field strip cleanly. Dates accept a full ISO-8601
+     * offset-date-time string, and -- the single most likely real-world input for the format this
+     * app's own UI advertises as "Generic format (Date, Description, Amount)" -- a plain date with
+     * no time or offset, which parses as UTC midnight (PF-311).
+     */
     @Nested
     @DisplayName("parse() — valid CSV")
     class ValidCsvTests {
@@ -170,6 +178,7 @@ class StandardCsvParserTest {
         }
     }
 
+    /** A null input stream fails fast with {@link NullPointerException} before any parsing begins. */
     @Nested
     @DisplayName("parse() — invalid input")
     class InvalidInputTests {

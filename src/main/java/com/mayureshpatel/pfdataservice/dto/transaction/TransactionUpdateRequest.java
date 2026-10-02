@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+/** The request payload for updating an existing {@code Transaction}, identified by {@code id}. */
 @Getter
 @Builder(toBuilder = true)
 @ToString
@@ -47,6 +48,15 @@ public class TransactionUpdateRequest {
     @Positive(message = "Merchant ID must be a positive number.")
     private final Long merchantId;
 
+    /**
+     * Builds an update-request DTO from an existing domain {@code Transaction}. Currently unused
+     * by any caller in this codebase -- kept as a documented extension point rather than removed,
+     * since its natural use (pre-populating an edit form/request from a loaded transaction) is a
+     * real future need, not speculative.
+     *
+     * @param transaction the domain transaction to convert
+     * @return an equivalent update-request DTO
+     */
     public static TransactionUpdateRequest fromDomain(Transaction transaction) {
         return TransactionUpdateRequest.builder()
                 .id(transaction.getId())
@@ -61,6 +71,12 @@ public class TransactionUpdateRequest {
                 .build();
     }
 
+    /**
+     * Batch form of {@link #fromDomain(Transaction)}.
+     *
+     * @param transactions the domain transactions to convert
+     * @return the equivalent update-request DTOs, in the same order
+     */
     public static List<TransactionUpdateRequest> fromDomain(List<Transaction> transactions) {
         return transactions.stream()
                 .map(TransactionUpdateRequest::fromDomain)

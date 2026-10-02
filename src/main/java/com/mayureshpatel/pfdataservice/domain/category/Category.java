@@ -6,6 +6,12 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+/**
+ * A user-defined label for classifying transactions (e.g. "Groceries", "Rent"). Optionally
+ * hierarchical: a category with {@code parentId} set is a subcategory of another {@code Category}
+ * -- one level of nesting is the only structure this supports (a subcategory's own {@code parent}
+ * is never itself a subcategory in practice, though nothing in this class enforces that).
+ */
 @Getter
 @Builder(toBuilder = true)
 @ToString

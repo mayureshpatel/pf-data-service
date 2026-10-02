@@ -28,6 +28,7 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Verifies {@code JwtAuthenticationFilter}'s request-level behavior, one {@code @Nested} class per concern below -- when it passes a request through untouched, when it actually authenticates, and what it writes back on rejection. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JwtAuthenticationFilter Unit Tests")
 class JwtAuthenticationFilterTest {
@@ -57,6 +58,7 @@ class JwtAuthenticationFilterTest {
         SecurityContextHolder.clearContext();
     }
 
+    /** A request with no {@code Authorization} header, or one that isn't a Bearer token, passes through to the rest of the chain without ever calling {@code jwtService}, leaving the security context untouched. */
     @Nested
     @DisplayName("Filter Bypass Scenarios")
     class FilterBypassTests {
@@ -92,6 +94,7 @@ class JwtAuthenticationFilterTest {
         }
     }
 
+    /** A valid Bearer token with an empty security context populates a {@link UsernamePasswordAuthenticationToken}; an already-authenticated context is left alone without re-querying {@code userService}; a token resolving to a null username, or one {@code jwtService.isTokenValid} rejects, leaves the context unset -- in every case the filter chain still proceeds. */
     @Nested
     @DisplayName("Authentication Logic")
     class AuthenticationLogicTests {
@@ -178,6 +181,7 @@ class JwtAuthenticationFilterTest {
         }
     }
 
+    /** A PF-211 case: both an expired token ({@link ExpiredJwtException}) and any other malformed/invalid token write a 401 with a JSON body containing a {@code "detail"} field -- and stop the chain, never calling {@code filterChain.doFilter} -- rather than letting the exception propagate unhandled. */
     @Nested
     @DisplayName("Rejection Response Bodies (PF-211)")
     class RejectionResponseBodyTests {

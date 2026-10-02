@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithCustomMockUser(id = BaseControllerTest.USER_ID)
 class ReportControllerTest extends BaseControllerTest {
 
+    /** {@code GET /api/v1/reports/net-worth} returns the service's series for an explicit {@code startDate}/{@code endDate}, and -- unlike the other report endpoints below -- defaults to the trailing 12 months (from the 1st of that starting month through today) when no range is given at all. */
     @Nested
     @DisplayName("getNetWorth")
     class GetNetWorthTests {
@@ -72,6 +73,7 @@ class ReportControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/reports/categories} returns the service's breakdown for an explicit range, and -- unlike {@link GetNetWorthTests}'s net-worth endpoint -- requires {@code startDate}/{@code endDate} explicitly, failing with a 400 rather than silently defaulting one, since the Reports page always has an active range client-side. */
     @Nested
     @DisplayName("getCategoryReportData")
     class GetCategoryReportDataTests {
@@ -106,6 +108,7 @@ class ReportControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/reports/merchants} returns the service's breakdown for the requested range, including each merchant's associated category names. */
     @Nested
     @DisplayName("getMerchantReportData")
     class GetMerchantReportDataTests {
@@ -132,6 +135,7 @@ class ReportControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/reports/monthly} returns the service's income/expense breakdown for the requested range. */
     @Nested
     @DisplayName("getMonthlyReportData")
     class GetMonthlyReportDataTests {

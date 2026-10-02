@@ -12,6 +12,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Verifies {@code RegistrationRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("RegistrationRequest validation tests")
 class RegistrationRequestValidationTest {
 
@@ -37,6 +38,7 @@ class RegistrationRequestValidationTest {
         assertThat(violations).isEmpty();
     }
 
+    /** {@code username} must be non-blank, no more than 50 characters, and restricted to letters, numbers, and underscores. */
     @Nested
     @DisplayName("Field: username")
     class UsernameValidation {
@@ -89,6 +91,7 @@ class RegistrationRequestValidationTest {
         }
     }
 
+    /** {@code email} must be non-blank, a well-formed address, and no more than 100 characters. */
     @Nested
     @DisplayName("Field: email")
     class EmailValidation {
@@ -133,6 +136,7 @@ class RegistrationRequestValidationTest {
         }
     }
 
+    /** {@code password} must be non-blank, between 8 and 100 characters, and contain at least one uppercase letter, one lowercase letter, one digit, and one special character -- each requirement checked independently so a single missing class of character produces its own targeted message. */
     @Nested
     @DisplayName("Field: password")
     class PasswordValidation {

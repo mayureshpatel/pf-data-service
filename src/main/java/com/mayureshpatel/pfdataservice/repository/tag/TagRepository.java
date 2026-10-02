@@ -13,6 +13,10 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * JDBC-backed persistence for {@link Tag}, including the transaction-tag junction-table
+ * operations moved here from {@code TransactionRepository} (PF-307).
+ */
 @Repository("jdbcTagRepository")
 @RequiredArgsConstructor
 public class TagRepository implements JdbcRepository<Tag, Long> {
@@ -37,6 +41,10 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
                 .optional();
     }
 
+    /**
+     * @param userId the owning user's id
+     * @return every tag the user has, alphabetical by name
+     */
     public List<Tag> findAllByUserId(Long userId) {
         return jdbcClient.sql(TagQueries.FIND_ALL_BY_USER_ID)
                 .param("userId", userId)
@@ -110,6 +118,11 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
                 .list();
     }
 
+    /**
+     * @param transactionId the transaction to tag
+     * @param tagId         the tag to assign
+     * @return the number of rows inserted (always 1 on success)
+     */
     public int insertTransactionTag(Long transactionId, Long tagId) {
         return jdbcClient.sql(TagQueries.INSERT_TRANSACTION_TAG)
                 .param("transactionId", transactionId)
@@ -117,6 +130,14 @@ public class TagRepository implements JdbcRepository<Tag, Long> {
                 .update();
     }
 
+    /**
+     * Removes one specific tag from one specific transaction -- not a bulk clear-all-tags
+     * operation.
+     *
+     * @param transactionId the tagged transaction
+     * @param tagId         the tag to remove
+     * @return the number of rows deleted (0 or 1)
+     */
     public int deleteTransactionTag(Long transactionId, Long tagId) {
         return jdbcClient.sql(TagQueries.DELETE_TRANSACTION_TAG)
                 .param("transactionId", transactionId)

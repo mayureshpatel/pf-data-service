@@ -18,6 +18,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+/** Verifies {@code UniversalCsvParser}'s header-pattern-matching parser -- the fallback used when no bank-specific parser applies -- across column identification, record parsing, edge cases, and resource cleanup, one {@code @Nested} class per concern below. */
 @DisplayName("UniversalCsvParser Unit Tests")
 class UniversalCsvParserTest {
 
@@ -29,6 +30,12 @@ class UniversalCsvParserTest {
         assertEquals(BankName.UNIVERSAL, parser.getBankName());
     }
 
+    /**
+     * {@code identifyColumns} matches a range of real-world header spellings via regex rather than
+     * exact names (e.g. {@code "Trans Date"}, {@code "Memo"}, {@code "Debit($)"}), falls back to a
+     * Post Date header when no plain Date column exists, and throws when a genuinely required
+     * column (Date or Description) is missing entirely.
+     */
     @Nested
     @DisplayName("identifyColumns")
     class IdentifyColumnsTests {
@@ -94,6 +101,12 @@ class UniversalCsvParserTest {
         }
     }
 
+    /**
+     * {@code parseRecord} handles both a split Debit/Credit pair and a single signed Amount
+     * column, several date formats, and -- a PF-822 regression -- stores a genuinely zero-amount
+     * row as a real $0.00 INCOME transaction rather than silently dropping it as a presumed
+     * pending/auth-hold artifact, matching every other parser in this codebase.
+     */
     @Nested
     @DisplayName("parseRecord logic")
     class ParseRecordTests {
@@ -157,6 +170,15 @@ class UniversalCsvParserTest {
         }
     }
 
+    /**
+     * A malformed or unrecognized-format amount throws {@link
+     * com.mayureshpatel.pfdataservice.exception.CsvParsingException}; a Debit-only or Credit-only
+     * column mapping still resolves to EXPENSE/INCOME correctly; and when a Debit/Credit pair is
+     * present but exactly one side is zero, the non-zero side wins -- except when both sides are
+     * genuinely zero (a PF-817 boundary), where neither's {@code compareTo(ZERO) > 0} check ever
+     * fires and the amount is left at its unscaled {@code BigDecimal.ZERO} initial value rather
+     * than either column's own scale, defaulting to EXPENSE.
+     */
     @Nested
     @DisplayName("edge cases and errors")
     class EdgeCaseTests {
@@ -286,6 +308,7 @@ class UniversalCsvParserTest {
         }
     }
 
+    /** A PF-817 regression: the underlying CSV parser and reader are closed both after a normal successful parse and when column identification fails before any row is read -- verified by spying on the input stream and asserting {@code close()} was called in either case. */
     @Nested
     @DisplayName("CSV resource cleanup (PF-817)")
     class ResourceCleanupTests {

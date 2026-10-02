@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Verifies {@code MerchantDescriptionLinkCreateRequest}'s single {@code description} field: non-blank, no more than 255 characters, and exposed via the record accessor. */
 @DisplayName("MerchantDescriptionLinkCreateRequest Validation Tests")
 class MerchantDescriptionLinkCreateRequestTest {
 

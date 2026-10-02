@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code ActionItemDto}'s record accessor in {@link StructureTests}. */
 @DisplayName("ActionItemDto Unit Tests")
 class ActionItemDtoTest {
 
+    /** {@code ActionItemDto}'s record accessors map their constructor arguments 1:1, including the nested {@code ActionType} enum. */
     @Nested
     @DisplayName("Record Structure")
     class StructureTests {

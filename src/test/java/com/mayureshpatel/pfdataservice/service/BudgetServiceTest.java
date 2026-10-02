@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code BudgetService}'s reads, CRUD, and status reporting, one {@code @Nested} class per method below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BudgetService Unit Tests")
 class BudgetServiceTest {
@@ -53,6 +54,7 @@ class BudgetServiceTest {
     private static final Long CATEGORY_ID = 10L;
     private static final Long BUDGET_ID = 100L;
 
+    /** {@code getBudgets} maps every repository row for the user/month/year filter to a {@link BudgetDto}. */
     @Nested
     @DisplayName("getBudgets")
     class GetBudgetsTests {
@@ -72,6 +74,7 @@ class BudgetServiceTest {
         }
     }
 
+    /** {@code getAllBudgets} passes the {@link Pageable} straight through to a year/month-descending repository query, mapping each row of the returned page to a {@link BudgetDto}. */
     @Nested
     @DisplayName("getAllBudgets")
     class GetAllBudgetsTests {
@@ -93,6 +96,7 @@ class BudgetServiceTest {
         }
     }
 
+    /** {@code getBudgetStatus} passes the repository's already-computed budgeted/spent/remaining/percentage figures straight through for the user/month/year filter. */
     @Nested
     @DisplayName("getBudgetStatus")
     class GetBudgetStatusTests {
@@ -113,6 +117,13 @@ class BudgetServiceTest {
         }
     }
 
+    /**
+     * {@code create} requires the user and, scoped to that user, the category to exist
+     * (otherwise {@link ResourceNotFoundException}, or {@link AccessDeniedException} if the
+     * category belongs to someone else), and rejects a second budget for the same
+     * user/category/month/year combination with {@link IllegalArgumentException} before ever
+     * reaching the repository insert.
+     */
     @Nested
     @DisplayName("create")
     class CreateTests {
@@ -187,6 +198,7 @@ class BudgetServiceTest {
         }
     }
 
+    /** {@code update} requires the budget to exist ({@link ResourceNotFoundException}) and be owned by the caller ({@link AccessDeniedException}) before delegating to the repository. */
     @Nested
     @DisplayName("update")
     class UpdateTests {
@@ -234,6 +246,7 @@ class BudgetServiceTest {
         }
     }
 
+    /** {@code delete} requires the budget to exist ({@link ResourceNotFoundException}) and be owned by the caller ({@link AccessDeniedException}) before delegating to the repository. */
     @Nested
     @DisplayName("delete")
     class DeleteTests {

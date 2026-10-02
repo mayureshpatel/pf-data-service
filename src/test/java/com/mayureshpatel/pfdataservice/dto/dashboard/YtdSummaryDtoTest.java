@@ -8,9 +8,11 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Verifies {@code YtdSummaryDto}'s builder and {@code toBuilder} in {@link BuilderTests}. */
 @DisplayName("YtdSummaryDto Unit Tests")
 class YtdSummaryDtoTest {
 
+    /** {@code YtdSummaryDto}'s builder maps its arguments 1:1, and {@code toBuilder} can override a field on a copy without needing to restate the rest. */
     @Nested
     @DisplayName("Builder and Structure")
     class BuilderTests {

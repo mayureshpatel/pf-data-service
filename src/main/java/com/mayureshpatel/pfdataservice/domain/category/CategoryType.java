@@ -1,5 +1,10 @@
 package com.mayureshpatel.pfdataservice.domain.category;
 
+/**
+ * The kind of transaction a {@code Category} is meant to classify. {@code BOTH} lets a single
+ * category (e.g. a shared "Reimbursable" bucket) apply to income and expense transactions alike,
+ * and {@code TRANSFER} exists for categories specific to inter-account transfers.
+ */
 public enum CategoryType {
     INCOME,
     EXPENSE,

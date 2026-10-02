@@ -10,9 +10,11 @@ import java.util.Collection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Verifies {@code CustomUserDetails}'s construction from a domain {@code User} and the {@code UserDetails} contract defaults it implements, one {@code @Nested} class per concern below. */
 @DisplayName("CustomUserDetails unit tests")
 class CustomUserDetailsTest {
 
+    /** The constructor copies id/username/password/email straight from the wrapped {@code User}, and defaults to exactly one {@code ROLE_USER} authority when the user's own role isn't set. */
     @Nested
     @DisplayName("Constructor and Mapping")
     class ConstructorAndMappingTest {
@@ -59,6 +61,7 @@ class CustomUserDetailsTest {
         }
     }
 
+    /** The four {@code UserDetails} account-status flags ({@code isAccountNonExpired}, {@code isAccountNonLocked}, {@code isCredentialsNonExpired}, {@code isEnabled}) are all hardcoded true -- this application has no account-locking or expiration concept of its own. */
     @Nested
     @DisplayName("UserDetails interface defaults")
     class UserDetailsDefaultsTest {

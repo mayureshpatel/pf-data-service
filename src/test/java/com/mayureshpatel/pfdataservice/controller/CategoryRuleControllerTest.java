@@ -32,6 +32,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
 
     private static final Long RULE_ID = 1L;
 
+    /** {@code GET /api/v1/category-rules} returns the user's rules, or an empty list, not an error, when there are none. */
     @Nested
     @DisplayName("getRules")
     class GetRulesTests {
@@ -72,6 +73,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/category-rules} creates the rule and returns its new id, and returns a 400 naming every violated field at once (missing {@code keywords} and {@code categoryId} together) when the request fails validation. */
     @Nested
     @DisplayName("createRule")
     class CreateRuleTests {
@@ -119,6 +121,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code PUT /api/v1/category-rules} updates the rule and returns the affected-row count, and returns a 400 naming every violated field at once (missing {@code id}, {@code categoryId}, and {@code keywords} together) when the request fails validation. */
     @Nested
     @DisplayName("updateRule")
     class UpdateRuleTests {
@@ -165,6 +168,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code GET /api/v1/category-rules/preview} returns {@code CategoryRuleService#previewApply}'s change previews without applying anything. */
     @Nested
     @DisplayName("previewApply")
     class PreviewApplyTests {
@@ -187,6 +191,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code POST /api/v1/category-rules/apply} delegates to {@code CategoryRuleService#applyRules} and returns 200. */
     @Nested
     @DisplayName("applyRules")
     class ApplyRulesTests {
@@ -203,6 +208,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE /api/v1/category-rules/{id}} returns 204 on success. */
     @Nested
     @DisplayName("deleteRule")
     class DeleteRuleTests {
@@ -219,6 +225,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
     }
 
+    /** {@code DELETE} returns 404 when the service throws {@link ResourceNotFoundException}; an unexpected exception elsewhere surfaces as a generic 500 via {@code GlobalExceptionHandler}'s catch-all. */
     @Nested
     @DisplayName("Error Handling")
     class ErrorHandlingTests {

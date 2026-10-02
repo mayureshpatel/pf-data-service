@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/** Verifies {@code SnapshotService}'s two methods, one {@code @Nested} class each below. */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SnapshotService Unit Tests")
 class SnapshotServiceTest {
@@ -42,6 +43,12 @@ class SnapshotServiceTest {
     private static final Long ACCOUNT_ID = 10L;
     private static final Long USER_ID = 1L;
 
+    /**
+     * {@code createEndOfMonthSnapshot} inserts a new snapshot or updates the existing one for the
+     * same account/date, computing the month-end balance as current balance minus net flow after
+     * that date (treating a null net flow as zero), and enforces both that the account exists and
+     * that the caller owns it before touching anything.
+     */
     @Nested
     @DisplayName("createEndOfMonthSnapshot")
     class CreateEndOfMonthSnapshotTests {
@@ -132,6 +139,13 @@ class SnapshotServiceTest {
         }
     }
 
+    /**
+     * {@code calculateEndOfMonthBalance} (added for PF-304, pulled out of {@link
+     * CreateEndOfMonthSnapshotTests}'s logic as a pure read-only computation) does the same
+     * current-balance-minus-net-flow math but never touches {@code snapshotRepository} or
+     * {@code accountRepository} -- callers that only need the number, not a persisted row (e.g.
+     * {@code ReportService}), use this instead of the persisting method.
+     */
     @Nested
     @DisplayName("calculateEndOfMonthBalance (PF-304)")
     class CalculateEndOfMonthBalanceTests {

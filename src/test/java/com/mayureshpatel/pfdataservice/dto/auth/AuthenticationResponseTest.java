@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Verifies {@code AuthenticationResponse}'s record accessor in {@link StructureTests}. */
 @DisplayName("AuthenticationResponse structure tests")
 class AuthenticationResponseTest {
 
+    /** {@code token()} returns what was set, whether the record was built via its builder or its canonical constructor. */
     @Nested
     @DisplayName("Structure")
     class StructureTests {

@@ -14,6 +14,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code CategoryRuleDtoMapper}'s static {@code toDto} mapping (in {@link ToDtoMappingTests}), plus confirms the private constructor of this static-utility-only class is instantiable via reflection, solely to satisfy coverage tooling. */
 @DisplayName("CategoryRuleDtoMapper Unit Tests")
 class CategoryRuleDtoMapperTest {
 
@@ -31,6 +32,7 @@ class CategoryRuleDtoMapperTest {
         assertNotNull(instance);
     }
 
+    /** {@code toDto} returns null for a null source, maps every field (including the amount range and nesting the category into its own sub-DTO) when fully populated, and leaves {@code userId}/{@code category} null without throwing when the source's {@code user}/{@code category} are null. */
     @Nested
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {

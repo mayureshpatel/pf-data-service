@@ -9,6 +9,11 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * Maps a JDBC {@link ResultSet} row directly to a {@link MerchantDescriptionLink}. Unlike most of
+ * this codebase's row mappers, this one has no prefixed/nested-embedding overload -- it's only
+ * ever used to map this table's own rows directly, never composed into a richer joined result.
+ */
 @Component
 public class MerchantDescriptionLinkRowMapper extends JdbcMapperUtils implements RowMapper<MerchantDescriptionLink> {
 

@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.repository.recurring_history.query;
 
 import lombok.NoArgsConstructor;
 
+/** SQL query constants for {@code RecurringTransactionRepository}. */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class RecurringTransactionQueries {
 

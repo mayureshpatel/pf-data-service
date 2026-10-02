@@ -14,6 +14,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * Registers the JWT bearer-token security scheme so Swagger UI's "Authorize" dialog and the
+     * generated OpenAPI spec both reflect this API's actual authentication mechanism.
+     *
+     * @return the customized OpenAPI definition
+     */
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "bearerAuth";

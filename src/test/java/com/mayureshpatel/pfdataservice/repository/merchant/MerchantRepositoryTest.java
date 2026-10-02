@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Verifies {@code MerchantRepository} against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising the JDBC Client mapping, pagination, search, and ownership-scoped writes directly rather than mocking them. */
 @Import(MerchantRepository.class)
 @DisplayName("MerchantRepository Integration Tests (PostgreSQL)")
 class MerchantRepositoryTest extends BaseRepositoryTest {
@@ -41,6 +42,14 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
     private static final Long MERCHANT_AMAZON = 2L;
     private static final Long MERCHANT_CAFE = 4L; // "My Favorite Cafe", baseline's own merchant
 
+    /**
+     * {@code findById}/{@code findAllByUserId} read correctly against the baseline fixture; the
+     * paginated {@code findAllByUserId(userId, search, pageable)} overload (PF-320) honors the
+     * requested page size with a correct total count, and its PF-845 search term matches
+     * case-insensitively against either {@code name} or {@code city}, returning an empty page
+     * (not an error) for no matches. {@code findByIdAndUserId} (PF-220) returns empty -- not the
+     * merchant -- for the right id under the wrong user.
+     */
     @Nested
     @DisplayName("Find Operations")
     class FindTests {
@@ -136,6 +145,7 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code findMerchantTotals} sums real baseline transaction amounts per merchant over a date range, resolved correctly back to the merchant's own display name and id. */
     @Nested
     @DisplayName("Aggregations")
     class AggregationTests {
@@ -162,6 +172,13 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /**
+     * {@code insert} round-trips every location field (PF-845: {@code city}/{@code state}/
+     * {@code postalCode}/{@code country}), leaving them null when omitted; {@code update}/
+     * {@code delete} are both scoped to the merchant's owning user at the SQL level -- a
+     * wrong-user call (PF-220/PF-845) affects zero rows and leaves the record completely
+     * untouched, rather than throwing or silently succeeding.
+     */
     @Nested
     @DisplayName("Write Operations")
     class WriteTests {
@@ -272,6 +289,15 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /**
+     * A PF-823 fix: {@code findMerchantReportData} aggregates every matching transaction, not just
+     * the newest 1000 -- proven by bulk-seeding 1,500 real rows directly via SQL (one set-based
+     * {@code INSERT...generate_series}, not 1,500 round trips) and asserting the real count and
+     * dollar total, which a silent 1000-row cap would have undercounted. It also reports an empty
+     * {@code categories} list, not a null placeholder, when every transaction for a merchant is
+     * uncategorized -- the underlying SQL's {@code array_remove} strips the null entry {@code
+     * array_agg} would otherwise contribute for an uncategorized row.
+     */
     @Nested
     @DisplayName("PF-823: Reports server-side aggregation (Merchants)")
     class ReportDataAggregation {
