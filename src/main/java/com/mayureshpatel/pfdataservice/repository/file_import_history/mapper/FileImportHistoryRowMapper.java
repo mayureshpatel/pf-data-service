@@ -33,12 +33,7 @@ public class FileImportHistoryRowMapper extends JdbcMapperUtils implements RowMa
      * @throws SQLException if there is an error accessing the ResultSet
      */
     public static FileImportHistory mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
         FileImportHistory.FileImportHistoryBuilder builder = FileImportHistory.builder();

@@ -71,74 +71,100 @@ public class SynovusCsvParser implements TransactionParser {
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         Objects.requireNonNull(inputStream, "InputStream cannot be null");
         try {
-            // read until we find the header row starting with "date"
             BufferedReader lineReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            String line;
-            StringBuilder csvContent = new StringBuilder();
-            boolean headerFound = false;
-            boolean isTabSeparated = false;
-
-            while ((line = lineReader.readLine()) != null) {
-                if (line.startsWith("\uFEFF")) {
-                    line = line.substring(1);
-                }
-                String trimmedLine = line.trim();
-                if (!headerFound) {
-                    // check if line starts with date (handling potential quotes or bom)
-                    // we remove leading quotes to check for "date"
-                    String headerCheck = trimmedLine.replace("\"", "");
-                    if (headerCheck.toLowerCase(Locale.ROOT).startsWith("date")) {
-                        headerFound = true;
-                        isTabSeparated = line.contains("\t");
-                        csvContent.append(line).append('\n');
-                    }
-                    continue;
-                }
-                // skip the totals footer
-                if (trimmedLine.contains("Totals:")) {
-                    continue;
-                }
-                csvContent.append(line).append('\n');
-            }
-
-            if (!headerFound) {
-                throw new CsvParsingException("Could not find header row starting with 'Date'");
-            }
-
-            CSVFormat format = isTabSeparated ? CSVFormat.TDF.builder()
-                    .setHeader()
-                    .setSkipHeaderRecord(true)
-                    .setIgnoreHeaderCase(true)
-                    .setTrim(true)
-                    .setIgnoreSurroundingSpaces(true)
-                    .get() : CSV_FORMAT;
-
-            CSVParser csvParser = format.parse(new java.io.StringReader(csvContent.toString()));
-            java.util.List<Transaction> transactions = new java.util.ArrayList<>();
-            java.util.List<String> errors = new java.util.ArrayList<>();
-
-            for (CSVRecord record : csvParser) {
-                if (isValidRecord(record, HEADER_DATE)) {
-                    try {
-                        transactions.add(parseTransaction(record));
-                    } catch (Exception e) {
-                        errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
-                    }
-                }
-            }
-
-            csvParser.close();
-
-            if (!errors.isEmpty()) {
-                throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", errors));
-            }
-
-            return transactions.stream();
+            ScanResult scanResult = scanForHeaderAndContent(lineReader);
+            return parseTransactions(scanResult);
         } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
             throw e;
         } catch (Exception e) {
             throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse Synovus CSV", e);
         }
+    }
+
+    /**
+     * The cleaned, header-starting CSV content (with any leading junk lines and the trailing
+     * "Totals:" footer stripped), and whether it turned out to be tab- rather than comma-separated
+     * (PF-809: extracted from {@link #parse}).
+     */
+    private record ScanResult(String csvContent, boolean isTabSeparated) {
+    }
+
+    /**
+     * Scans forward line-by-line for the first row starting with "date" (case-insensitive,
+     * quote/BOM-tolerant), since Synovus exports don't always put the header on line 1, then
+     * keeps every subsequent line except the trailing "Totals:" footer (PF-809: extracted from
+     * {@link #parse}).
+     */
+    private ScanResult scanForHeaderAndContent(BufferedReader lineReader) throws java.io.IOException {
+        String line;
+        StringBuilder csvContent = new StringBuilder();
+        boolean headerFound = false;
+        boolean isTabSeparated = false;
+
+        while ((line = lineReader.readLine()) != null) {
+            if (line.startsWith("\uFEFF")) {
+                line = line.substring(1);
+            }
+            String trimmedLine = line.trim();
+            if (!headerFound) {
+                // check if line starts with date (handling potential quotes or bom)
+                // we remove leading quotes to check for "date"
+                String headerCheck = trimmedLine.replace("\"", "");
+                if (headerCheck.toLowerCase(Locale.ROOT).startsWith("date")) {
+                    headerFound = true;
+                    isTabSeparated = line.contains("\t");
+                    csvContent.append(line).append('\n');
+                }
+                continue;
+            }
+            // skip the totals footer
+            if (trimmedLine.contains("Totals:")) {
+                continue;
+            }
+            csvContent.append(line).append('\n');
+        }
+
+        if (!headerFound) {
+            throw new CsvParsingException("Could not find header row starting with 'Date'");
+        }
+
+        return new ScanResult(csvContent.toString(), isTabSeparated);
+    }
+
+    /**
+     * Parses the already-cleaned CSV content into transactions, collecting per-row errors rather
+     * than failing on the first one (PF-809: extracted from {@link #parse}).
+     */
+    private Stream<Transaction> parseTransactions(ScanResult scanResult) throws java.io.IOException {
+        CSVFormat format = scanResult.isTabSeparated() ? CSVFormat.TDF.builder()
+                .setHeader()
+                .setSkipHeaderRecord(true)
+                .setIgnoreHeaderCase(true)
+                .setTrim(true)
+                .setIgnoreSurroundingSpaces(true)
+                .get() : CSV_FORMAT;
+
+        CSVParser csvParser = format.parse(new java.io.StringReader(scanResult.csvContent()));
+        java.util.List<Transaction> transactions = new java.util.ArrayList<>();
+        java.util.List<String> errors = new java.util.ArrayList<>();
+
+        for (CSVRecord record : csvParser) {
+            if (isValidRecord(record, HEADER_DATE)) {
+                try {
+                    transactions.add(parseTransaction(record));
+                } catch (Exception e) {
+                    errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
+                }
+            }
+        }
+
+        csvParser.close();
+
+        if (!errors.isEmpty()) {
+            throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", errors));
+        }
+
+        return transactions.stream();
     }
 
     /**

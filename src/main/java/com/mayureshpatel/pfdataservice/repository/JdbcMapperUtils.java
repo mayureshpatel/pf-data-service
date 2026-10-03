@@ -58,55 +58,53 @@ public class JdbcMapperUtils {
     public static TableAudit getAuditColumns(ResultSet rs, String prefix, Set<String> availableColumns) throws SQLException {
         String safePrefix = prefix == null ? "" : prefix;
 
-        OffsetDateTime createdAt = null;
-        OffsetDateTime updatedAt = null;
-        OffsetDateTime deletedAt = null;
-
-        User createdBy = null;
-        User updatedBy = null;
-        User deletedBy = null;
-
-        if (hasColumn(safePrefix + "created_at", availableColumns)) {
-            createdAt = getOffsetDateTime(rs, safePrefix + "created_at");
-        }
-
-        if (hasColumn(safePrefix + "updated_at", availableColumns)) {
-            updatedAt = getOffsetDateTime(rs, safePrefix + "updated_at");
-        }
-
-        if (hasColumn(safePrefix + "deleted_at", availableColumns)) {
-            deletedAt = getOffsetDateTime(rs, safePrefix + "deleted_at");
-        }
-
-        if (hasColumn(safePrefix + "created_by", availableColumns)) {
-            Long userId = getLongOrNull(rs, safePrefix + "created_by");
-            if (userId != null) {
-                createdBy = User.builder().id(userId).build();
-            }
-        }
-
-        if (hasColumn(safePrefix + "updated_by", availableColumns)) {
-            Long userId = getLongOrNull(rs, safePrefix + "updated_by");
-            if (userId != null) {
-                updatedBy = User.builder().id(userId).build();
-            }
-        }
-
-        if (hasColumn(safePrefix + "deleted_by", availableColumns)) {
-            Long userId = getLongOrNull(rs, safePrefix + "deleted_by");
-            if (userId != null) {
-                deletedBy = User.builder().id(userId).build();
-            }
-        }
-
         return TableAudit.builder()
-                .createdAt(createdAt)
-                .updatedAt(updatedAt)
-                .deletedAt(deletedAt)
-                .createdBy(createdBy)
-                .updatedBy(updatedBy)
-                .deletedBy(deletedBy)
+                .createdAt(getAuditTimestamp(rs, safePrefix + "created_at", availableColumns))
+                .updatedAt(getAuditTimestamp(rs, safePrefix + "updated_at", availableColumns))
+                .deletedAt(getAuditTimestamp(rs, safePrefix + "deleted_at", availableColumns))
+                .createdBy(getAuditUser(rs, safePrefix + "created_by", availableColumns))
+                .updatedBy(getAuditUser(rs, safePrefix + "updated_by", availableColumns))
+                .deletedBy(getAuditUser(rs, safePrefix + "deleted_by", availableColumns))
                 .build();
+    }
+
+    /**
+     * Reads one audit timestamp column (PF-809: extracted from {@link #getAuditColumns}'s
+     * previously-inlined, 3-times-repeated version of this exact check), or {@code null} if the
+     * query didn't select it.
+     */
+    private static OffsetDateTime getAuditTimestamp(ResultSet rs, String columnName, Set<String> availableColumns) throws SQLException {
+        return hasColumn(columnName, availableColumns) ? getOffsetDateTime(rs, columnName) : null;
+    }
+
+    /**
+     * Reads one audit user-reference column (PF-809: extracted from {@link #getAuditColumns}'s
+     * previously-inlined, 3-times-repeated version of this exact check) as a stub {@link User}
+     * carrying only its id, or {@code null} if the query didn't select it or the column was
+     * {@code null}.
+     */
+    private static User getAuditUser(ResultSet rs, String columnName, Set<String> availableColumns) throws SQLException {
+        if (!hasColumn(columnName, availableColumns)) {
+            return null;
+        }
+        Long userId = getLongOrNull(rs, columnName);
+        return userId != null ? User.builder().id(userId).build() : null;
+    }
+
+    /**
+     * Normalizes a caller-supplied column prefix to the trailing-underscore form every
+     * {@code RowMapper}'s column lookups expect (e.g. {@code "account"} and {@code "account_"}
+     * both become {@code "account_"}; {@code null}/empty stays {@code ""}) -- previously
+     * duplicated verbatim in every {@code mapRow(ResultSet, String)} implementation (PF-809).
+     *
+     * @param prefix the raw prefix, possibly {@code null}, empty, or already underscore-terminated
+     * @return the safe, underscore-terminated prefix ready to prepend to a column name
+     */
+    public static String normalizePrefix(String prefix) {
+        if (prefix == null || prefix.isEmpty()) {
+            return "";
+        }
+        return prefix.endsWith("_") ? prefix : prefix + "_";
     }
 
     /**

@@ -31,12 +31,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Verifies {@code TransactionRepository} -- the largest and most heavily-queried repository in this codebase -- against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising dynamic filtering, aggregation, and batch writes directly rather than mocking them. */
-@Import(TransactionRepository.class)
+@Import({TransactionRepository.class, TransactionReportRepository.class})
 @DisplayName("TransactionRepository Integration Tests (PostgreSQL)")
 class TransactionRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private TransactionReportRepository transactionReportRepository;
 
     @Autowired
     private JdbcClient jdbcClient;
@@ -560,7 +563,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
 
             // act
-            BigDecimal sum = transactionRepository.getSumByDateRange(USER_ID, start, end, TransactionType.INCOME);
+            BigDecimal sum = transactionReportRepository.getSumByDateRange(USER_ID, start, end, TransactionType.INCOME);
 
             // assert & verify
             // Based on baseline: 1002 is 500.00 INCOME
@@ -592,7 +595,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             OffsetDateTime end = OffsetDateTime.parse("2024-12-31T23:59:59.999999000Z");
 
             // act
-            BigDecimal sum = transactionRepository.getSumByDateRange(USER_ID, start, end, TransactionType.EXPENSE);
+            BigDecimal sum = transactionReportRepository.getSumByDateRange(USER_ID, start, end, TransactionType.EXPENSE);
 
             // assert & verify -- baseline has no other 2024 EXPENSE transactions for this user; any
             // non-zero result means the Jan-1-2025 transaction leaked into the 2024 range
@@ -607,7 +610,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
 
             // act
-            List<CategoryBreakdownDto> result = transactionRepository.findCategoryTotals(USER_ID, start, end);
+            List<CategoryBreakdownDto> result = transactionReportRepository.findCategoryTotals(USER_ID, start, end);
 
             // assert & verify
             assertFalse(result.isEmpty());
@@ -651,7 +654,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should find monthly sums for cash flow trend")
         void shouldFindMonthlySums() {
             // act
-            List<Object[]> result = transactionRepository.findMonthlySums(USER_ID, LocalDate.of(2025, 9, 1));
+            List<Object[]> result = transactionReportRepository.findMonthlySums(USER_ID, LocalDate.of(2025, 9, 1));
 
             // assert & verify
             assertFalse(result.isEmpty());
@@ -664,7 +667,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should return zero for uncategorized expense totals when everything is categorized")
         void shouldGetZeroUncategorizedExpenseTotalsWhenAllCategorized() {
             // act -- every EXPENSE transaction in the baseline already has a category
-            BigDecimal result = transactionRepository.getUncategorizedExpenseTotals(USER_ID);
+            BigDecimal result = transactionReportRepository.getUncategorizedExpenseTotals(USER_ID);
 
             // assert & verify
             assertEquals(0, BigDecimal.ZERO.compareTo(result));
@@ -684,7 +687,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             transactionRepository.insert(uncategorizedExpense);
 
             // act
-            BigDecimal result = transactionRepository.getUncategorizedExpenseTotals(USER_ID);
+            BigDecimal result = transactionReportRepository.getUncategorizedExpenseTotals(USER_ID);
 
             // assert & verify
             assertEquals(0, new BigDecimal(AMOUNT).compareTo(result));
@@ -971,7 +974,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             seedBulkGroceryTransactions();
 
             // act -- range covers all 1,500 seeded days plus margin
-            List<CategoryReportDataDto> result = transactionRepository.findCategoryReportData(
+            List<CategoryReportDataDto> result = transactionReportRepository.findCategoryReportData(
                     USER_ID,
                     OffsetDateTime.parse("2020-01-01T00:00:00Z"),
                     OffsetDateTime.parse("2024-12-31T00:00:00Z"));
@@ -998,7 +1001,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     """).update();
 
             // act
-            List<CategoryReportDataDto> result = transactionRepository.findCategoryReportData(
+            List<CategoryReportDataDto> result = transactionReportRepository.findCategoryReportData(
                     USER_ID,
                     OffsetDateTime.parse("2031-07-01T00:00:00Z"),
                     OffsetDateTime.parse("2031-07-02T00:00:00Z"));
@@ -1015,7 +1018,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             seedBulkGroceryTransactions();
 
             // act
-            List<MonthlyReportDataDto> result = transactionRepository.findMonthlyIncomeExpense(
+            List<MonthlyReportDataDto> result = transactionReportRepository.findMonthlyIncomeExpense(
                     USER_ID,
                     OffsetDateTime.parse("2020-01-01T00:00:00Z"),
                     OffsetDateTime.parse("2024-12-31T00:00:00Z"));
@@ -1049,7 +1052,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     """).update();
 
             // act
-            List<MonthlyReportDataDto> result = transactionRepository.findMonthlyIncomeExpense(
+            List<MonthlyReportDataDto> result = transactionReportRepository.findMonthlyIncomeExpense(
                     USER_ID,
                     OffsetDateTime.parse("2031-05-01T00:00:00Z"),
                     OffsetDateTime.parse("2031-05-31T00:00:00Z"));

@@ -34,25 +34,35 @@ public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<
      * @throws SQLException if an error occurs while accessing the ResultSet
      */
     public static CategoryRule mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
-        CategoryRule.CategoryRuleBuilder builder = CategoryRule.builder();
-        if (hasColumn(safePrefix + "id", availableColumns)) {
-            Long id = getLongOrNull(rs, safePrefix + "id");
-            if (id == null) {
-                return null;
-            }
-            builder.id(id);
-        } else {
+        Long id = requireId(rs, safePrefix, availableColumns);
+        if (id == null) {
             return null;
         }
 
+        CategoryRule.CategoryRuleBuilder builder = CategoryRule.builder().id(id);
+        mapOptionalFields(builder, rs, safePrefix, availableColumns);
+        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+
+        return builder.build();
+    }
+
+    /**
+     * The one required column (PF-809: extracted from {@link #mapRow(ResultSet, String)}) --
+     * {@code null} whether the column is simply absent from the query or present but itself
+     * {@code null}, since either way there's no rule to map.
+     */
+    private static Long requireId(ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
+        return hasColumn(safePrefix + "id", availableColumns) ? getLongOrNull(rs, safePrefix + "id") : null;
+    }
+
+    /**
+     * Every column besides {@code id} and the audit trail, each independently optional
+     * (PF-809: extracted from {@link #mapRow(ResultSet, String)}).
+     */
+    private static void mapOptionalFields(CategoryRule.CategoryRuleBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (availableColumns.contains(safePrefix + "match_type")) {
             String matchType = rs.getString(safePrefix + "match_type");
             builder.matchType(matchType != null ? MatchType.valueOf(matchType) : null);
@@ -72,8 +82,5 @@ public class CategoryRuleRowMapper extends JdbcMapperUtils implements RowMapper<
         if (availableColumns.contains(safePrefix + "max_amount")) {
             builder.maxAmount(rs.getBigDecimal(safePrefix + "max_amount"));
         }
-        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
-
-        return builder.build();
     }
 }

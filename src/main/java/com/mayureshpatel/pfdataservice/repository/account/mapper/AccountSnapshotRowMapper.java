@@ -31,12 +31,7 @@ public class AccountSnapshotRowMapper extends JdbcMapperUtils implements RowMapp
      * @throws SQLException if an error occurs while accessing the ResultSet
      */
     public static AccountSnapshot mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
         AccountSnapshot.AccountSnapshotBuilder builder = AccountSnapshot.builder();

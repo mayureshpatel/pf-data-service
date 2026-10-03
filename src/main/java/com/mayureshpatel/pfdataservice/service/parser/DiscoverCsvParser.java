@@ -77,39 +77,69 @@ public class DiscoverCsvParser implements TransactionParser {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
         try {
             CSVParser csvParser = CSV_FORMAT.parse(reader);
-            List<Transaction> transactions = new ArrayList<>();
-            List<String> errors = new ArrayList<>();
+            ParseOutcome outcome = parseRecords(csvParser);
+            closeResources(csvParser, reader);
 
-            for (CSVRecord record : csvParser) {
-                if (isValidRecord(record, HEADER_DATE)) {
-                    try {
-                        transactions.add(parseTransaction(record));
-                    } catch (Exception e) {
-                        errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
-                    }
-                }
+            if (!outcome.errors().isEmpty()) {
+                throw new CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", outcome.errors()));
             }
 
-            try {
-                csvParser.close();
-                reader.close();
-            } catch (Exception e) {
-                throw new CsvParsingException("Failed to close CSV parser resources", e);
-            }
-
-            if (!errors.isEmpty()) {
-                throw new CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", errors));
-            }
-
-            return transactions.stream();
+            return outcome.transactions().stream();
         } catch (CsvParsingException e) {
             throw e;
         } catch (Exception e) {
-            try {
-                reader.close();
-            } catch (Exception ignored) {
-            }
+            closeQuietly(reader);
             throw new CsvParsingException("Failed to parse Discover CSV", e);
+        }
+    }
+
+    /**
+     * A parsed file's successfully-mapped transactions alongside any per-row errors (PF-809:
+     * extracted from {@link #parse}) -- collected together rather than thrown immediately, so a
+     * malformed row doesn't prevent every other row's error from also being reported.
+     */
+    private record ParseOutcome(List<Transaction> transactions, List<String> errors) {
+    }
+
+    /**
+     * Parses every valid record, collecting rather than failing on the first per-row error
+     * (PF-809: extracted from {@link #parse}).
+     */
+    private ParseOutcome parseRecords(CSVParser csvParser) {
+        List<Transaction> transactions = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        for (CSVRecord record : csvParser) {
+            if (isValidRecord(record, HEADER_DATE)) {
+                try {
+                    transactions.add(parseTransaction(record));
+                } catch (Exception e) {
+                    errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
+                }
+            }
+        }
+
+        return new ParseOutcome(transactions, errors);
+    }
+
+    /**
+     * Closes both resources, converting any close failure into the same domain exception a parse
+     * failure would use (PF-809: extracted from {@link #parse}) -- always attempted exactly once,
+     * whether or not the parse itself succeeded, matching the original inline ordering.
+     */
+    private void closeResources(CSVParser csvParser, BufferedReader reader) {
+        try {
+            csvParser.close();
+            reader.close();
+        } catch (Exception e) {
+            throw new CsvParsingException("Failed to close CSV parser resources", e);
+        }
+    }
+
+    private void closeQuietly(BufferedReader reader) {
+        try {
+            reader.close();
+        } catch (Exception ignored) {
         }
     }
 

@@ -54,81 +54,11 @@ public final class TransactionSpecification {
         parameters.put("userId", userId);
 
         if (filter != null) {
-            if (filter.accountId() != null) {
-                conditions.add("transactions.account_id = :accountId");
-                parameters.put("accountId", filter.accountId());
-            }
-
-            if (filter.type() != null) {
-                if (filter.type() == TransactionType.TRANSFER) {
-                    conditions.add("transactions.type IN ('TRANSFER', 'TRANSFER_IN', 'TRANSFER_OUT')");
-                } else {
-                    conditions.add("transactions.type = :type");
-                    parameters.put("type", filter.type().name());
-                }
-            }
-
-            if (filter.description() != null && !filter.description().isBlank()) {
-                conditions.add("LOWER(transactions.description) LIKE :description ESCAPE '\\'");
-                parameters.put("description", "%" + escapeLike(filter.description().toLowerCase(Locale.ROOT)) + "%");
-            }
-
-            if (filter.categoryName() != null && !filter.categoryName().isBlank()) {
-                if (UNCATEGORIZED_SENTINEL.equalsIgnoreCase(filter.categoryName())) {
-                    conditions.add("transactions.category_id IS NULL");
-                } else {
-                    conditions.add("LOWER(categories.name) LIKE :categoryName ESCAPE '\\'");
-                    parameters.put("categoryName", "%" + escapeLike(filter.categoryName().toLowerCase(Locale.ROOT)) + "%");
-                }
-            }
-
-            // PF-845: merchants.clean_name no longer exists (dropped by V42) -- matches against
-            // merchants.name instead. filter.merchantCleanName()'s own name is untouched here,
-            // deliberately out of this ticket's scope (see TransactionFilter).
-            if (filter.merchantCleanName() != null && !filter.merchantCleanName().isBlank()) {
-                conditions.add("LOWER(merchants.name) LIKE :merchantCleanName ESCAPE '\\'");
-                parameters.put("merchantCleanName", "%" + escapeLike(filter.merchantCleanName().toLowerCase(Locale.ROOT)) + "%");
-            }
-
-            if (filter.minAmount() != null) {
-                conditions.add("transactions.amount >= :minAmount");
-                parameters.put("minAmount", filter.minAmount());
-            }
-
-            if (filter.maxAmount() != null) {
-                conditions.add("transactions.amount <= :maxAmount");
-                parameters.put("maxAmount", filter.maxAmount());
-            }
-
-            if (filter.startDate() != null) {
-                // bound as an explicit UTC OffsetDateTime, not a bare LocalDate -- a LocalDate
-                // parameter compared against a timestamptz column resolves using the database
-                // session's timezone (America/New_York in production, see application.yml), not
-                // UTC. Under that non-UTC session, a transaction stored at UTC midnight on this
-                // exact start date falls *before* the implicitly-shifted lower bound and was
-                // silently excluded. See PF-828.
-                conditions.add("transactions.date >= :startDate");
-                parameters.put("startDate", filter.startDate().atStartOfDay(UTC_ZONE).toOffsetDateTime());
-            }
-
-            if (filter.endDate() != null) {
-                // exclusive upper bound on the day AFTER endDate, so the filter covers the whole
-                // end date rather than cutting off at midnight -- same explicit-UTC reasoning as
-                // startDate above, not just the inclusive-end-date reasoning this originally
-                // documented (see PF-828).
-                conditions.add("transactions.date < :endDate");
-                parameters.put("endDate", filter.endDate().plusDays(1).atStartOfDay(UTC_ZONE).toOffsetDateTime());
-            }
-
-            if (filter.tagId() != null) {
-                // PF-308: EXISTS rather than a JOIN -- transaction_tags is many-to-many, and a
-                // transaction can carry other tags besides the one being filtered on. A JOIN
-                // filtered to one tag_id wouldn't duplicate rows here (at most one match per
-                // transaction), but EXISTS keeps this condition self-contained in the WHERE-clause
-                // list without touching ENRICHED_JOINS/baseFrom construction at all.
-                conditions.add("EXISTS (SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = transactions.id AND tt.tag_id = :tagId)");
-                parameters.put("tagId", filter.tagId());
-            }
+            addIdentityFilters(conditions, parameters, filter);
+            addTextSearchFilters(conditions, parameters, filter);
+            addAmountRangeFilters(conditions, parameters, filter);
+            addDateRangeFilters(conditions, parameters, filter);
+            addTagFilter(conditions, parameters, filter);
         }
 
         // always filter out deleted transactions
@@ -136,6 +66,106 @@ public final class TransactionSpecification {
 
         String whereClause = String.join(" and ", conditions);
         return new FilterResult(whereClause, parameters);
+    }
+
+    /**
+     * {@code accountId}/{@code type}, each an exact-match filter (PF-809: extracted from
+     * {@link #buildWhereClause}).
+     */
+    private static void addIdentityFilters(List<String> conditions, Map<String, Object> parameters, TransactionFilter filter) {
+        if (filter.accountId() != null) {
+            conditions.add("transactions.account_id = :accountId");
+            parameters.put("accountId", filter.accountId());
+        }
+
+        if (filter.type() != null) {
+            if (filter.type() == TransactionType.TRANSFER) {
+                conditions.add("transactions.type IN ('TRANSFER', 'TRANSFER_IN', 'TRANSFER_OUT')");
+            } else {
+                conditions.add("transactions.type = :type");
+                parameters.put("type", filter.type().name());
+            }
+        }
+    }
+
+    /**
+     * {@code description}/{@code categoryName}/{@code merchantCleanName}, each a case-insensitive
+     * {@code LIKE} search (PF-809: extracted from {@link #buildWhereClause}).
+     */
+    private static void addTextSearchFilters(List<String> conditions, Map<String, Object> parameters, TransactionFilter filter) {
+        if (filter.description() != null && !filter.description().isBlank()) {
+            conditions.add("LOWER(transactions.description) LIKE :description ESCAPE '\\'");
+            parameters.put("description", "%" + escapeLike(filter.description().toLowerCase(Locale.ROOT)) + "%");
+        }
+
+        if (filter.categoryName() != null && !filter.categoryName().isBlank()) {
+            if (UNCATEGORIZED_SENTINEL.equalsIgnoreCase(filter.categoryName())) {
+                conditions.add("transactions.category_id IS NULL");
+            } else {
+                conditions.add("LOWER(categories.name) LIKE :categoryName ESCAPE '\\'");
+                parameters.put("categoryName", "%" + escapeLike(filter.categoryName().toLowerCase(Locale.ROOT)) + "%");
+            }
+        }
+
+        // PF-845: merchants.clean_name no longer exists (dropped by V42) -- matches against
+        // merchants.name instead. filter.merchantCleanName()'s own name is untouched here,
+        // deliberately out of this ticket's scope (see TransactionFilter).
+        if (filter.merchantCleanName() != null && !filter.merchantCleanName().isBlank()) {
+            conditions.add("LOWER(merchants.name) LIKE :merchantCleanName ESCAPE '\\'");
+            parameters.put("merchantCleanName", "%" + escapeLike(filter.merchantCleanName().toLowerCase(Locale.ROOT)) + "%");
+        }
+    }
+
+    /**
+     * {@code minAmount}/{@code maxAmount} (PF-809: extracted from {@link #buildWhereClause}).
+     */
+    private static void addAmountRangeFilters(List<String> conditions, Map<String, Object> parameters, TransactionFilter filter) {
+        if (filter.minAmount() != null) {
+            conditions.add("transactions.amount >= :minAmount");
+            parameters.put("minAmount", filter.minAmount());
+        }
+
+        if (filter.maxAmount() != null) {
+            conditions.add("transactions.amount <= :maxAmount");
+            parameters.put("maxAmount", filter.maxAmount());
+        }
+    }
+
+    /**
+     * {@code startDate}/{@code endDate}, both bound as explicit UTC {@link OffsetDateTime}s
+     * rather than bare {@link LocalDate}s (PF-809: extracted from {@link #buildWhereClause}) -- a
+     * {@code LocalDate} parameter compared against a {@code timestamptz} column resolves using the
+     * database session's timezone (America/New_York in production, see application.yml), not UTC.
+     * Under that non-UTC session, a transaction stored at UTC midnight on the exact start date
+     * falls *before* the implicitly-shifted lower bound and was silently excluded. See PF-828.
+     * {@code endDate} is an exclusive upper bound on the day AFTER it, so the filter covers the
+     * whole end date rather than cutting off at midnight.
+     */
+    private static void addDateRangeFilters(List<String> conditions, Map<String, Object> parameters, TransactionFilter filter) {
+        if (filter.startDate() != null) {
+            conditions.add("transactions.date >= :startDate");
+            parameters.put("startDate", filter.startDate().atStartOfDay(UTC_ZONE).toOffsetDateTime());
+        }
+
+        if (filter.endDate() != null) {
+            conditions.add("transactions.date < :endDate");
+            parameters.put("endDate", filter.endDate().plusDays(1).atStartOfDay(UTC_ZONE).toOffsetDateTime());
+        }
+    }
+
+    /**
+     * {@code tagId}, via {@code EXISTS} rather than a {@code JOIN} (PF-809: extracted from
+     * {@link #buildWhereClause}) -- {@code transaction_tags} is many-to-many, and a transaction
+     * can carry other tags besides the one being filtered on. A JOIN filtered to one tag_id
+     * wouldn't duplicate rows here (at most one match per transaction), but EXISTS keeps this
+     * condition self-contained in the WHERE-clause list without touching
+     * ENRICHED_JOINS/baseFrom construction at all. See PF-308.
+     */
+    private static void addTagFilter(List<String> conditions, Map<String, Object> parameters, TransactionFilter filter) {
+        if (filter.tagId() != null) {
+            conditions.add("EXISTS (SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = transactions.id AND tt.tag_id = :tagId)");
+            parameters.put("tagId", filter.tagId());
+        }
     }
 
     private static String escapeLike(String value) {

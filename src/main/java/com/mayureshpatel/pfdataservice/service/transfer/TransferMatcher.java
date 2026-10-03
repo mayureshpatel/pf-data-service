@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -48,31 +49,46 @@ public class TransferMatcher {
             Transaction t1 = sorted.get(i);
             if (matchedIds.contains(t1.getId())) continue;
 
-            for (int j = i + 1; j < sorted.size(); j++) {
-                Transaction t2 = sorted.get(j);
-                if (matchedIds.contains(t2.getId())) continue;
-
-                long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getTransactionDate(), t2.getTransactionDate()));
-
-                if (daysDiff > MAX_DAYS_APART_FOR_TRANSFER_MATCH) {
-                    break;
-                }
-
-                if (t1.getAmount().compareTo(t2.getAmount()) == 0
-                        && t1.getType() != t2.getType()
-                        && !t1.getAccount().getId().equals(t2.getAccount().getId())) {
-                    suggestions.add(new TransferSuggestionDto(
-                            TransactionDtoMapper.toDto(t1),
-                            TransactionDtoMapper.toDto(t2),
-                            0.9 - (daysDiff * 0.1)
-                    ));
-
-                    matchedIds.add(t1.getId());
-                    matchedIds.add(t2.getId());
-                    break;
-                }
-            }
+            findMatchForTransaction(sorted, i, t1, matchedIds).ifPresent(suggestions::add);
         }
         return suggestions;
+    }
+
+    /**
+     * Searches forward from just after {@code t1}'s own position for the first transaction that
+     * pairs with it as a transfer candidate, marking both ids matched if found (PF-809: extracted
+     * from {@link #findMatches}, same early-break behavior preserved -- a gap beyond the
+     * threshold ends the search for {@code t1} entirely, since {@code sorted} is date-ordered.
+     *
+     * @return the suggestion, or empty if nothing within the window matched
+     */
+    private Optional<TransferSuggestionDto> findMatchForTransaction(List<Transaction> sorted, int t1Index, Transaction t1, Set<Long> matchedIds) {
+        for (int j = t1Index + 1; j < sorted.size(); j++) {
+            Transaction t2 = sorted.get(j);
+            if (matchedIds.contains(t2.getId())) continue;
+
+            long daysDiff = Math.abs(ChronoUnit.DAYS.between(t1.getTransactionDate(), t2.getTransactionDate()));
+
+            if (daysDiff > MAX_DAYS_APART_FOR_TRANSFER_MATCH) {
+                break;
+            }
+
+            if (isTransferMatch(t1, t2)) {
+                matchedIds.add(t1.getId());
+                matchedIds.add(t2.getId());
+                return Optional.of(new TransferSuggestionDto(
+                        TransactionDtoMapper.toDto(t1),
+                        TransactionDtoMapper.toDto(t2),
+                        0.9 - (daysDiff * 0.1)
+                ));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private boolean isTransferMatch(Transaction t1, Transaction t2) {
+        return t1.getAmount().compareTo(t2.getAmount()) == 0
+                && t1.getType() != t2.getType()
+                && !t1.getAccount().getId().equals(t2.getAccount().getId());
     }
 }

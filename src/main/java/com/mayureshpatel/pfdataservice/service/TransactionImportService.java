@@ -183,34 +183,78 @@ public class TransactionImportService {
     public int saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash) {
         log.info("Saving {} transactions for User: {}, Account ID: {}", approvedDtos.size(), userId, accountId);
 
+        Account account = validateAccountOwnership(userId, accountId);
+        checkForDuplicateFileImport(accountId, fileHash);
+
+        if (approvedDtos == null || approvedDtos.isEmpty()) {
+            return 0;
+        }
+
+        Map<String, Long> merchantMap = resolveMerchantIds(userId, approvedDtos);
+        Set<String> existingSignatures = findExistingSignatures(accountId, approvedDtos);
+        DedupeResult result = deduplicateTransactions(approvedDtos, existingSignatures, account, merchantMap);
+        persistIfAny(account, result, fileName, fileHash);
+
+        return result.uniqueTransactions().size();
+    }
+
+    /**
+     * (PF-809: extracted from {@link #saveTransactions}).
+     */
+    private Account validateAccountOwnership(Long userId, Long accountId) {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + accountId));
 
         if (!account.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied to account");
         }
+        return account;
+    }
 
+    /**
+     * Rejects the whole batch outright if its file hash matches a previously imported file
+     * (PF-809: extracted from {@link #saveTransactions}).
+     */
+    private void checkForDuplicateFileImport(Long accountId, String fileHash) {
         if (fileHash != null && fileImportHistoryRepository.findByAccountIdAndFileHash(accountId, fileHash).isPresent()) {
             log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);
             throw new DuplicateImportException("This file has already been imported.");
         }
+    }
 
-        if (approvedDtos == null || approvedDtos.isEmpty()) {
-            return 0;
-        }
+    /**
+     * (PF-809: extracted from {@link #saveTransactions}).
+     */
+    private Map<String, Long> resolveMerchantIds(Long userId, List<TransactionDto> approvedDtos) {
+        List<String> incomingDescriptions = approvedDtos.stream().map(TransactionDto::description).toList();
+        return merchantService.findMatchingMerchantIds(userId, incomingDescriptions);
+    }
 
+    /**
+     * The (date, amount, description, type) signatures of every already-saved transaction within
+     * the batch's own date range (PF-809: extracted from {@link #saveTransactions}), to check
+     * incoming rows against.
+     */
+    private Set<String> findExistingSignatures(Long accountId, List<TransactionDto> approvedDtos) {
         OffsetDateTime earliest = approvedDtos.stream().map(TransactionDto::date).min(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
         OffsetDateTime latest = approvedDtos.stream().map(TransactionDto::date).max(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
 
-        List<String> incomingDescriptions = approvedDtos.stream().map(TransactionDto::description).toList();
-        Map<String, Long> merchantMap = merchantService.findMatchingMerchantIds(userId, incomingDescriptions);
-
         List<Transaction> existingTransactions = transactionRepository.findExistingForDuplicateCheck(accountId, earliest, latest);
 
-        Set<String> existingSignatures = existingTransactions.stream()
+        return existingTransactions.stream()
                 .map(t -> String.format("%s_%s_%s_%s", t.getTransactionDate(), t.getAmount().stripTrailingZeros(), t.getDescription(), t.getType().name()))
                 .collect(Collectors.toSet());
+    }
 
+    /**
+     * The transactions actually ready to insert, plus how many were skipped as duplicates of
+     * either an existing row or an earlier row in this same batch (PF-809: extracted from
+     * {@link #saveTransactions}).
+     */
+    private record DedupeResult(List<TransactionCreateRequest> uniqueTransactions, int duplicateCount) {
+    }
+
+    private DedupeResult deduplicateTransactions(List<TransactionDto> approvedDtos, Set<String> existingSignatures, Account account, Map<String, Long> merchantMap) {
         List<TransactionCreateRequest> uniqueTransactions = new ArrayList<>();
         Set<String> batchSignatures = new java.util.HashSet<>();
         int duplicateCount = 0;
@@ -241,6 +285,16 @@ public class TransactionImportService {
             }
         }
 
+        return new DedupeResult(uniqueTransactions, duplicateCount);
+    }
+
+    /**
+     * Inserts the batch's unique transactions, updates the account balance, and records file
+     * import history, only if there's anything to save (PF-809: extracted from
+     * {@link #saveTransactions}).
+     */
+    private void persistIfAny(Account account, DedupeResult result, String fileName, String fileHash) {
+        List<TransactionCreateRequest> uniqueTransactions = result.uniqueTransactions();
         if (!uniqueTransactions.isEmpty()) {
             transactionRepository.insertAll(uniqueTransactions);
             updateAccountBalance(account, uniqueTransactions);
@@ -254,12 +308,10 @@ public class TransactionImportService {
                         .build();
                 fileImportHistoryRepository.save(history);
             }
-            log.info("Successfully saved {} new transactions. Skipped {} duplicates.", uniqueTransactions.size(), duplicateCount);
+            log.info("Successfully saved {} new transactions. Skipped {} duplicates.", uniqueTransactions.size(), result.duplicateCount());
         } else {
-            log.info("No new transactions to save. All {} inputs were duplicates.", duplicateCount);
+            log.info("No new transactions to save. All {} inputs were duplicates.", result.duplicateCount());
         }
-
-        return uniqueTransactions.size();
     }
 
     /**

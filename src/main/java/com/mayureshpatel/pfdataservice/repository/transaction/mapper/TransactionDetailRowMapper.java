@@ -38,16 +38,24 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
      * @throws SQLException if an error occurs while accessing the result set
      */
     public static Transaction mapRow(ResultSet rs, String prefix) throws SQLException {
-        String safePrefix;
-        if (prefix == null || prefix.isEmpty()) {
-            safePrefix = "";
-        } else {
-            safePrefix = prefix.endsWith("_") ? prefix : prefix + "_";
-        }
+        String safePrefix = normalizePrefix(prefix);
         Set<String> availableColumns = getAvailableColumns(rs);
 
         Transaction.TransactionBuilder builder = Transaction.builder();
 
+        mapCoreFields(builder, rs, safePrefix, availableColumns);
+        mapRemainingFields(builder, rs, safePrefix, availableColumns);
+        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+
+        return builder.build();
+    }
+
+    /**
+     * {@code id}, the two embedded relations, {@code amount}, and the transaction date (PF-809:
+     * extracted from {@link #mapRow(ResultSet, String)}) -- {@code transaction_date} is preferred
+     * over the bare {@code date} alias when a query happens to expose both.
+     */
+    private static void mapCoreFields(Transaction.TransactionBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (availableColumns.contains(safePrefix + "id")) {
             builder.id(rs.getLong(safePrefix + "id"));
         }
@@ -65,7 +73,12 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
         } else if (availableColumns.contains(safePrefix + "date")) {
             builder.transactionDate(getOffsetDateTime(rs, safePrefix + "date"));
         }
+    }
 
+    /**
+     * Every remaining optional column (PF-809: extracted from {@link #mapRow(ResultSet, String)}).
+     */
+    private static void mapRemainingFields(Transaction.TransactionBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (availableColumns.contains(safePrefix + "post_date")) {
             builder.postDate(getOffsetDateTime(rs, safePrefix + "post_date"));
         }
@@ -78,8 +91,5 @@ public class TransactionDetailRowMapper extends JdbcMapperUtils implements RowMa
         if (availableColumns.contains(safePrefix + "merchant_id")) {
             builder.merchant(MerchantRowMapper.mapRow(rs, "merchant"));
         }
-        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
-
-        return builder.build();
     }
 }

@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
@@ -14,38 +11,32 @@ import com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
 
 /**
- * CRUD for a user's confirmed recurring transactions, plus {@link #findSuggestions}, which
- * detects candidate recurring patterns in the user's transaction history for them to confirm.
- * Detection groups the last 12 months of expenses by merchant/description + amount, then checks
- * whether a group's inter-transaction intervals are stable enough to call weekly, bi-weekly,
- * monthly, or yearly.
+ * CRUD for a user's confirmed recurring transactions. Pattern detection (finding new candidates
+ * from raw transaction history) is {@link RecurringSuggestionFinder}'s own concern, not this
+ * class's -- the two used to be one class until splitting detection's own internals into enough
+ * named helper methods to resolve its complexity findings (PF-809) left this class newly flagged
+ * as a PMD {@code GodClass}, since most of those new helpers are pure functions that don't touch
+ * either class's instance state and lowered Tight Class Cohesion as a result.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RecurringTransactionService {
 
-    private static final int MIN_OCCURRENCES_FOR_RECURRING_PATTERN = 3;
-
     private final RecurringTransactionRepository recurringRepository;
-    private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
     private final MerchantRepository merchantRepository;
+    private final RecurringSuggestionFinder suggestionFinder;
 
     /**
      * Returns the user's active confirmed recurring transactions, next-occurrence first.
@@ -62,152 +53,13 @@ public class RecurringTransactionService {
     /**
      * Detects candidate recurring transaction patterns in the last 12 months of the user's
      * expenses that aren't already confirmed as recurring, ranked by confidence (higher
-     * occurrence counts score higher).
+     * occurrence counts score higher). Delegates entirely to {@link RecurringSuggestionFinder}.
      *
      * @param userId the user id
      * @return the detected suggestions, highest confidence first
      */
     public List<RecurringSuggestionDto> findSuggestions(Long userId) {
-        // 1. get existing recurring items to exclude duplicates
-        Set<String> existingMerchants = recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(r -> r.getMerchant() != null ? r.getMerchant().getName().toLowerCase(Locale.ROOT) : "")
-                .collect(Collectors.toSet());
-
-        // 2. fetch expenses from last 12 months
-        LocalDate oneYearAgo = LocalDate.now().minusYears(1);
-        List<Transaction> transactions = transactionRepository.findExpensesSince(userId, oneYearAgo);
-
-        // 3. group by merchant name (or description) alone -- NOT also by amount. A subscription
-        // that changed price partway through its history (routine: rate increases, promotional
-        // periods ending) used to split into one independent group per price, each evaluated as
-        // its own recurring candidate -- confirmed live, Netflix's real 56-month history across 4
-        // price tiers surfaced as multiple simultaneous, conflicting suggestions for the same
-        // subscription. detectFrequency() only ever looked at dates, never amount, so grouping by
-        // name alone doesn't change frequency detection at all -- see PF-834.
-        Map<String, List<Transaction>> groups = new HashMap<>();
-
-        for (Transaction t : transactions) {
-            String name = t.getMerchant() != null ? t.getMerchant().getName() : t.getDescription();
-            if (name == null) continue;
-
-            name = name.trim();
-            if (existingMerchants.contains(name.toLowerCase(Locale.ROOT))) continue;
-
-            groups.computeIfAbsent(name, k -> new ArrayList<>()).add(t);
-        }
-
-        List<RecurringSuggestionDto> suggestions = new ArrayList<>();
-
-        // 4. analyze groups
-        for (Map.Entry<String, List<Transaction>> entry : groups.entrySet()) {
-            List<Transaction> group = entry.getValue();
-
-            if (group.size() < MIN_OCCURRENCES_FOR_RECURRING_PATTERN) continue;
-
-            // filter out any transactions with null dates to prevent npe during sort
-            group = group.stream()
-                    .filter(t -> t.getTransactionDate() != null)
-                    .collect(Collectors.toList());
-
-            if (group.size() < MIN_OCCURRENCES_FOR_RECURRING_PATTERN) continue;
-
-            group.sort(Comparator.comparing(Transaction::getTransactionDate));
-
-            Frequency frequency = detectFrequency(group);
-            if (frequency != null) {
-                Transaction lastTxn = group.get(group.size() - 1);
-                String merchantName = entry.getKey();
-
-                suggestions.add(RecurringSuggestionDto.builder()
-                        .merchant(MerchantDto.builder().name(merchantName).build())
-                        .amount(lastTxn.getAmount())
-                        .frequency(frequency)
-                        .lastDate(lastTxn.getTransactionDate().toLocalDate())
-                        .nextDate(calculateNextDate(lastTxn.getTransactionDate().toLocalDate(), frequency))
-                        .occurrenceCount(group.size())
-                        .confidenceScore(calculateConfidenceScore(group.size()))
-                        .build());
-            }
-        }
-
-        return suggestions.stream()
-                .sorted(Comparator.comparingDouble(RecurringSuggestionDto::confidenceScore).reversed())
-                .toList();
-    }
-
-    /**
-     * Determines whether a date-sorted group of transactions recurs at a stable interval.
-     * "Stable" means every consecutive gap stays within 5 days of the group's average gap.
-     * <br><br>
-     * Classifies the average interval into one bucket per {@link Frequency} value (WEEKLY,
-     * BI_WEEKLY, MONTHLY, QUARTERLY, YEARLY) -- there is deliberately no bucket for every possible
-     * interval. A stable ~9-12 or ~17-24 day average returns {@code null}, same as an unstable
-     * group: no {@link Frequency} value corresponds to those cadences, so there's nothing to
-     * classify it as (PF-205). Add a new bucket here only if a new {@link Frequency} value is
-     * added to model it.
-     *
-     * @param group the transactions to check, already sorted by date
-     * @return the detected frequency, or {@code null} if the intervals aren't stable enough to
-     * call recurring, or are stable but don't correspond to any supported frequency
-     */
-    private Frequency detectFrequency(List<Transaction> group) {
-        List<Long> intervals = new ArrayList<>();
-        for (int i = 1; i < group.size(); i++) {
-            intervals.add(ChronoUnit.DAYS.between(
-                    group.get(i - 1).getTransactionDate(),
-                    group.get(i).getTransactionDate()));
-        }
-
-        double avgInterval = intervals.stream().mapToLong(val -> val).average().orElse(0);
-
-        boolean stable = intervals.stream().allMatch(i -> Math.abs(i - avgInterval) < 5);
-
-        if (!stable) return null;
-
-        if (avgInterval >= 25 && avgInterval <= 35) return Frequency.MONTHLY;
-        if (avgInterval >= 6 && avgInterval <= 8) return Frequency.WEEKLY;
-        if (avgInterval >= 13 && avgInterval <= 16) return Frequency.BI_WEEKLY;
-        if (avgInterval >= 85 && avgInterval <= 95) return Frequency.QUARTERLY;
-        if (avgInterval >= 360 && avgInterval <= 370) return Frequency.YEARLY;
-
-        return null;
-    }
-
-    /**
-     * Scores how confident a detected pattern is, as a real 0-100 percentage. The prior formula
-     * (uncapped {@code 0.8 + occurrenceCount * 0.05}) was never actually a percentage -- displayed
-     * with a literal "%" suffix and color-coded against 0-100 thresholds on the frontend, it read
-     * as "1.35%" for the *strongest* real suggestion in a live dataset, and the color tiers never
-     * differentiated anything since real values never approached even 2.0. See PF-835.
-     * <p>
-     * {@link #MIN_OCCURRENCES_FOR_RECURRING_PATTERN} (the minimum to even qualify as a suggestion
-     * at all) starts at a substantial 50%; each occurrence past that adds 4 points, capped at 100%
-     * once a pattern has repeated enough (a dozen-plus occurrences) to be about as confident as
-     * this heuristic can meaningfully get.
-     *
-     * @param occurrenceCount how many transactions matched the pattern
-     * @return a confidence percentage in [0, 100]
-     */
-    private double calculateConfidenceScore(int occurrenceCount) {
-        double score = 50.0 + (occurrenceCount - MIN_OCCURRENCES_FOR_RECURRING_PATTERN) * 4.0;
-        return Math.min(100.0, score);
-    }
-
-    /**
-     * Projects the next expected occurrence date from the last known one and a frequency.
-     *
-     * @param lastDate  the most recent occurrence
-     * @param frequency how often it recurs
-     * @return the projected next occurrence date
-     */
-    private LocalDate calculateNextDate(LocalDate lastDate, Frequency frequency) {
-        return switch (frequency) {
-            case MONTHLY -> lastDate.plusMonths(1);
-            case WEEKLY -> lastDate.plusWeeks(1);
-            case BI_WEEKLY -> lastDate.plusWeeks(2);
-            case QUARTERLY -> lastDate.plusMonths(3);
-            case YEARLY -> lastDate.plusYears(1);
-        };
+        return suggestionFinder.findSuggestions(userId);
     }
 
     /**
