@@ -163,9 +163,6 @@
              production classes already confirmed genuinely complex above. Still excluded, now 6
              instances rather than the original 3. -->
         <exclude name="CouplingBetweenObjects"/>
-        <!-- The 1 instance (TransactionCrudController) needs a real API-shape change (a
-             filter/request object) to fix properly, not a mechanical edit. -->
-        <exclude name="ExcessiveParameterList"/>
         <!-- All 19 instances are deliberate boundary catches (JwtAuthenticationFilter's JWT
              validation, TransactionImportService and all 5 CSV parsers' file-import path): each
              converts an unpredictable failure into a clean, safe, domain-appropriate response
@@ -177,9 +174,11 @@
     <rule ref="category/java/design.xml/CouplingBetweenObjects">
         <priority>4</priority>
     </rule>
-    <rule ref="category/java/design.xml/ExcessiveParameterList">
-        <priority>4</priority>
-    </rule>
+    <!-- [PF-810]: the 1 instance (TransactionCrudController.getTransactions) resolved by
+         consolidating its 10 individual @RequestParam arguments into a single
+         @ModelAttribute TransactionFilter, the same record TransactionSpecification already
+         used downstream, rather than a parallel controller-only type. Back to its normal
+         blocking priority. -->
 
     <!-- pf-data-service/CLAUDE.md: "Provide complete Javadoc at both the class and method
          levels." CommentRequired is the one documentation rule that maps to an actual stated

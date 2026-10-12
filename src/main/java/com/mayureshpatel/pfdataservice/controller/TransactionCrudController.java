@@ -1,6 +1,5 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.*;
@@ -23,8 +22,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -114,21 +111,15 @@ public class TransactionCrudController {
     }
 
     /**
-     * Returns a paginated, filtered page of the user's transactions. Every filter parameter is
-     * optional; omitted ones simply aren't applied.
+     * Returns a paginated, filtered page of the user's transactions. Every field on
+     * {@code filter} is optional; omitted ones simply aren't applied. Bound directly from query
+     * params into {@link TransactionFilter} via {@code @ModelAttribute} (PF-810) -- the same
+     * record {@link com.mayureshpatel.pfdataservice.repository.transaction.specification.TransactionSpecification}
+     * already uses downstream, rather than a parallel, controller-only filter type.
      *
      * @param userDetails the authenticated user
      * @param pageable    page number/size/sort, defaults to sorting by date descending
-     * @param accountId   restrict to one account
-     * @param type        restrict to one transaction type
-     * @param description substring match on description
-     * @param categoryName restrict to one category
-     * @param vendorName  restrict to one merchant/vendor
-     * @param minAmount   lower bound (inclusive) on amount
-     * @param maxAmount   upper bound (inclusive) on amount
-     * @param startDate   lower bound (inclusive) on transaction date
-     * @param endDate     upper bound (inclusive) on transaction date
-     * @param tagId       restrict to transactions carrying this tag
+     * @param filter      the optional filter fields, bound from query params by name
      * @return the matching page of transactions
      */
     @Operation(summary = "List transactions", description = "Paginated, filtered list of the authenticated user's transactions")
@@ -137,22 +128,8 @@ public class TransactionCrudController {
     public ResponseEntity<Page<TransactionDto>> getTransactions(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(sort = "date", direction = Sort.Direction.DESC) Pageable pageable,
-            @RequestParam(required = false) Long accountId,
-            @RequestParam(required = false) TransactionType type,
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) String categoryName,
-            @RequestParam(required = false) String vendorName,
-            @RequestParam(required = false) BigDecimal minAmount,
-            @RequestParam(required = false) BigDecimal maxAmount,
-            @RequestParam(required = false) LocalDate startDate,
-            @RequestParam(required = false) LocalDate endDate,
-            @RequestParam(required = false) Long tagId
+            @ModelAttribute TransactionFilter filter
     ) {
-
-        TransactionFilter filter = new TransactionFilter(
-                accountId, type, description, categoryName, vendorName, minAmount, maxAmount, startDate, endDate, tagId
-        );
-
         return ResponseEntity.ok(transactionService.getTransactions(userDetails.getId(), filter, pageable));
     }
 
