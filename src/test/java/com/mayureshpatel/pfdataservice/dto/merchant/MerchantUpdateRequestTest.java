@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.merchant;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,17 +12,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Verifies {@link MerchantUpdateRequest}'s jakarta bean-validation constraints, its builder/all-args/no-args construction paths, {@code toBuilder}, and {@code toString}. */
 @DisplayName("MerchantUpdateRequest Validation Tests")
-class MerchantUpdateRequestTest {
+class MerchantUpdateRequestTest extends ValidatorTestBase {
 
     private static final String MERCHANT_NAME = "Starbucks";
-
-    private Validator validator;
-
-    @BeforeEach
-    void setup() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
 
     @Test
     @DisplayName("should pass validation with valid data")
@@ -35,7 +24,7 @@ class MerchantUpdateRequestTest {
                 .name(MERCHANT_NAME)
                 .build();
 
-        Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -51,7 +40,7 @@ class MerchantUpdateRequestTest {
                     .name(MERCHANT_NAME)
                     .build();
 
-            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Merchant ID cannot be null.".equals(v.getMessage())));
         }
@@ -64,7 +53,7 @@ class MerchantUpdateRequestTest {
                     .name(MERCHANT_NAME)
                     .build();
 
-            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Merchant ID must be a positive number.".equals(v.getMessage())));
         }
@@ -82,7 +71,7 @@ class MerchantUpdateRequestTest {
                     .name("")
                     .build();
 
-            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Merchant name cannot be blank.".equals(v.getMessage())));
         }
@@ -95,7 +84,7 @@ class MerchantUpdateRequestTest {
                     .name("A".repeat(256))
                     .build();
 
-            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<MerchantUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Merchant name must be less than 255 characters.".equals(v.getMessage())));
         }

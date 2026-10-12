@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,17 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@link CategoryCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("CategoryCreateRequest Validation Tests")
-class CategoryCreateRequestTest {
+class CategoryCreateRequestTest extends ValidatorTestBase {
 
     private static final String CATEGORY_NAME = "Groceries";
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setupValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
 
     @Test
     @DisplayName("should pass when all fields are valid")
@@ -40,7 +29,7 @@ class CategoryCreateRequestTest {
                 .parentId(2L)
                 .build();
 
-        Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -55,7 +44,7 @@ class CategoryCreateRequestTest {
                     .userId(null)
                     .name(CATEGORY_NAME)
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
@@ -67,7 +56,7 @@ class CategoryCreateRequestTest {
                     .userId(0L)
                     .name(CATEGORY_NAME)
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
@@ -84,7 +73,7 @@ class CategoryCreateRequestTest {
                     .userId(1L)
                     .name("")
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category name cannot be blank.".equals(v.getMessage())));
         }
@@ -96,7 +85,7 @@ class CategoryCreateRequestTest {
                     .userId(1L)
                     .name("a".repeat(51))
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category name must be less than 50 characters.".equals(v.getMessage())));
         }
@@ -114,7 +103,7 @@ class CategoryCreateRequestTest {
                     .name(CATEGORY_NAME)
                     .type("a".repeat(21))
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category type must be less than 20 characters.".equals(v.getMessage())));
         }
@@ -132,7 +121,7 @@ class CategoryCreateRequestTest {
                     .name(CATEGORY_NAME)
                     .color("a".repeat(21))
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category color must be less than 20 characters.".equals(v.getMessage())));
         }
@@ -150,7 +139,7 @@ class CategoryCreateRequestTest {
                     .name(CATEGORY_NAME)
                     .icon("a".repeat(51))
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category icon must be less than 50 characters.".equals(v.getMessage())));
         }
@@ -168,7 +157,7 @@ class CategoryCreateRequestTest {
                     .name(CATEGORY_NAME)
                     .parentId(0L)
                     .build();
-            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Parent ID must be a positive number.".equals(v.getMessage())));
         }

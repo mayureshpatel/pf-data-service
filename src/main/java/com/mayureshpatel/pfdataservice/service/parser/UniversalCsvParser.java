@@ -3,7 +3,6 @@ package com.mayureshpatel.pfdataservice.service.parser;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -34,7 +33,6 @@ import java.util.stream.Stream;
  * exception, silently skipping such rows as presumed pending/auth-hold artifacts.
  */
 @Component
-@Slf4j
 public class UniversalCsvParser implements TransactionParser {
 
     // common date formats to try
@@ -63,11 +61,9 @@ public class UniversalCsvParser implements TransactionParser {
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-        try {
-            CSVParser parser = openHeaderParser(reader);
+        try (reader; CSVParser parser = openHeaderParser(reader)) {
             UniversalCsvColumnDetector.ColumnMapping mapping = UniversalCsvColumnDetector.detect(parser.getHeaderMap());
             ParseOutcome outcome = parseRecords(parser, mapping);
-            closeQuietlyLogging(parser, reader);
 
             if (!outcome.errors().isEmpty()) {
                 throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join("; ", outcome.errors()));
@@ -78,11 +74,6 @@ public class UniversalCsvParser implements TransactionParser {
         } catch (com.mayureshpatel.pfdataservice.exception.CsvParsingException e) {
             throw e;
         } catch (Exception e) {
-            try {
-                reader.close();
-            } catch (Exception closeException) {
-                log.warn("Failed to close reader during exception handling", closeException);
-            }
             throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse Universal CSV", e);
         }
     }
@@ -124,19 +115,6 @@ public class UniversalCsvParser implements TransactionParser {
         }
 
         return new ParseOutcome(transactions, errors);
-    }
-
-    /**
-     * Unlike this codebase's other CSV parsers, a close failure here is only logged, not raised as
-     * its own parse failure (PF-809: extracted from {@link #parse}, behavior unchanged).
-     */
-    private void closeQuietlyLogging(CSVParser parser, BufferedReader reader) {
-        try {
-            parser.close();
-            reader.close();
-        } catch (Exception e) {
-            log.error("Error closing CSV resources", e);
-        }
     }
 
     /**

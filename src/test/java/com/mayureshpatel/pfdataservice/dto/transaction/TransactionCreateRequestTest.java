@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,15 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Verifies {@link TransactionCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("TransactionCreateRequest Validation Tests")
-class TransactionCreateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setupValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class TransactionCreateRequestTest extends ValidatorTestBase {
 
     private TransactionCreateRequest.TransactionCreateRequestBuilder createValidBuilder() {
         return TransactionCreateRequest.builder()
@@ -42,7 +31,7 @@ class TransactionCreateRequestTest {
     @DisplayName("should pass when all fields are valid")
     void shouldPassWithValidData() {
         TransactionCreateRequest request = createValidBuilder().build();
-        Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -54,7 +43,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             TransactionCreateRequest request = createValidBuilder().accountId(null).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Account ID cannot be null.".equals(v.getMessage())));
         }
@@ -63,7 +52,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when accountId is not positive")
         void shouldFailWhenAccountIdIsNotPositive() {
             TransactionCreateRequest request = createValidBuilder().accountId(0L).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Account ID must be a positive number.".equals(v.getMessage())));
         }
@@ -77,7 +66,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when categoryId is not positive")
         void shouldFailWhenCategoryIdIsNotPositive() {
             TransactionCreateRequest request = createValidBuilder().categoryId(0L).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category ID must be a positive number.".equals(v.getMessage())));
         }
@@ -91,7 +80,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when amount is null")
         void shouldFailWhenAmountIsNull() {
             TransactionCreateRequest request = createValidBuilder().amount(null).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Starting balance cannot be null.".equals(v.getMessage())));
         }
@@ -100,7 +89,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when amount is below minimum")
         void shouldFailWhenAmountIsBelowMin() {
             TransactionCreateRequest request = createValidBuilder().amount(new BigDecimal("-10000000000.00")).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().contains("transaction amount must be greater than or equal to")));
         }
@@ -109,7 +98,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when amount is above maximum")
         void shouldFailWhenAmountIsAboveMax() {
             TransactionCreateRequest request = createValidBuilder().amount(new BigDecimal("10000000000.00")).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().contains("transaction amount must be less than or equal to")));
         }
@@ -123,7 +112,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when transactionDate is null")
         void shouldFailWhenTransactionDateIsNull() {
             TransactionCreateRequest request = createValidBuilder().transactionDate(null).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Transaction date cannot be null.".equals(v.getMessage())));
         }
@@ -137,7 +126,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when description is blank")
         void shouldFailWhenDescriptionIsBlank() {
             TransactionCreateRequest request = createValidBuilder().description("").build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Description cannot be blank.".equals(v.getMessage())));
         }
@@ -146,7 +135,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when description exceeds 255 characters")
         void shouldFailWhenDescriptionIsTooLong() {
             TransactionCreateRequest request = createValidBuilder().description("a".repeat(256)).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Description must be less than 255 characters.".equals(v.getMessage())));
         }
@@ -160,7 +149,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when type is blank")
         void shouldFailWhenTypeIsBlank() {
             TransactionCreateRequest request = createValidBuilder().type("").build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Type cannot be blank.".equals(v.getMessage())));
         }
@@ -169,7 +158,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when type exceeds 20 characters")
         void shouldFailWhenTypeIsTooLong() {
             TransactionCreateRequest request = createValidBuilder().type("a".repeat(21)).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Type must be less than 20 characters.".equals(v.getMessage())));
         }
@@ -183,7 +172,7 @@ class TransactionCreateRequestTest {
         @DisplayName("should fail when merchantId is not positive")
         void shouldFailWhenMerchantIdIsNotPositive() {
             TransactionCreateRequest request = createValidBuilder().merchantId(0L).build();
-            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TransactionCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Merchant ID must be a positive number.".equals(v.getMessage())));
         }

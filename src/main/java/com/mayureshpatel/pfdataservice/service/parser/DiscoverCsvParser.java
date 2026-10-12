@@ -75,10 +75,8 @@ public class DiscoverCsvParser implements TransactionParser {
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-        try {
-            CSVParser csvParser = CSV_FORMAT.parse(reader);
+        try (reader; CSVParser csvParser = CSV_FORMAT.parse(reader)) {
             ParseOutcome outcome = parseRecords(csvParser);
-            closeResources(csvParser, reader);
 
             if (!outcome.errors().isEmpty()) {
                 throw new CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", outcome.errors()));
@@ -88,7 +86,6 @@ public class DiscoverCsvParser implements TransactionParser {
         } catch (CsvParsingException e) {
             throw e;
         } catch (Exception e) {
-            closeQuietly(reader);
             throw new CsvParsingException("Failed to parse Discover CSV", e);
         }
     }
@@ -120,27 +117,6 @@ public class DiscoverCsvParser implements TransactionParser {
         }
 
         return new ParseOutcome(transactions, errors);
-    }
-
-    /**
-     * Closes both resources, converting any close failure into the same domain exception a parse
-     * failure would use (PF-809: extracted from {@link #parse}) -- always attempted exactly once,
-     * whether or not the parse itself succeeded, matching the original inline ordering.
-     */
-    private void closeResources(CSVParser csvParser, BufferedReader reader) {
-        try {
-            csvParser.close();
-            reader.close();
-        } catch (Exception e) {
-            throw new CsvParsingException("Failed to close CSV parser resources", e);
-        }
-    }
-
-    private void closeQuietly(BufferedReader reader) {
-        try {
-            reader.close();
-        } catch (Exception ignored) {
-        }
     }
 
     /**

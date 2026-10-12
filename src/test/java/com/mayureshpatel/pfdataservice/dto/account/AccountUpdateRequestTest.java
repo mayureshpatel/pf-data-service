@@ -1,11 +1,8 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,15 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Verifies {@link AccountUpdateRequest}'s jakarta bean-validation constraints, its {@code toDomain()} mapping, and per-field validation failures, one {@code @Nested} class per field below. */
 @DisplayName("AccountUpdateRequest Unit Tests")
-class AccountUpdateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setup() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class AccountUpdateRequestTest extends ValidatorTestBase {
 
     @Test
     @DisplayName("should pass when all fields are valid")
@@ -40,7 +29,7 @@ class AccountUpdateRequestTest {
                 .version(1L)
                 .build();
 
-        Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -76,7 +65,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(null)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "id", "Account ID cannot be null.");
         }
 
@@ -86,7 +75,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .id(0L)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "id", "Account ID must be a positive number.");
         }
     }
@@ -102,7 +91,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .name(blankName)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "name", "Account name cannot be blank.");
         }
 
@@ -112,7 +101,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .name("A".repeat(101))
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "name", "Account name must be less than 100 characters.");
         }
     }
@@ -128,7 +117,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .type(blankType)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "type", "Account type cannot be blank.");
         }
 
@@ -138,7 +127,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .type("A".repeat(21))
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "type", "Account type must be less than 20 characters.");
         }
     }
@@ -154,7 +143,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .currencyCode(blankCurrency)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "currencyCode", "Currency code cannot be blank.");
         }
 
@@ -165,7 +154,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .currencyCode(wrongLength)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "currencyCode", "Currency code must be exactly 3 characters.");
         }
     }
@@ -180,7 +169,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .bankName("A".repeat(51))
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "bankName", "Bank name must be less than 50 characters.");
         }
     }
@@ -195,7 +184,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .version(null)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "version", "Version cannot be null.");
         }
 
@@ -205,7 +194,7 @@ class AccountUpdateRequestTest {
             AccountUpdateRequest request = AccountUpdateRequest.builder()
                     .version(0L)
                     .build();
-            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "version", "Version must be a positive number.");
         }
     }

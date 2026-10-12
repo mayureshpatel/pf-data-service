@@ -42,30 +42,21 @@ public class StandardCsvParser implements TransactionParser {
     @Override
     public Stream<Transaction> parse(Long accountId, InputStream inputStream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-        try {
-            CSVParser csvParser = CSVFormat.DEFAULT.builder()
-                    .setHeader()
-                    .setSkipHeaderRecord(true)
-                    .setIgnoreHeaderCase(true)
-                    .setTrim(true)
-                    .get()
-                    .parse(reader);
-            
+        try (reader; CSVParser csvParser = CSVFormat.DEFAULT.builder()
+                .setHeader()
+                .setSkipHeaderRecord(true)
+                .setIgnoreHeaderCase(true)
+                .setTrim(true)
+                .get()
+                .parse(reader)) {
+            // materialized eagerly, inside the try, so both resources above are guaranteed
+            // closed before this method returns -- not left open behind a lazily-evaluated
+            // Stream.onClose() callback a caller might never trigger (PF-812)
             return csvParser.stream()
                     .map(this::mapToTransaction)
-                    .onClose(() -> {
-                        try {
-                            csvParser.close();
-                            reader.close();
-                        } catch (Exception e) {
-                            throw new CsvParsingException("Failed to close CSV parser resources", e);
-                        }
-                    });
+                    .toList()
+                    .stream();
         } catch (Exception e) {
-            try {
-                reader.close();
-            } catch (Exception ignored) {
-            }
             throw new CsvParsingException("Failed to parse Standard CSV", e);
         }
     }

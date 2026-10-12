@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.transaction.recurring;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,15 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Verifies {@code RecurringTransactionUpdateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("RecurringTransactionUpdateRequest Validation Tests")
-class RecurringTransactionUpdateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setupValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class RecurringTransactionUpdateRequestTest extends ValidatorTestBase {
 
     private RecurringTransactionUpdateRequest.RecurringTransactionUpdateRequestBuilder createValidBuilder() {
         return RecurringTransactionUpdateRequest.builder()
@@ -42,7 +31,7 @@ class RecurringTransactionUpdateRequestTest {
     @DisplayName("should pass when all fields are valid")
     void shouldPassWithValidData() {
         RecurringTransactionUpdateRequest request = createValidBuilder().build();
-        Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -54,7 +43,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when id is null")
         void shouldFailWhenIdIsNull() {
             RecurringTransactionUpdateRequest request = createValidBuilder().id(null).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Recurring transaction ID cannot be null.".equals(v.getMessage())));
         }
@@ -63,7 +52,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when id is not positive")
         void shouldFailWhenIdIsNotPositive() {
             RecurringTransactionUpdateRequest request = createValidBuilder().id(0L).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Recurring transaction ID must be a positive number.".equals(v.getMessage())));
         }
@@ -77,7 +66,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when accountId is null")
         void shouldFailWhenAccountIdIsNull() {
             RecurringTransactionUpdateRequest request = createValidBuilder().accountId(null).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Account ID cannot be null.".equals(v.getMessage())));
         }
@@ -86,7 +75,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when accountId is not positive")
         void shouldFailWhenAccountIdIsNotPositive() {
             RecurringTransactionUpdateRequest request = createValidBuilder().accountId(0L).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Account ID must be a positive number.".equals(v.getMessage())));
         }
@@ -100,7 +89,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when amount is null")
         void shouldFailWhenAmountIsNull() {
             RecurringTransactionUpdateRequest request = createValidBuilder().amount(null).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Amount cannot be null.".equals(v.getMessage())));
         }
@@ -109,7 +98,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when amount is below minimum")
         void shouldFailWhenAmountIsBelowMin() {
             RecurringTransactionUpdateRequest request = createValidBuilder().amount(new BigDecimal("-10000000000.00")).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().contains("Amount must be greater than or equal to")));
         }
@@ -118,7 +107,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when amount is above maximum")
         void shouldFailWhenAmountIsAboveMax() {
             RecurringTransactionUpdateRequest request = createValidBuilder().amount(new BigDecimal("10000000000.00")).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().contains("Amount must be less than or equal to")));
         }
@@ -132,7 +121,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when frequency is null")
         void shouldFailWhenFrequencyIsNull() {
             RecurringTransactionUpdateRequest request = createValidBuilder().frequency(null).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Frequency cannot be null.".equals(v.getMessage())));
         }
@@ -141,7 +130,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when frequency pattern is invalid")
         void shouldFailWhenFrequencyIsInvalid() {
             RecurringTransactionUpdateRequest request = createValidBuilder().frequency("DAILY").build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> v.getMessage().contains("Frequency must be one of")));
         }
@@ -155,7 +144,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when nextDate is null")
         void shouldFailWhenNextDateIsNull() {
             RecurringTransactionUpdateRequest request = createValidBuilder().nextDate(null).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Next date cannot be null.".equals(v.getMessage())));
         }
@@ -164,7 +153,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when nextDate is in the past")
         void shouldFailWhenNextDateIsInPast() {
             RecurringTransactionUpdateRequest request = createValidBuilder().nextDate(LocalDate.now().minusDays(1)).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Next date must be in the future.".equals(v.getMessage())));
         }
@@ -178,7 +167,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when merchantId is null")
         void shouldFailWhenMerchantIdIsNull() {
             RecurringTransactionUpdateRequest request = createValidBuilder().merchantId(null).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Merchant ID cannot be null.".equals(v.getMessage())));
         }
@@ -187,7 +176,7 @@ class RecurringTransactionUpdateRequestTest {
         @DisplayName("should fail when merchantId is not positive")
         void shouldFailWhenMerchantIdIsNotPositive() {
             RecurringTransactionUpdateRequest request = createValidBuilder().merchantId(0L).build();
-            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Merchant ID must be a positive number.".equals(v.getMessage())));
         }

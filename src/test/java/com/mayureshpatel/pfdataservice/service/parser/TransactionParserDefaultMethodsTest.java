@@ -47,12 +47,13 @@ class TransactionParserDefaultMethodsTest {
     @DisplayName("isValidRecord() should validate mapped and non-empty headers")
     void isValidRecord_variousScenarios() throws Exception {
         String csv = "Header1,Header2\nValue1,";
-        CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv));
-        CSVRecord record = csvParser.iterator().next();
+        try (CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv))) {
+            CSVRecord record = csvParser.iterator().next();
 
-        assertThat(parser.isValidRecord(record, "Header1")).isTrue();
-        assertThat(parser.isValidRecord(record, "Header2")).isFalse();
-        assertThat(parser.isValidRecord(record, "NonExistent")).isFalse();
+            assertThat(parser.isValidRecord(record, "Header1")).isTrue();
+            assertThat(parser.isValidRecord(record, "Header2")).isFalse();
+            assertThat(parser.isValidRecord(record, "NonExistent")).isFalse();
+        }
     }
 
     @Test
@@ -85,9 +86,10 @@ class TransactionParserDefaultMethodsTest {
                 "-100.00,x\n" +
                 "invalid,x\n" +
                 ",x\n";
-        CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv));
-
-        List<CSVRecord> records = csvParser.getRecords();
+        List<CSVRecord> records;
+        try (CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv))) {
+            records = csvParser.getRecords();
+        }
 
         assertThat(parser.parseAmount(records.get(0), COLUMN_AMOUNT)).isEqualByComparingTo("1234.56");
         assertThat(parser.parseAmount(records.get(1), COLUMN_AMOUNT)).isEqualByComparingTo("-100.00");
@@ -102,12 +104,13 @@ class TransactionParserDefaultMethodsTest {
     void parseAmount_columnEntirelyMissing_throws() throws Exception {
         String csv = "Amount,Other\n" +
                 "50.00,x\n";
-        CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv));
-        CSVRecord record = csvParser.iterator().next();
+        try (CSVParser csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv))) {
+            CSVRecord record = csvParser.iterator().next();
 
-        // "NonExistent" isn't a real column in this file at all -- distinct from being blank
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(record, "NonExistent"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("missing from this file");
+            // "NonExistent" isn't a real column in this file at all -- distinct from being blank
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> parser.parseAmount(record, "NonExistent"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("missing from this file");
+        }
     }
 }

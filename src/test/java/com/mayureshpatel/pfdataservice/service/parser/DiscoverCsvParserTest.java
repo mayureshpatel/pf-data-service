@@ -209,40 +209,42 @@ class DiscoverCsvParserTest {
 
         @Test
         @DisplayName("should parse the Discover example CSV file successfully")
-        void parse_discoverExampleCsv_parsesAllRecords() {
-            InputStream csvStream = getClass().getResourceAsStream("/parser/discover-example.csv");
-            assertThat(csvStream).isNotNull();
+        void parse_discoverExampleCsv_parsesAllRecords() throws Exception {
+            try (InputStream csvStream = getClass().getResourceAsStream("/parser/discover-example.csv")) {
+                assertThat(csvStream).isNotNull();
 
-            List<Transaction> result;
-            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, csvStream)) {
-                result = stream.toList();
+                List<Transaction> result;
+                try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, csvStream)) {
+                    result = stream.toList();
+                }
+
+                assertThat(result).hasSize(38);
             }
-
-            assertThat(result).hasSize(38);
         }
 
         @Test
         @DisplayName("should parse the pre-July-2022 Debit/Credit-column format with correct, non-zero amounts (PF-198)")
-        void parse_preJuly2022DiscoverFormat_parsesNonZeroAmounts() {
+        void parse_preJuly2022DiscoverFormat_parsesNonZeroAmounts() throws Exception {
             // PF-821: was /sample-imports/Discover-2022-06.csv, an untracked local-only directory
             // -- getResourceAsStream returned null on a clean CI checkout, failing this assertion
             // immediately. Moved into the already-tracked parser/ fixture directory alongside this
             // class's other real-format example CSVs.
-            InputStream csvStream = getClass().getResourceAsStream("/parser/discover-old-example.csv");
-            assertThat(csvStream).isNotNull();
+            try (InputStream csvStream = getClass().getResourceAsStream("/parser/discover-old-example.csv")) {
+                assertThat(csvStream).isNotNull();
 
-            List<Transaction> result;
-            try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, csvStream)) {
-                result = stream.toList();
+                List<Transaction> result;
+                try (Stream<Transaction> stream = parser.parse(ACCOUNT_ID, csvStream)) {
+                    result = stream.toList();
+                }
+
+                assertThat(result).hasSize(23);
+                assertThat(result).allSatisfy(t -> assertThat(t.getAmount()).isNotEqualByComparingTo(BigDecimal.ZERO));
+
+                Transaction first = result.get(0);
+                assertThat(first.getDescription()).isEqualTo("BEST BUY 00005165295 ALPHARETTA GA");
+                assertThat(first.getType()).isEqualTo(TransactionType.EXPENSE);
+                assertThat(first.getAmount()).isEqualByComparingTo(new BigDecimal("70.03"));
             }
-
-            assertThat(result).hasSize(23);
-            assertThat(result).allSatisfy(t -> assertThat(t.getAmount()).isNotEqualByComparingTo(BigDecimal.ZERO));
-
-            Transaction first = result.get(0);
-            assertThat(first.getDescription()).isEqualTo("BEST BUY 00005165295 ALPHARETTA GA");
-            assertThat(first.getType()).isEqualTo(TransactionType.EXPENSE);
-            assertThat(first.getAmount()).isEqualByComparingTo(new BigDecimal("70.03"));
         }
     }
 
