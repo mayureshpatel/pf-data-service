@@ -71,13 +71,13 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
 
         jdbcClient.sql(RecurringTransactionQueries.INSERT)
                 .param(SqlParams.USER_ID, userId)
-                .param("accountId", request.getAccountId())
-                .param("merchantId", request.getMerchantId())
-                .param("amount", request.getAmount())
-                .param("frequency", request.getFrequency())
-                .param("lastDate", request.getLastDate())
-                .param("nextDate", request.getNextDate())
-                .param("active", request.isActive())
+                .param("accountId", request.accountId())
+                .param("merchantId", request.merchantId())
+                .param("amount", request.amount())
+                .param("frequency", request.frequency())
+                .param("lastDate", request.lastDate())
+                .param("nextDate", request.nextDate())
+                .param("active", request.active())
                 .update(keyHolder);
 
         return keyHolder.getKey().intValue();
@@ -90,13 +90,13 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
      */
     public int update(RecurringTransactionUpdateRequest request, Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.UPDATE)
-                .param("accountId", request.getAccountId())
-                .param("merchantId", request.getMerchantId())
-                .param("amount", request.getAmount())
-                .param("frequency", request.getFrequency())
-                .param("nextDate", request.getNextDate())
-                .param("active", request.isActive())
-                .param("id", request.getId())
+                .param("accountId", request.accountId())
+                .param("merchantId", request.merchantId())
+                .param("amount", request.amount())
+                .param("frequency", request.frequency())
+                .param("nextDate", request.nextDate())
+                .param("active", request.active())
+                .param("id", request.id())
                 .param(SqlParams.USER_ID, userId)
                 .update();
     }

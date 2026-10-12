@@ -35,12 +35,12 @@ public class AccountTypeRepository implements JdbcRepository<AccountType, String
      */
     public int insert(AccountTypeCreateRequest request) {
         return jdbcClient.sql(AccountTypeQueries.INSERT)
-                .param("code", request.getCode())
-                .param("label", request.getLabel())
-                .param("icon", request.getIcon())
-                .param("color", request.getColor())
+                .param("code", request.code())
+                .param("label", request.label())
+                .param("icon", request.icon())
+                .param("color", request.color())
                 .param("isAsset", request.isAsset())
-                .param("sortOrder", request.getSortOrder())
+                .param("sortOrder", request.sortOrder())
                 .param("isActive", request.isActive())
                 .update();
     }
