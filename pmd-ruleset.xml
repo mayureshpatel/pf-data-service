@@ -50,15 +50,13 @@
              as real assertions: a gap in this rule's detection against this project's actual
              test styles, not genuinely un-asserted tests. -->
         <exclude name="UnitTestShouldIncludeAssert"/>
-        <!-- All 7 instances are test-helper ResultSet reads immediately after an
-             `INSERT ... RETURNING id`: an unexpectedly-empty ResultSet would already fail the
-             test via the next line's SQLException, so real risk is low, but 7 near-identical call
-             sites across 2 files still deserve their own focused pass rather than a rushed one. -->
-        <exclude name="CheckResultSet"/>
     </rule>
-    <rule ref="category/java/bestpractices.xml/CheckResultSet">
-        <priority>4</priority>
-    </rule>
+    <!-- [PF-811]: the 7 findings this rule was excluded for (test-helper ResultSet reads
+         immediately after an INSERT ... RETURNING id, in V35BackfillMerchantCleanNamesTest and
+         MerchantMergeIntegrationTest) no longer exist; both files were deleted by PF-845's
+         merchant CRUD rework (2026-09-19, commit e78e357), six days after this exclude was
+         filed. A fresh pmd:pmd run confirms zero current CheckResultSet findings. Back to its
+         normal blocking priority rather than left excluded for code that's gone. -->
 
     <rule ref="category/java/errorprone.xml">
         <!-- Conflicts with this project's own explicit convention (pf-data-service/CLAUDE.md):
