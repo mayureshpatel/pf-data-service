@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
@@ -133,6 +134,57 @@ class TransactionCrudControllerTest extends BaseControllerTest {
             verify(transactionService).getTransactions(
                     eq(USER_ID),
                     argThat((TransactionFilter filter) -> filter.tagId() != null && filter.tagId().equals(42L)),
+                    any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("PF-810: GET should pass the vendorName query param through to the filter's renamed field")
+        void getTransactions_shouldPassThroughVendorName() throws Exception {
+            Page<TransactionDto> page = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+            when(transactionService.getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class))).thenReturn(page);
+
+            mockMvc.perform(get(BASE_URL)
+                            .param("vendorName", "Whole Foods"))
+                    .andExpect(status().isOk());
+
+            verify(transactionService).getTransactions(
+                    eq(USER_ID),
+                    argThat((TransactionFilter filter) -> "Whole Foods".equals(filter.vendorName())),
+                    any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("PF-810: GET should bind every filter field via @ModelAttribute, not just one at a time")
+        void getTransactions_shouldBindEveryFilterFieldTogether() throws Exception {
+            Page<TransactionDto> page = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+            when(transactionService.getTransactions(eq(USER_ID), any(TransactionFilter.class), any(Pageable.class))).thenReturn(page);
+
+            mockMvc.perform(get(BASE_URL)
+                            .param("accountId", "7")
+                            .param("type", TransactionType.EXPENSE.name())
+                            .param("description", "coffee")
+                            .param("categoryName", "Dining")
+                            .param("vendorName", "Starbucks")
+                            .param("minAmount", "5.00")
+                            .param("maxAmount", "50.00")
+                            .param("startDate", "2026-01-01")
+                            .param("endDate", "2026-01-31")
+                            .param("tagId", "3"))
+                    .andExpect(status().isOk());
+
+            verify(transactionService).getTransactions(
+                    eq(USER_ID),
+                    argThat((TransactionFilter filter) ->
+                            filter.accountId().equals(7L)
+                                    && filter.type() == TransactionType.EXPENSE
+                                    && "coffee".equals(filter.description())
+                                    && "Dining".equals(filter.categoryName())
+                                    && "Starbucks".equals(filter.vendorName())
+                                    && filter.minAmount().compareTo(new BigDecimal("5.00")) == 0
+                                    && filter.maxAmount().compareTo(new BigDecimal("50.00")) == 0
+                                    && filter.startDate().equals(java.time.LocalDate.of(2026, 1, 1))
+                                    && filter.endDate().equals(java.time.LocalDate.of(2026, 1, 31))
+                                    && filter.tagId().equals(3L)),
                     any(Pageable.class));
         }
     }

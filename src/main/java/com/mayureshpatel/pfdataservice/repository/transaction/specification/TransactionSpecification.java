@@ -89,7 +89,7 @@ public final class TransactionSpecification {
     }
 
     /**
-     * {@code description}/{@code categoryName}/{@code merchantCleanName}, each a case-insensitive
+     * {@code description}/{@code categoryName}/{@code vendorName}, each a case-insensitive
      * {@code LIKE} search (PF-809: extracted from {@link #buildWhereClause}).
      */
     private static void addTextSearchFilters(List<String> conditions, Map<String, Object> parameters, TransactionFilter filter) {
@@ -108,11 +108,13 @@ public final class TransactionSpecification {
         }
 
         // PF-845: merchants.clean_name no longer exists (dropped by V42) -- matches against
-        // merchants.name instead. filter.merchantCleanName()'s own name is untouched here,
-        // deliberately out of this ticket's scope (see TransactionFilter).
-        if (filter.merchantCleanName() != null && !filter.merchantCleanName().isBlank()) {
-            conditions.add("LOWER(merchants.name) LIKE :merchantCleanName ESCAPE '\\'");
-            parameters.put("merchantCleanName", "%" + escapeLike(filter.merchantCleanName().toLowerCase(Locale.ROOT)) + "%");
+        // merchants.name instead. The field itself is now named vendorName (PF-810), matching
+        // the public API's own query param name -- PF-845 deliberately deferred that rename as
+        // out of its own scope; it's in scope here since direct @ModelAttribute binding of this
+        // record needs its component names to match the request params exactly.
+        if (filter.vendorName() != null && !filter.vendorName().isBlank()) {
+            conditions.add("LOWER(merchants.name) LIKE :vendorName ESCAPE '\\'");
+            parameters.put("vendorName", "%" + escapeLike(filter.vendorName().toLowerCase(Locale.ROOT)) + "%");
         }
     }
 
@@ -182,7 +184,7 @@ public final class TransactionSpecification {
             TransactionType type,
             String description,
             String categoryName,
-            String merchantCleanName,
+            String vendorName,
             BigDecimal minAmount,
             BigDecimal maxAmount,
             LocalDate startDate,
