@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -19,15 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@link AccountCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("AccountCreateRequest Unit Tests")
-class AccountCreateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setup() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class AccountCreateRequestTest extends ValidatorTestBase {
 
     @Test
     @DisplayName("should pass when all fields are valid")
@@ -40,7 +29,7 @@ class AccountCreateRequestTest {
                 .bankName("Test Bank")
                 .build();
 
-        Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -55,7 +44,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name(blankName)
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "name", "Account name cannot be blank.");
         }
 
@@ -65,7 +54,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .name("A".repeat(101))
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "name", "Account name must be less than 100 characters.");
         }
     }
@@ -81,7 +70,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .type(blankType)
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "type", "Account type cannot be blank.");
         }
 
@@ -91,7 +80,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .type("A".repeat(21))
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "type", "Account type must be less than 20 characters.");
         }
     }
@@ -106,7 +95,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .startingBalance(null)
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "startingBalance", "Starting balance cannot be null.");
         }
 
@@ -116,7 +105,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .startingBalance(new BigDecimal("-10000000000.00"))
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "startingBalance", "Starting balance must be greater than or equal to -9999999999.99");
         }
 
@@ -126,7 +115,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .startingBalance(new BigDecimal("10000000000.00"))
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "startingBalance", "Starting balance must be less than or equal to 9999999999.99");
         }
     }
@@ -142,7 +131,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .currencyCode(blankCurrency)
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "currencyCode", "Currency code cannot be blank.");
         }
 
@@ -153,7 +142,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .currencyCode(wrongLength)
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "currencyCode", "Currency code must be exactly 3 characters.");
         }
     }
@@ -168,7 +157,7 @@ class AccountCreateRequestTest {
             AccountCreateRequest request = AccountCreateRequest.builder()
                     .bankName("A".repeat(51))
                     .build();
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "bankName", "Bank name must be less than 50 characters.");
         }
 
@@ -183,7 +172,7 @@ class AccountCreateRequestTest {
                     .bankName(null)
                     .build();
 
-            Set<ConstraintViolation<AccountCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountCreateRequest>> violations = validator().validate(request);
             assertTrue(violations.isEmpty(), "Should have no violations");
         }
     }

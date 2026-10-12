@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,17 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@link CategoryRuleCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("CategoryRuleCreateRequest Validation Tests")
-class CategoryRuleCreateRequestTest {
+class CategoryRuleCreateRequestTest extends ValidatorTestBase {
 
     private static final String KEYWORD_PUBLIX = "PUBLIX";
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setupValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
 
     @Test
     @DisplayName("should pass when all fields are valid")
@@ -39,7 +28,7 @@ class CategoryRuleCreateRequestTest {
                 .priority(1)
                 .build();
 
-        Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -55,7 +44,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(1L)
                     .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "User ID cannot be null.".equals(v.getMessage())));
         }
@@ -68,7 +57,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(1L)
                     .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "User ID must be a positive number.".equals(v.getMessage())));
         }
@@ -86,7 +75,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(null)
                     .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category ID cannot be null.".equals(v.getMessage())));
         }
@@ -99,7 +88,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(0L)
                     .keywords(List.of(KEYWORD_PUBLIX))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Category ID must be a positive number.".equals(v.getMessage())));
         }
@@ -117,7 +106,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(1L)
                     .keywords(List.of())
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "At least one keyword is required.".equals(v.getMessage())));
         }
@@ -130,7 +119,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(1L)
                     .keywords(List.of(KEYWORD_PUBLIX, ""))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Keyword cannot be blank.".equals(v.getMessage())));
         }
@@ -143,7 +132,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(1L)
                     .keywords(List.of("a".repeat(256)))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Keyword cannot exceed 255 characters.".equals(v.getMessage())));
         }
@@ -156,7 +145,7 @@ class CategoryRuleCreateRequestTest {
                     .categoryId(1L)
                     .keywords(List.of("AMZN", "MKTP"))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertTrue(violations.isEmpty());
         }
     }
@@ -174,7 +163,7 @@ class CategoryRuleCreateRequestTest {
                     .keywords(List.of(KEYWORD_PUBLIX))
                     .priority(-1)
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Priority must be a positive number or zero.".equals(v.getMessage())));
         }
@@ -194,7 +183,7 @@ class CategoryRuleCreateRequestTest {
                     .minAmount(null)
                     .maxAmount(null)
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertTrue(violations.isEmpty());
         }
 
@@ -207,7 +196,7 @@ class CategoryRuleCreateRequestTest {
                     .keywords(List.of(KEYWORD_PUBLIX))
                     .minAmount(new java.math.BigDecimal("-0.01"))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Minimum amount must be a positive number or zero.".equals(v.getMessage())));
         }
@@ -221,7 +210,7 @@ class CategoryRuleCreateRequestTest {
                     .keywords(List.of(KEYWORD_PUBLIX))
                     .maxAmount(new java.math.BigDecimal("-0.01"))
                     .build();
-            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<CategoryRuleCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Maximum amount must be a positive number or zero.".equals(v.getMessage())));
         }

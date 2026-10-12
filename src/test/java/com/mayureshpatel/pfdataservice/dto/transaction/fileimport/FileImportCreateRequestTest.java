@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.transaction.fileimport;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,15 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Verifies {@code FileImportCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("FileImportCreateRequest Validation Tests")
-class FileImportCreateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setupValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class FileImportCreateRequestTest extends ValidatorTestBase {
 
     private FileImportCreateRequest.FileImportCreateRequestBuilder createValidBuilder() {
         return FileImportCreateRequest.builder()
@@ -37,7 +26,7 @@ class FileImportCreateRequestTest {
     @DisplayName("should pass when all fields are valid")
     void shouldPassWithValidData() {
         FileImportCreateRequest request = createValidBuilder().build();
-        Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<FileImportCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -49,7 +38,7 @@ class FileImportCreateRequestTest {
         @DisplayName("should fail when accountId is blank")
         void shouldFailWhenAccountIdIsBlank() {
             FileImportCreateRequest request = createValidBuilder().accountId("").build();
-            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Account ID cannot be blank".equals(v.getMessage())));
         }
@@ -63,7 +52,7 @@ class FileImportCreateRequestTest {
         @DisplayName("should fail when fileName is blank")
         void shouldFailWhenFileNameIsBlank() {
             FileImportCreateRequest request = createValidBuilder().fileName("").build();
-            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "File name cannot be blank".equals(v.getMessage())));
         }
@@ -72,7 +61,7 @@ class FileImportCreateRequestTest {
         @DisplayName("should fail when fileName exceeds 255 characters")
         void shouldFailWhenFileNameIsTooLong() {
             FileImportCreateRequest request = createValidBuilder().fileName("a".repeat(256)).build();
-            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "File name must be less than 255 characters".equals(v.getMessage())));
         }
@@ -86,7 +75,7 @@ class FileImportCreateRequestTest {
         @DisplayName("should fail when fileHash is blank")
         void shouldFailWhenFileHashIsBlank() {
             FileImportCreateRequest request = createValidBuilder().fileHash("").build();
-            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "File hash cannot be blank".equals(v.getMessage())));
         }
@@ -95,7 +84,7 @@ class FileImportCreateRequestTest {
         @DisplayName("should fail when fileHash exceeds 64 characters")
         void shouldFailWhenFileHashIsTooLong() {
             FileImportCreateRequest request = createValidBuilder().fileHash("a".repeat(65)).build();
-            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "File hash must be less than 64 characters".equals(v.getMessage())));
         }
@@ -109,7 +98,7 @@ class FileImportCreateRequestTest {
         @DisplayName("should fail when fileContent is blank")
         void shouldFailWhenFileContentIsBlank() {
             FileImportCreateRequest request = createValidBuilder().fileContent("").build();
-            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<FileImportCreateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "File content cannot be blank".equals(v.getMessage())));
         }

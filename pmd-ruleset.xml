@@ -77,12 +77,6 @@
              universally-idiomatic Java line-reading pattern, not the confused-with-`==`
              assignment this rule exists to catch. -->
         <exclude name="AssignmentInOperand"/>
-        <!-- Mixed bag: the 5 CSV-parser instances are false positives (the CSVParser is actually
-             closed via a `Stream.onClose()` callback that this rule's analysis doesn't follow
-             across the lambda boundary, confirmed directly in StandardCsvParser and
-             CapitalOneCsvParser); the DTO-validation-test instances (ValidatorFactory) may be a
-             genuine, fixable gap. Needs per-instance sorting, not a blanket call either way. -->
-        <exclude name="CloseResource"/>
     </rule>
     <!-- [PF-808]: the 140-finding backlog (after skipAnnotations below removed 16 repeated
          Spring/OpenAPI annotation literals like @ApiResponse's responseCode, which repeat by
@@ -95,9 +89,13 @@
             <property name="skipAnnotations" value="true"/>
         </properties>
     </rule>
-    <rule ref="category/java/errorprone.xml/CloseResource">
-        <priority>4</priority>
-    </rule>
+    <!-- [PF-812]: all 31 CloseResource findings resolved. The 5 CSV-parser instances needed
+         try-with-resources (CapitalOneCsvParser, DiscoverCsvParser, SynovusCsvParser, and
+         UniversalCsvParser had a real exception-path gap introduced by PF-809's own refactor, not
+         the Stream.onClose() false positive only StandardCsvParser still genuinely had); the 21
+         DTO *RequestTest ValidatorFactory leaks now share one lifecycle via a new
+         ValidatorTestBase; the 5 newly-found test-file instances got explicit try-with-resources
+         too. Back to its normal blocking priority. -->
 
     <rule ref="category/java/design.xml">
         <!-- This project deliberately uses Lombok-heavy, simple data classes (entities/DTOs):

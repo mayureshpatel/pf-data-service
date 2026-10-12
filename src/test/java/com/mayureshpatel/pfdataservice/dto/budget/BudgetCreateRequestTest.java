@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.budget;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,15 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@link BudgetCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("BudgetCreateRequest Unit Tests")
-class BudgetCreateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setup() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class BudgetCreateRequestTest extends ValidatorTestBase {
 
     @Test
     @DisplayName("should pass when all fields are valid")
@@ -38,7 +27,7 @@ class BudgetCreateRequestTest {
                 .year(2024)
                 .build();
 
-        Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -52,7 +41,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .userId(null)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "userId", "User ID cannot be null.");
         }
 
@@ -62,7 +51,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .userId(0L)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "userId", "User ID must be a positive number.");
         }
     }
@@ -77,7 +66,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .categoryId(null)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "categoryId", "Category ID cannot be null.");
         }
 
@@ -87,7 +76,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .categoryId(-1L)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "categoryId", "Category ID must be a positive number.");
         }
     }
@@ -102,7 +91,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .amount(null)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "amount", "Amount cannot be null.");
         }
 
@@ -112,7 +101,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .amount(new BigDecimal("-10000000000.00"))
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "amount", "Amount must be greater than or equal to -9999999999.99");
         }
 
@@ -122,7 +111,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .amount(new BigDecimal("10000000000.00"))
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "amount", "Amount must be less than or equal to 9999999999.99");
         }
     }
@@ -137,7 +126,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .month(null)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "month", "Month cannot be null.");
         }
 
@@ -147,7 +136,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .month(0)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             // This will have multiple violations: @Positive and @DecimalMin(1)
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "month".equals(v.getPropertyPath().toString())));
@@ -159,7 +148,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .month(13)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "month", "Month must be less than or equal to 12");
         }
     }
@@ -174,7 +163,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .year(null)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "year", "Year cannot be null.");
         }
 
@@ -184,7 +173,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .year(1899)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "year", "Year must be greater than or equal to 1900");
         }
 
@@ -194,7 +183,7 @@ class BudgetCreateRequestTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .year(10000)
                     .build();
-            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "year", "Year must be less than or equal to 9999");
         }
     }

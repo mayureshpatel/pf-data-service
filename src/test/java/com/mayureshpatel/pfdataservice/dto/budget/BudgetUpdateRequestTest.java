@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.budget;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,15 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@link BudgetUpdateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("BudgetUpdateRequest Unit Tests")
-class BudgetUpdateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setup() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class BudgetUpdateRequestTest extends ValidatorTestBase {
 
     @Test
     @DisplayName("should pass when all fields are valid")
@@ -36,7 +25,7 @@ class BudgetUpdateRequestTest {
                 .amount(new BigDecimal("1500.00"))
                 .build();
 
-        Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -50,7 +39,7 @@ class BudgetUpdateRequestTest {
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .id(null)
                     .build();
-            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "id", "Budget ID cannot be null.");
         }
 
@@ -60,7 +49,7 @@ class BudgetUpdateRequestTest {
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .id(0L)
                     .build();
-            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "id", "Budget ID must be a positive number.");
         }
     }
@@ -75,7 +64,7 @@ class BudgetUpdateRequestTest {
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .userId(null)
                     .build();
-            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "userId", "User ID cannot be null.");
         }
 
@@ -85,7 +74,7 @@ class BudgetUpdateRequestTest {
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .userId(-1L)
                     .build();
-            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "userId", "User ID must be a positive number.");
         }
     }
@@ -100,7 +89,7 @@ class BudgetUpdateRequestTest {
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .amount(null)
                     .build();
-            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "amount", "Amount cannot be null.");
         }
 
@@ -110,7 +99,7 @@ class BudgetUpdateRequestTest {
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .amount(new BigDecimal("-10000000000.00"))
                     .build();
-            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "amount", "Amount must be greater than or equal to -9999999999.99");
         }
 
@@ -120,7 +109,7 @@ class BudgetUpdateRequestTest {
             BudgetUpdateRequest request = BudgetUpdateRequest.builder()
                     .amount(new BigDecimal("10000000000.00"))
                     .build();
-            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<BudgetUpdateRequest>> violations = validator().validate(request);
             assertViolation(violations, "amount", "Amount must be less than or equal to 9999999999.99");
         }
     }

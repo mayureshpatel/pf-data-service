@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.merchant;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -16,22 +13,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@code MerchantDescriptionLinkCreateRequest}'s single {@code description} field: non-blank, no more than 255 characters, and exposed via the record accessor. */
 @DisplayName("MerchantDescriptionLinkCreateRequest Validation Tests")
-class MerchantDescriptionLinkCreateRequestTest {
-
-    private Validator validator;
-
-    @BeforeEach
-    void setup() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class MerchantDescriptionLinkCreateRequestTest extends ValidatorTestBase {
 
     @Test
     @DisplayName("should pass validation with a valid description")
     void shouldPassWithValidDescription() {
         MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest("STARBUCKS #1");
 
-        Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -40,7 +29,7 @@ class MerchantDescriptionLinkCreateRequestTest {
     void shouldFailWhenDescriptionIsBlank() {
         MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest("");
 
-        Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator().validate(request);
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> "Description cannot be blank.".equals(v.getMessage())));
     }
@@ -50,7 +39,7 @@ class MerchantDescriptionLinkCreateRequestTest {
     void shouldFailWhenDescriptionIsTooLong() {
         MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest("A".repeat(256));
 
-        Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<MerchantDescriptionLinkCreateRequest>> violations = validator().validate(request);
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> "Description must be less than 255 characters.".equals(v.getMessage())));
     }

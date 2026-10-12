@@ -144,21 +144,20 @@ public class SynovusCsvParser implements TransactionParser {
                 .setIgnoreSurroundingSpaces(true)
                 .get() : CSV_FORMAT;
 
-        CSVParser csvParser = format.parse(new java.io.StringReader(scanResult.csvContent()));
         java.util.List<Transaction> transactions = new java.util.ArrayList<>();
         java.util.List<String> errors = new java.util.ArrayList<>();
 
-        for (CSVRecord record : csvParser) {
-            if (isValidRecord(record, HEADER_DATE)) {
-                try {
-                    transactions.add(parseTransaction(record));
-                } catch (Exception e) {
-                    errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
+        try (CSVParser csvParser = format.parse(new java.io.StringReader(scanResult.csvContent()))) {
+            for (CSVRecord record : csvParser) {
+                if (isValidRecord(record, HEADER_DATE)) {
+                    try {
+                        transactions.add(parseTransaction(record));
+                    } catch (Exception e) {
+                        errors.add("Row " + record.getRecordNumber() + ": " + e.getMessage());
+                    }
                 }
             }
         }
-
-        csvParser.close();
 
         if (!errors.isEmpty()) {
             throw new com.mayureshpatel.pfdataservice.exception.CsvParsingException("Failed to parse CSV with errors: " + String.join(", ", errors));

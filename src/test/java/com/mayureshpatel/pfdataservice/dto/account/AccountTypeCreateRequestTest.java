@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,15 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@link AccountTypeCreateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("AccountTypeCreateRequest Unit Tests")
-class AccountTypeCreateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setup() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class AccountTypeCreateRequestTest extends ValidatorTestBase {
 
     @Test
     @DisplayName("should pass when all fields are valid")
@@ -39,7 +28,7 @@ class AccountTypeCreateRequestTest {
                 .isActive(true)
                 .build();
 
-        Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -53,7 +42,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .code(null)
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "code", "Account type code cannot be null.");
         }
 
@@ -63,7 +52,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .code("A".repeat(21))
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "code", "Account type code must be less than 20 characters.");
         }
     }
@@ -78,7 +67,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .label(null)
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "label", "Account type label cannot be null.");
         }
 
@@ -88,7 +77,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .label("A".repeat(51))
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "label", "Account type label must be less than 50 characters.");
         }
     }
@@ -103,7 +92,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .icon("A".repeat(51))
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "icon", "Account type icon must be less than 50 characters.");
         }
     }
@@ -118,7 +107,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .color("A".repeat(21))
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "color", "Account type color must be less than 20 characters.");
         }
     }
@@ -133,7 +122,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .sortOrder(null)
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "sortOrder", "Account type sort order cannot be null.");
         }
 
@@ -143,7 +132,7 @@ class AccountTypeCreateRequestTest {
             AccountTypeCreateRequest request = AccountTypeCreateRequest.builder()
                     .sortOrder(-1)
                     .build();
-            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<AccountTypeCreateRequest>> violations = validator().validate(request);
             assertViolation(violations, "sortOrder", "Account type sort order must be a positive number or zero.");
         }
     }

@@ -1,10 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.transaction.tags;
 
+import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,21 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies {@code TagUpdateRequest}'s jakarta bean-validation constraints pass on a fully valid request and fail correctly per-field, one {@code @Nested} class per field below. */
 @DisplayName("TagUpdateRequest Validation Tests")
-class TagUpdateRequestTest {
-
-    private static Validator validator;
-
-    @BeforeAll
-    static void setupValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
+class TagUpdateRequestTest extends ValidatorTestBase {
 
     @Test
     @DisplayName("should pass when all fields are valid")
     void shouldPassWithValidData() {
         TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("Travel").color("#123456").build();
-        Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
+        Set<ConstraintViolation<TagUpdateRequest>> violations = validator().validate(request);
         assertTrue(violations.isEmpty(), "Should have no violations");
     }
 
@@ -42,7 +31,7 @@ class TagUpdateRequestTest {
         @DisplayName("should fail when id is null")
         void shouldFailWhenIdIsNull() {
             TagUpdateRequest request = TagUpdateRequest.builder().id(null).name("Travel").build();
-            Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TagUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Tag ID cannot be null.".equals(v.getMessage())));
         }
@@ -51,7 +40,7 @@ class TagUpdateRequestTest {
         @DisplayName("should fail when id is not positive")
         void shouldFailWhenIdIsNotPositive() {
             TagUpdateRequest request = TagUpdateRequest.builder().id(0L).name("Travel").build();
-            Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TagUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Tag ID must be a positive number.".equals(v.getMessage())));
         }
@@ -65,7 +54,7 @@ class TagUpdateRequestTest {
         @DisplayName("should fail when name is blank")
         void shouldFailWhenNameIsBlank() {
             TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("").build();
-            Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TagUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Name cannot be blank.".equals(v.getMessage())));
         }
@@ -74,7 +63,7 @@ class TagUpdateRequestTest {
         @DisplayName("should fail when name exceeds 50 characters")
         void shouldFailWhenNameIsTooLong() {
             TagUpdateRequest request = TagUpdateRequest.builder().id(1L).name("a".repeat(51)).build();
-            Set<ConstraintViolation<TagUpdateRequest>> violations = validator.validate(request);
+            Set<ConstraintViolation<TagUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "Name cannot exceed 50 characters.".equals(v.getMessage())));
         }
