@@ -64,6 +64,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     private static final String PARAM_DATE = "date";
     private static final String PARAM_DESCRIPTION = "description";
     private static final String PARAM_TYPE = "type";
+    private static final String PARAM_MERCHANT_ID = "merchantId";
 
     private final JdbcClient jdbcClient;
     private final TransactionDetailRowMapper rowMapper;
@@ -146,7 +147,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("postDate", request.getPostDate())
                 .param(PARAM_DESCRIPTION, request.getDescription())
                 .param(PARAM_TYPE, request.getType())
-                .param("merchantId", request.getMerchantId())
+                .param(PARAM_MERCHANT_ID, request.getMerchantId())
                 .update(keyHolder);
 
         return keyHolder.getKey().intValue();
@@ -175,7 +176,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("postDate", transaction.getPostDate())
                 .param(PARAM_DESCRIPTION, transaction.getDescription())
                 .param(PARAM_TYPE, transaction.getType().name())
-                .param("merchantId", transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
+                .param(PARAM_MERCHANT_ID, transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
                 .update(keyHolder);
 
         return keyHolder.getKey().intValue();
@@ -198,7 +199,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param("postDate", transaction.getPostDate())
                 .param(PARAM_DESCRIPTION, transaction.getDescription())
                 .param(PARAM_TYPE, transaction.getType().name())
-                .param("merchantId", transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
+                .param(PARAM_MERCHANT_ID, transaction.getMerchant() != null ? transaction.getMerchant().getId() : null)
                 .param(PARAM_ACCOUNT_ID, transaction.getAccount() != null ? transaction.getAccount().getId() : null)
                 .update();
     }
@@ -383,6 +384,30 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
+    }
+
+    /**
+     * PF-815: a merchant's recency-weighted default category -- the category with the highest
+     * exponentially-decayed score across the user's categorized, non-deleted transactions for this
+     * merchant, provided at least {@code minOccurrences} of them share that category. Backs
+     * {@code MerchantDefaultCategoryStrategy}.
+     *
+     * @param merchantId      the merchant to score
+     * @param userId          the owning user's id
+     * @param halfLifeSeconds the decay half-life -- a transaction this old contributes half the
+     *                        weight of a brand-new one
+     * @param minOccurrences  the minimum number of matching transactions a category needs before
+     *                        it's eligible to be returned
+     * @return the winning category id, or empty if no category meets the occurrence floor
+     */
+    public Optional<Long> findWeightedDefaultCategoryId(Long merchantId, Long userId, long halfLifeSeconds, int minOccurrences) {
+        return jdbcClient.sql(TransactionQueries.FIND_WEIGHTED_DEFAULT_CATEGORY_ID)
+                .param(PARAM_MERCHANT_ID, merchantId)
+                .param(SqlParams.USER_ID, userId)
+                .param("halfLifeSeconds", halfLifeSeconds)
+                .param("minOccurrences", minOccurrences)
+                .query(Long.class)
+                .optional();
     }
 
     /**

@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -1062,6 +1063,100 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertTrue(result.isEmpty(),
                     "a month with only TRANSFER_OUT/TRANSFER_IN legs must produce no income/expense row, got: "
                             + result);
+        }
+    }
+
+    /**
+     * {@code findWeightedDefaultCategoryId} (PF-815, backing {@code MerchantDefaultCategoryStrategy})
+     * scores each of a merchant's categorized transactions by exponential recency decay, sums per
+     * category, and returns the highest-scoring category -- but only once it has at least
+     * {@code minOccurrences} matching transactions. Merchant 2 (Amazon) carries zero transactions
+     * in the baseline fixture, so every test here seeds its own in isolation without baseline
+     * interference.
+     */
+    @Nested
+    @DisplayName("PF-815: findWeightedDefaultCategoryId")
+    class WeightedDefaultCategoryTests {
+
+        private static final Long MERCHANT_AMAZON = 2L;
+        private static final Long CATEGORY_GROCERIES = 7L;
+        private static final Long CATEGORY_DINING_OUT = 8L;
+        private static final long HALF_LIFE_SECONDS = 180L * 24 * 60 * 60;
+
+        @Test
+        @DisplayName("should prefer a recent minority category over an older, more frequent one")
+        void shouldWeightByRecencyNotJustFrequency() {
+            // arrange -- 5 old (300-day) Groceries transactions outnumber 2 recent (5-day) Dining
+            // Out transactions, but the recent pair's decay-weighted score is still higher: a plain
+            // most-common-category (mode) rule would pick Groceries here, proving this is genuinely
+            // recency-weighted, not mode in disguise
+            jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    select 1, :groceries, :merchant, 20.00, now() - interval '300 days', 'Old Groceries ' || s.n, 'EXPENSE'
+                    from generate_series(1, 5) as s(n)
+                    """)
+                    .param("groceries", CATEGORY_GROCERIES)
+                    .param("merchant", MERCHANT_AMAZON)
+                    .update();
+            jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    select 1, :diningOut, :merchant, 15.00, now() - interval '5 days', 'Recent Dining ' || s.n, 'EXPENSE'
+                    from generate_series(1, 2) as s(n)
+                    """)
+                    .param("diningOut", CATEGORY_DINING_OUT)
+                    .param("merchant", MERCHANT_AMAZON)
+                    .update();
+
+            // act
+            Optional<Long> result = transactionRepository.findWeightedDefaultCategoryId(
+                    MERCHANT_AMAZON, USER_ID, HALF_LIFE_SECONDS, 2);
+
+            // assert & verify
+            assertTrue(result.isPresent());
+            assertEquals(CATEGORY_DINING_OUT, result.get(),
+                    "recent transactions should outweigh older, more numerous ones");
+        }
+
+        @Test
+        @DisplayName("should return empty when no category meets the minimum occurrence threshold")
+        void shouldReturnEmptyBelowOccurrenceThreshold() {
+            // arrange -- merchant 4 (My Favorite Cafe) has exactly 1 baseline transaction (id 1000)
+            Optional<Long> result = transactionRepository.findWeightedDefaultCategoryId(
+                    4L, USER_ID, HALF_LIFE_SECONDS, 2);
+
+            // assert & verify
+            assertTrue(result.isEmpty(), "a single occurrence must not meet a minOccurrences=2 floor");
+        }
+
+        @Test
+        @DisplayName("should ignore transactions with no category assigned")
+        void shouldExcludeUncategorizedTransactions() {
+            // arrange -- every seeded transaction for this merchant is uncategorized
+            jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    select 1, null, :merchant, 10.00, now() - interval '1 day', 'Uncategorized ' || s.n, 'EXPENSE'
+                    from generate_series(1, 3) as s(n)
+                    """)
+                    .param("merchant", MERCHANT_AMAZON)
+                    .update();
+
+            // act
+            Optional<Long> result = transactionRepository.findWeightedDefaultCategoryId(
+                    MERCHANT_AMAZON, USER_ID, HALF_LIFE_SECONDS, 2);
+
+            // assert & verify
+            assertTrue(result.isEmpty(), "uncategorized transactions must never produce a default");
+        }
+
+        @Test
+        @DisplayName("should return empty for a merchant with no transactions at all")
+        void shouldReturnEmptyForMerchantWithNoTransactions() {
+            // act -- merchant 2 (Amazon) has zero transactions in the baseline fixture
+            Optional<Long> result = transactionRepository.findWeightedDefaultCategoryId(
+                    MERCHANT_AMAZON, USER_ID, HALF_LIFE_SECONDS, 2);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
         }
     }
 }
