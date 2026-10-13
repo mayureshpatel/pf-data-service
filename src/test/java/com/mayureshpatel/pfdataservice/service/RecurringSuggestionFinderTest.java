@@ -356,7 +356,15 @@ class RecurringSuggestionFinderTest {
                     Arguments.of("just below QUARTERLY lower bound (avg 84.67)", List.of(85L, 85L, 84L), null),
                     Arguments.of("just above QUARTERLY upper bound (avg 95.33)", List.of(95L, 95L, 96L), null),
                     Arguments.of("just below YEARLY lower bound (avg 359.67)", List.of(360L, 360L, 359L), null),
-                    Arguments.of("just above YEARLY upper bound (avg 370.33)", List.of(370L, 370L, 371L), null)
+                    Arguments.of("just above YEARLY upper bound (avg 370.33)", List.of(370L, 370L, 371L), null),
+
+                    // PF-855: a separate boundary on the SAME method -- the "stable enough to call
+                    // recurring at all" check (Math.abs(i - avgInterval) < 5), distinct from the 5
+                    // named frequency ranges above. Both cases hold avgInterval at exactly 30 (the
+                    // MONTHLY bucket's midpoint) so classifyFrequency never confounds the result --
+                    // only the single most-deviant interval's distance from that average changes.
+                    Arguments.of("stability boundary: largest deviation exactly 5 (unstable)", List.of(35L, 27L, 28L), null),
+                    Arguments.of("stability boundary: largest deviation 4, just under 5 (stable)", List.of(34L, 28L, 28L), Frequency.MONTHLY)
             );
         }
 
