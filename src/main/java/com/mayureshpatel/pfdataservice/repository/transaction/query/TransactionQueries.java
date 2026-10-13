@@ -457,4 +457,30 @@ public final class TransactionQueries {
             "   and transactions.type = 'TRANSFER_IN'" +
             "   and accounts.type = 'CREDIT_CARD'" +
             AND_NOT_DELETED;
+
+    // language=SQL
+    // PF-815: a merchant's recency-weighted default category, for MerchantDefaultCategoryStrategy.
+    // each matching transaction contributes exp(-ln(2) * ageInSeconds / halfLifeSeconds) toward its
+    // category's score -- a transaction exactly one half-life old contributes half the weight of a
+    // brand-new one, decaying smoothly rather than in hard buckets. scores are summed per category,
+    // and only a category with at least :minOccurrences matching transactions is eligible, so a
+    // single miscategorized transaction can't become a merchant's "default" on its own.
+    public static final String FIND_WEIGHTED_DEFAULT_CATEGORY_ID = """
+            select category_id
+            from (
+                select transactions.category_id as category_id,
+                       sum(exp(-ln(2) * extract(epoch from (now() - transactions.date)) / :halfLifeSeconds)) as weighted_score,
+                       count(*) as occurrence_count
+                from transactions
+                join accounts on transactions.account_id = accounts.id
+                where accounts.user_id = :userId
+                  and transactions.merchant_id = :merchantId
+                  and transactions.category_id is not null
+                  and transactions.deleted_at is null
+                group by transactions.category_id
+                having count(*) >= :minOccurrences
+            ) scored
+            order by weighted_score desc
+            limit 1
+            """;
 }

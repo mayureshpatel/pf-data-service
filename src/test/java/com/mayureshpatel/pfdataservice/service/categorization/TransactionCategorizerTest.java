@@ -1,8 +1,12 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,6 +23,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /** Verifies {@code TransactionCategorizer}'s {@code guessCategory} overloads run registered {@link CategorizationStrategy} beans in {@code getOrder()} order and stop at the first match. */
@@ -102,6 +109,67 @@ class TransactionCategorizerTest {
 
             // assert & verify
             verify(s1, times(2)).categorize(any(Transaction.class), any());
+        }
+    }
+
+    /**
+     * PF-815: wires the two real strategies (not mocks) together and proves the priority ordering
+     * {@link RuleBasedCategorizationStrategy#getOrder()} (100) and
+     * {@link MerchantDefaultCategoryStrategy#getOrder()} (200) establish actually holds end to end
+     * -- a merchant default only ever surfaces when no rule matches, and a matching rule always
+     * wins over a merchant default even when both would apply to the same transaction.
+     */
+    @Nested
+    @DisplayName("PF-815: Rule-Based vs. Merchant-Default priority")
+    class RuleVsMerchantDefaultPriorityTests {
+        @Mock
+        private TransactionRepository transactionRepository;
+
+        @Test
+        @DisplayName("should fall back to the merchant's default category when no rule matches")
+        void shouldFallBackToMerchantDefault() {
+            // arrange
+            strategies.add(new RuleBasedCategorizationStrategy());
+            strategies.add(new MerchantDefaultCategoryStrategy(transactionRepository));
+            when(transactionRepository.findWeightedDefaultCategoryId(eq(5L), eq(1L), anyLong(), anyInt()))
+                    .thenReturn(Optional.of(77L));
+
+            Transaction t = Transaction.builder()
+                    .description("UNMATCHED DESCRIPTION")
+                    .account(Account.builder().userId(1L).build())
+                    .merchant(Merchant.builder().id(5L).build())
+                    .build();
+
+            // act
+            Long result = categorizer.guessCategory(t, List.of());
+
+            // assert & verify
+            assertEquals(77L, result);
+        }
+
+        @Test
+        @DisplayName("should prefer a matching rule over the merchant's default category")
+        void shouldPreferRuleOverMerchantDefault() {
+            // arrange
+            CategoryRule rule = CategoryRule.builder()
+                    .keywords(List.of("COFFEE"))
+                    .category(Category.builder().id(10L).build())
+                    .build();
+            strategies.add(new RuleBasedCategorizationStrategy());
+            strategies.add(new MerchantDefaultCategoryStrategy(transactionRepository));
+
+            Transaction t = Transaction.builder()
+                    .description("STARBUCKS COFFEE")
+                    .account(Account.builder().userId(1L).build())
+                    .merchant(Merchant.builder().id(5L).build())
+                    .build();
+
+            // act
+            Long result = categorizer.guessCategory(t, List.of(rule));
+
+            // assert & verify
+            assertEquals(10L, result);
+            verifyNoInteractions(transactionRepository);
         }
     }
 
