@@ -75,16 +75,16 @@ public class RecurringTransactionService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (request.getAccountId() != null) {
-            Account account = accountRepository.findById(request.getAccountId())
+        if (request.accountId() != null) {
+            Account account = accountRepository.findById(request.accountId())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
             if (!account.getUserId().equals(userId)) {
                 throw new AccessDeniedException("Access denied to account");
             }
         }
 
-        if (request.getMerchantId() != null && request.getMerchantId() > 0) {
-            merchantRepository.findById(request.getMerchantId())
+        if (request.merchantId() != null && request.merchantId() > 0) {
+            merchantRepository.findById(request.merchantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
         }
 
@@ -103,15 +103,15 @@ public class RecurringTransactionService {
      */
     @Transactional
     public int updateRecurringTransaction(Long userId, RecurringTransactionUpdateRequest request) {
-        RecurringTransaction recurring = recurringRepository.findById(request.getId())
+        RecurringTransaction recurring = recurringRepository.findById(request.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Recurring transaction not found"));
 
         if (!recurring.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
 
-        if (request.getAccountId() != null) {
-            Account account = accountRepository.findById(request.getAccountId())
+        if (request.accountId() != null) {
+            Account account = accountRepository.findById(request.accountId())
                     .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
             if (!account.getUserId().equals(userId)) {
@@ -119,8 +119,8 @@ public class RecurringTransactionService {
             }
         }
 
-        if (request.getMerchantId() != null && request.getMerchantId() > 0) {
-            merchantRepository.findById(request.getMerchantId())
+        if (request.merchantId() != null && request.merchantId() > 0) {
+            merchantRepository.findById(request.merchantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
         }
 
