@@ -12,10 +12,12 @@ import java.math.BigDecimal;
  * @param representativeMerchantId the merchant's id
  * @param displayName              the merchant's name
  * @param total                    the sum of expense amounts for this merchant in the current period
+ * @param transactionCount         the number of expense transactions summed into {@code total}
  */
 public record MerchantBreakdownDto(
         Long representativeMerchantId,
         String displayName,
-        BigDecimal total
+        BigDecimal total,
+        long transactionCount
 ) {
 }

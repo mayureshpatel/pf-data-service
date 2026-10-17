@@ -22,7 +22,8 @@ public class MerchantTotalRowMapper extends JdbcMapperUtils implements RowMapper
         return new MerchantBreakdownDto(
                 rs.getLong("representative_merchant_id"),
                 rs.getString("display_name"),
-                rs.getBigDecimal("total")
+                rs.getBigDecimal("total"),
+                rs.getLong("transaction_count")
         );
     }
 

@@ -72,7 +72,8 @@ public final class MerchantQueries {
     public static final String FIND_MERCHANT_TOTALS = """
             select m.id as representative_merchant_id,
                    m.name as display_name,
-                   sum(t.amount) as total
+                   sum(t.amount) as total,
+                   count(*) as transaction_count
             from transactions t
             join accounts a on t.account_id = a.id
             join merchants m on t.merchant_id = m.id

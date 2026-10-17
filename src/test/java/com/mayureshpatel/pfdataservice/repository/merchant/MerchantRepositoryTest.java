@@ -21,7 +21,9 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -171,6 +173,26 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
 
             assertEquals(MERCHANT_WHOLE_FOODS, breakdown.representativeMerchantId());
             assertTrue(breakdown.total().compareTo(BigDecimal.ZERO) > 0);
+        }
+
+        @Test
+        @DisplayName("should report a transaction count matching the report query's count for each merchant")
+        void shouldFindMerchantTransactionCounts() {
+            // arrange
+            OffsetDateTime start = LocalDate.of(2025, 9, 1).atStartOfDay().atOffset(ZoneOffset.UTC);
+            OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
+
+            // act
+            List<MerchantBreakdownDto> totals = repository.findMerchantTotals(USER_1, start, end);
+            Map<Long, Long> reportCounts = repository.findMerchantReportData(USER_1, start, end).stream()
+                    .collect(Collectors.toMap(MerchantReportDataDto::representativeMerchantId, MerchantReportDataDto::count));
+
+            // assert & verify
+            assertFalse(totals.isEmpty());
+            for (MerchantBreakdownDto row : totals) {
+                assertTrue(row.transactionCount() > 0);
+                assertEquals(reportCounts.get(row.representativeMerchantId()), row.transactionCount());
+            }
         }
     }
 
