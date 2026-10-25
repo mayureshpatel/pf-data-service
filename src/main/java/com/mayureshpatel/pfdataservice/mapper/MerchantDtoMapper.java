@@ -22,7 +22,8 @@ public final class MerchantDtoMapper {
                 merchant.getCity(),
                 merchant.getState(),
                 merchant.getPostalCode(),
-                merchant.getCountry()
+                merchant.getCountry(),
+                merchant.getLinkCount()
         );
     }
 }

@@ -55,7 +55,7 @@ class MerchantControllerTest extends BaseControllerTest {
         @DisplayName("GET should return a page of the authenticated user's merchants")
         void getMerchants_shouldReturnPage() throws Exception {
             // arrange
-            MerchantDto dto = MerchantDto.builder().id(MERCHANT_ID).userId(USER_ID).name("Starbucks").build();
+            MerchantDto dto = MerchantDto.builder().id(MERCHANT_ID).userId(USER_ID).name("Starbucks").linkCount(3).build();
             Page<MerchantDto> page = new PageImpl<>(List.of(dto), PageRequest.of(0, 20), 1);
             when(merchantService.getAllMerchants(eq(USER_ID), eq(null), any(Pageable.class))).thenReturn(page);
 
@@ -65,7 +65,8 @@ class MerchantControllerTest extends BaseControllerTest {
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.content", hasSize(1)))
                     .andExpect(jsonPath("$.content[0].id").value(MERCHANT_ID))
-                    .andExpect(jsonPath("$.content[0].name").value("Starbucks"));
+                    .andExpect(jsonPath("$.content[0].name").value("Starbucks"))
+                    .andExpect(jsonPath("$.content[0].linkCount").value(3));
 
             verify(merchantService).getAllMerchants(eq(USER_ID), eq(null), any(Pageable.class));
         }

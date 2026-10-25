@@ -65,6 +65,9 @@ public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merc
         if (hasColumn(safePrefix + "country", availableColumns)) {
             builder.country(rs.getString(safePrefix + "country"));
         }
+        if (hasColumn(safePrefix + "link_count", availableColumns)) {
+            builder.linkCount(rs.getInt(safePrefix + "link_count"));
+        }
         builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
 
         return builder.build();

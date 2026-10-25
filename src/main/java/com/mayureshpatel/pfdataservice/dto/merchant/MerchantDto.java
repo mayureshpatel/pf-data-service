@@ -10,6 +10,7 @@ public record MerchantDto(
         String city,
         String state,
         String postalCode,
-        String country
+        String country,
+        int linkCount
 ) {
 }
