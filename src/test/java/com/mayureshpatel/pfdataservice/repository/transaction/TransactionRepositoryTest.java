@@ -1166,6 +1166,11 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
     @DisplayName("findDescriptions")
     class FindDescriptionsTests {
 
+        private static final String SEARCH = "zzq";
+        private static final String COSTCO = "ZZQ Costco";
+        private static final String UNLINKED = "ZZQ Unlinked";
+        private static final String LINKED = "ZZQ Linked";
+        private static final String LINKED_KEY = "zzq linked";
         private static final Long USER_2 = 2L;
         private static final Long MERCHANT_AMAZON = 2L;
 
@@ -1201,7 +1206,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             // act
             Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
-                    USER_ID, "zzq", false, PageRequest.of(0, 10));
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10));
 
             // assert & verify
             assertEquals(1, result.getTotalElements());
@@ -1218,7 +1223,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             // act
             Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
-                    USER_ID, "zzq", false, PageRequest.of(0, 10));
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10));
 
             // assert & verify
             assertEquals(0, result.getTotalElements());
@@ -1228,17 +1233,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should not include another user's transactions or links")
         void shouldBeOwnerScoped() {
             // arrange
-            insertTransaction(1L, "ZZQ Costco");
-            insertTransaction(4L, "ZZQ Costco");
-            insertTransaction(4L, "ZZQ Costco");
+            insertTransaction(1L, COSTCO);
+            insertTransaction(4L, COSTCO);
+            insertTransaction(4L, COSTCO);
             jdbcClient.sql("insert into merchants (id, user_id, name) values (900, :userId, 'Other Costco')")
                     .param("userId", USER_2)
                     .update();
-            insertLink(USER_2, 900L, "ZZQ Costco", "zzq costco");
+            insertLink(USER_2, 900L, COSTCO, "zzq costco");
 
             // act
             Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
-                    USER_ID, "zzq", false, PageRequest.of(0, 10));
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10));
 
             // assert & verify
             assertEquals(1, result.getTotalElements());
@@ -1250,17 +1255,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should return the linked merchant id and name, or null when unlinked")
         void shouldReturnLinkedMerchant() {
             // arrange
-            insertTransaction(1L, "ZZQ Linked");
-            insertTransaction(1L, "ZZQ Unlinked");
-            insertLink(USER_ID, MERCHANT_AMAZON, "zzq linked", "zzq linked");
+            insertTransaction(1L, LINKED);
+            insertTransaction(1L, UNLINKED);
+            insertLink(USER_ID, MERCHANT_AMAZON, LINKED_KEY, LINKED_KEY);
 
             // act
             List<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
-                    USER_ID, "zzq", false, PageRequest.of(0, 10)).getContent();
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10)).getContent();
 
             // assert & verify
-            TransactionDescriptionDto linked = result.stream().filter(d -> d.description().equals("ZZQ Linked")).findFirst().orElseThrow();
-            TransactionDescriptionDto unlinked = result.stream().filter(d -> d.description().equals("ZZQ Unlinked")).findFirst().orElseThrow();
+            TransactionDescriptionDto linked = result.stream().filter(d -> LINKED.equals(d.description())).findFirst().orElseThrow();
+            TransactionDescriptionDto unlinked = result.stream().filter(d -> UNLINKED.equals(d.description())).findFirst().orElseThrow();
             assertEquals(MERCHANT_AMAZON, linked.merchantId());
             assertEquals("Amazon", linked.merchantName());
             assertNull(unlinked.merchantId());
@@ -1291,17 +1296,17 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should return only unlinked rows when unlinkedOnly, with totals reflecting the filter")
         void shouldFilterUnlinkedOnly() {
             // arrange
-            insertTransaction(1L, "ZZQ Linked");
-            insertTransaction(1L, "ZZQ Unlinked");
-            insertLink(USER_ID, MERCHANT_AMAZON, "zzq linked", "zzq linked");
+            insertTransaction(1L, LINKED);
+            insertTransaction(1L, UNLINKED);
+            insertLink(USER_ID, MERCHANT_AMAZON, LINKED_KEY, LINKED_KEY);
 
             // act
             Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
-                    USER_ID, "zzq", true, PageRequest.of(0, 10));
+                    USER_ID, SEARCH, true, PageRequest.of(0, 10));
 
             // assert & verify
             assertEquals(1, result.getTotalElements());
-            assertEquals("ZZQ Unlinked", result.getContent().get(0).description());
+            assertEquals(UNLINKED, result.getContent().get(0).description());
         }
 
         @Test
@@ -1315,9 +1320,9 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             // act
             Page<TransactionDescriptionDto> first = transactionRepository.findDescriptions(
-                    USER_ID, "zzq", false, PageRequest.of(0, 2));
+                    USER_ID, SEARCH, false, PageRequest.of(0, 2));
             Page<TransactionDescriptionDto> second = transactionRepository.findDescriptions(
-                    USER_ID, "zzq", false, PageRequest.of(1, 2));
+                    USER_ID, SEARCH, false, PageRequest.of(1, 2));
 
             // assert & verify
             assertEquals(3, first.getTotalElements());
