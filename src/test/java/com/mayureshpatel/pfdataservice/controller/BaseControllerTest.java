@@ -68,6 +68,8 @@ public abstract class BaseControllerTest {
     @MockitoBean
     protected ReportService reportService;
     @MockitoBean
+    protected ExploreService exploreService;
+    @MockitoBean
     protected CurrencyService currencyService;
     @MockitoBean
     protected MerchantService merchantService;

@@ -1,8 +1,11 @@
 package com.mayureshpatel.pfdataservice.controller;
 
-import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
-import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
-import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRequest;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreResultDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreScopeRequest;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
+import com.mayureshpatel.pfdataservice.service.ExploreService;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.ReportService;
@@ -10,9 +13,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +38,7 @@ import java.util.List;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ExploreService exploreService;
 
     /**
      * Returns the user's total net worth as of the end of each month in the requested range,
@@ -57,62 +64,63 @@ public class ReportController {
     }
 
     /**
-     * Returns the user's spending broken down by category for the requested range, aggregated
-     * fully server-side (PF-823) -- no row cap, unlike the client-side approach it replaces.
+     * Runs the Reports explorer: one measure over one grouping, under stacked filters, optionally compared
+     * with an equivalent earlier period. See {@link ExploreRequest} for the parameters.
      *
      * @param userDetails the authenticated user
-     * @param startDate   the first date to include
-     * @param endDate     the last date to include
-     * @return one entry per category with spend in range (including uncategorized), highest total first
+     * @param request     the explorer parameters, bound by name
+     * @return the groups, totals and comparison
      */
-    @Operation(summary = "Category breakdown", description = "Spending by category for the requested range, computed server-side over every matching transaction")
-    @ApiResponse(responseCode = "200", description = "Category breakdown returned (possibly empty)")
-    @GetMapping("/categories")
-    public ResponseEntity<List<CategoryReportDataDto>> getCategoryReportData(
+    @Operation(summary = "Explore spending and income", description = "Any measure by any grouping under stacked filters, with an optional comparison period; transfers and adjustments are excluded")
+    @ApiResponse(responseCode = "200", description = "Explorer result returned")
+    @ApiResponse(responseCode = "400", description = "The measure cannot be grouped that way (net and savings rate group by time only)")
+    @GetMapping("/explore")
+    public ResponseEntity<ExploreResultDto> explore(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate) {
-
-        return ResponseEntity.ok(reportService.getCategoryReportData(userDetails.getId(), startDate, endDate));
+            @Valid @ModelAttribute ExploreRequest request) {
+        return ResponseEntity.ok(exploreService.explore(
+                userDetails.getId(), request.measure(), request.sideOrDefault(), request.groupBy(),
+                request.startDate(), request.endDate(), request.compareOrDefault(), request.toFilter()));
     }
 
     /**
-     * Returns the user's spending broken down by merchant for the requested range, aggregated
-     * fully server-side (PF-823) -- no row cap, unlike the client-side approach it replaces.
+     * Returns the explorer's trend: the chosen measure per day, week or month across the period, with the
+     * comparison period's buckets lined up by position when a comparison is on.
      *
      * @param userDetails the authenticated user
-     * @param startDate   the first date to include
-     * @param endDate     the last date to include
-     * @return one entry per merchant with spend in range, highest total first
+     * @param request     the period, measure and filters, bound by name
+     * @return the current and comparison buckets
      */
-    @Operation(summary = "Merchant breakdown", description = "Spending by merchant for the requested range, computed server-side over every matching transaction")
-    @ApiResponse(responseCode = "200", description = "Merchant breakdown returned (possibly empty)")
-    @GetMapping("/merchants")
-    public ResponseEntity<List<MerchantReportDataDto>> getMerchantReportData(
+    @Operation(summary = "Explore trend", description = "The chosen measure per day, week or month across the period, under the same filters as the explorer")
+    @ApiResponse(responseCode = "200", description = "Trend returned")
+    @GetMapping("/explore/trend")
+    public ResponseEntity<ExploreTrendDto> exploreTrend(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate) {
-
-        return ResponseEntity.ok(reportService.getMerchantReportData(userDetails.getId(), startDate, endDate));
+            @Valid @ModelAttribute ExploreScopeRequest request) {
+        return ResponseEntity.ok(exploreService.trend(
+                userDetails.getId(), request.measure(), request.sideOrDefault(), request.startDate(), request.endDate(),
+                request.compareOrDefault(), request.toFilter()));
     }
 
     /**
-     * Returns the user's monthly income vs. expense totals for the requested range, aggregated
-     * fully server-side (PF-823) -- no row cap, unlike the client-side approach it replaces.
+     * Pages through the transactions behind an explorer number, newest first: the last step of a drill-down.
      *
      * @param userDetails the authenticated user
-     * @param startDate   the first date to include
-     * @param endDate     the last date to include
-     * @return one entry per month with matching activity, oldest first
+     * @param request     the period, measure and filters, bound by name
+     * @param page        the zero-based page
+     * @param size        the page size (capped at 100)
+     * @return the page of transactions
      */
-    @Operation(summary = "Monthly income vs. expense", description = "Monthly income/expense totals for the requested range, computed server-side over every matching transaction")
-    @ApiResponse(responseCode = "200", description = "Monthly breakdown returned (possibly empty)")
-    @GetMapping("/monthly")
-    public ResponseEntity<List<MonthlyReportDataDto>> getMonthlyReportData(
+    @Operation(summary = "Explore transactions", description = "The transactions behind an explorer number, newest first, under the same filters")
+    @ApiResponse(responseCode = "200", description = "Transactions returned")
+    @GetMapping("/explore/transactions")
+    public ResponseEntity<Page<ExploreTransactionDto>> exploreTransactions(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate) {
-
-        return ResponseEntity.ok(reportService.getMonthlyReportData(userDetails.getId(), startDate, endDate));
+            @Valid @ModelAttribute ExploreScopeRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(exploreService.transactions(
+                userDetails.getId(), request.measure(), request.sideOrDefault(), request.startDate(), request.endDate(),
+                request.toFilter(), page, size));
     }
 }

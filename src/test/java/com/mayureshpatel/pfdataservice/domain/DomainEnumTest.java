@@ -56,6 +56,16 @@ class DomainEnumTest {
         }
 
         @Test
+        void shouldAdvanceByItsOwnCalendarIncrement() {
+            java.time.LocalDate day = java.time.LocalDate.of(2026, 1, 31);
+            assertEquals(day.plusWeeks(1), Frequency.WEEKLY.advance(day));
+            assertEquals(day.plusWeeks(2), Frequency.BI_WEEKLY.advance(day));
+            assertEquals(day.plusMonths(1), Frequency.MONTHLY.advance(day));
+            assertEquals(day.plusMonths(3), Frequency.QUARTERLY.advance(day));
+            assertEquals(day.plusYears(1), Frequency.YEARLY.advance(day));
+        }
+
+        @Test
         void shouldThrowOnInvalidFrequency() {
             assertThrows(IllegalArgumentException.class, () -> Frequency.fromCode("invalid"));
         }

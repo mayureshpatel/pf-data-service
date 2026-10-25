@@ -2,12 +2,8 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryBreakdownDto;
-import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
-import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryBreakdownRowMapper;
-import com.mayureshpatel.pfdataservice.repository.transaction.mapper.CategoryReportDataRowMapper;
-import com.mayureshpatel.pfdataservice.repository.transaction.mapper.MonthlyReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.TransactionQueries;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -40,13 +36,9 @@ public class TransactionReportRepository {
 
     private final JdbcClient jdbcClient;
     private final CategoryBreakdownRowMapper categoryBreakdownRowMapper;
-    private final CategoryReportDataRowMapper categoryReportDataRowMapper;
-    private final MonthlyReportDataRowMapper monthlyReportDataRowMapper;
 
     /**
-     * Dashboard's category-spend-breakdown widget and the Reports feature's own simpler
-     * equivalent both use this -- the Reports feature's richer equivalent
-     * ({@link #findCategoryReportData}) deliberately excludes uncategorized instead.
+     * Dashboard's category-spend-breakdown widget's data, including an "Uncategorized" bucket.
      *
      * @param userId the owning user's id
      * @param start  the inclusive range start
@@ -63,36 +55,8 @@ public class TransactionReportRepository {
     }
 
     /**
-     * PF-823: Reports' Categories tab data for the given range, aggregated fully server-side --
-     * no row cap, unlike the client-side approach it replaces.
-     */
-    public List<CategoryReportDataDto> findCategoryReportData(Long userId, OffsetDateTime start, OffsetDateTime end) {
-        return jdbcClient.sql(TransactionQueries.FIND_CATEGORY_REPORT_DATA)
-                .param(SqlParams.USER_ID, userId)
-                .param(PARAM_START_DATE, start)
-                .param(PARAM_END_DATE, end)
-                .query(categoryReportDataRowMapper)
-                .list();
-    }
-
-    /**
-     * PF-823: Reports' Cash Flow tab data for the given range, one row per month with income and
-     * expense already pivoted side by side.
-     */
-    public List<MonthlyReportDataDto> findMonthlyIncomeExpense(Long userId, OffsetDateTime start, OffsetDateTime end) {
-        return jdbcClient.sql(TransactionQueries.FIND_MONTHLY_INCOME_EXPENSE)
-                .param(SqlParams.USER_ID, userId)
-                .param(PARAM_START_DATE, start)
-                .param(PARAM_END_DATE, end)
-                .query(monthlyReportDataRowMapper)
-                .list();
-    }
-
-    /**
      * Dashboard pulse widget's trailing-months income/expense totals, one row per
-     * (year, month, type) rather than {@link #findMonthlyIncomeExpense}'s pre-pivoted shape --
-     * open-ended from {@code startDate} to now, not bounded by an explicit end like the Reports
-     * feature's equivalent.
+     * (year, month, type), open-ended from {@code startDate} to now.
      *
      * @param userId    the owning user's id
      * @param startDate the inclusive start of the trailing window

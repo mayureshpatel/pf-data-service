@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.mapper.MerchantDescriptionLinkDtoMapper;
 import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantDescriptionLinkRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,6 +38,7 @@ public class MerchantService {
 
     private final MerchantRepository merchantRepository;
     private final MerchantDescriptionLinkRepository descriptionLinkRepository;
+    private final RecurringTransactionRepository recurringRepository;
 
     /**
      * Case-folds and collapses whitespace in a raw description -- the lookup key
@@ -50,7 +51,7 @@ public class MerchantService {
      * @return the case-folded, whitespace-collapsed form, or {@code ""} for a null input
      */
     private static String lightNormalize(String raw) {
-        return raw == null ? "" : raw.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        return DescriptionKeys.fold(raw);
     }
 
     /**
@@ -107,11 +108,16 @@ public class MerchantService {
      * @param userId     the authenticated user id
      * @param merchantId the merchant id to delete
      * @throws ResourceNotFoundException if the merchant doesn't exist or isn't owned by {@code userId}
+     * @throws IllegalStateException     if a recurring item still uses the merchant (PF-884)
      */
     @Transactional
     public void deleteMerchant(Long userId, Long merchantId) {
         merchantRepository.findByIdAndUserId(merchantId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+        if (recurringRepository.countActiveByMerchantId(merchantId, userId) > 0) {
+            throw new IllegalStateException("This merchant is used by a recurring item. Delete that recurring item first.");
+        }
+        recurringRepository.purgeDeletedByMerchantId(merchantId, userId);
         merchantRepository.delete(merchantId, userId);
     }
 

@@ -111,4 +111,49 @@ public class MerchantDescriptionLinkRepository {
                 .param(SqlParams.USER_ID, userId)
                 .update();
     }
+
+    /**
+     * The normalized descriptions linked to any of the given merchants.
+     *
+     * @param userId      the user id
+     * @param merchantIds the merchants to look up
+     * @return their linked normalized descriptions; empty when no merchant ids are given
+     */
+    public java.util.Set<String> findNormalizedDescriptionsByMerchantIds(Long userId, java.util.Collection<Long> merchantIds) {
+        if (merchantIds == null || merchantIds.isEmpty()) {
+            return java.util.Set.of();
+        }
+        return new java.util.HashSet<>(jdbcClient.sql(MerchantDescriptionLinkQueries.FIND_NORMALIZED_DESCRIPTIONS_BY_MERCHANT_IDS)
+                .param(SqlParams.USER_ID, userId)
+                .param("merchantIds", merchantIds)
+                .query(String.class)
+                .list());
+    }
+
+    /**
+     * The merchant (id and name) each given normalized description is linked to. A description with no
+     * link is simply absent from the result.
+     *
+     * @param userId                 the user id
+     * @param normalizedDescriptions the light-normalized descriptions to look up
+     * @return linked merchants keyed by normalized description; empty when no keys are given
+     */
+    public java.util.Map<String, com.mayureshpatel.pfdataservice.domain.merchant.Merchant> findMerchantsByNormalizedDescriptions(
+            Long userId, java.util.Collection<String> normalizedDescriptions) {
+        if (normalizedDescriptions == null || normalizedDescriptions.isEmpty()) {
+            return java.util.Map.of();
+        }
+        java.util.Map<String, com.mayureshpatel.pfdataservice.domain.merchant.Merchant> result = new java.util.HashMap<>();
+        jdbcClient.sql(MerchantDescriptionLinkQueries.FIND_MERCHANTS_BY_NORMALIZED_DESCRIPTIONS)
+                .param(SqlParams.USER_ID, userId)
+                .param("normalizedDescriptions", normalizedDescriptions)
+                .query((rs, rowNum) -> result.put(
+                        rs.getString("normalized_description"),
+                        com.mayureshpatel.pfdataservice.domain.merchant.Merchant.builder()
+                                .id(rs.getLong("merchant_id"))
+                                .name(rs.getString("merchant_name"))
+                                .build()))
+                .list();
+        return result;
+    }
 }

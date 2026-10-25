@@ -42,7 +42,6 @@ public record RecurringTransactionUpdateRequest(
         String frequency,
 
         @NotNull(message = "Next date cannot be null.")
-        @Future(message = "Next date must be in the future.")
         LocalDate nextDate,
 
         boolean active,

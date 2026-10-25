@@ -32,6 +32,39 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
     private static final Long USER_2 = 2L;
     private static final Long MERCHANT_CAFE = 4L; // baseline's "My Favorite Cafe", owned by user 1
 
+    /** {@code findMerchantsByNormalizedDescriptions} returns each linked description's merchant (id and name), only for the requesting user. */
+    @Nested
+    @DisplayName("findMerchantsByNormalizedDescriptions")
+    class FindMerchantsByNormalizedDescriptionsTests {
+
+        @Test
+        @DisplayName("should return the merchant for each linked description and nothing for an unlinked one")
+        void shouldReturnMerchants() {
+            // arrange
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
+
+            // act
+            Map<String, com.mayureshpatel.pfdataservice.domain.merchant.Merchant> result =
+                    repository.findMerchantsByNormalizedDescriptions(USER_1, List.of(DESCRIPTION_NORMALIZED, "nothing"));
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(MERCHANT_CAFE, result.get(DESCRIPTION_NORMALIZED).getId());
+            assertEquals("My Favorite Cafe", result.get(DESCRIPTION_NORMALIZED).getName());
+        }
+
+        @Test
+        @DisplayName("should not return another user's link and should return empty for no keys")
+        void shouldBeUserScoped() {
+            // arrange
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
+
+            // act & assert & verify
+            assertTrue(repository.findMerchantsByNormalizedDescriptions(USER_2, List.of(DESCRIPTION_NORMALIZED)).isEmpty());
+            assertTrue(repository.findMerchantsByNormalizedDescriptions(USER_1, List.of()).isEmpty());
+        }
+    }
+
     /** The batch lookup returns a matched description's linked merchant id, simply omits (PF-845, not errors on) an unmatched description, never returns another user's link even for an identical normalized key, and short-circuits to an empty map without querying at all when given no descriptions. */
     @Nested
     @DisplayName("findMerchantIdsByNormalizedDescriptions")

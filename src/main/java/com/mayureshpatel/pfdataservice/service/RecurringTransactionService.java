@@ -1,7 +1,10 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissPatternRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissedPatternDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
@@ -10,6 +13,7 @@ import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.RecurringTransactionDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.DismissedPatternRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +21,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * CRUD for a user's confirmed recurring transactions. Pattern detection (finding new candidates
@@ -37,21 +44,29 @@ public class RecurringTransactionService {
     private final UserRepository userRepository;
     private final MerchantRepository merchantRepository;
     private final RecurringSuggestionFinder suggestionFinder;
+    private final DismissedPatternRepository dismissedRepository;
 
     /**
-     * Returns the user's active confirmed recurring transactions, next-occurrence first.
+     * Returns every one of the user's tracked recurring items, paused ones included, each decorated with
+     * what their real charges say (last charge, rolled-forward next date, overdue, price change), the
+     * soonest next date first.
      *
      * @param userId the user id
      * @return the user's recurring transactions
      */
     public List<RecurringTransactionDto> getRecurringTransactions(Long userId) {
-        return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(RecurringTransactionDtoMapper::toDto)
+        LocalDate today = LocalDate.now();
+        Map<Long, List<RecurringCharge>> charges = recurringRepository.findRecentChargesByRecurringId(userId);
+        return recurringRepository.findAllByUserId(userId).stream()
+                .map(item -> RecurringTransactionDtoMapper.toDto(
+                        item, RecurringProjection.project(item, charges.getOrDefault(item.getId(), List.of()), today)))
+                .sorted(Comparator.comparing(RecurringTransactionDto::projectedNextDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 
     /**
-     * Detects candidate recurring transaction patterns in the last 12 months of the user's
+     * Detects candidate recurring transaction patterns in the last three years of the user's
      * expenses that aren't already confirmed as recurring, ranked by confidence (higher
      * occurrence counts score higher). Delegates entirely to {@link RecurringSuggestionFinder}.
      *
@@ -146,5 +161,43 @@ public class RecurringTransactionService {
         }
 
         return recurringRepository.delete(id, userId);
+    }
+
+    /**
+     * Lists the recurring patterns the user dismissed, newest first.
+     *
+     * @param userId the user id
+     * @return the user's dismissals
+     */
+    public List<DismissedPatternDto> getDismissedPatterns(Long userId) {
+        return dismissedRepository.findByUserId(userId);
+    }
+
+    /**
+     * Dismisses a detected pattern so it stops being suggested. Dismissing the same pattern again is
+     * harmless. The key is folded here (not trusted from the client) so it always agrees with the
+     * key detection compares against.
+     *
+     * @param userId  the user id
+     * @param request the pattern key and its display name
+     * @return the dismissal id
+     */
+    @Transactional
+    public Long dismissPattern(Long userId, DismissPatternRequest request) {
+        return dismissedRepository.insert(userId, DescriptionKeys.fold(request.patternKey()), request.name().strip());
+    }
+
+    /**
+     * Restores a dismissed pattern so detection can suggest it again.
+     *
+     * @param userId the user id
+     * @param id     the dismissal id
+     * @throws ResourceNotFoundException if the dismissal does not exist or is not the user's
+     */
+    @Transactional
+    public void restoreDismissedPattern(Long userId, Long id) {
+        if (dismissedRepository.deleteByIdAndUserId(id, userId) == 0) {
+            throw new ResourceNotFoundException("Dismissed pattern not found");
+        }
     }
 }

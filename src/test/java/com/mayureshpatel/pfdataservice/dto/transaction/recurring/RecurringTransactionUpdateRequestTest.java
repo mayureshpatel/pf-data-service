@@ -136,7 +136,7 @@ class RecurringTransactionUpdateRequestTest extends ValidatorTestBase {
         }
     }
 
-    /** {@code nextDate} must be non-null and in the future. */
+    /** {@code nextDate} must be non-null; it may be in the past (PF-884: an overdue item must stay editable, paused, resumed and re-priced). */
     @Nested
     @DisplayName("Field: nextDate")
     class NextDateValidationTests {
@@ -150,12 +150,11 @@ class RecurringTransactionUpdateRequestTest extends ValidatorTestBase {
         }
 
         @Test
-        @DisplayName("should fail when nextDate is in the past")
-        void shouldFailWhenNextDateIsInPast() {
+        @DisplayName("PF-884: should accept a nextDate in the past so an overdue item can still be saved")
+        void shouldAcceptNextDateInPast() {
             RecurringTransactionUpdateRequest request = createValidBuilder().nextDate(LocalDate.now().minusDays(1)).build();
             Set<ConstraintViolation<RecurringTransactionUpdateRequest>> violations = validator().validate(request);
-            assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> "Next date must be in the future.".equals(v.getMessage())));
+            assertTrue(violations.isEmpty());
         }
     }
 

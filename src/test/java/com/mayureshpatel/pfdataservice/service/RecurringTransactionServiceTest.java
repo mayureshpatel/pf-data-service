@@ -4,6 +4,8 @@ import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissPatternRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissedPatternDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
@@ -11,6 +13,7 @@ import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransa
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.DismissedPatternRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +48,7 @@ class RecurringTransactionServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private MerchantRepository merchantRepository;
     @Mock private RecurringSuggestionFinder suggestionFinder;
+    @Mock private DismissedPatternRepository dismissedRepository;
 
     @InjectMocks private RecurringTransactionService recurringService;
 
@@ -65,7 +69,7 @@ class RecurringTransactionServiceTest {
                     .frequency("MONTHLY")
                     .active(true)
                     .build();
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(List.of(rt));
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(rt));
 
             // act
             List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);
@@ -263,6 +267,115 @@ class RecurringTransactionServiceTest {
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(999L).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
             assertThrows(AccessDeniedException.class, () -> recurringService.deleteRecurringTransaction(USER_ID, RECURRING_ID));
+        }
+    }
+
+    /** {@code getRecurringTransactions} returns paused items too and decorates each with its projection from the user's real charges. */
+    @Nested
+    @DisplayName("getRecurringTransactions projection")
+    class ProjectionTests {
+
+        private static final String MONTHLY = "MONTHLY";
+
+        @Test
+        @DisplayName("should return paused items with projection fields and leave the stored amount alone")
+        void shouldReturnPausedWithProjection() {
+            // arrange
+            RecurringTransaction paused = RecurringTransaction.builder()
+                    .id(RECURRING_ID).userId(USER_ID).frequency(MONTHLY).active(false)
+                    .amount(new java.math.BigDecimal("10.00"))
+                    .nextDate(java.time.LocalDate.now().plusDays(10))
+                    .build();
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(paused));
+            when(recurringRepository.findRecentChargesByRecurringId(USER_ID)).thenReturn(java.util.Map.of(
+                    RECURRING_ID, List.of(
+                            new com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge(
+                                    java.time.LocalDate.now().minusDays(5), new java.math.BigDecimal("12.00")),
+                            new com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge(
+                                    java.time.LocalDate.now().minusDays(35), new java.math.BigDecimal("12.00")))));
+
+            // act
+            List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertFalse(result.get(0).active());
+            assertEquals(0, new java.math.BigDecimal("10.00").compareTo(result.get(0).amount()));
+            assertEquals(0, new java.math.BigDecimal("12.00").compareTo(result.get(0).lastChargeAmount()));
+            assertEquals(java.time.LocalDate.now().minusDays(5).plusMonths(1), result.get(0).projectedNextDate());
+            assertNotNull(result.get(0).priceChange());
+        }
+
+        @Test
+        @DisplayName("should order items by their projected next date")
+        void shouldOrderByProjectedNextDate() {
+            // arrange
+            java.time.LocalDate today = java.time.LocalDate.now();
+            RecurringTransaction later = RecurringTransaction.builder().id(1L).userId(USER_ID).frequency(MONTHLY)
+                    .amount(java.math.BigDecimal.TEN).nextDate(today.plusDays(20)).active(true).build();
+            RecurringTransaction sooner = RecurringTransaction.builder().id(2L).userId(USER_ID).frequency(MONTHLY)
+                    .amount(java.math.BigDecimal.TEN).nextDate(today.plusDays(2)).active(true).build();
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(later, sooner));
+
+            // act
+            List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);
+
+            // assert & verify
+            assertEquals(List.of(2L, 1L), result.stream().map(RecurringTransactionDto::id).toList());
+        }
+    }
+
+    /** Dismissals are stored under the folded pattern key, listed for the user, and restorable only by their owner. */
+    @Nested
+    @DisplayName("dismissed patterns")
+    class DismissedPatternTests {
+
+        @Test
+        @DisplayName("should fold the key before storing a dismissal")
+        void shouldFoldKeyOnDismiss() {
+            // arrange
+            when(dismissedRepository.insert(USER_ID, "net flix", "Net  Flix")).thenReturn(5L);
+
+            // act
+            Long id = recurringService.dismissPattern(USER_ID, new DismissPatternRequest("  Net   FLIX ", "Net  Flix"));
+
+            // assert & verify
+            assertEquals(5L, id);
+            verify(dismissedRepository).insert(USER_ID, "net flix", "Net  Flix");
+        }
+
+        @Test
+        @DisplayName("should list the user's dismissals")
+        void shouldListDismissals() {
+            // arrange
+            DismissedPatternDto dto = new DismissedPatternDto(5L, "net flix", "Net Flix", null);
+            when(dismissedRepository.findByUserId(USER_ID)).thenReturn(List.of(dto));
+
+            // act & assert & verify
+            assertEquals(List.of(dto), recurringService.getDismissedPatterns(USER_ID));
+        }
+
+        @Test
+        @DisplayName("should restore a dismissal the user owns")
+        void shouldRestore() {
+            // arrange
+            when(dismissedRepository.deleteByIdAndUserId(5L, USER_ID)).thenReturn(1);
+
+            // act
+            recurringService.restoreDismissedPattern(USER_ID, 5L);
+
+            // assert & verify
+            verify(dismissedRepository).deleteByIdAndUserId(5L, USER_ID);
+        }
+
+        @Test
+        @DisplayName("should throw not found when restoring someone else's dismissal")
+        void shouldThrowWhenNotOwned() {
+            // arrange
+            when(dismissedRepository.deleteByIdAndUserId(5L, USER_ID)).thenReturn(0);
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> recurringService.restoreDismissedPattern(USER_ID, 5L));
         }
     }
 }
