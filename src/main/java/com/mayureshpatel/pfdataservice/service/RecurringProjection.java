@@ -52,18 +52,31 @@ public final class RecurringProjection {
             return new Projection(null, null, stored, stored != null && stored.isBefore(today), null);
         }
         RecurringCharge newest = chargesNewestFirst.get(0);
-        LocalDate next = Frequency.fromCode(item.getFrequency()).advance(newest.date());
+        LocalDate rolled = Frequency.fromCode(item.getFrequency()).advance(newest.date());
+        // a stored date later than the rolled one is the user pushing it out: honour it; an earlier,
+        // stale one has been overtaken by the real charges
+        LocalDate stored = item.getNextDate();
+        LocalDate next = stored != null && stored.isAfter(rolled) ? stored : rolled;
         return new Projection(newest.date(), newest.amount(), next, next.isBefore(today),
                 findPriceChange(item.getAmount(), chargesNewestFirst));
     }
 
+    private static boolean sameAmount(BigDecimal a, BigDecimal b) {
+        return a != null && b != null && a.compareTo(b) == 0;
+    }
+
     /**
-     * A price change exists when the newest charge differs from the stored amount; it began at the
-     * oldest charge of the unbroken run at the newest amount.
+     * A price change exists when the last two charges agree on an amount that differs from the stored
+     * one; it began at the oldest charge of the unbroken run at that amount.
      */
     private static PriceChangeDto findPriceChange(BigDecimal storedAmount, List<RecurringCharge> chargesNewestFirst) {
         BigDecimal newest = chargesNewestFirst.get(0).amount();
         if (storedAmount == null || newest == null || newest.compareTo(storedAmount) == 0) {
+            return null;
+        }
+        // one charge at a new amount may be a one-off, and a bill that varies every month never repeats
+        // itself: only a new price the last two charges agree on counts as a price change
+        if (chargesNewestFirst.size() < 2 || !sameAmount(newest, chargesNewestFirst.get(1).amount())) {
             return null;
         }
         LocalDate since = chargesNewestFirst.get(0).date();

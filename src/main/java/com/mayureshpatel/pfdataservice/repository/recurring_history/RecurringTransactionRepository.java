@@ -14,7 +14,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +29,8 @@ import java.util.Optional;
 public class RecurringTransactionRepository implements JdbcRepository<RecurringTransaction, Long> {
 
     private static final String MERCHANT_ID = "merchantId";
+    /** how far back real charges are matched to tracked items; the same window detection uses. */
+    private static final int CHARGE_LOOKBACK_YEARS = 3;
 
     private final JdbcClient jdbcClient;
     private final RecurringTransactionRowMapper rowMapper;
@@ -153,6 +157,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
         Map<Long, List<RecurringCharge>> byItem = new LinkedHashMap<>();
         jdbcClient.sql(RecurringTransactionQueries.FIND_RECENT_CHARGES_BY_RECURRING_ID)
                 .param(SqlParams.USER_ID, userId)
+                .param("since", LocalDate.now().minusYears(CHARGE_LOOKBACK_YEARS).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime())
                 .query((rs, rowNum) -> {
                     byItem.computeIfAbsent(rs.getLong("recurring_id"), id -> new ArrayList<>())
                             .add(new RecurringCharge(

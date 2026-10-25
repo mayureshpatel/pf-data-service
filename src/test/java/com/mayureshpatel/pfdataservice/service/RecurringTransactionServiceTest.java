@@ -288,8 +288,11 @@ class RecurringTransactionServiceTest {
                     .build();
             when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(paused));
             when(recurringRepository.findRecentChargesByRecurringId(USER_ID)).thenReturn(java.util.Map.of(
-                    RECURRING_ID, List.of(new com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge(
-                            java.time.LocalDate.now().minusDays(5), new java.math.BigDecimal("12.00")))));
+                    RECURRING_ID, List.of(
+                            new com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge(
+                                    java.time.LocalDate.now().minusDays(5), new java.math.BigDecimal("12.00")),
+                            new com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge(
+                                    java.time.LocalDate.now().minusDays(35), new java.math.BigDecimal("12.00")))));
 
             // act
             List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);

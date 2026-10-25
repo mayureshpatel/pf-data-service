@@ -270,7 +270,7 @@ class RecurringSuggestionFinderTest {
             );
 
             // act
-            Frequency result = ReflectionTestUtils.invokeMethod(suggestionFinder, "detectFrequency", group);
+            Frequency result = FrequencyDetector.detect(group);
 
             // assert & verify
             assertEquals(Frequency.QUARTERLY, result);
@@ -290,7 +290,7 @@ class RecurringSuggestionFinderTest {
             );
 
             // act
-            Frequency result = ReflectionTestUtils.invokeMethod(suggestionFinder, "detectFrequency", group);
+            Frequency result = FrequencyDetector.detect(group);
 
             // assert & verify
             assertNull(result);
@@ -450,6 +450,28 @@ class RecurringSuggestionFinderTest {
             return group;
         }
 
+        /** Like {@link #withGaps} but the newest charge was {@code endedDaysAgo} days ago. */
+        private List<Transaction> withGapsEndingAgo(String description, long endedDaysAgo, long... gaps) {
+            long span = 0;
+            for (long gap : gaps) {
+                span += gap;
+            }
+            LocalDate cursor = LocalDate.now().minusDays(endedDaysAgo + span);
+            List<Transaction> group = new ArrayList<>();
+            group.add(tx(cursor, STEADY_AMOUNT, description, null));
+            for (long gap : gaps) {
+                cursor = cursor.plusDays(gap);
+                group.add(tx(cursor, STEADY_AMOUNT, description, null));
+            }
+            return group;
+        }
+
+        private static long[] repeat(long gap, int times) {
+            long[] gaps = new long[times];
+            java.util.Arrays.fill(gaps, gap);
+            return gaps;
+        }
+
         private List<RecurringSuggestionDto> find(List<Transaction> transactions) {
             when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(transactions);
@@ -513,6 +535,81 @@ class RecurringSuggestionFinderTest {
 
             // act & assert & verify
             assertTrue(suggestionFinder.findSuggestions(USER_ID).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should not suggest a pattern whose last charge is more than two periods ago (a cancelled subscription)")
+        void shouldNotSuggestCancelledSubscriptions() {
+            // act & assert & verify
+            assertTrue(find(withGapsEndingAgo(VENDOR, 800, repeat(30, 11))).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should still suggest a pattern whose last charge is a little late")
+        void shouldSuggestALittleLatePattern() {
+            // act & assert & verify
+            assertEquals(1, find(withGapsEndingAgo(VENDOR, 40, 30, 30, 30)).size());
+        }
+
+        @Test
+        @DisplayName("should still find a long monthly pattern with one missed month")
+        void shouldSurviveOneMissedMonth() {
+            // arrange -- 24 months with a 61-day gap where a card expired
+            long[] gaps = new long[24];
+            java.util.Arrays.fill(gaps, 30);
+            gaps[11] = 61;
+
+            // act
+            List<RecurringSuggestionDto> result = find(withGaps(VENDOR, gaps));
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(Frequency.MONTHLY, result.get(0).frequency());
+        }
+
+        @Test
+        @DisplayName("should still reject a long group when many gaps stray")
+        void shouldRejectWhenManyGapsStray() {
+            // arrange -- 3 of 10 gaps are far off the 30-day rhythm
+            long[] gaps = {30, 30, 30, 61, 30, 30, 61, 30, 30, 61};
+
+            // act & assert & verify
+            assertTrue(find(withGaps(VENDOR, gaps)).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should tolerate a monthly charge slipping 4 days over a weekend")
+        void shouldTolerateMonthlyWeekendSlip() {
+            // act & assert & verify
+            assertEquals(Frequency.MONTHLY, find(withGaps(VENDOR, 34, 28, 30)).get(0).frequency());
+        }
+
+        @Test
+        @DisplayName("should report the merchant a pattern's description is already linked to")
+        void shouldReportLinkedMerchant() {
+            // arrange
+            com.mayureshpatel.pfdataservice.domain.merchant.Merchant linked =
+                    Merchant.builder().id(7L).name("Streaming Co").build();
+            when(linkRepository.findMerchantsByNormalizedDescriptions(eq(USER_ID), any()))
+                    .thenReturn(java.util.Map.of("vendor", linked));
+
+            // act
+            RecurringSuggestionDto suggestion = find(withGaps(VENDOR, 30, 30)).get(0);
+
+            // assert & verify
+            assertEquals(7L, suggestion.linkedMerchantId());
+            assertEquals("Streaming Co", suggestion.linkedMerchantName());
+        }
+
+        @Test
+        @DisplayName("should leave the linked merchant empty when the description is not linked")
+        void shouldLeaveLinkedMerchantEmpty() {
+            // act
+            RecurringSuggestionDto suggestion = find(withGaps(VENDOR, 30, 30)).get(0);
+
+            // assert & verify
+            assertNull(suggestion.linkedMerchantId());
+            assertNull(suggestion.linkedMerchantName());
         }
 
         @Test

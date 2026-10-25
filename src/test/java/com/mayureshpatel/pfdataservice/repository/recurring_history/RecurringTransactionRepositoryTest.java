@@ -328,6 +328,21 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("should ignore charges older than the three-year lookback")
+        void shouldIgnoreChargesOlderThanTheLookback() {
+            // arrange
+            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "5.00", java.time.OffsetDateTime.now().minusYears(4).toString(), "OLD", EXPENSE);
+            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "6.00", java.time.OffsetDateTime.now().minusMonths(2).toString(), "RECENT", EXPENSE);
+
+            // act
+            var charges = chargesOfAmazonItem();
+
+            // assert & verify
+            assertEquals(1, charges.size());
+            assertEquals(0, new java.math.BigDecimal("6.00").compareTo(charges.get(0).amount()));
+        }
+
+        @Test
         @DisplayName("should return at most 12 newest first per item")
         void shouldCapAtTwelveNewestFirst() {
             // arrange

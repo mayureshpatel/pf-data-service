@@ -7,7 +7,7 @@ import lombok.Builder;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Builder
+@Builder(toBuilder = true)
 public record RecurringSuggestionDto(
         MerchantDto merchant,
         BigDecimal amount,
@@ -20,6 +20,8 @@ public record RecurringSuggestionDto(
         String accountName,
         BigDecimal previousAmount,
         LocalDate priceChangedOn,
-        String patternKey
+        String patternKey,
+        Long linkedMerchantId,
+        String linkedMerchantName
 ) {
 }

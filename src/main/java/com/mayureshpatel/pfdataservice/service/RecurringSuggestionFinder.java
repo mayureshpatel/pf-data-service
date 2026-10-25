@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -15,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * separate concerns, CRUD vs. detection, into their own classes resolved both: each stayed
  * cohesive around only the fields its own methods actually use).
  * <p>
- * Groups the last 12 months of expenses by merchant/description + amount, then checks whether a
+ * Groups the last three years of expenses by merchant/description + amount, then checks whether a
  * group's inter-transaction intervals are stable enough to call weekly, bi-weekly, monthly,
  * quarterly, or yearly.
  */
@@ -50,7 +50,7 @@ public class RecurringSuggestionFinder {
     private final MerchantDescriptionLinkRepository linkRepository;
 
     /**
-     * Detects candidate recurring transaction patterns in the last 12 months of the user's
+     * Detects candidate recurring transaction patterns in the last three years of the user's
      * expenses that aren't already confirmed as recurring, ranked by confidence (higher
      * occurrence counts score higher).
      *
@@ -73,9 +73,25 @@ public class RecurringSuggestionFinder {
             }
         }
 
+        Map<String, Merchant> linked = suggestions.isEmpty()
+                ? Map.of()
+                : linkRepository.findMerchantsByNormalizedDescriptions(
+                        userId, suggestions.stream().map(RecurringSuggestionDto::patternKey).toList());
+
         return suggestions.stream()
+                .map(suggestion -> withLinkedMerchant(suggestion, linked.get(suggestion.patternKey())))
                 .sorted(Comparator.comparingDouble(RecurringSuggestionDto::confidenceScore).reversed())
                 .toList();
+    }
+
+    /**
+     * Points a suggestion at the merchant its text is already linked to, when there is one, so the
+     * review can offer that merchant instead of a duplicate.
+     */
+    private static RecurringSuggestionDto withLinkedMerchant(RecurringSuggestionDto suggestion, Merchant linked) {
+        return linked == null
+                ? suggestion
+                : suggestion.toBuilder().linkedMerchantId(linked.getId()).linkedMerchantName(linked.getName()).build();
     }
 
     /**
@@ -116,13 +132,17 @@ public class RecurringSuggestionFinder {
 
         datedGroup.sort(Comparator.comparing(Transaction::getTransactionDate));
 
-        Frequency frequency = detectFrequency(datedGroup);
+        Frequency frequency = FrequencyDetector.detect(datedGroup);
         if (frequency == null || !hasEnoughSightings(datedGroup.size(), frequency)) {
             return null;
         }
 
         Transaction lastTxn = datedGroup.get(datedGroup.size() - 1);
         LocalDate lastDate = lastTxn.getTransactionDate().toLocalDate();
+        if (frequency.advance(frequency.advance(lastDate)).isBefore(LocalDate.now())) {
+            // missed two or more periods in a row: a cancelled subscription, not a live pattern
+            return null;
+        }
         PatternGrouping.PriceChange change = PatternGrouping.findPriceChange(datedGroup);
         return RecurringSuggestionDto.builder()
                 .merchant(MerchantDto.builder().name(PatternGrouping.displayName(datedGroup)).build())
@@ -150,84 +170,6 @@ public class RecurringSuggestionFinder {
         return sightings >= required;
     }
 
-    /**
-     * Determines whether a date-sorted group of transactions recurs at a stable interval.
-     * "Stable" means every consecutive gap stays within 5 days of the group's average gap.
-     * <br><br>
-     * Classifies the average interval into one bucket per {@link Frequency} value (WEEKLY,
-     * BI_WEEKLY, MONTHLY, QUARTERLY, YEARLY) -- there is deliberately no bucket for every possible
-     * interval. A stable ~9-12 or ~17-24 day average returns {@code null}, same as an unstable
-     * group: no {@link Frequency} value corresponds to those cadences, so there's nothing to
-     * classify it as (PF-205). Add a new bucket here only if a new {@link Frequency} value is
-     * added to model it.
-     *
-     * @param group the transactions to check, already sorted by date
-     * @return the detected frequency, or {@code null} if the intervals aren't stable enough to
-     * call recurring, or are stable but don't correspond to any supported frequency
-     */
-    private static Frequency detectFrequency(List<Transaction> group) {
-        List<Long> intervals = computeIntervals(group);
-        double avgInterval = intervals.stream().mapToLong(val -> val).average().orElse(0);
-        Frequency frequency = classifyFrequency(avgInterval);
-        if (frequency == null) {
-            return null;
-        }
-        double tolerance = toleranceDays(frequency);
-        boolean stable = intervals.stream().allMatch(i -> Math.abs(i - avgInterval) < tolerance);
-
-        return stable ? frequency : null;
-    }
-
-    /**
-     * How far (in days, exclusive) a single gap may stray from the group's average gap before the
-     * group stops looking recurring: tight for weekly charges, looser for quarterly and yearly ones
-     * whose dates drift more with weekends and holidays.
-     */
-    private static double toleranceDays(Frequency frequency) {
-        return switch (frequency) {
-            case WEEKLY -> 2;
-            case BI_WEEKLY, MONTHLY -> 5;
-            case QUARTERLY -> 10;
-            case YEARLY -> 14;
-        };
-    }
-
-    /**
-     * The day-gaps between each consecutive pair of transactions.
-     */
-    private static List<Long> computeIntervals(List<Transaction> group) {
-        List<Long> intervals = new ArrayList<>();
-        for (int i = 1; i < group.size(); i++) {
-            intervals.add(ChronoUnit.DAYS.between(
-                    group.get(i - 1).getTransactionDate(),
-                    group.get(i).getTransactionDate()));
-        }
-        return intervals;
-    }
-
-    /**
-     * Classifies a stable average interval into one {@link Frequency} bucket. Split across two
-     * methods purely to stay under PMD's own method-level complexity threshold -- the exact
-     * boundary values are unchanged and still covered by their own dedicated boundary tests, see
-     * PF-816.
-     */
-    private static Frequency classifyFrequency(double avgInterval) {
-        Frequency shortTerm = classifyShortTermFrequency(avgInterval);
-        return shortTerm != null ? shortTerm : classifyLongTermFrequency(avgInterval);
-    }
-
-    private static Frequency classifyShortTermFrequency(double avgInterval) {
-        if (avgInterval >= 25 && avgInterval <= 35) return Frequency.MONTHLY;
-        if (avgInterval >= 6 && avgInterval <= 8) return Frequency.WEEKLY;
-        if (avgInterval >= 13 && avgInterval <= 16) return Frequency.BI_WEEKLY;
-        return null;
-    }
-
-    private static Frequency classifyLongTermFrequency(double avgInterval) {
-        if (avgInterval >= 85 && avgInterval <= 95) return Frequency.QUARTERLY;
-        if (avgInterval >= 360 && avgInterval <= 370) return Frequency.YEARLY;
-        return null;
-    }
 
     /**
      * Scores how confident a detected pattern is, as a real 0-100 percentage. The prior formula

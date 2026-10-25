@@ -101,11 +101,34 @@ class RecurringProjectionTest {
         }
 
         @Test
+        @DisplayName("should keep a stored next date that is later than the rolled one: the user pushed it out")
+        void shouldKeepALaterStoredDate() {
+            // act
+            Projection result = RecurringProjection.project(
+                    item(MONTHLY, TODAY.plusDays(40)), List.of(charge(last, STORED_AMOUNT)), TODAY);
+
+            // assert & verify
+            assertEquals(TODAY.plusDays(40), result.projectedNextDate());
+            assertFalse(result.overdue());
+        }
+
+        @Test
+        @DisplayName("should prefer the rolled date over a stored one the real charges have overtaken")
+        void shouldPreferRolledOverStaleStoredDate() {
+            // act
+            Projection result = RecurringProjection.project(
+                    item(MONTHLY, TODAY.minusYears(1)), List.of(charge(last, STORED_AMOUNT)), TODAY);
+
+            // assert & verify
+            assertEquals(last.plusMonths(1), result.projectedNextDate());
+        }
+
+        @Test
         @DisplayName("should flag a rolled date in the past as overdue")
         void shouldFlagOverdueAfterRolling() {
             // act
             Projection result = RecurringProjection.project(
-                    item(MONTHLY, TODAY), List.of(charge(TODAY.minusMonths(1).minusDays(4), STORED_AMOUNT)), TODAY);
+                    item(MONTHLY, TODAY.minusMonths(3)), List.of(charge(TODAY.minusMonths(1).minusDays(4), STORED_AMOUNT)), TODAY);
 
             // assert & verify
             assertTrue(result.overdue());
@@ -151,18 +174,44 @@ class RecurringProjectionTest {
         @Test
         @DisplayName("should find the start of the run when the price changed twice")
         void shouldFindRunStartAfterTwoChanges() {
-            // arrange -- stored 10, charges went 10 -> 11 -> 12
+            // arrange -- stored 10, charges went 10 -> 11 -> 12 and 12 has now been charged twice
             List<RecurringCharge> charges = List.of(
                     charge(TODAY.minusDays(2), NEW_AMOUNT),
-                    charge(TODAY.minusDays(32), "11.00"),
-                    charge(TODAY.minusDays(62), "10.00"));
+                    charge(TODAY.minusDays(32), NEW_AMOUNT),
+                    charge(TODAY.minusDays(62), "11.00"),
+                    charge(TODAY.minusDays(92), "10.00"));
 
             // act
             Projection result = RecurringProjection.project(item(MONTHLY, TODAY), charges, TODAY);
 
             // assert & verify
-            assertEquals(TODAY.minusDays(2), result.priceChange().since());
+            assertEquals(TODAY.minusDays(32), result.priceChange().since());
             assertEquals(0, new BigDecimal(NEW_AMOUNT).compareTo(result.priceChange().newAmount()));
+        }
+
+        @Test
+        @DisplayName("should not report a price change from one charge at a new price")
+        void shouldWaitForASecondChargeAtTheNewPrice() {
+            // arrange -- a single charge may be a one-off, so wait for the new price to repeat
+            List<RecurringCharge> charges = List.of(
+                    charge(TODAY.minusDays(2), NEW_AMOUNT),
+                    charge(TODAY.minusDays(32), STORED_AMOUNT));
+
+            // act & assert & verify
+            assertNull(RecurringProjection.project(item(MONTHLY, TODAY), charges, TODAY).priceChange());
+        }
+
+        @Test
+        @DisplayName("should not report a price change for a bill that varies every month")
+        void shouldIgnoreVariableBills() {
+            // arrange
+            List<RecurringCharge> charges = List.of(
+                    charge(TODAY.minusDays(2), "91.40"),
+                    charge(TODAY.minusDays(32), "87.12"),
+                    charge(TODAY.minusDays(62), "90.00"));
+
+            // act & assert & verify
+            assertNull(RecurringProjection.project(item(MONTHLY, TODAY), charges, TODAY).priceChange());
         }
     }
 }

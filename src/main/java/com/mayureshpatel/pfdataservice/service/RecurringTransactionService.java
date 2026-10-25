@@ -66,7 +66,7 @@ public class RecurringTransactionService {
     }
 
     /**
-     * Detects candidate recurring transaction patterns in the last 12 months of the user's
+     * Detects candidate recurring transaction patterns in the last three years of the user's
      * expenses that aren't already confirmed as recurring, ranked by confidence (higher
      * occurrence counts score higher). Delegates entirely to {@link RecurringSuggestionFinder}.
      *
