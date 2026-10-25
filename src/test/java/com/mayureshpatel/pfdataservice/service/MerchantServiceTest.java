@@ -46,6 +46,9 @@ class MerchantServiceTest {
     @Mock
     private MerchantDescriptionLinkRepository descriptionLinkRepository;
 
+    @Mock
+    private com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository recurringRepository;
+
     @InjectMocks
     private MerchantService merchantService;
 
@@ -184,6 +187,39 @@ class MerchantServiceTest {
 
             // assert & verify
             verify(merchantRepository).delete(7L, USER_ID);
+        }
+
+        @Test
+        @DisplayName("PF-884: should refuse, with a clear message, while an active recurring item uses the merchant")
+        void shouldRefuseWhileUsedByRecurringItem() {
+            // arrange
+            Merchant owned = Merchant.builder().id(7L).userId(USER_ID).name("Netflix").build();
+            when(merchantRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.of(owned));
+            when(recurringRepository.countActiveByMerchantId(7L, USER_ID)).thenReturn(1L);
+
+            // act
+            IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> merchantService.deleteMerchant(USER_ID, 7L));
+
+            // assert & verify
+            assertTrue(thrown.getMessage().contains("recurring"));
+            verify(merchantRepository, never()).delete(any(), any());
+        }
+
+        @Test
+        @DisplayName("PF-884: should purge the merchant's already-deleted recurring rows before deleting it")
+        void shouldPurgeSoftDeletedRecurringRows() {
+            // arrange
+            Merchant owned = Merchant.builder().id(7L).userId(USER_ID).name("Netflix").build();
+            when(merchantRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.of(owned));
+            when(recurringRepository.countActiveByMerchantId(7L, USER_ID)).thenReturn(0L);
+
+            // act
+            merchantService.deleteMerchant(USER_ID, 7L);
+
+            // assert & verify
+            org.mockito.InOrder order = org.mockito.Mockito.inOrder(recurringRepository, merchantRepository);
+            order.verify(recurringRepository).purgeDeletedByMerchantId(7L, USER_ID);
+            order.verify(merchantRepository).delete(7L, USER_ID);
         }
 
         @Test

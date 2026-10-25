@@ -211,6 +211,48 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** A merchant used by a tracked item can not be deleted: {@code countActiveByMerchantId} says whether one still uses it, and {@code purgeDeletedByMerchantId} removes the already-deleted rows whose NOT NULL merchant reference would otherwise block deleting the merchant. */
+    @Nested
+    @DisplayName("merchant usage")
+    class MerchantUsageTests {
+
+        @Test
+        @DisplayName("should count the user's undeleted items that use the merchant, paused ones included")
+        void shouldCountUndeletedUse() {
+            // arrange -- one item is paused (still tracked), the other is deleted
+            jdbcClient.sql("update recurring_transactions set active = false where id = 2").update();
+            jdbcClient.sql("update recurring_transactions set deleted_at = now() where id = 1").update();
+
+            // act & assert & verify
+            assertEquals(1L, repository.countActiveByMerchantId(3L, USER_1));
+            assertEquals(0L, repository.countActiveByMerchantId(MERCHANT_AMAZON, USER_1));
+            assertEquals(0L, repository.countActiveByMerchantId(3L, 2L));
+        }
+
+        @Test
+        @DisplayName("should purge deleted rows so the merchant can then be deleted")
+        void shouldPurgeDeletedRowsSoMerchantCanBeDeleted() {
+            // arrange -- the Amazon item is deleted (soft) and so no longer blocks in the user's eyes
+            jdbcClient.sql("update recurring_transactions set deleted_at = now() where id = 1").update();
+
+            // act
+            int purged = repository.purgeDeletedByMerchantId(MERCHANT_AMAZON, USER_1);
+            int merchantsDeleted = jdbcClient.sql("delete from merchants where id = :id").param("id", MERCHANT_AMAZON).update();
+
+            // assert & verify
+            assertEquals(1, purged);
+            assertEquals(1, merchantsDeleted);
+        }
+
+        @Test
+        @DisplayName("should leave active items alone when purging")
+        void shouldNotPurgeActiveItems() {
+            // act & assert & verify
+            assertEquals(0, repository.purgeDeletedByMerchantId(3L, USER_1));
+            assertEquals(1L, repository.countActiveByMerchantId(3L, USER_1));
+        }
+    }
+
     /** {@code findRecentChargesByRecurringId} matches a tracked item to the user's real expense charges through its merchant id or its merchant's linked descriptions (folded for case and spacing), newest first, at most 12 per item, never crossing users or counting deleted or non-expense rows. */
     @Nested
     @DisplayName("findRecentChargesByRecurringId")

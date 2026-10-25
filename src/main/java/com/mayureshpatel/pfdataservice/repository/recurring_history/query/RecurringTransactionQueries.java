@@ -168,4 +168,22 @@ public final class RecurringTransactionQueries {
             where ranked.rn <= 12
             order by ranked.recurring_id, ranked.rn
             """;
+
+    // language=SQL -- PF-884: whether a tracked item still uses a merchant (blocks deleting it)
+    public static final String COUNT_ACTIVE_BY_MERCHANT_ID = """
+            select count(*)
+            from recurring_transactions
+            where merchant_id = :merchantId
+              and user_id = :userId
+              and deleted_at is null
+            """;
+
+    // language=SQL -- PF-884: merchant_id is NOT NULL, so rows already deleted from the user's view
+    // would still block deleting the merchant (the foreign key's SET NULL can not apply); remove them
+    public static final String PURGE_DELETED_BY_MERCHANT_ID = """
+            delete from recurring_transactions
+            where merchant_id = :merchantId
+              and user_id = :userId
+              and deleted_at is not null
+            """;
 }

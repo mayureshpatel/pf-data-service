@@ -161,4 +161,35 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .list();
         return byItem;
     }
+
+    /**
+     * How many of the user's tracked items (not deleted) still use a merchant; any makes the merchant
+     * undeletable.
+     *
+     * @param merchantId the merchant id
+     * @param userId     the owning user's id
+     * @return the number of undeleted items that use the merchant
+     */
+    public long countActiveByMerchantId(Long merchantId, Long userId) {
+        return jdbcClient.sql(RecurringTransactionQueries.COUNT_ACTIVE_BY_MERCHANT_ID)
+                .param("merchantId", merchantId)
+                .param(SqlParams.USER_ID, userId)
+                .query(Long.class)
+                .single();
+    }
+
+    /**
+     * Permanently removes the user's already-deleted tracked items that reference a merchant, so their
+     * NOT NULL merchant reference no longer blocks deleting the merchant.
+     *
+     * @param merchantId the merchant id
+     * @param userId     the owning user's id
+     * @return the number of rows removed
+     */
+    public int purgeDeletedByMerchantId(Long merchantId, Long userId) {
+        return jdbcClient.sql(RecurringTransactionQueries.PURGE_DELETED_BY_MERCHANT_ID)
+                .param("merchantId", merchantId)
+                .param(SqlParams.USER_ID, userId)
+                .update();
+    }
 }
