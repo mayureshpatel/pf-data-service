@@ -55,6 +55,7 @@ class MerchantDtoMapperTest {
                     .state("GA")
                     .postalCode("30301")
                     .country("USA")
+                    .linkCount(4)
                     .build();
 
             // act
@@ -69,6 +70,7 @@ class MerchantDtoMapperTest {
             assertEquals(merchant.getState(), dto.state());
             assertEquals(merchant.getPostalCode(), dto.postalCode());
             assertEquals(merchant.getCountry(), dto.country());
+            assertEquals(4, dto.linkCount());
         }
 
         @Test
@@ -90,6 +92,7 @@ class MerchantDtoMapperTest {
             assertNull(dto.state());
             assertNull(dto.postalCode());
             assertNull(dto.country());
+            assertEquals(0, dto.linkCount());
         }
     }
 }

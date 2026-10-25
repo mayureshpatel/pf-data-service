@@ -53,6 +53,25 @@ public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merc
         if (hasColumn(safePrefix + "name", availableColumns)) {
             builder.name(rs.getString(safePrefix + "name"));
         }
+        mapLocationColumns(builder, rs, safePrefix, availableColumns);
+        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
+
+        return builder.build();
+    }
+
+    /**
+     * Maps the optional location columns and the list query's {@code link_count}, each only when
+     * present in the result set -- split out of {@link #mapRow(ResultSet, String)} to keep that
+     * method under the project's complexity threshold.
+     *
+     * @param builder          the merchant being built
+     * @param rs               ResultSet containing row data
+     * @param safePrefix       the normalized column prefix
+     * @param availableColumns the columns present in the result set
+     * @throws SQLException if there is an error accessing ResultSet
+     */
+    private static void mapLocationColumns(Merchant.MerchantBuilder builder, ResultSet rs, String safePrefix,
+                                           Set<String> availableColumns) throws SQLException {
         if (hasColumn(safePrefix + "city", availableColumns)) {
             builder.city(rs.getString(safePrefix + "city"));
         }
@@ -65,8 +84,8 @@ public class MerchantRowMapper extends JdbcMapperUtils implements RowMapper<Merc
         if (hasColumn(safePrefix + "country", availableColumns)) {
             builder.country(rs.getString(safePrefix + "country"));
         }
-        builder.audit(getAuditColumns(rs, safePrefix, availableColumns));
-
-        return builder.build();
+        if (hasColumn(safePrefix + "link_count", availableColumns)) {
+            builder.linkCount(rs.getInt(safePrefix + "link_count"));
+        }
     }
 }

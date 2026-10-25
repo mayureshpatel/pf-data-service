@@ -113,6 +113,26 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("should include each merchant's own description link count, never another user's")
+        void shouldIncludeLinkCount() {
+            // arrange
+            jdbcClient.sql("""
+                    insert into merchant_description_links (user_id, merchant_id, description, normalized_description)
+                    values (1, 4, 'CAFE ONE', 'cafe one'), (1, 4, 'CAFE TWO', 'cafe two'), (1, 1, 'WF', 'wf')
+                    """).update();
+
+            // act
+            List<Merchant> result = repository.findAllByUserId(USER_1, null, PageRequest.of(0, 20)).getContent();
+            List<Merchant> searched = repository.findAllByUserId(USER_1, "favorite", PageRequest.of(0, 20)).getContent();
+
+            // assert & verify
+            assertEquals(2, result.stream().filter(m -> m.getId() == 4L).findFirst().orElseThrow().getLinkCount());
+            assertEquals(1, result.stream().filter(m -> m.getId() == 1L).findFirst().orElseThrow().getLinkCount());
+            assertEquals(0, result.stream().filter(m -> m.getId() == 2L).findFirst().orElseThrow().getLinkCount());
+            assertEquals(2, searched.get(0).getLinkCount());
+        }
+
+        @Test
         @DisplayName("PF-845: should also match a case-insensitive search term against city")
         void shouldFindAllByUserIdWithSearchByCity() {
             // arrange

@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SoftDeleteSupport;
 import com.mayureshpatel.pfdataservice.repository.SqlParams;
@@ -574,5 +575,54 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .list()
                 .stream()
                 .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+    }
+
+    /**
+     * Lists the user's distinct transaction descriptions for the merchants page's link picker:
+     * descriptions differing only in case or whitespace are one row (the light-normalized key that
+     * description links match on), counted over non-deleted transactions, each with the merchant it
+     * is linked to if any. Ordered by usage then description.
+     *
+     * @param userId       the user id
+     * @param search       an optional case-insensitive substring to match; like wildcards are literal
+     * @param unlinkedOnly when true, only descriptions with no merchant link
+     * @param pageable     the requested page and size (sorting is fixed)
+     * @return the requested page of descriptions
+     */
+    public Page<TransactionDescriptionDto> findDescriptions(Long userId, String search, boolean unlinkedOnly, Pageable pageable) {
+        boolean hasSearch = search != null && !search.isBlank();
+        String filters = (hasSearch ? TransactionQueries.DESCRIPTIONS_SEARCH : "")
+                + (unlinkedOnly ? TransactionQueries.DESCRIPTIONS_UNLINKED_ONLY : "");
+        String searchParam = hasSearch ? "%" + escapeLike(search.trim().toLowerCase(java.util.Locale.ROOT)) + "%" : null;
+
+        Map<String, Object> params = new HashMap<>();
+        params.put(SqlParams.USER_ID, userId);
+        if (hasSearch) {
+            params.put("search", searchParam);
+        }
+
+        long total = jdbcClient.sql(TransactionQueries.DESCRIPTIONS_GROUPED + "select count(*) "
+                        + TransactionQueries.DESCRIPTIONS_JOINED + filters)
+                .params(params)
+                .query(Long.class)
+                .single();
+
+        params.put("limit", pageable.getPageSize());
+        params.put("offset", pageable.getOffset());
+        List<TransactionDescriptionDto> content = jdbcClient.sql(TransactionQueries.DESCRIPTIONS_GROUPED
+                        + TransactionQueries.DESCRIPTIONS_SELECT + TransactionQueries.DESCRIPTIONS_JOINED
+                        + filters + TransactionQueries.DESCRIPTIONS_ORDER_PAGE)
+                .params(params)
+                .query((rs, rowNum) -> new TransactionDescriptionDto(
+                        rs.getString("description"),
+                        rs.getLong("transaction_count"),
+                        rs.getObject("merchant_id", Long.class),
+                        rs.getString("merchant_name")))
+                .list();
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

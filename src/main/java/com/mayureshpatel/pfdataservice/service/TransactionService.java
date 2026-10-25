@@ -513,4 +513,18 @@ public class TransactionService {
                 .map(MerchantDtoMapper::toDto)
                 .toList();
     }
+
+    /**
+     * Lists the user's distinct transaction descriptions with their usage counts and current
+     * merchant links, for the merchants page's description picker.
+     *
+     * @param userId       the user id
+     * @param search       an optional case-insensitive substring to match
+     * @param unlinkedOnly when true, only descriptions with no merchant link
+     * @param pageable     the requested page and size
+     * @return the requested page of descriptions
+     */
+    public Page<TransactionDescriptionDto> getDescriptions(Long userId, String search, boolean unlinkedOnly, Pageable pageable) {
+        return transactionRepository.findDescriptions(userId, search, unlinkedOnly, pageable);
+    }
 }

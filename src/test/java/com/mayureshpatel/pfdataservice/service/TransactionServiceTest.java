@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
@@ -1214,6 +1215,27 @@ class TransactionServiceTest {
             assertEquals(7L, result.get(0).id());
             assertEquals("Costco", result.get(0).name());
             verify(transactionRepository).getMerchantsWithTransactions(USER_ID);
+        }
+    }
+
+    /** {@code getDescriptions} hands the user id, filters and page straight to the repository. */
+    @Nested
+    @DisplayName("getDescriptions")
+    class GetDescriptionsTests {
+        @Test
+        @DisplayName("should delegate to the repository with the user id")
+        void shouldDelegate() {
+            // arrange
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<TransactionDescriptionDto> page = new PageImpl<>(List.of(new TransactionDescriptionDto("Costco", 3L, null, null)));
+            when(transactionRepository.findDescriptions(USER_ID, "cos", true, pageable)).thenReturn(page);
+
+            // act
+            Page<TransactionDescriptionDto> result = transactionService.getDescriptions(USER_ID, "cos", true, pageable);
+
+            // assert & verify
+            assertSame(page, result);
+            verify(transactionRepository).findDescriptions(USER_ID, "cos", true, pageable);
         }
     }
 }

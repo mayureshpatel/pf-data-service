@@ -27,6 +27,9 @@ public class Merchant {
     private String postalCode;
     private String country;
 
+    /** how many description links point at this merchant; only populated by the list query, 0 elsewhere. */
+    private int linkCount;
+
     @ToString.Exclude
     private TableAudit audit;
 }

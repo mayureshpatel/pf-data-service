@@ -43,14 +43,16 @@ public final class MerchantQueries {
 
     // language=SQL
     public static final String FIND_PAGE_BY_USER_ID = """
-            select *
+            select merchants.*,
+                   (select count(*) from merchant_description_links links where links.merchant_id = merchants.id) as link_count
             from merchants
             where user_id = :userId
             """;
 
     // language=SQL
     public static final String FIND_PAGE_BY_USER_ID_AND_SEARCH = """
-            select *
+            select merchants.*,
+                   (select count(*) from merchant_description_links links where links.merchant_id = merchants.id) as link_count
             from merchants
             where user_id = :userId
               and (name ilike :search or city ilike :search)

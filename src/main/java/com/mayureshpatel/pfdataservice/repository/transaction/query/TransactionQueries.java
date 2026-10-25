@@ -483,4 +483,45 @@ public final class TransactionQueries {
             order by weighted_score desc
             limit 1
             """;
+
+    // language=SQL
+    // groups the user's live transaction descriptions by their light-normalized form (the key
+    // merchant_description_links.normalized_description uses), showing each group's most common raw
+    // spelling. the search and unlinked-only fragments below are appended by the repository.
+    public static final String DESCRIPTIONS_GROUPED = """
+            with grouped as (
+                select lower(btrim(regexp_replace(transactions.description, '\\s+', ' ', 'g'))) as norm_key,
+                       mode() within group (order by transactions.description) as description,
+                       count(*) as transaction_count
+                from transactions
+                    join accounts on transactions.account_id = accounts.id
+                where accounts.user_id = :userId
+                  and transactions.deleted_at is null
+                  and btrim(regexp_replace(transactions.description, '\\s+', ' ', 'g')) <> ''
+                group by 1
+            )
+            """;
+
+    // language=SQL
+    public static final String DESCRIPTIONS_JOINED = """
+            from grouped
+                left join merchant_description_links links
+                    on links.user_id = :userId and links.normalized_description = grouped.norm_key
+                left join merchants on merchants.id = links.merchant_id
+            where 1 = 1
+            """;
+
+    // language=SQL
+    public static final String DESCRIPTIONS_SEARCH = " and grouped.norm_key like :search escape '\\'";
+
+    // language=SQL
+    public static final String DESCRIPTIONS_UNLINKED_ONLY = " and links.id is null";
+
+    // language=SQL
+    public static final String DESCRIPTIONS_SELECT =
+            "select grouped.description, grouped.transaction_count, merchants.id as merchant_id, merchants.name as merchant_name ";
+
+    // language=SQL
+    public static final String DESCRIPTIONS_ORDER_PAGE =
+            " order by grouped.transaction_count desc, grouped.description limit :limit offset :offset";
 }

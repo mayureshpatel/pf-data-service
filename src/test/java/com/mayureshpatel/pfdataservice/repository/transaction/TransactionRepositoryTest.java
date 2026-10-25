@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.transaction;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -1157,6 +1158,194 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertTrue(result.isEmpty());
+        }
+    }
+
+    /** {@code findDescriptions} lists the user's distinct transaction descriptions (grouped by their light-normalized form, the same key description links match on) with how many live transactions use each and which merchant, if any, each is linked to. */
+    @Nested
+    @DisplayName("findDescriptions")
+    class FindDescriptionsTests {
+
+        private static final String SEARCH = "zzq";
+        private static final String COSTCO = "ZZQ Costco";
+        private static final String UNLINKED = "ZZQ Unlinked";
+        private static final String LINKED = "ZZQ Linked";
+        private static final String LINKED_KEY = "zzq linked";
+        private static final Long USER_2 = 2L;
+        private static final Long MERCHANT_AMAZON = 2L;
+
+        private void insertTransaction(long accountId, String description) {
+            jdbcClient.sql("""
+                    insert into transactions (account_id, amount, date, description, type)
+                    values (:accountId, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
+                    """)
+                    .param("accountId", accountId)
+                    .param("description", description)
+                    .update();
+        }
+
+        private void insertLink(long userId, long merchantId, String description, String normalized) {
+            jdbcClient.sql("""
+                    insert into merchant_description_links (user_id, merchant_id, description, normalized_description)
+                    values (:userId, :merchantId, :description, :normalized)
+                    """)
+                    .param("userId", userId)
+                    .param("merchantId", merchantId)
+                    .param("description", description)
+                    .param("normalized", normalized)
+                    .update();
+        }
+
+        @Test
+        @DisplayName("should group descriptions that differ only in case or spacing and sum their counts")
+        void shouldGroupByNormalizedDescription() {
+            // arrange
+            insertTransaction(1L, "ZZQ Chick-fil-A #1");
+            insertTransaction(1L, "ZZQ Chick-fil-A #1");
+            insertTransaction(2L, "ZZQ CHICK-FIL-A  #1");
+
+            // act
+            Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10));
+
+            // assert & verify
+            assertEquals(1, result.getTotalElements());
+            assertEquals(3L, result.getContent().get(0).transactionCount());
+            assertEquals("ZZQ Chick-fil-A #1", result.getContent().get(0).description());
+        }
+
+        @Test
+        @DisplayName("should fold leading and trailing tabs and line breaks the same way the link key does")
+        void shouldFoldSurroundingWhitespaceLikeTheLinkKey() {
+            // arrange -- "ZZQ Trail\r" and "ZZQ Trail" are one description to MerchantService.lightNormalize
+            insertTransaction(1L, "ZZQ Trail\r");
+            insertTransaction(1L, "ZZQ Trail");
+            insertLink(USER_ID, MERCHANT_AMAZON, "ZZQ Trail", "zzq trail");
+
+            // act
+            List<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
+                    USER_ID, "zzq trail", false, PageRequest.of(0, 10)).getContent();
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(2L, result.get(0).transactionCount());
+            assertEquals(MERCHANT_AMAZON, result.get(0).merchantId());
+        }
+
+        @Test
+        @DisplayName("should not count soft-deleted transactions")
+        void shouldIgnoreSoftDeleted() {
+            // arrange
+            insertTransaction(1L, "ZZQ Gone");
+            jdbcClient.sql("update transactions set deleted_at = now() where description = 'ZZQ Gone'").update();
+
+            // act
+            Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10));
+
+            // assert & verify
+            assertEquals(0, result.getTotalElements());
+        }
+
+        @Test
+        @DisplayName("should not include another user's transactions or links")
+        void shouldBeOwnerScoped() {
+            // arrange
+            insertTransaction(1L, COSTCO);
+            insertTransaction(4L, COSTCO);
+            insertTransaction(4L, COSTCO);
+            jdbcClient.sql("insert into merchants (id, user_id, name) values (900, :userId, 'Other Costco')")
+                    .param("userId", USER_2)
+                    .update();
+            insertLink(USER_2, 900L, COSTCO, "zzq costco");
+
+            // act
+            Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10));
+
+            // assert & verify
+            assertEquals(1, result.getTotalElements());
+            assertEquals(1L, result.getContent().get(0).transactionCount());
+            assertNull(result.getContent().get(0).merchantId());
+        }
+
+        @Test
+        @DisplayName("should return the linked merchant id and name, or null when unlinked")
+        void shouldReturnLinkedMerchant() {
+            // arrange
+            insertTransaction(1L, LINKED);
+            insertTransaction(1L, UNLINKED);
+            insertLink(USER_ID, MERCHANT_AMAZON, LINKED_KEY, LINKED_KEY);
+
+            // act
+            List<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
+                    USER_ID, SEARCH, false, PageRequest.of(0, 10)).getContent();
+
+            // assert & verify
+            TransactionDescriptionDto linked = result.stream().filter(d -> LINKED.equals(d.description())).findFirst().orElseThrow();
+            TransactionDescriptionDto unlinked = result.stream().filter(d -> UNLINKED.equals(d.description())).findFirst().orElseThrow();
+            assertEquals(MERCHANT_AMAZON, linked.merchantId());
+            assertEquals("Amazon", linked.merchantName());
+            assertNull(unlinked.merchantId());
+            assertNull(unlinked.merchantName());
+        }
+
+        @Test
+        @DisplayName("should filter by case-insensitive search and treat LIKE wildcards literally")
+        void shouldSearchAndEscapeWildcards() {
+            // arrange
+            insertTransaction(1L, "ZZQ Fifty% Off");
+            insertTransaction(1L, "ZZQ Fiftyx Off");
+
+            // act
+            Page<TransactionDescriptionDto> literal = transactionRepository.findDescriptions(
+                    USER_ID, "FIFTY%", false, PageRequest.of(0, 10));
+            Page<TransactionDescriptionDto> wildcard = transactionRepository.findDescriptions(
+                    USER_ID, "%", false, PageRequest.of(0, 10));
+
+            // assert & verify
+            assertEquals(1, literal.getTotalElements());
+            assertEquals("ZZQ Fifty% Off", literal.getContent().get(0).description());
+            assertEquals(List.of("ZZQ Fifty% Off"), wildcard.getContent().stream()
+                    .map(TransactionDescriptionDto::description).filter(d -> d.startsWith("ZZQ")).toList());
+        }
+
+        @Test
+        @DisplayName("should return only unlinked rows when unlinkedOnly, with totals reflecting the filter")
+        void shouldFilterUnlinkedOnly() {
+            // arrange
+            insertTransaction(1L, LINKED);
+            insertTransaction(1L, UNLINKED);
+            insertLink(USER_ID, MERCHANT_AMAZON, LINKED_KEY, LINKED_KEY);
+
+            // act
+            Page<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
+                    USER_ID, SEARCH, true, PageRequest.of(0, 10));
+
+            // assert & verify
+            assertEquals(1, result.getTotalElements());
+            assertEquals(UNLINKED, result.getContent().get(0).description());
+        }
+
+        @Test
+        @DisplayName("should order by transaction count descending then description, and page")
+        void shouldOrderAndPage() {
+            // arrange
+            insertTransaction(1L, "ZZQ B");
+            insertTransaction(1L, "ZZQ A");
+            insertTransaction(1L, "ZZQ C");
+            insertTransaction(1L, "ZZQ C");
+
+            // act
+            Page<TransactionDescriptionDto> first = transactionRepository.findDescriptions(
+                    USER_ID, SEARCH, false, PageRequest.of(0, 2));
+            Page<TransactionDescriptionDto> second = transactionRepository.findDescriptions(
+                    USER_ID, SEARCH, false, PageRequest.of(1, 2));
+
+            // assert & verify
+            assertEquals(3, first.getTotalElements());
+            assertEquals(List.of("ZZQ C", "ZZQ A"), first.getContent().stream().map(TransactionDescriptionDto::description).toList());
+            assertEquals(List.of("ZZQ B"), second.getContent().stream().map(TransactionDescriptionDto::description).toList());
         }
     }
 }
