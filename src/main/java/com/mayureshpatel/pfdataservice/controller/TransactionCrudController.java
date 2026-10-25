@@ -274,4 +274,26 @@ public class TransactionCrudController {
         transactionService.deleteTransaction(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Lists the user's distinct transaction descriptions with their usage counts and current
+     * merchant links, for the merchants page's description picker. Descriptions that differ only in
+     * case or whitespace are one row.
+     *
+     * @param userDetails  the authenticated user
+     * @param search       an optional case-insensitive substring to match
+     * @param unlinkedOnly when true, only descriptions with no merchant link
+     * @param pageable     page number and size (ordering is fixed: usage, then description)
+     * @return the matching page of descriptions
+     */
+    @Operation(summary = "List transaction descriptions", description = "Paginated distinct transaction descriptions with usage counts and the merchant each is linked to")
+    @ApiResponse(responseCode = "200", description = "Page of descriptions returned")
+    @GetMapping("/descriptions")
+    public ResponseEntity<Page<TransactionDescriptionDto>> getDescriptions(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "false") boolean unlinkedOnly,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(transactionService.getDescriptions(userDetails.getId(), search, unlinkedOnly, pageable));
+    }
 }

@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
@@ -369,6 +370,43 @@ class TransactionCrudControllerTest extends BaseControllerTest {
             mockMvc.perform(delete("/api/v1/transactions/{id}", TRANSACTION_ID)
                             .with(csrf()))
                     .andExpect(status().isNotFound());
+        }
+    }
+
+    /** {@code GET /api/v1/transactions/descriptions} returns the authenticated user's distinct transaction descriptions, passing search, unlinkedOnly and paging to the service. */
+    @Nested
+    @DisplayName("getDescriptions")
+    class GetDescriptionsTests {
+        @Test
+        @DisplayName("GET /descriptions should return the page and pass search, unlinkedOnly and paging")
+        void getDescriptions_shouldReturnPage() throws Exception {
+            // arrange
+            Page<TransactionDescriptionDto> page = new PageImpl<>(
+                    List.of(new TransactionDescriptionDto("Costco", 3L, 7L, "Costco Wholesale")), PageRequest.of(1, 5), 6);
+            when(transactionService.getDescriptions(eq(USER_ID), eq("cos"), eq(true), any(Pageable.class))).thenReturn(page);
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/descriptions")
+                            .param("search", "cos").param("unlinkedOnly", "true")
+                            .param("page", "1").param("size", "5"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].description").value("Costco"))
+                    .andExpect(jsonPath("$.content[0].transactionCount").value(3))
+                    .andExpect(jsonPath("$.content[0].merchantId").value(7))
+                    .andExpect(jsonPath("$.content[0].merchantName").value("Costco Wholesale"));
+            verify(transactionService).getDescriptions(eq(USER_ID), eq("cos"), eq(true), argThat((Pageable p) -> p.getPageNumber() == 1 && p.getPageSize() == 5));
+        }
+
+        @Test
+        @DisplayName("GET /descriptions should default unlinkedOnly to false")
+        void getDescriptions_shouldDefaultUnlinkedOnly() throws Exception {
+            // arrange
+            when(transactionService.getDescriptions(eq(USER_ID), isNull(), eq(false), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/descriptions")).andExpect(status().isOk());
+            verify(transactionService).getDescriptions(eq(USER_ID), isNull(), eq(false), any(Pageable.class));
         }
     }
 }
