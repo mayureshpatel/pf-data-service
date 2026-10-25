@@ -63,7 +63,7 @@ public class RecurringSuggestionFinder {
         LocalDate lookbackStart = LocalDate.now().minusYears(LOOKBACK_YEARS);
         List<Transaction> transactions = transactionRepository.findExpensesSince(userId, lookbackStart);
 
-        Map<String, List<Transaction>> groups = groupEligibleExpensesByMerchant(transactions, excludedKeys);
+        Map<String, List<Transaction>> groups = PatternGrouping.groupEligibleExpenses(transactions, excludedKeys);
 
         List<RecurringSuggestionDto> suggestions = new ArrayList<>();
         for (Map.Entry<String, List<Transaction>> entry : groups.entrySet()) {
@@ -98,49 +98,6 @@ public class RecurringSuggestionFinder {
     }
 
     /**
-     * Groups by merchant name (or description) alone -- NOT also by amount. A subscription that
-     * changed price partway through its history (routine: rate increases, promotional periods
-     * ending) used to split into one independent group per price, each evaluated as its own
-     * recurring candidate -- confirmed live, Netflix's real 56-month history across 4 price tiers
-     * surfaced as multiple simultaneous, conflicting suggestions for the same subscription.
-     * {@link #detectFrequency} only ever looked at dates, never amount, so grouping by name alone
-     * doesn't change frequency detection at all -- see PF-834.
-     */
-    private static Map<String, List<Transaction>> groupEligibleExpensesByMerchant(List<Transaction> transactions, Set<String> existingMerchants) {
-        Map<String, List<Transaction>> groups = new HashMap<>();
-
-        for (Transaction t : transactions) {
-            String key = DescriptionKeys.fold(nameOf(t));
-            if (key.isEmpty() || existingMerchants.contains(key)) continue;
-
-            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(t);
-        }
-
-        return groups;
-    }
-
-    /**
-     * The text a transaction is grouped under: its merchant's name when it has one, otherwise its
-     * raw description.
-     */
-    private static String nameOf(Transaction t) {
-        return t.getMerchant() != null ? t.getMerchant().getName() : t.getDescription();
-    }
-
-    /**
-     * The spelling shown for a group: the raw name used by most of its transactions.
-     */
-    private static String displayName(List<Transaction> group) {
-        return group.stream()
-                .map(t -> nameOf(t).strip())
-                .collect(Collectors.groupingBy(n -> n, LinkedHashMap::new, Collectors.counting()))
-                .entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse("");
-    }
-
-    /**
      * Checks one merchant's group of expenses for a stable recurring pattern, building the
      * suggestion if one's found.
      *
@@ -166,9 +123,9 @@ public class RecurringSuggestionFinder {
 
         Transaction lastTxn = datedGroup.get(datedGroup.size() - 1);
         LocalDate lastDate = lastTxn.getTransactionDate().toLocalDate();
-        PriceChange change = findPriceChange(datedGroup);
+        PatternGrouping.PriceChange change = PatternGrouping.findPriceChange(datedGroup);
         return RecurringSuggestionDto.builder()
-                .merchant(MerchantDto.builder().name(displayName(datedGroup)).build())
+                .merchant(MerchantDto.builder().name(PatternGrouping.displayName(datedGroup)).build())
                 .amount(lastTxn.getAmount())
                 .frequency(frequency)
                 .lastDate(lastDate)
@@ -191,34 +148,6 @@ public class RecurringSuggestionFinder {
                 ? MIN_OCCURRENCES_FOR_YEARLY_PATTERN
                 : MIN_OCCURRENCES_FOR_RECURRING_PATTERN;
         return sightings >= required;
-    }
-
-    /**
-     * The price before the newest unbroken run of equal amounts and the date that run began, or
-     * {@code null} when the amount never changed.
-     */
-    private static PriceChange findPriceChange(List<Transaction> datedGroup) {
-        BigDecimal latest = datedGroup.get(datedGroup.size() - 1).getAmount();
-        if (latest == null) {
-            return null;
-        }
-        int runStart = datedGroup.size() - 1;
-        while (runStart > 0 && latest.compareTo(amountOrZero(datedGroup.get(runStart - 1))) == 0) {
-            runStart--;
-        }
-        if (runStart == 0) {
-            return null;
-        }
-        return new PriceChange(
-                datedGroup.get(runStart - 1).getAmount(),
-                datedGroup.get(runStart).getTransactionDate().toLocalDate());
-    }
-
-    private static BigDecimal amountOrZero(Transaction t) {
-        return t.getAmount() != null ? t.getAmount() : BigDecimal.ZERO;
-    }
-
-    private record PriceChange(BigDecimal previousAmount, LocalDate changedOn) {
     }
 
     /**

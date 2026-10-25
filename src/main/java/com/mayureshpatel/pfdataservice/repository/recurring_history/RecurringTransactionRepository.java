@@ -26,6 +26,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RecurringTransactionRepository implements JdbcRepository<RecurringTransaction, Long> {
 
+    private static final String MERCHANT_ID = "merchantId";
+
     private final JdbcClient jdbcClient;
     private final RecurringTransactionRowMapper rowMapper;
 
@@ -77,7 +79,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
         jdbcClient.sql(RecurringTransactionQueries.INSERT)
                 .param(SqlParams.USER_ID, userId)
                 .param("accountId", request.accountId())
-                .param("merchantId", request.merchantId())
+                .param(MERCHANT_ID, request.merchantId())
                 .param("amount", request.amount())
                 .param("frequency", request.frequency())
                 .param("lastDate", request.lastDate())
@@ -96,7 +98,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
     public int update(RecurringTransactionUpdateRequest request, Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.UPDATE)
                 .param("accountId", request.accountId())
-                .param("merchantId", request.merchantId())
+                .param(MERCHANT_ID, request.merchantId())
                 .param("amount", request.amount())
                 .param("frequency", request.frequency())
                 .param("nextDate", request.nextDate())
@@ -172,7 +174,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
      */
     public long countActiveByMerchantId(Long merchantId, Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.COUNT_ACTIVE_BY_MERCHANT_ID)
-                .param("merchantId", merchantId)
+                .param(MERCHANT_ID, merchantId)
                 .param(SqlParams.USER_ID, userId)
                 .query(Long.class)
                 .single();
@@ -188,7 +190,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
      */
     public int purgeDeletedByMerchantId(Long merchantId, Long userId) {
         return jdbcClient.sql(RecurringTransactionQueries.PURGE_DELETED_BY_MERCHANT_ID)
-                .param("merchantId", merchantId)
+                .param(MERCHANT_ID, merchantId)
                 .param(SqlParams.USER_ID, userId)
                 .update();
     }

@@ -275,12 +275,14 @@ class RecurringTransactionServiceTest {
     @DisplayName("getRecurringTransactions projection")
     class ProjectionTests {
 
+        private static final String MONTHLY = "MONTHLY";
+
         @Test
         @DisplayName("should return paused items with projection fields and leave the stored amount alone")
         void shouldReturnPausedWithProjection() {
             // arrange
             RecurringTransaction paused = RecurringTransaction.builder()
-                    .id(RECURRING_ID).userId(USER_ID).frequency("MONTHLY").active(false)
+                    .id(RECURRING_ID).userId(USER_ID).frequency(MONTHLY).active(false)
                     .amount(new java.math.BigDecimal("10.00"))
                     .nextDate(java.time.LocalDate.now().plusDays(10))
                     .build();
@@ -306,9 +308,9 @@ class RecurringTransactionServiceTest {
         void shouldOrderByProjectedNextDate() {
             // arrange
             java.time.LocalDate today = java.time.LocalDate.now();
-            RecurringTransaction later = RecurringTransaction.builder().id(1L).userId(USER_ID).frequency("MONTHLY")
+            RecurringTransaction later = RecurringTransaction.builder().id(1L).userId(USER_ID).frequency(MONTHLY)
                     .amount(java.math.BigDecimal.TEN).nextDate(today.plusDays(20)).active(true).build();
-            RecurringTransaction sooner = RecurringTransaction.builder().id(2L).userId(USER_ID).frequency("MONTHLY")
+            RecurringTransaction sooner = RecurringTransaction.builder().id(2L).userId(USER_ID).frequency(MONTHLY)
                     .amount(java.math.BigDecimal.TEN).nextDate(today.plusDays(2)).active(true).build();
             when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(later, sooner));
 

@@ -258,6 +258,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
     @DisplayName("findRecentChargesByRecurringId")
     class FindRecentChargesTests {
 
+        private static final String EXPENSE = "EXPENSE";
         private static final Long RECURRING_AMAZON = 1L;
         private static final String TXN_INSERT = """
                 insert into transactions (account_id, merchant_id, amount, date, description, type)
@@ -294,7 +295,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         @DisplayName("should match charges through the merchant id")
         void shouldMatchThroughMerchantId() {
             // arrange
-            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "15.99", "2026-09-01T12:00:00Z", "AMAZON PRIME", "EXPENSE");
+            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "15.99", "2026-09-01T12:00:00Z", "AMAZON PRIME", EXPENSE);
 
             // act & assert & verify
             assertEquals(1, chargesOfAmazonItem().size());
@@ -306,7 +307,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         void shouldMatchThroughLinkedDescription() {
             // arrange
             insertLink("AMZN MKTP", "amzn mktp");
-            insertCharge(ACCOUNT_1, null, "9.50", "2026-09-02T12:00:00Z", "  AMZN   mktp\t", "EXPENSE");
+            insertCharge(ACCOUNT_1, null, "9.50", "2026-09-02T12:00:00Z", "  AMZN   mktp\t", EXPENSE);
 
             // act & assert & verify
             assertEquals(1, chargesOfAmazonItem().size());
@@ -317,10 +318,10 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         void shouldIgnoreNonMatching() {
             // arrange
             insertLink("AMZN MKTP", "amzn mktp");
-            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "1.00", "2026-09-03T12:00:00Z", "deleted", "EXPENSE");
+            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "1.00", "2026-09-03T12:00:00Z", "deleted", EXPENSE);
             jdbcClient.sql("update transactions set deleted_at = now() where description = 'deleted'").update();
             insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "2.00", "2026-09-04T12:00:00Z", "refund", "INCOME");
-            insertCharge(4L, null, "3.00", "2026-09-05T12:00:00Z", "AMZN MKTP", "EXPENSE");
+            insertCharge(4L, null, "3.00", "2026-09-05T12:00:00Z", "AMZN MKTP", EXPENSE);
 
             // act & assert & verify
             assertTrue(chargesOfAmazonItem().isEmpty());
@@ -331,7 +332,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         void shouldCapAtTwelveNewestFirst() {
             // arrange
             for (int day = 1; day <= 15; day++) {
-                insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "5.00", String.format("2026-08-%02dT12:00:00Z", day), "AMAZON", "EXPENSE");
+                insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "5.00", String.format("2026-08-%02dT12:00:00Z", day), "AMAZON", EXPENSE);
             }
 
             // act

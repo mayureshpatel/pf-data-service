@@ -19,6 +19,8 @@ class RecurringProjectionTest {
 
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 24);
     private static final String STORED_AMOUNT = "10.00";
+    private static final String NEW_AMOUNT = "12.00";
+    private static final String MONTHLY = "MONTHLY";
 
     private static RecurringTransaction item(String frequency, LocalDate nextDate) {
         return RecurringTransaction.builder()
@@ -41,7 +43,7 @@ class RecurringProjectionTest {
         @DisplayName("should use the stored next date when nothing matched")
         void shouldUseStoredNextDate() {
             // act
-            Projection result = RecurringProjection.project(item("MONTHLY", TODAY.plusDays(5)), List.of(), TODAY);
+            Projection result = RecurringProjection.project(item(MONTHLY, TODAY.plusDays(5)), List.of(), TODAY);
 
             // assert & verify
             assertEquals(TODAY.plusDays(5), result.projectedNextDate());
@@ -55,7 +57,7 @@ class RecurringProjectionTest {
         @DisplayName("should flag a stored next date in the past as overdue")
         void shouldFlagPastStoredDate() {
             // act
-            Projection result = RecurringProjection.project(item("MONTHLY", TODAY.minusDays(3)), List.of(), TODAY);
+            Projection result = RecurringProjection.project(item(MONTHLY, TODAY.minusDays(3)), List.of(), TODAY);
 
             // assert & verify
             assertTrue(result.overdue());
@@ -81,7 +83,7 @@ class RecurringProjectionTest {
             // act & assert & verify
             assertEquals(last.plusWeeks(1), rolled("WEEKLY"));
             assertEquals(last.plusWeeks(2), rolled("BI_WEEKLY"));
-            assertEquals(last.plusMonths(1), rolled("MONTHLY"));
+            assertEquals(last.plusMonths(1), rolled(MONTHLY));
             assertEquals(last.plusMonths(3), rolled("QUARTERLY"));
             assertEquals(last.plusYears(1), rolled("YEARLY"));
         }
@@ -90,7 +92,7 @@ class RecurringProjectionTest {
         @DisplayName("should report the last charge date and amount")
         void shouldReportLastCharge() {
             // act
-            Projection result = RecurringProjection.project(item("MONTHLY", TODAY), List.of(charge(last, STORED_AMOUNT)), TODAY);
+            Projection result = RecurringProjection.project(item(MONTHLY, TODAY), List.of(charge(last, STORED_AMOUNT)), TODAY);
 
             // assert & verify
             assertEquals(last, result.lastChargeDate());
@@ -103,7 +105,7 @@ class RecurringProjectionTest {
         void shouldFlagOverdueAfterRolling() {
             // act
             Projection result = RecurringProjection.project(
-                    item("MONTHLY", TODAY), List.of(charge(TODAY.minusMonths(1).minusDays(4), STORED_AMOUNT)), TODAY);
+                    item(MONTHLY, TODAY), List.of(charge(TODAY.minusMonths(1).minusDays(4), STORED_AMOUNT)), TODAY);
 
             // assert & verify
             assertTrue(result.overdue());
@@ -121,7 +123,7 @@ class RecurringProjectionTest {
         void shouldReportNoChangeWhenEqual() {
             // act
             Projection result = RecurringProjection.project(
-                    item("MONTHLY", TODAY), List.of(charge(TODAY.minusDays(1), "10.0")), TODAY);
+                    item(MONTHLY, TODAY), List.of(charge(TODAY.minusDays(1), "10.0")), TODAY);
 
             // assert & verify
             assertNull(result.priceChange());
@@ -132,17 +134,17 @@ class RecurringProjectionTest {
         void shouldReportChangeWithSince() {
             // arrange -- newest first: two charges at 12, before them a charge at 10
             List<RecurringCharge> charges = List.of(
-                    charge(TODAY.minusDays(2), "12.00"),
-                    charge(TODAY.minusDays(32), "12.00"),
+                    charge(TODAY.minusDays(2), NEW_AMOUNT),
+                    charge(TODAY.minusDays(32), NEW_AMOUNT),
                     charge(TODAY.minusDays(62), "10.00"));
 
             // act
-            Projection result = RecurringProjection.project(item("MONTHLY", TODAY), charges, TODAY);
+            Projection result = RecurringProjection.project(item(MONTHLY, TODAY), charges, TODAY);
 
             // assert & verify
             assertNotNull(result.priceChange());
             assertEquals(0, new BigDecimal(STORED_AMOUNT).compareTo(result.priceChange().previousAmount()));
-            assertEquals(0, new BigDecimal("12.00").compareTo(result.priceChange().newAmount()));
+            assertEquals(0, new BigDecimal(NEW_AMOUNT).compareTo(result.priceChange().newAmount()));
             assertEquals(TODAY.minusDays(32), result.priceChange().since());
         }
 
@@ -151,16 +153,16 @@ class RecurringProjectionTest {
         void shouldFindRunStartAfterTwoChanges() {
             // arrange -- stored 10, charges went 10 -> 11 -> 12
             List<RecurringCharge> charges = List.of(
-                    charge(TODAY.minusDays(2), "12.00"),
+                    charge(TODAY.minusDays(2), NEW_AMOUNT),
                     charge(TODAY.minusDays(32), "11.00"),
                     charge(TODAY.minusDays(62), "10.00"));
 
             // act
-            Projection result = RecurringProjection.project(item("MONTHLY", TODAY), charges, TODAY);
+            Projection result = RecurringProjection.project(item(MONTHLY, TODAY), charges, TODAY);
 
             // assert & verify
             assertEquals(TODAY.minusDays(2), result.priceChange().since());
-            assertEquals(0, new BigDecimal("12.00").compareTo(result.priceChange().newAmount()));
+            assertEquals(0, new BigDecimal(NEW_AMOUNT).compareTo(result.priceChange().newAmount()));
         }
     }
 }

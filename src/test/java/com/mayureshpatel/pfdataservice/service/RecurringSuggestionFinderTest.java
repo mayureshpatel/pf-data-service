@@ -423,6 +423,7 @@ class RecurringSuggestionFinderTest {
     class DetectionUpgradeTests {
 
         private static final String VENDOR = "Vendor";
+        private static final String STEADY_AMOUNT = "10.00";
 
         private Transaction tx(LocalDate date, String amount, String description, Account account) {
             return Transaction.builder()
@@ -441,10 +442,10 @@ class RecurringSuggestionFinderTest {
             }
             LocalDate cursor = LocalDate.now().minusDays(span);
             List<Transaction> group = new ArrayList<>();
-            group.add(tx(cursor, "10.00", description, null));
+            group.add(tx(cursor, STEADY_AMOUNT, description, null));
             for (long gap : gaps) {
                 cursor = cursor.plusDays(gap);
-                group.add(tx(cursor, "10.00", description, null));
+                group.add(tx(cursor, STEADY_AMOUNT, description, null));
             }
             return group;
         }
@@ -579,8 +580,8 @@ class RecurringSuggestionFinderTest {
             // arrange
             LocalDate now = LocalDate.now();
             List<Transaction> group = List.of(
-                    tx(now.minusMonths(3), "10.00", MERCHANT_NETFLIX, null),
-                    tx(now.minusMonths(2), "10.00", MERCHANT_NETFLIX, null),
+                    tx(now.minusMonths(3), STEADY_AMOUNT, MERCHANT_NETFLIX, null),
+                    tx(now.minusMonths(2), STEADY_AMOUNT, MERCHANT_NETFLIX, null),
                     tx(now.minusMonths(1), "12.00", MERCHANT_NETFLIX, null),
                     tx(now, "12.00", MERCHANT_NETFLIX, null));
 
@@ -589,7 +590,7 @@ class RecurringSuggestionFinderTest {
 
             // assert & verify
             assertEquals(0, new BigDecimal("12.00").compareTo(suggestion.amount()));
-            assertEquals(0, new BigDecimal("10.00").compareTo(suggestion.previousAmount()));
+            assertEquals(0, new BigDecimal(STEADY_AMOUNT).compareTo(suggestion.previousAmount()));
             assertEquals(now.minusMonths(1), suggestion.priceChangedOn());
         }
 
@@ -612,9 +613,9 @@ class RecurringSuggestionFinderTest {
             Account old = Account.builder().id(1L).name("Old Card").build();
             Account current = Account.builder().id(2L).name("New Card").build();
             List<Transaction> group = List.of(
-                    tx(now.minusDays(60), "10.00", VENDOR, old),
-                    tx(now.minusDays(30), "10.00", VENDOR, old),
-                    tx(now, "10.00", VENDOR, current));
+                    tx(now.minusDays(60), STEADY_AMOUNT, VENDOR, old),
+                    tx(now.minusDays(30), STEADY_AMOUNT, VENDOR, old),
+                    tx(now, STEADY_AMOUNT, VENDOR, current));
 
             // act
             RecurringSuggestionDto suggestion = find(group).get(0);
@@ -630,9 +631,9 @@ class RecurringSuggestionFinderTest {
             // arrange
             LocalDate now = LocalDate.now();
             List<Transaction> group = List.of(
-                    tx(now.minusDays(60), "10.00", "Net  Flix", null),
-                    tx(now.minusDays(30), "10.00", "net flix ", null),
-                    tx(now, "10.00", "Net  Flix", null));
+                    tx(now.minusDays(60), STEADY_AMOUNT, "Net  Flix", null),
+                    tx(now.minusDays(30), STEADY_AMOUNT, "net flix ", null),
+                    tx(now, STEADY_AMOUNT, "Net  Flix", null));
 
             // act
             List<RecurringSuggestionDto> result = find(group);
