@@ -89,10 +89,9 @@ public class ExploreService {
      */
     public ExploreResultDto explore(Long userId, ExploreMeasure measure, ExploreSide side, ExploreGroupBy groupBy,
                                     LocalDate startDate, LocalDate endDate, ExploreCompare compare, ExploreFilter filter, LocalDate today) {
-        if (measure.timeOnly() && !groupBy.isTime()) {
-            throw new IllegalArgumentException(measure + " can only be grouped by time (month, week or day), not by " + groupBy);
-        }
-        ResolvedRanges ranges = ExploreRanges.resolve(startDate, endDate, compare, today);
+        requireTimeGroupingIfTimeOnly(measure, groupBy);
+        ExploreGroupBy unit = groupBy == ExploreGroupBy.MONTH || groupBy == ExploreGroupBy.WEEK ? groupBy : null;
+        ResolvedRanges ranges = ExploreRanges.resolve(startDate, endDate, compare, today, unit);
         List<ExploreRowData> current = repository.findGroups(userId, groupBy, filter, ranges.current());
         DateWindow comparisonWindow = ranges.comparison();
         List<ExploreRowData> earlier = comparisonWindow == null ? List.of() : repository.findGroups(userId, groupBy, filter, comparisonWindow);
@@ -101,17 +100,32 @@ public class ExploreService {
         ExploreRowData earlierTotal = comparisonWindow == null ? null : totalOf(userId, groupBy, filter, comparisonWindow, earlier);
         long days = ChronoUnit.DAYS.between(ranges.current().start(), ranges.current().end());
 
-        List<ExploreRowDto> rows = buildRows(measure, side, groupBy, compare, days, current, earlier, comparisonWindow != null);
+        int unitBuckets = unit == null ? 0 : bucketCount(unit, ranges.current());
+        List<ExploreRowDto> rows = buildRows(measure, side, groupBy, compare, days, unitBuckets, current, earlier, comparisonWindow != null);
         return new ExploreResultDto(
                 rows,
                 ExploreMeasures.value(measure, side, total),
                 earlierTotal == null ? null : ExploreMeasures.value(measure, side, earlierTotal),
                 ExploreMeasures.count(measure, side, total),
                 repository.countExcluded(userId, filter, ranges.current()),
-                comparisonWindow == null ? null : comparisonWindow.start().toLocalDate(),
-                comparisonWindow == null ? null : comparisonWindow.end().minusDays(1).toLocalDate(),
+                comparisonDay(comparisonWindow, true),
+                comparisonDay(comparisonWindow, false),
                 ranges.comparisonLabel(),
                 ranges.inProgress());
+    }
+
+    private static void requireTimeGroupingIfTimeOnly(ExploreMeasure measure, ExploreGroupBy groupBy) {
+        if (measure.timeOnly() && !groupBy.isTime()) {
+            throw new IllegalArgumentException(measure + " can only be grouped by time (month, week or day), not by " + groupBy);
+        }
+    }
+
+    /** The first or last day of the comparison window, or null when there is no comparison. */
+    private static LocalDate comparisonDay(DateWindow window, boolean first) {
+        if (window == null) {
+            return null;
+        }
+        return first ? window.start().toLocalDate() : window.end().minusDays(1).toLocalDate();
     }
 
     /**
@@ -148,14 +162,15 @@ public class ExploreService {
      */
     public ExploreTrendDto trend(Long userId, ExploreMeasure measure, ExploreSide side, LocalDate startDate, LocalDate endDate,
                                  ExploreCompare compare, ExploreFilter filter, LocalDate today) {
-        ResolvedRanges ranges = ExploreRanges.resolve(startDate, endDate, compare, today);
-        LocalDate first = ranges.current().start().toLocalDate();
-        LocalDate last = ranges.current().end().minusDays(1).toLocalDate();
+        DateWindow shown = ExploreRanges.resolve(startDate, endDate, ExploreCompare.NONE, today).current();
+        LocalDate first = shown.start().toLocalDate();
+        LocalDate last = shown.end().minusDays(1).toLocalDate();
         if (last.isBefore(first)) {
             return new ExploreTrendDto(List.of(), List.of());
         }
         ExploreGroupBy granularity = ExploreBuckets.granularityFor(ChronoUnit.DAYS.between(first, last) + 1);
         int count = ExploreBuckets.count(granularity, first, last);
+        ResolvedRanges ranges = ExploreRanges.resolve(startDate, endDate, compare, today, granularity);
 
         List<Bucket> current = buckets(userId, measure, side, granularity, filter, ranges.current(), count, ranges.inProgress());
         DateWindow comparisonWindow = ranges.comparison();
@@ -240,7 +255,7 @@ public class ExploreService {
     }
 
     private List<ExploreRowDto> buildRows(ExploreMeasure measure, ExploreSide side, ExploreGroupBy groupBy, ExploreCompare compare, long days,
-                                          List<ExploreRowData> current, List<ExploreRowData> earlier, boolean comparing) {
+                                          int unitBuckets, List<ExploreRowData> current, List<ExploreRowData> earlier, boolean comparing) {
         Map<String, ExploreRowData> earlierByKey = new HashMap<>();
         earlier.forEach(row -> earlierByKey.put(row.key(), row));
 
@@ -250,7 +265,7 @@ public class ExploreService {
             if (!ExploreMeasures.hasActivity(measure, side, row)) {
                 continue;
             }
-            String earlierKey = ExploreLabels.comparisonKey(groupBy, row.key(), compare, days);
+            String earlierKey = ExploreLabels.comparisonKey(groupBy, row.key(), compare, days, unitBuckets);
             ExploreRowData counterpart = earlierByKey.get(earlierKey);
             matched.add(earlierKey);
             rows.add(new ExploreRowDto(
@@ -270,6 +285,12 @@ public class ExploreService {
         rows.sort(Comparator.comparing(ExploreRowDto::value, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(row -> Objects.toString(row.label(), "")));
         return rows;
+    }
+
+    private static int bucketCount(ExploreGroupBy unit, DateWindow window) {
+        LocalDate first = window.start().toLocalDate();
+        LocalDate last = window.end().minusDays(1).toLocalDate();
+        return last.isBefore(first) ? 0 : ExploreBuckets.count(unit, first, last);
     }
 
     private BigDecimal comparisonValue(ExploreMeasure measure, ExploreSide side, ExploreRowData counterpart) {

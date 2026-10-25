@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.dto.report.explore.DateWindow;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreCompare;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreGroupBy;
 import com.mayureshpatel.pfdataservice.service.ExploreRanges.ResolvedRanges;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -115,5 +116,40 @@ class ExploreRangesTest {
         // assert & verify
         assertNull(ranges.comparison());
         assertEquals(ranges.current().start(), ranges.current().end());
+    }
+
+    @Test
+    @DisplayName("should compare whole months with whole months for a previous period in monthly buckets")
+    void shouldAlignPreviousPeriodToMonths() {
+        // act -- Jan 1 to Oct 25 is 10 monthly buckets, so the comparison is the 10 months before
+        ResolvedRanges ranges = ExploreRanges.resolve(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31),
+                ExploreCompare.PREVIOUS_PERIOD, TODAY, ExploreGroupBy.MONTH);
+
+        // assert & verify -- Mar 1 to Dec 25, 2025: the last bucket is the same 25 days of December
+        assertEquals(new DateWindow(utc(2025, 3, 1), utc(2025, 12, 26)), ranges.comparison());
+    }
+
+    @Test
+    @DisplayName("should start the comparison on the same weekday for weekly buckets")
+    void shouldAlignSameDaysLastYearToWeeks() {
+        // act -- Monday Jul 27 to Sunday Oct 25, 2026 is 13 weeks
+        ResolvedRanges ranges = ExploreRanges.resolve(LocalDate.of(2026, 7, 27), LocalDate.of(2026, 10, 25),
+                ExploreCompare.SAME_DAYS_LAST_YEAR, TODAY, ExploreGroupBy.WEEK);
+
+        // assert & verify -- 52 weeks earlier is Monday Jul 28, 2025 to Sunday Oct 26, 2025
+        assertEquals(new DateWindow(utc(2025, 7, 28), utc(2025, 10, 27)), ranges.comparison());
+    }
+
+    @Test
+    @DisplayName("should keep the day-based comparison for day buckets and non-time groupings")
+    void shouldKeepDayBasedComparisonWithoutCalendarBuckets() {
+        // act
+        ResolvedRanges plain = ExploreRanges.resolve(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), ExploreCompare.PREVIOUS_PERIOD, TODAY);
+        ResolvedRanges day = ExploreRanges.resolve(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), ExploreCompare.PREVIOUS_PERIOD, TODAY, ExploreGroupBy.DAY);
+        ResolvedRanges category = ExploreRanges.resolve(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), ExploreCompare.PREVIOUS_PERIOD, TODAY, ExploreGroupBy.CATEGORY);
+
+        // assert & verify
+        assertEquals(plain, day);
+        assertEquals(plain, category);
     }
 }

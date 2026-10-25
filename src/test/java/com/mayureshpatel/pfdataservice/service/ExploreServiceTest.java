@@ -44,6 +44,7 @@ class ExploreServiceTest {
     private static final String DAY_2026_01_01 = "2026-01-01";
     private static final String AMOUNT_80 = "80.00";
     private static final String AMOUNT_10 = "10.00";
+    private static final String DAY_2025_03_01 = "2025-03-01";
     private static final String DAY_2026_03_01 = "2026-03-01";
     private static final ExploreFilter NO_FILTER = ExploreFilter.none();
 
@@ -260,7 +261,7 @@ class ExploreServiceTest {
         // arrange
         when(repository.findGroups(eq(USER_ID), eq(ExploreGroupBy.MONTH), any(), any())).thenReturn(
                 List.of(data(DAY_2026_03_01, DAY_2026_03_01, "0", AMOUNT_100, 0, 1)),
-                List.of(data("2025-03-01", "2025-03-01", "0", AMOUNT_80, 0, 1)));
+                List.of(data(DAY_2025_03_01, DAY_2025_03_01, "0", AMOUNT_80, 0, 1)));
 
         // act
         ExploreResultDto result = service.explore(USER_ID, ExploreMeasure.SPENDING, ExploreSide.SPENDING, ExploreGroupBy.MONTH,
@@ -268,6 +269,24 @@ class ExploreServiceTest {
 
         // assert & verify
         assertValue(AMOUNT_80, only(result).comparisonValue());
+    }
+
+    @Test
+    @DisplayName("should compare a month with the whole month of the previous period, not a shifted slice")
+    void shouldComparePreviousPeriodByWholeMonths() {
+        // arrange -- Jan 2026 spending against Mar 2025, which is 10 months earlier
+        when(repository.findGroups(eq(USER_ID), eq(ExploreGroupBy.MONTH), any(), any())).thenReturn(
+                List.of(data(DAY_2026_01_01, DAY_2026_01_01, "0", AMOUNT_100, 0, 1)),
+                List.of(data(DAY_2025_03_01, DAY_2025_03_01, "0", "60.00", 0, 1)));
+
+        // act
+        ExploreResultDto result = service.explore(USER_ID, ExploreMeasure.SPENDING, ExploreSide.SPENDING, ExploreGroupBy.MONTH,
+                JAN_1, LocalDate.of(2026, 12, 31), ExploreCompare.PREVIOUS_PERIOD, NO_FILTER, TODAY);
+
+        // assert & verify
+        assertValue(AMOUNT_100, result.rows().get(0).value());
+        assertValue("60.00", result.rows().get(0).comparisonValue());
+        assertEquals(LocalDate.of(2025, 3, 1), result.comparisonStart());
     }
 
     /** The trend buckets by day, week or month depending on the window, zero-fills empty buckets, flags the bucket still in progress, and lines the comparison up by position. */
@@ -347,6 +366,23 @@ class ExploreServiceTest {
             assertEquals(6, result.comparison().size());
             assertValue("80.00", result.comparison().get(0).value());
             assertEquals(LocalDate.of(2025, 1, 1), result.comparison().get(0).start());
+        }
+
+        @Test
+        @DisplayName("should build weekly comparison buckets on the same weekday as the current ones")
+        void shouldAlignWeeklyComparison() {
+            // arrange
+            when(repository.findGroups(eq(USER_ID), eq(ExploreGroupBy.WEEK), any(), any())).thenReturn(List.of(), List.of());
+
+            // act
+            ExploreTrendDto result = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 7, 27), LocalDate.of(2026, 10, 25),
+                    ExploreCompare.SAME_DAYS_LAST_YEAR);
+
+            // assert & verify
+            assertEquals(13, result.current().size());
+            assertEquals(13, result.comparison().size());
+            assertEquals(LocalDate.of(2025, 7, 28), result.comparison().get(0).start());
+            assertEquals(LocalDate.of(2025, 10, 20), result.comparison().get(12).start());
         }
 
         @Test

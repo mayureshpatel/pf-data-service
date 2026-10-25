@@ -15,6 +15,7 @@ import java.util.Locale;
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class ExploreLabels {
 
+    private static final int WEEKS_IN_YEAR = 52;
     private static final DateTimeFormatter MONTH = DateTimeFormatter.ofPattern("MMM yyyy", Locale.US);
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US);
 
@@ -58,5 +59,30 @@ public final class ExploreLabels {
             case WEEK -> shifted.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toString();
             default -> shifted.toString();
         };
+    }
+
+    /**
+     * Like {@link #comparisonKey(ExploreGroupBy, String, ExploreCompare, long)} for results bucketed by
+     * month or week whose comparison window shifts by whole calendar units (see {@code ExploreRanges}): the
+     * previous period moves back by the number of buckets the range spans, same days last year by a year
+     * (months) or 52 weeks (weeks).
+     *
+     * @param groupBy the grouping
+     * @param key     the current bucket's key
+     * @param compare the comparison mode
+     * @param days    how many days the current window spans (used for day buckets)
+     * @param buckets how many month or week buckets the current window spans
+     * @return the comparison bucket's key
+     */
+    public static String comparisonKey(ExploreGroupBy groupBy, String key, ExploreCompare compare, long days, int buckets) {
+        if (key == null || (groupBy != ExploreGroupBy.MONTH && groupBy != ExploreGroupBy.WEEK)) {
+            return comparisonKey(groupBy, key, compare, days);
+        }
+        LocalDate date = LocalDate.parse(key);
+        boolean month = groupBy == ExploreGroupBy.MONTH;
+        if (compare == ExploreCompare.SAME_DAYS_LAST_YEAR) {
+            return month ? date.minusYears(1).withDayOfMonth(1).toString() : date.minusWeeks(WEEKS_IN_YEAR).toString();
+        }
+        return month ? date.minusMonths(buckets).withDayOfMonth(1).toString() : date.minusWeeks(buckets).toString();
     }
 }
