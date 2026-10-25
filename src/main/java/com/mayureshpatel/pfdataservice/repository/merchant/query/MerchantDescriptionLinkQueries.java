@@ -53,4 +53,13 @@ public final class MerchantDescriptionLinkQueries {
             where id = :id
               and user_id = :userId
             """;
+
+    // language=SQL -- PF-884: the descriptions already tied to a set of merchants, so recurring
+    // detection can skip a pattern whose text belongs to a merchant that is already tracked.
+    public static final String FIND_NORMALIZED_DESCRIPTIONS_BY_MERCHANT_IDS = """
+            select normalized_description
+            from merchant_description_links
+            where user_id = :userId
+              and merchant_id in (:merchantIds)
+            """;
 }

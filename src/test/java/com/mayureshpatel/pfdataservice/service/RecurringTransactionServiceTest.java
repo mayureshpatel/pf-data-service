@@ -4,6 +4,8 @@ import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissPatternRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissedPatternDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
@@ -11,6 +13,7 @@ import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransa
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.DismissedPatternRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +48,7 @@ class RecurringTransactionServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private MerchantRepository merchantRepository;
     @Mock private RecurringSuggestionFinder suggestionFinder;
+    @Mock private DismissedPatternRepository dismissedRepository;
 
     @InjectMocks private RecurringTransactionService recurringService;
 
@@ -263,6 +267,60 @@ class RecurringTransactionServiceTest {
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(999L).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
             assertThrows(AccessDeniedException.class, () -> recurringService.deleteRecurringTransaction(USER_ID, RECURRING_ID));
+        }
+    }
+
+    /** Dismissals are stored under the folded pattern key, listed for the user, and restorable only by their owner. */
+    @Nested
+    @DisplayName("dismissed patterns")
+    class DismissedPatternTests {
+
+        @Test
+        @DisplayName("should fold the key before storing a dismissal")
+        void shouldFoldKeyOnDismiss() {
+            // arrange
+            when(dismissedRepository.insert(USER_ID, "net flix", "Net  Flix")).thenReturn(5L);
+
+            // act
+            Long id = recurringService.dismissPattern(USER_ID, new DismissPatternRequest("  Net   FLIX ", "Net  Flix"));
+
+            // assert & verify
+            assertEquals(5L, id);
+            verify(dismissedRepository).insert(USER_ID, "net flix", "Net  Flix");
+        }
+
+        @Test
+        @DisplayName("should list the user's dismissals")
+        void shouldListDismissals() {
+            // arrange
+            DismissedPatternDto dto = new DismissedPatternDto(5L, "net flix", "Net Flix", null);
+            when(dismissedRepository.findByUserId(USER_ID)).thenReturn(List.of(dto));
+
+            // act & assert & verify
+            assertEquals(List.of(dto), recurringService.getDismissedPatterns(USER_ID));
+        }
+
+        @Test
+        @DisplayName("should restore a dismissal the user owns")
+        void shouldRestore() {
+            // arrange
+            when(dismissedRepository.deleteByIdAndUserId(5L, USER_ID)).thenReturn(1);
+
+            // act
+            recurringService.restoreDismissedPattern(USER_ID, 5L);
+
+            // assert & verify
+            verify(dismissedRepository).deleteByIdAndUserId(5L, USER_ID);
+        }
+
+        @Test
+        @DisplayName("should throw not found when restoring someone else's dismissal")
+        void shouldThrowWhenNotOwned() {
+            // arrange
+            when(dismissedRepository.deleteByIdAndUserId(5L, USER_ID)).thenReturn(0);
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> recurringService.restoreDismissedPattern(USER_ID, 5L));
         }
     }
 }

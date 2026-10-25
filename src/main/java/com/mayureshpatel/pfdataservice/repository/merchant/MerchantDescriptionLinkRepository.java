@@ -111,4 +111,22 @@ public class MerchantDescriptionLinkRepository {
                 .param(SqlParams.USER_ID, userId)
                 .update();
     }
+
+    /**
+     * The normalized descriptions linked to any of the given merchants.
+     *
+     * @param userId      the user id
+     * @param merchantIds the merchants to look up
+     * @return their linked normalized descriptions; empty when no merchant ids are given
+     */
+    public java.util.Set<String> findNormalizedDescriptionsByMerchantIds(Long userId, java.util.Collection<Long> merchantIds) {
+        if (merchantIds == null || merchantIds.isEmpty()) {
+            return java.util.Set.of();
+        }
+        return new java.util.HashSet<>(jdbcClient.sql(MerchantDescriptionLinkQueries.FIND_NORMALIZED_DESCRIPTIONS_BY_MERCHANT_IDS)
+                .param(SqlParams.USER_ID, userId)
+                .param("merchantIds", merchantIds)
+                .query(String.class)
+                .list());
+    }
 }

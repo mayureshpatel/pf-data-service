@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissPatternRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissedPatternDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionUpdateRequest;
@@ -227,6 +229,73 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
             // act & assert & verify
             mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError());
+        }
+    }
+
+    /** The dismissals endpoints list, create (validated, idempotent per key) and restore a user's dismissed patterns. */
+    @Nested
+    @DisplayName("dismissals")
+    class DismissalTests {
+
+        @Test
+        @DisplayName("GET /dismissals should return the user's dismissals")
+        void shouldList() throws Exception {
+            // arrange
+            when(recurringTransactionService.getDismissedPatterns(USER_ID))
+                    .thenReturn(List.of(new DismissedPatternDto(5L, "net flix", "Net Flix", null)));
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/dismissals"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].patternKey").value("net flix"));
+        }
+
+        @Test
+        @DisplayName("POST /dismissals should store a dismissal and return its id")
+        void shouldCreate() throws Exception {
+            // arrange
+            when(recurringTransactionService.dismissPattern(eq(USER_ID), any(DismissPatternRequest.class))).thenReturn(5L);
+
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL + "/dismissals")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"patternKey\":\"net flix\",\"name\":\"Net Flix\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("5"));
+        }
+
+        @Test
+        @DisplayName("POST /dismissals should reject a blank key")
+        void shouldRejectBlankKey() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL + "/dismissals")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"patternKey\":\" \",\"name\":\"Net Flix\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("DELETE /dismissals/{id} should restore a dismissal")
+        void shouldRestore() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(delete(BASE_URL + "/dismissals/{id}", 5L).with(csrf()))
+                    .andExpect(status().isNoContent());
+            verify(recurringTransactionService).restoreDismissedPattern(USER_ID, 5L);
+        }
+
+        @Test
+        @DisplayName("DELETE /dismissals/{id} should return 404 for a dismissal that is not the user's")
+        void shouldReturn404() throws Exception {
+            // arrange
+            org.mockito.Mockito.doThrow(new ResourceNotFoundException("Dismissed pattern not found"))
+                    .when(recurringTransactionService).restoreDismissedPattern(USER_ID, 5L);
+
+            // act & assert & verify
+            mockMvc.perform(delete(BASE_URL + "/dismissals/{id}", 5L).with(csrf()))
+                    .andExpect(status().isNotFound());
         }
     }
 }

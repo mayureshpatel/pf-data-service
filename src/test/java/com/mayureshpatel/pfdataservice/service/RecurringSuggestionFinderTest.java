@@ -3,8 +3,11 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantDescriptionLinkRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.DismissedPatternRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +56,8 @@ class RecurringSuggestionFinderTest {
 
     @Mock private RecurringTransactionRepository recurringRepository;
     @Mock private TransactionRepository transactionRepository;
+    @Mock private DismissedPatternRepository dismissedRepository;
+    @Mock private MerchantDescriptionLinkRepository linkRepository;
 
     @InjectMocks private RecurringSuggestionFinder suggestionFinder;
 
@@ -110,7 +115,7 @@ class RecurringSuggestionFinderTest {
             Transaction y2 = Transaction.builder().transactionDate(now.minusDays(365).atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("Y").build();
             Transaction y3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(zone.getOffset())).amount(BigDecimal.TEN).description("Y").build();
 
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(w1, w2, w3, m1, m2, m3, b1, b2, b3, q1, q2, q3, y1, y2, y3));
 
             // act
@@ -133,7 +138,7 @@ class RecurringSuggestionFinderTest {
             Transaction t2 = Transaction.builder().transactionDate(now.minusDays(20).atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("R").build();
             Transaction t3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("R").build();
 
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(t1, t2, t3));
 
             // act
@@ -153,7 +158,7 @@ class RecurringSuggestionFinderTest {
             Transaction t3 = Transaction.builder().description(null).merchant(m).build();
             Transaction t4 = Transaction.builder().description("D").merchant(null).build();
 
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(t1, t2, t3, t4, t4, t4));
 
             // act
@@ -173,7 +178,7 @@ class RecurringSuggestionFinderTest {
             Transaction t2 = Transaction.builder().transactionDate(now.minusDays(50).atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("None").build();
             Transaction t3 = Transaction.builder().transactionDate(now.atStartOfDay().atOffset(OffsetDateTime.now().getOffset())).amount(BigDecimal.TEN).description("None").build();
 
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(List.of(t1, t2, t3));
 
             // act
@@ -200,7 +205,7 @@ class RecurringSuggestionFinderTest {
                     Transaction.builder().transactionDate(now.atStartOfDay().atOffset(offset.getOffset())).amount(new BigDecimal(LATEST_AMOUNT)).description(MERCHANT_NETFLIX).build()
             );
 
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(netflix);
 
             // act
@@ -232,7 +237,7 @@ class RecurringSuggestionFinderTest {
                         .build());
             }
 
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(group);
 
             // act
@@ -374,7 +379,7 @@ class RecurringSuggestionFinderTest {
         @MethodSource("boundaryCases")
         void shouldClassifyAtBoundary(String caseName, List<Long> intervalDays, Frequency expected) {
             // arrange
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(groupWithIntervals(intervalDays));
 
             // act
@@ -445,9 +450,68 @@ class RecurringSuggestionFinderTest {
         }
 
         private List<RecurringSuggestionDto> find(List<Transaction> transactions) {
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(Collections.emptyList());
             when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(transactions);
             return suggestionFinder.findSuggestions(USER_ID);
+        }
+
+        @Test
+        @DisplayName("should exclude a dismissed pattern and look the keys up for this user only")
+        void shouldExcludeDismissedPattern() {
+            // arrange
+            when(dismissedRepository.findKeysByUserId(USER_ID)).thenReturn(java.util.Set.of("vendor"));
+
+            // act
+            List<RecurringSuggestionDto> result = find(withGaps(VENDOR, 30, 30));
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+            verify(dismissedRepository).findKeysByUserId(USER_ID);
+        }
+
+        @Test
+        @DisplayName("should bring a pattern back once its dismissal is gone")
+        void shouldSuggestAgainAfterRestore() {
+            // arrange
+            when(dismissedRepository.findKeysByUserId(USER_ID)).thenReturn(java.util.Set.of());
+
+            // act & assert & verify
+            assertEquals(1, find(withGaps(VENDOR, 30, 30)).size());
+        }
+
+        @Test
+        @DisplayName("should exclude a pattern that matches a tracked merchant's linked description")
+        void shouldExcludeLinkedDescription() {
+            // arrange
+            RecurringTransaction tracked = RecurringTransaction.builder()
+                    .merchant(Merchant.builder().id(7L).name("Streaming Co").build())
+                    .build();
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(tracked));
+            when(linkRepository.findNormalizedDescriptionsByMerchantIds(USER_ID, java.util.Set.of(7L)))
+                    .thenReturn(java.util.Set.of("netflix.com 866"));
+            when(transactionRepository.findExpensesSince(eq(USER_ID), any()))
+                    .thenReturn(withGaps("NETFLIX.COM  866", 30, 30));
+
+            // act
+            List<RecurringSuggestionDto> result = suggestionFinder.findSuggestions(USER_ID);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should still exclude a pattern named like a paused tracked merchant")
+        void shouldExcludePausedTrackedMerchant() {
+            // arrange
+            RecurringTransaction paused = RecurringTransaction.builder()
+                    .active(false)
+                    .merchant(Merchant.builder().id(7L).name(VENDOR).build())
+                    .build();
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(paused));
+            when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(withGaps(VENDOR, 30, 30));
+
+            // act & assert & verify
+            assertTrue(suggestionFinder.findSuggestions(USER_ID).isEmpty());
         }
 
         @Test

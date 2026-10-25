@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissPatternRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissedPatternDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
@@ -112,6 +114,55 @@ public class RecurringTransactionController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
         recurringService.deleteRecurringTransaction(userDetails.getId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Lists the recurring patterns the user dismissed from the review.
+     *
+     * @param userDetails the authenticated user
+     * @return the user's dismissed patterns, newest first
+     */
+    @Operation(summary = "List dismissed recurring patterns", description = "Returns the patterns the authenticated user dismissed from the detected-patterns review")
+    @ApiResponse(responseCode = "200", description = "Dismissed patterns returned (possibly empty)")
+    @GetMapping("/dismissals")
+    public ResponseEntity<List<DismissedPatternDto>> getDismissedPatterns(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(recurringService.getDismissedPatterns(userDetails.getId()));
+    }
+
+    /**
+     * Dismisses a detected pattern so it is no longer suggested. Dismissing the same pattern twice
+     * is harmless.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the pattern key and display name
+     * @return the dismissal id
+     */
+    @Operation(summary = "Dismiss a recurring pattern", description = "Stops a detected pattern from being suggested until it is restored")
+    @ApiResponse(responseCode = "200", description = "Pattern dismissed; the dismissal id is returned")
+    @PostMapping("/dismissals")
+    public ResponseEntity<Long> dismissPattern(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody DismissPatternRequest request) {
+        return ResponseEntity.ok(recurringService.dismissPattern(userDetails.getId(), request));
+    }
+
+    /**
+     * Restores a dismissed pattern so it can be suggested again.
+     *
+     * @param userDetails the authenticated user
+     * @param id          the dismissal id
+     * @return 204 once restored
+     */
+    @Operation(summary = "Restore a dismissed pattern", description = "Removes a dismissal so the pattern can be suggested again")
+    @ApiResponse(responseCode = "204", description = "Dismissal removed")
+    @ApiResponse(responseCode = "404", description = "The dismissal does not exist or is not the user's")
+    @DeleteMapping("/dismissals/{id}")
+    public ResponseEntity<Void> restoreDismissedPattern(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id) {
+        recurringService.restoreDismissedPattern(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
     }
 }

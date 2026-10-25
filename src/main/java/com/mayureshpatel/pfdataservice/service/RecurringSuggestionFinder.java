@@ -1,9 +1,12 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringSuggestionDto;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantDescriptionLinkRepository;
+import com.mayureshpatel.pfdataservice.repository.recurring_history.DismissedPatternRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,8 @@ public class RecurringSuggestionFinder {
 
     private final RecurringTransactionRepository recurringRepository;
     private final TransactionRepository transactionRepository;
+    private final DismissedPatternRepository dismissedRepository;
+    private final MerchantDescriptionLinkRepository linkRepository;
 
     /**
      * Detects candidate recurring transaction patterns in the last 12 months of the user's
@@ -53,12 +58,12 @@ public class RecurringSuggestionFinder {
      * @return the detected suggestions, highest confidence first
      */
     public List<RecurringSuggestionDto> findSuggestions(Long userId) {
-        Set<String> existingMerchants = findExistingMerchantNames(userId);
+        Set<String> excludedKeys = findExcludedKeys(userId);
 
         LocalDate lookbackStart = LocalDate.now().minusYears(LOOKBACK_YEARS);
         List<Transaction> transactions = transactionRepository.findExpensesSince(userId, lookbackStart);
 
-        Map<String, List<Transaction>> groups = groupEligibleExpensesByMerchant(transactions, existingMerchants);
+        Map<String, List<Transaction>> groups = groupEligibleExpensesByMerchant(transactions, excludedKeys);
 
         List<RecurringSuggestionDto> suggestions = new ArrayList<>();
         for (Map.Entry<String, List<Transaction>> entry : groups.entrySet()) {
@@ -74,12 +79,22 @@ public class RecurringSuggestionFinder {
     }
 
     /**
-     * The user's already-confirmed recurring merchants, to exclude as duplicate suggestions.
+     * The folded keys detection must not suggest: patterns the user dismissed, plus the names of every
+     * tracked item's merchant (paused ones included -- pausing is a decision, not a gap) and every
+     * description linked to those merchants.
      */
-    private Set<String> findExistingMerchantNames(Long userId) {
-        return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(r -> r.getMerchant() != null ? r.getMerchant().getName().toLowerCase(Locale.ROOT) : "")
-                .collect(Collectors.toSet());
+    private Set<String> findExcludedKeys(Long userId) {
+        Set<String> excluded = new HashSet<>(dismissedRepository.findKeysByUserId(userId));
+        Set<Long> trackedMerchantIds = new HashSet<>();
+        for (RecurringTransaction tracked : recurringRepository.findAllByUserId(userId)) {
+            if (tracked.getMerchant() == null) continue;
+            excluded.add(DescriptionKeys.fold(tracked.getMerchant().getName()));
+            if (tracked.getMerchant().getId() != null) {
+                trackedMerchantIds.add(tracked.getMerchant().getId());
+            }
+        }
+        excluded.addAll(linkRepository.findNormalizedDescriptionsByMerchantIds(userId, trackedMerchantIds));
+        return excluded;
     }
 
     /**
