@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissPatternRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissedPatternDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.recurring.PriceChangeDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionUpdateRequest;
@@ -69,6 +70,12 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
             RecurringTransactionDto dto = RecurringTransactionDto.builder()
                     .id(RECURRING_ID)
                     .amount(new BigDecimal("50.00"))
+                    .active(false)
+                    .lastChargeDate(LocalDate.of(2026, 10, 3))
+                    .lastChargeAmount(new BigDecimal("60.00"))
+                    .projectedNextDate(LocalDate.of(2026, 11, 3))
+                    .overdue(true)
+                    .priceChange(new PriceChangeDto(new BigDecimal("50.00"), new BigDecimal("60.00"), LocalDate.of(2026, 9, 3)))
                     .build();
 
             when(recurringTransactionService.getRecurringTransactions(USER_ID)).thenReturn(List.of(dto));
@@ -77,7 +84,13 @@ class RecurringTransactionControllerTest extends BaseControllerTest {
             mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].id").value(RECURRING_ID));
+                    .andExpect(jsonPath("$[0].id").value(RECURRING_ID))
+                    .andExpect(jsonPath("$[0].active").value(false))
+                    .andExpect(jsonPath("$[0].lastChargeAmount").value(60.00))
+                    .andExpect(jsonPath("$[0].projectedNextDate").value("2026-11-03"))
+                    .andExpect(jsonPath("$[0].overdue").value(true))
+                    .andExpect(jsonPath("$[0].priceChange.newAmount").value(60.00))
+                    .andExpect(jsonPath("$[0].priceChange.since").value("2026-09-03"));
 
             verify(recurringTransactionService).getRecurringTransactions(USER_ID);
         }

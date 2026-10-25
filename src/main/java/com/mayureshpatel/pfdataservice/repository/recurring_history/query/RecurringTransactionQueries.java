@@ -136,4 +136,36 @@ public final class RecurringTransactionQueries {
             where account_id = :accountId
               and deleted_at is null
             """;
+
+    // language=SQL -- PF-884: matches each tracked item to the user's real expense charges, through the
+    // item's merchant id or through a description linked to that merchant (folded exactly like the
+    // link key: trim, collapse whitespace, lower case), and keeps the 12 newest per item.
+    public static final String FIND_RECENT_CHARGES_BY_RECURRING_ID = """
+            select ranked.recurring_id, ranked.date, ranked.amount
+            from (
+                select recurring_transactions.id as recurring_id,
+                       transactions.date,
+                       transactions.amount,
+                       row_number() over (
+                           partition by recurring_transactions.id
+                           order by transactions.date desc, transactions.id desc
+                       ) as rn
+                from recurring_transactions
+                    join accounts on accounts.user_id = recurring_transactions.user_id
+                    join transactions on transactions.account_id = accounts.id
+                where recurring_transactions.user_id = :userId
+                  and recurring_transactions.deleted_at is null
+                  and recurring_transactions.merchant_id is not null
+                  and transactions.deleted_at is null
+                  and transactions.type = 'EXPENSE'
+                  and (transactions.merchant_id = recurring_transactions.merchant_id
+                       or lower(btrim(regexp_replace(transactions.description, '\\s+', ' ', 'g'))) in (
+                           select links.normalized_description
+                           from merchant_description_links links
+                           where links.user_id = :userId
+                             and links.merchant_id = recurring_transactions.merchant_id))
+            ) ranked
+            where ranked.rn <= 12
+            order by ranked.recurring_id, ranked.rn
+            """;
 }

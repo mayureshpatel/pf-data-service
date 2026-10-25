@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissPatternRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.DismissedPatternDto;
@@ -20,7 +21,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * CRUD for a user's confirmed recurring transactions. Pattern detection (finding new candidates
@@ -43,14 +47,21 @@ public class RecurringTransactionService {
     private final DismissedPatternRepository dismissedRepository;
 
     /**
-     * Returns the user's active confirmed recurring transactions, next-occurrence first.
+     * Returns every one of the user's tracked recurring items, paused ones included, each decorated with
+     * what their real charges say (last charge, rolled-forward next date, overdue, price change), the
+     * soonest next date first.
      *
      * @param userId the user id
      * @return the user's recurring transactions
      */
     public List<RecurringTransactionDto> getRecurringTransactions(Long userId) {
-        return recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(userId).stream()
-                .map(RecurringTransactionDtoMapper::toDto)
+        LocalDate today = LocalDate.now();
+        Map<Long, List<RecurringCharge>> charges = recurringRepository.findRecentChargesByRecurringId(userId);
+        return recurringRepository.findAllByUserId(userId).stream()
+                .map(item -> RecurringTransactionDtoMapper.toDto(
+                        item, RecurringProjection.project(item, charges.getOrDefault(item.getId(), List.of()), today)))
+                .sorted(Comparator.comparing(RecurringTransactionDto::projectedNextDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 

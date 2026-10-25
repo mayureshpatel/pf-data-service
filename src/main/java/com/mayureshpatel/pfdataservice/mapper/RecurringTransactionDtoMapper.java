@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.mapper;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.service.RecurringProjection;
 
 /**
  * Converts the {@link RecurringTransaction} domain object into its API-facing
@@ -19,6 +20,16 @@ public final class RecurringTransactionDtoMapper {
      */
     public static RecurringTransactionDto toDto(RecurringTransaction recurring) {
         if (recurring == null) return null;
+        return toDto(recurring, new RecurringProjection.Projection(null, null, recurring.getNextDate(), false, null));
+    }
+
+    /**
+     * @param recurring  the domain recurring-transaction template to convert, or {@code null}
+     * @param projection what the template's real charges say about it (last charge, next date, price change)
+     * @return the equivalent DTO, or {@code null} if {@code recurring} was {@code null}
+     */
+    public static RecurringTransactionDto toDto(RecurringTransaction recurring, RecurringProjection.Projection projection) {
+        if (recurring == null) return null;
         return new RecurringTransactionDto(
                 recurring.getId(),
                 recurring.getUserId() != null ? recurring.getUserId() : null,
@@ -28,7 +39,12 @@ public final class RecurringTransactionDtoMapper {
                 Frequency.fromCode(recurring.getFrequency()),
                 recurring.getLastDate(),
                 recurring.getNextDate(),
-                recurring.isActive()
+                recurring.isActive(),
+                projection.lastChargeDate(),
+                projection.lastChargeAmount(),
+                projection.projectedNextDate(),
+                projection.overdue(),
+                projection.priceChange()
         );
     }
 }

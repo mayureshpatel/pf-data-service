@@ -69,7 +69,7 @@ class RecurringTransactionServiceTest {
                     .frequency("MONTHLY")
                     .active(true)
                     .build();
-            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(List.of(rt));
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(rt));
 
             // act
             List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);
@@ -267,6 +267,56 @@ class RecurringTransactionServiceTest {
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(999L).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
             assertThrows(AccessDeniedException.class, () -> recurringService.deleteRecurringTransaction(USER_ID, RECURRING_ID));
+        }
+    }
+
+    /** {@code getRecurringTransactions} returns paused items too and decorates each with its projection from the user's real charges. */
+    @Nested
+    @DisplayName("getRecurringTransactions projection")
+    class ProjectionTests {
+
+        @Test
+        @DisplayName("should return paused items with projection fields and leave the stored amount alone")
+        void shouldReturnPausedWithProjection() {
+            // arrange
+            RecurringTransaction paused = RecurringTransaction.builder()
+                    .id(RECURRING_ID).userId(USER_ID).frequency("MONTHLY").active(false)
+                    .amount(new java.math.BigDecimal("10.00"))
+                    .nextDate(java.time.LocalDate.now().plusDays(10))
+                    .build();
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(paused));
+            when(recurringRepository.findRecentChargesByRecurringId(USER_ID)).thenReturn(java.util.Map.of(
+                    RECURRING_ID, List.of(new com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge(
+                            java.time.LocalDate.now().minusDays(5), new java.math.BigDecimal("12.00")))));
+
+            // act
+            List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertFalse(result.get(0).active());
+            assertEquals(0, new java.math.BigDecimal("10.00").compareTo(result.get(0).amount()));
+            assertEquals(0, new java.math.BigDecimal("12.00").compareTo(result.get(0).lastChargeAmount()));
+            assertEquals(java.time.LocalDate.now().minusDays(5).plusMonths(1), result.get(0).projectedNextDate());
+            assertNotNull(result.get(0).priceChange());
+        }
+
+        @Test
+        @DisplayName("should order items by their projected next date")
+        void shouldOrderByProjectedNextDate() {
+            // arrange
+            java.time.LocalDate today = java.time.LocalDate.now();
+            RecurringTransaction later = RecurringTransaction.builder().id(1L).userId(USER_ID).frequency("MONTHLY")
+                    .amount(java.math.BigDecimal.TEN).nextDate(today.plusDays(20)).active(true).build();
+            RecurringTransaction sooner = RecurringTransaction.builder().id(2L).userId(USER_ID).frequency("MONTHLY")
+                    .amount(java.math.BigDecimal.TEN).nextDate(today.plusDays(2)).active(true).build();
+            when(recurringRepository.findAllByUserId(USER_ID)).thenReturn(List.of(later, sooner));
+
+            // act
+            List<RecurringTransactionDto> result = recurringService.getRecurringTransactions(USER_ID);
+
+            // assert & verify
+            assertEquals(List.of(2L, 1L), result.stream().map(RecurringTransactionDto::id).toList());
         }
     }
 

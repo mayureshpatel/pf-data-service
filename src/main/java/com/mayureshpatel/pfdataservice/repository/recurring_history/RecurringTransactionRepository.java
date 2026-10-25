@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.recurring_history;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge;
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionUpdateRequest;
@@ -13,7 +14,11 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** JDBC-backed persistence for {@link RecurringTransaction} templates. */
@@ -131,5 +136,29 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .param("accountId", accountId)
                 .query(Long.class)
                 .single();
+    }
+
+    /**
+     * Matches each of the user's tracked items to its real charges (PF-884): the user's non-deleted
+     * expense transactions assigned to the item's merchant, or whose folded description equals one
+     * linked to that merchant. At most the 12 newest per item, newest first. An item with no
+     * matches has no entry.
+     *
+     * @param userId the owning user's id
+     * @return recent matched charges keyed by tracked item id
+     */
+    public Map<Long, List<RecurringCharge>> findRecentChargesByRecurringId(Long userId) {
+        Map<Long, List<RecurringCharge>> byItem = new LinkedHashMap<>();
+        jdbcClient.sql(RecurringTransactionQueries.FIND_RECENT_CHARGES_BY_RECURRING_ID)
+                .param(SqlParams.USER_ID, userId)
+                .query((rs, rowNum) -> {
+                    byItem.computeIfAbsent(rs.getLong("recurring_id"), id -> new ArrayList<>())
+                            .add(new RecurringCharge(
+                                    rs.getObject("date", OffsetDateTime.class).toLocalDate(),
+                                    rs.getBigDecimal("amount")));
+                    return rowNum;
+                })
+                .list();
+        return byItem;
     }
 }

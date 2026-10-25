@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,6 +25,9 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     private RecurringTransactionRepository repository;
+
+    @Autowired
+    private JdbcClient jdbcClient;
 
     private static final Long USER_1 = 1L;
     private static final Long ACCOUNT_1 = 1L;
@@ -204,6 +208,114 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertEquals(1, countBeforeDelete);
             assertEquals(0, countAfterDelete);
+        }
+    }
+
+    /** {@code findRecentChargesByRecurringId} matches a tracked item to the user's real expense charges through its merchant id or its merchant's linked descriptions (folded for case and spacing), newest first, at most 12 per item, never crossing users or counting deleted or non-expense rows. */
+    @Nested
+    @DisplayName("findRecentChargesByRecurringId")
+    class FindRecentChargesTests {
+
+        private static final Long RECURRING_AMAZON = 1L;
+        private static final String TXN_INSERT = """
+                insert into transactions (account_id, merchant_id, amount, date, description, type)
+                values (:accountId, :merchantId, :amount, :date::timestamptz, :description, :type)
+                """;
+
+        private void insertCharge(long accountId, Long merchantId, String amount, String date, String description, String type) {
+            jdbcClient.sql(TXN_INSERT)
+                    .param("accountId", accountId)
+                    .param("merchantId", merchantId)
+                    .param("amount", new java.math.BigDecimal(amount))
+                    .param("date", date)
+                    .param("description", description)
+                    .param("type", type)
+                    .update();
+        }
+
+        private void insertLink(String description, String normalized) {
+            jdbcClient.sql("""
+                    insert into merchant_description_links (user_id, merchant_id, description, normalized_description)
+                    values (1, :merchantId, :description, :normalized)
+                    """)
+                    .param("merchantId", MERCHANT_AMAZON)
+                    .param("description", description)
+                    .param("normalized", normalized)
+                    .update();
+        }
+
+        private List<com.mayureshpatel.pfdataservice.domain.transaction.RecurringCharge> chargesOfAmazonItem() {
+            return repository.findRecentChargesByRecurringId(USER_1).getOrDefault(RECURRING_AMAZON, List.of());
+        }
+
+        @Test
+        @DisplayName("should match charges through the merchant id")
+        void shouldMatchThroughMerchantId() {
+            // arrange
+            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "15.99", "2026-09-01T12:00:00Z", "AMAZON PRIME", "EXPENSE");
+
+            // act & assert & verify
+            assertEquals(1, chargesOfAmazonItem().size());
+            assertEquals(0, new java.math.BigDecimal("15.99").compareTo(chargesOfAmazonItem().get(0).amount()));
+        }
+
+        @Test
+        @DisplayName("should match charges through a linked description folded for case and spacing")
+        void shouldMatchThroughLinkedDescription() {
+            // arrange
+            insertLink("AMZN MKTP", "amzn mktp");
+            insertCharge(ACCOUNT_1, null, "9.50", "2026-09-02T12:00:00Z", "  AMZN   mktp\t", "EXPENSE");
+
+            // act & assert & verify
+            assertEquals(1, chargesOfAmazonItem().size());
+        }
+
+        @Test
+        @DisplayName("should ignore soft-deleted, income and another user's transactions")
+        void shouldIgnoreNonMatching() {
+            // arrange
+            insertLink("AMZN MKTP", "amzn mktp");
+            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "1.00", "2026-09-03T12:00:00Z", "deleted", "EXPENSE");
+            jdbcClient.sql("update transactions set deleted_at = now() where description = 'deleted'").update();
+            insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "2.00", "2026-09-04T12:00:00Z", "refund", "INCOME");
+            insertCharge(4L, null, "3.00", "2026-09-05T12:00:00Z", "AMZN MKTP", "EXPENSE");
+
+            // act & assert & verify
+            assertTrue(chargesOfAmazonItem().isEmpty());
+        }
+
+        @Test
+        @DisplayName("should return at most 12 newest first per item")
+        void shouldCapAtTwelveNewestFirst() {
+            // arrange
+            for (int day = 1; day <= 15; day++) {
+                insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "5.00", String.format("2026-08-%02dT12:00:00Z", day), "AMAZON", "EXPENSE");
+            }
+
+            // act
+            var charges = chargesOfAmazonItem();
+
+            // assert & verify
+            assertEquals(12, charges.size());
+            assertTrue(charges.get(0).date().isAfter(charges.get(11).date()));
+        }
+
+        @Test
+        @DisplayName("should return no entry for an item without matching charges")
+        void shouldReturnNothingForUnmatchedItem() {
+            // act & assert & verify
+            assertNull(repository.findRecentChargesByRecurringId(USER_1).get(RECURRING_AMAZON));
+        }
+
+        @Test
+        @DisplayName("should return paused items from findAllByUserId")
+        void shouldReturnPausedFromFindAll() {
+            // arrange
+            jdbcClient.sql("update recurring_transactions set active = false where id = :id").param("id", RECURRING_AMAZON).update();
+
+            // act & assert & verify
+            assertEquals(2, repository.findAllByUserId(USER_1).size());
+            assertEquals(1, repository.findByUserIdAndActiveTrueOrderByNextDate(USER_1).size());
         }
     }
 }

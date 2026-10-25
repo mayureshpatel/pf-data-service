@@ -18,6 +18,11 @@ public record RecurringTransactionDto(
         Frequency frequency,
         LocalDate lastDate,
         LocalDate nextDate,
-        boolean active
+        boolean active,
+        LocalDate lastChargeDate,
+        BigDecimal lastChargeAmount,
+        LocalDate projectedNextDate,
+        boolean overdue,
+        PriceChangeDto priceChange
 ) {
 }

@@ -328,12 +328,6 @@ public class RecurringSuggestionFinder {
      * @return the projected next occurrence date
      */
     private static LocalDate calculateNextDate(LocalDate lastDate, Frequency frequency) {
-        return switch (frequency) {
-            case MONTHLY -> lastDate.plusMonths(1);
-            case WEEKLY -> lastDate.plusWeeks(1);
-            case BI_WEEKLY -> lastDate.plusWeeks(2);
-            case QUARTERLY -> lastDate.plusMonths(3);
-            case YEARLY -> lastDate.plusYears(1);
-        };
+        return frequency.advance(lastDate);
     }
 }
