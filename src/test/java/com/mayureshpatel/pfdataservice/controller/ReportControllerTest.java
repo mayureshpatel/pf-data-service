@@ -1,5 +1,12 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreCompare;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreFilter;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreGroupBy;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreMeasure;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreResultDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRowDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
 import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
@@ -15,6 +22,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +39,11 @@ class ReportControllerTest extends BaseControllerTest {
 
     private static final String PARAM_START_DATE = "startDate";
     private static final String PARAM_END_DATE = "endDate";
+    private static final String EXPLORE_URL = "/api/v1/reports/explore";
+    private static final String PARAM_MEASURE = "measure";
+    private static final String PARAM_GROUP_BY = "groupBy";
+    private static final String JAN_1 = "2026-01-01";
+    private static final String JAN_31 = "2026-01-31";
 
     /** {@code GET /api/v1/reports/net-worth} returns the service's series for an explicit {@code startDate}/{@code endDate}, and -- unlike the other report endpoints below -- defaults to the trailing 12 months (from the 1st of that starting month through today) when no range is given at all. */
     @Nested
@@ -162,6 +175,82 @@ class ReportControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$[0].expense").value(1800.00));
 
             verify(reportService).getMonthlyReportData(USER_ID, start, end);
+        }
+    }
+
+    /** {@code GET /api/v1/reports/explore} binds every parameter, defaults side to spending and compare to none, and rejects a measure/grouping pair that makes no sense. */
+    @Nested
+    @DisplayName("explore")
+    class ExploreTests {
+
+        private ExploreResultDto result() {
+            return new ExploreResultDto(
+                    List.of(new ExploreRowDto("5", "Food", new BigDecimal("100.00"), new BigDecimal("80.00"), 2L)),
+                    new BigDecimal("100.00"), new BigDecimal("80.00"), 2L, 38L,
+                    LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31), "same days last year (Jan 1 to Jan 31, 2025)", false);
+        }
+
+        @Test
+        @DisplayName("GET /explore should bind every parameter and return the result")
+        void explore_shouldBindEveryParameter() throws Exception {
+            // arrange
+            ExploreFilter filter = new ExploreFilter(List.of(1L, 2L), 7L, false, null, true, 3L, false, new BigDecimal("5"), new BigDecimal("500"));
+            when(exploreService.explore(eq(USER_ID), eq(ExploreMeasure.COUNT), eq(ExploreSide.INCOME), eq(ExploreGroupBy.MERCHANT),
+                    eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 1, 31)), eq(ExploreCompare.SAME_DAYS_LAST_YEAR), eq(filter)))
+                    .thenReturn(result());
+
+            // act & assert & verify
+            mockMvc.perform(get(EXPLORE_URL)
+                            .param(PARAM_MEASURE, "COUNT").param("side", "INCOME").param(PARAM_GROUP_BY, "MERCHANT")
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31)
+                            .param("compare", "SAME_DAYS_LAST_YEAR")
+                            .param("accountIds", "1", "2").param("categoryId", "7").param("noMerchant", "true")
+                            .param("tagId", "3").param("minAmount", "5").param("maxAmount", "500"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.rows", hasSize(1)))
+                    .andExpect(jsonPath("$.rows[0].label").value("Food"))
+                    .andExpect(jsonPath("$.rows[0].comparisonValue").value(80.00))
+                    .andExpect(jsonPath("$.excludedCount").value(38))
+                    .andExpect(jsonPath("$.comparisonLabel").value("same days last year (Jan 1 to Jan 31, 2025)"));
+        }
+
+        @Test
+        @DisplayName("GET /explore should default side to SPENDING and compare to NONE")
+        void explore_shouldApplyDefaults() throws Exception {
+            // arrange
+            when(exploreService.explore(eq(USER_ID), eq(ExploreMeasure.SPENDING), eq(ExploreSide.SPENDING), eq(ExploreGroupBy.CATEGORY),
+                    any(LocalDate.class), any(LocalDate.class), eq(ExploreCompare.NONE), eq(ExploreFilter.none())))
+                    .thenReturn(result());
+
+            // act & assert & verify
+            mockMvc.perform(get(EXPLORE_URL)
+                            .param(PARAM_MEASURE, "SPENDING").param(PARAM_GROUP_BY, "CATEGORY")
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("GET /explore should return 400 for an invalid measure/grouping pair")
+        void explore_shouldReturn400ForInvalidPair() throws Exception {
+            // arrange
+            when(exploreService.explore(any(), eq(ExploreMeasure.NET), any(), eq(ExploreGroupBy.CATEGORY), any(), any(), any(), any()))
+                    .thenThrow(new IllegalArgumentException("Net only groups by time"));
+
+            // act & assert & verify
+            mockMvc.perform(get(EXPLORE_URL)
+                            .param(PARAM_MEASURE, "NET").param(PARAM_GROUP_BY, "CATEGORY")
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("GET /explore should return 400 for an unknown grouping")
+        void explore_shouldReturn400ForUnknownGrouping() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(get(EXPLORE_URL)
+                            .param(PARAM_MEASURE, "SPENDING").param(PARAM_GROUP_BY, "NOPE")
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
+                    .andExpect(status().isBadRequest());
         }
     }
 }

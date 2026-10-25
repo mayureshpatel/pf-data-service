@@ -1,5 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRequest;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreResultDto;
+import com.mayureshpatel.pfdataservice.service.ExploreService;
 import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
@@ -12,7 +15,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +37,7 @@ import java.util.List;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ExploreService exploreService;
 
     /**
      * Returns the user's total net worth as of the end of each month in the requested range,
@@ -114,5 +120,25 @@ public class ReportController {
             @RequestParam LocalDate endDate) {
 
         return ResponseEntity.ok(reportService.getMonthlyReportData(userDetails.getId(), startDate, endDate));
+    }
+
+    /**
+     * Runs the Reports explorer: one measure over one grouping, under stacked filters, optionally compared
+     * with an equivalent earlier period. See {@link ExploreRequest} for the parameters.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the explorer parameters, bound by name
+     * @return the groups, totals and comparison
+     */
+    @Operation(summary = "Explore spending and income", description = "Any measure by any grouping under stacked filters, with an optional comparison period; transfers and adjustments are excluded")
+    @ApiResponse(responseCode = "200", description = "Explorer result returned")
+    @ApiResponse(responseCode = "400", description = "The measure cannot be grouped that way (net and savings rate group by time only)")
+    @GetMapping("/explore")
+    public ResponseEntity<ExploreResultDto> explore(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @ModelAttribute ExploreRequest request) {
+        return ResponseEntity.ok(exploreService.explore(
+                userDetails.getId(), request.measure(), request.sideOrDefault(), request.groupBy(),
+                request.startDate(), request.endDate(), request.compareOrDefault(), request.toFilter()));
     }
 }
