@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Frequency;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
@@ -21,6 +22,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -407,6 +409,175 @@ class RecurringSuggestionFinderTest {
                         .build());
             }
             return group;
+        }
+    }
+
+    /** PF-884: detection finds yearly charges seen twice, judges stability against each frequency's own tolerance, treats a price change as one pattern while reporting the previous price, and reports the account and a folded pattern key. */
+    @Nested
+    @DisplayName("PF-884 detection upgrades")
+    class DetectionUpgradeTests {
+
+        private static final String VENDOR = "Vendor";
+
+        private Transaction tx(LocalDate date, String amount, String description, Account account) {
+            return Transaction.builder()
+                    .transactionDate(date.atStartOfDay().atOffset(ZoneOffset.UTC))
+                    .amount(new BigDecimal(amount))
+                    .description(description)
+                    .account(account)
+                    .build();
+        }
+
+        /** Builds a group whose consecutive gaps are exactly {@code gaps}, ending today. */
+        private List<Transaction> withGaps(String description, long... gaps) {
+            long span = 0;
+            for (long gap : gaps) {
+                span += gap;
+            }
+            LocalDate cursor = LocalDate.now().minusDays(span);
+            List<Transaction> group = new ArrayList<>();
+            group.add(tx(cursor, "10.00", description, null));
+            for (long gap : gaps) {
+                cursor = cursor.plusDays(gap);
+                group.add(tx(cursor, "10.00", description, null));
+            }
+            return group;
+        }
+
+        private List<RecurringSuggestionDto> find(List<Transaction> transactions) {
+            when(recurringRepository.findByUserIdAndActiveTrueOrderByNextDate(USER_ID)).thenReturn(Collections.emptyList());
+            when(transactionRepository.findExpensesSince(eq(USER_ID), any())).thenReturn(transactions);
+            return suggestionFinder.findSuggestions(USER_ID);
+        }
+
+        @Test
+        @DisplayName("should find a yearly charge seen twice about a year apart")
+        void shouldFindYearlyWithTwoSightings() {
+            // act
+            List<RecurringSuggestionDto> result = find(withGaps(VENDOR, 365));
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(Frequency.YEARLY, result.get(0).frequency());
+            assertEquals(2, result.get(0).occurrenceCount());
+        }
+
+        @Test
+        @DisplayName("should not call a two-sighting monthly group a pattern")
+        void shouldNeedThreeSightingsForMonthly() {
+            // act & assert & verify
+            assertTrue(find(withGaps(VENDOR, 30)).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should ask the lookback for about three years of expenses")
+        void shouldLookBackThreeYears() {
+            // act
+            find(Collections.emptyList());
+
+            // assert & verify
+            org.mockito.ArgumentCaptor<LocalDate> since = org.mockito.ArgumentCaptor.forClass(LocalDate.class);
+            verify(transactionRepository).findExpensesSince(eq(USER_ID), since.capture());
+            assertEquals(LocalDate.now().minusYears(3), since.getValue());
+        }
+
+        @Test
+        @DisplayName("should accept a quarterly group whose gaps vary by 8 days")
+        void shouldToleratePeriodicSlipForQuarterly() {
+            // act & assert & verify
+            assertEquals(Frequency.QUARTERLY, find(withGaps(VENDOR, 82, 98, 90)).get(0).frequency());
+        }
+
+        @Test
+        @DisplayName("should accept a yearly group whose gaps vary by 7 days")
+        void shouldToleratePeriodicSlipForYearly() {
+            // act & assert & verify
+            assertEquals(Frequency.YEARLY, find(withGaps(VENDOR, 358, 372)).get(0).frequency());
+        }
+
+        @Test
+        @DisplayName("should reject a weekly group with a 3-day slip")
+        void shouldBeStrictForWeekly() {
+            // act & assert & verify
+            assertTrue(find(withGaps(VENDOR, 4, 10, 7)).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should reject a monthly group with a 12-day slip")
+        void shouldRejectLargeMonthlySlip() {
+            // act & assert & verify
+            assertTrue(find(withGaps(VENDOR, 42, 30, 18)).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should report the previous amount and the date the price changed")
+        void shouldReportPriceChange() {
+            // arrange
+            LocalDate now = LocalDate.now();
+            List<Transaction> group = List.of(
+                    tx(now.minusMonths(3), "10.00", MERCHANT_NETFLIX, null),
+                    tx(now.minusMonths(2), "10.00", MERCHANT_NETFLIX, null),
+                    tx(now.minusMonths(1), "12.00", MERCHANT_NETFLIX, null),
+                    tx(now, "12.00", MERCHANT_NETFLIX, null));
+
+            // act
+            RecurringSuggestionDto suggestion = find(group).get(0);
+
+            // assert & verify
+            assertEquals(0, new BigDecimal("12.00").compareTo(suggestion.amount()));
+            assertEquals(0, new BigDecimal("10.00").compareTo(suggestion.previousAmount()));
+            assertEquals(now.minusMonths(1), suggestion.priceChangedOn());
+        }
+
+        @Test
+        @DisplayName("should leave previousAmount and priceChangedOn null when the price never changed")
+        void shouldLeavePriceChangeNullWhenSteady() {
+            // act
+            RecurringSuggestionDto suggestion = find(withGaps(VENDOR, 30, 30)).get(0);
+
+            // assert & verify
+            assertNull(suggestion.previousAmount());
+            assertNull(suggestion.priceChangedOn());
+        }
+
+        @Test
+        @DisplayName("should report the account of the most recent charge")
+        void shouldReportMostRecentAccount() {
+            // arrange
+            LocalDate now = LocalDate.now();
+            Account old = Account.builder().id(1L).name("Old Card").build();
+            Account current = Account.builder().id(2L).name("New Card").build();
+            List<Transaction> group = List.of(
+                    tx(now.minusDays(60), "10.00", VENDOR, old),
+                    tx(now.minusDays(30), "10.00", VENDOR, old),
+                    tx(now, "10.00", VENDOR, current));
+
+            // act
+            RecurringSuggestionDto suggestion = find(group).get(0);
+
+            // assert & verify
+            assertEquals(2L, suggestion.accountId());
+            assertEquals("New Card", suggestion.accountName());
+        }
+
+        @Test
+        @DisplayName("should fold case and spacing in the pattern key and group spellings together")
+        void shouldFoldThePatternKey() {
+            // arrange
+            LocalDate now = LocalDate.now();
+            List<Transaction> group = List.of(
+                    tx(now.minusDays(60), "10.00", "Net  Flix", null),
+                    tx(now.minusDays(30), "10.00", "net flix ", null),
+                    tx(now, "10.00", "Net  Flix", null));
+
+            // act
+            List<RecurringSuggestionDto> result = find(group);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals("net flix", result.get(0).patternKey());
+            assertEquals(3, result.get(0).occurrenceCount());
+            assertEquals("Net  Flix", result.get(0).merchant().name());
         }
     }
 }

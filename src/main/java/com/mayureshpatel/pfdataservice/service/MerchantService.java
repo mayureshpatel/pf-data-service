@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -50,7 +49,7 @@ public class MerchantService {
      * @return the case-folded, whitespace-collapsed form, or {@code ""} for a null input
      */
     private static String lightNormalize(String raw) {
-        return raw == null ? "" : raw.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        return DescriptionKeys.fold(raw);
     }
 
     /**

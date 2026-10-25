@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -36,6 +37,9 @@ import java.util.stream.Collectors;
 public class RecurringSuggestionFinder {
 
     private static final int MIN_OCCURRENCES_FOR_RECURRING_PATTERN = 3;
+    /** a yearly charge is judged on two sightings: three would need a three-year-old first charge. */
+    private static final int MIN_OCCURRENCES_FOR_YEARLY_PATTERN = 2;
+    private static final int LOOKBACK_YEARS = 3;
 
     private final RecurringTransactionRepository recurringRepository;
     private final TransactionRepository transactionRepository;
@@ -51,8 +55,8 @@ public class RecurringSuggestionFinder {
     public List<RecurringSuggestionDto> findSuggestions(Long userId) {
         Set<String> existingMerchants = findExistingMerchantNames(userId);
 
-        LocalDate oneYearAgo = LocalDate.now().minusYears(1);
-        List<Transaction> transactions = transactionRepository.findExpensesSince(userId, oneYearAgo);
+        LocalDate lookbackStart = LocalDate.now().minusYears(LOOKBACK_YEARS);
+        List<Transaction> transactions = transactionRepository.findExpensesSince(userId, lookbackStart);
 
         Map<String, List<Transaction>> groups = groupEligibleExpensesByMerchant(transactions, existingMerchants);
 
@@ -91,16 +95,34 @@ public class RecurringSuggestionFinder {
         Map<String, List<Transaction>> groups = new HashMap<>();
 
         for (Transaction t : transactions) {
-            String name = t.getMerchant() != null ? t.getMerchant().getName() : t.getDescription();
-            if (name == null) continue;
+            String key = DescriptionKeys.fold(nameOf(t));
+            if (key.isEmpty() || existingMerchants.contains(key)) continue;
 
-            name = name.trim();
-            if (existingMerchants.contains(name.toLowerCase(Locale.ROOT))) continue;
-
-            groups.computeIfAbsent(name, k -> new ArrayList<>()).add(t);
+            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(t);
         }
 
         return groups;
+    }
+
+    /**
+     * The text a transaction is grouped under: its merchant's name when it has one, otherwise its
+     * raw description.
+     */
+    private static String nameOf(Transaction t) {
+        return t.getMerchant() != null ? t.getMerchant().getName() : t.getDescription();
+    }
+
+    /**
+     * The spelling shown for a group: the raw name used by most of its transactions.
+     */
+    private static String displayName(List<Transaction> group) {
+        return group.stream()
+                .map(t -> nameOf(t).strip())
+                .collect(Collectors.groupingBy(n -> n, LinkedHashMap::new, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("");
     }
 
     /**
@@ -110,37 +132,78 @@ public class RecurringSuggestionFinder {
      * @return the suggestion, or {@code null} if the group is too small or its intervals aren't
      * stable enough to call recurring
      */
-    private static RecurringSuggestionDto analyzeGroup(String merchantName, List<Transaction> group) {
-        if (group.size() < MIN_OCCURRENCES_FOR_RECURRING_PATTERN) {
-            return null;
-        }
-
+    private static RecurringSuggestionDto analyzeGroup(String patternKey, List<Transaction> group) {
         // filter out any transactions with null dates to prevent npe during sort
         List<Transaction> datedGroup = group.stream()
                 .filter(t -> t.getTransactionDate() != null)
                 .collect(Collectors.toList());
 
-        if (datedGroup.size() < MIN_OCCURRENCES_FOR_RECURRING_PATTERN) {
+        if (datedGroup.size() < MIN_OCCURRENCES_FOR_YEARLY_PATTERN) {
             return null;
         }
 
         datedGroup.sort(Comparator.comparing(Transaction::getTransactionDate));
 
         Frequency frequency = detectFrequency(datedGroup);
-        if (frequency == null) {
+        if (frequency == null || !hasEnoughSightings(datedGroup.size(), frequency)) {
             return null;
         }
 
         Transaction lastTxn = datedGroup.get(datedGroup.size() - 1);
+        LocalDate lastDate = lastTxn.getTransactionDate().toLocalDate();
+        PriceChange change = findPriceChange(datedGroup);
         return RecurringSuggestionDto.builder()
-                .merchant(MerchantDto.builder().name(merchantName).build())
+                .merchant(MerchantDto.builder().name(displayName(datedGroup)).build())
                 .amount(lastTxn.getAmount())
                 .frequency(frequency)
-                .lastDate(lastTxn.getTransactionDate().toLocalDate())
-                .nextDate(calculateNextDate(lastTxn.getTransactionDate().toLocalDate(), frequency))
+                .lastDate(lastDate)
+                .nextDate(calculateNextDate(lastDate, frequency))
                 .occurrenceCount(datedGroup.size())
                 .confidenceScore(calculateConfidenceScore(datedGroup.size()))
+                .accountId(lastTxn.getAccount() != null ? lastTxn.getAccount().getId() : null)
+                .accountName(lastTxn.getAccount() != null ? lastTxn.getAccount().getName() : null)
+                .previousAmount(change != null ? change.previousAmount() : null)
+                .priceChangedOn(change != null ? change.changedOn() : null)
+                .patternKey(patternKey)
                 .build();
+    }
+
+    /**
+     * A yearly pattern needs only two sightings; every other frequency needs three.
+     */
+    private static boolean hasEnoughSightings(int sightings, Frequency frequency) {
+        int required = frequency == Frequency.YEARLY
+                ? MIN_OCCURRENCES_FOR_YEARLY_PATTERN
+                : MIN_OCCURRENCES_FOR_RECURRING_PATTERN;
+        return sightings >= required;
+    }
+
+    /**
+     * The price before the newest unbroken run of equal amounts and the date that run began, or
+     * {@code null} when the amount never changed.
+     */
+    private static PriceChange findPriceChange(List<Transaction> datedGroup) {
+        BigDecimal latest = datedGroup.get(datedGroup.size() - 1).getAmount();
+        if (latest == null) {
+            return null;
+        }
+        int runStart = datedGroup.size() - 1;
+        while (runStart > 0 && latest.compareTo(amountOrZero(datedGroup.get(runStart - 1))) == 0) {
+            runStart--;
+        }
+        if (runStart == 0) {
+            return null;
+        }
+        return new PriceChange(
+                datedGroup.get(runStart - 1).getAmount(),
+                datedGroup.get(runStart).getTransactionDate().toLocalDate());
+    }
+
+    private static BigDecimal amountOrZero(Transaction t) {
+        return t.getAmount() != null ? t.getAmount() : BigDecimal.ZERO;
+    }
+
+    private record PriceChange(BigDecimal previousAmount, LocalDate changedOn) {
     }
 
     /**
@@ -161,9 +224,28 @@ public class RecurringSuggestionFinder {
     private static Frequency detectFrequency(List<Transaction> group) {
         List<Long> intervals = computeIntervals(group);
         double avgInterval = intervals.stream().mapToLong(val -> val).average().orElse(0);
-        boolean stable = intervals.stream().allMatch(i -> Math.abs(i - avgInterval) < 5);
+        Frequency frequency = classifyFrequency(avgInterval);
+        if (frequency == null) {
+            return null;
+        }
+        double tolerance = toleranceDays(frequency);
+        boolean stable = intervals.stream().allMatch(i -> Math.abs(i - avgInterval) < tolerance);
 
-        return stable ? classifyFrequency(avgInterval) : null;
+        return stable ? frequency : null;
+    }
+
+    /**
+     * How far (in days, exclusive) a single gap may stray from the group's average gap before the
+     * group stops looking recurring: tight for weekly charges, looser for quarterly and yearly ones
+     * whose dates drift more with weekends and holidays.
+     */
+    private static double toleranceDays(Frequency frequency) {
+        return switch (frequency) {
+            case WEEKLY -> 2;
+            case BI_WEEKLY, MONTHLY -> 5;
+            case QUARTERLY -> 10;
+            case YEARLY -> 14;
+        };
     }
 
     /**

@@ -15,6 +15,11 @@ public record RecurringSuggestionDto(
         LocalDate lastDate,
         LocalDate nextDate,
         int occurrenceCount,
-        double confidenceScore
+        double confidenceScore,
+        Long accountId,
+        String accountName,
+        BigDecimal previousAmount,
+        LocalDate priceChangedOn,
+        String patternKey
 ) {
 }
