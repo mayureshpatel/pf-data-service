@@ -490,14 +490,14 @@ public final class TransactionQueries {
     // spelling. the search and unlinked-only fragments below are appended by the repository.
     public static final String DESCRIPTIONS_GROUPED = """
             with grouped as (
-                select lower(regexp_replace(btrim(transactions.description), '\\s+', ' ', 'g')) as norm_key,
+                select lower(btrim(regexp_replace(transactions.description, '\\s+', ' ', 'g'))) as norm_key,
                        mode() within group (order by transactions.description) as description,
                        count(*) as transaction_count
                 from transactions
                     join accounts on transactions.account_id = accounts.id
                 where accounts.user_id = :userId
                   and transactions.deleted_at is null
-                  and btrim(transactions.description) <> ''
+                  and btrim(regexp_replace(transactions.description, '\\s+', ' ', 'g')) <> ''
                 group by 1
             )
             """;

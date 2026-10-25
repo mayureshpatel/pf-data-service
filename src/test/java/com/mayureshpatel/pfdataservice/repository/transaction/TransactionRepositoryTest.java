@@ -1215,6 +1215,24 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("should fold leading and trailing tabs and line breaks the same way the link key does")
+        void shouldFoldSurroundingWhitespaceLikeTheLinkKey() {
+            // arrange -- "ZZQ Trail\r" and "ZZQ Trail" are one description to MerchantService.lightNormalize
+            insertTransaction(1L, "ZZQ Trail\r");
+            insertTransaction(1L, "ZZQ Trail");
+            insertLink(USER_ID, MERCHANT_AMAZON, "ZZQ Trail", "zzq trail");
+
+            // act
+            List<TransactionDescriptionDto> result = transactionRepository.findDescriptions(
+                    USER_ID, "zzq trail", false, PageRequest.of(0, 10)).getContent();
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(2L, result.get(0).transactionCount());
+            assertEquals(MERCHANT_AMAZON, result.get(0).merchantId());
+        }
+
+        @Test
         @DisplayName("should not count soft-deleted transactions")
         void shouldIgnoreSoftDeleted() {
             // arrange
