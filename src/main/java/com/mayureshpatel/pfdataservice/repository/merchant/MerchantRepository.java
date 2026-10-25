@@ -4,10 +4,8 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
-import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
 import com.mayureshpatel.pfdataservice.repository.SqlParams;
-import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantReportDataRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.mapper.MerchantTotalRowMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.query.MerchantQueries;
@@ -28,8 +26,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * JDBC-backed persistence for {@link Merchant}, including the report-facing spend-breakdown
- * queries ({@link #findMerchantTotals}/{@link #findMerchantReportData}). Post-PF-845, merchants
+ * JDBC-backed persistence for {@link Merchant}, including the Dashboard's spend-breakdown
+ * query ({@link #findMerchantTotals}). Post-PF-845, merchants
  * are plain user-owned entities with no fragmentation/clustering concept -- see
  * {@code MerchantQueries}'s own doc for the column-naming history that predates that change.
  */
@@ -40,7 +38,6 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
     private final JdbcClient jdbcClient;
     private final MerchantRowMapper rowMapper;
     private final MerchantTotalRowMapper merchantTotalRowMapper;
-    private final MerchantReportDataRowMapper merchantReportDataRowMapper;
 
     @Override
     public Optional<Merchant> findById(Long aLong) {
@@ -129,7 +126,7 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
 
     /**
      * Dashboard-facing spend-by-merchant breakdown for the given date range (expense transactions
-     * only). See {@link #findMerchantReportData} for the Reports feature's richer equivalent.
+     * only).
      *
      * @param userId    the owning user's id
      * @param startDate the inclusive range start
@@ -142,19 +139,6 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .param("startDate", startDate)
                 .param("endDate", endDate)
                 .query(merchantTotalRowMapper)
-                .list();
-    }
-
-    /**
-     * PF-823: Reports' Merchants tab data for the given range, aggregated fully server-side --
-     * no row cap, unlike the client-side approach it replaces.
-     */
-    public List<MerchantReportDataDto> findMerchantReportData(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
-        return jdbcClient.sql(MerchantQueries.FIND_MERCHANT_REPORT_DATA)
-                .param(SqlParams.USER_ID, userId)
-                .param("startDate", startDate)
-                .param("endDate", endDate)
-                .query(merchantReportDataRowMapper)
                 .list();
     }
 

@@ -4,8 +4,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * SQL query constants for {@code MerchantRepository}. The {@code representative_merchant_id}/
- * {@code display_name} column aliases in {@link #FIND_MERCHANT_TOTALS}/
- * {@link #FIND_MERCHANT_REPORT_DATA} predate PF-845 (when merchant identities could still
+ * {@code display_name} column aliases in {@link #FIND_MERCHANT_TOTALS}
+ * predate PF-845 (when merchant identities could still
  * fragment into clusters needing a "representative" one); kept as-is post-PF-845 to avoid
  * breaking the frontend wire contract, even though every merchant is now its own representative.
  */
@@ -79,25 +79,6 @@ public final class MerchantQueries {
             from transactions t
             join accounts a on t.account_id = a.id
             join merchants m on t.merchant_id = m.id
-            where a.user_id = :userId
-              and t.date >= :startDate
-              and t.date < :endDate
-              and t.type = 'EXPENSE'
-              and t.deleted_at is null
-            group by m.id, m.name
-            """;
-
-    // language=SQL -- PF-823/PF-845: same simplification as FIND_MERCHANT_TOTALS above.
-    public static final String FIND_MERCHANT_REPORT_DATA = """
-            select m.id as representative_merchant_id,
-                   m.name as display_name,
-                   sum(t.amount) as total,
-                   count(*) as txn_count,
-                   array_remove(array_agg(distinct c.name), null) as category_names
-            from transactions t
-            join accounts a on t.account_id = a.id
-            join merchants m on t.merchant_id = m.id
-            left join categories c on t.category_id = c.id
             where a.user_id = :userId
               and t.date >= :startDate
               and t.date < :endDate

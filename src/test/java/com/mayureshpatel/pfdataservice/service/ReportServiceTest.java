@@ -2,18 +2,12 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
-import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
-import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
-import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
-import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReportRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -39,12 +33,6 @@ class ReportServiceTest {
 
     @Mock
     private SnapshotService snapshotService;
-
-    @Mock
-    private TransactionReportRepository transactionReportRepository;
-
-    @Mock
-    private MerchantRepository merchantRepository;
 
     @InjectMocks
     private ReportService reportService;
@@ -161,112 +149,4 @@ class ReportServiceTest {
         }
     }
 
-    /**
-     * A PF-823 regression suite: all three report-data methods convert the caller's
-     * caller-inclusive {@code LocalDate} end bound into an exclusive UTC-midnight-of-the-next-day
-     * {@code OffsetDateTime} before querying, so that same-day activity on the end date itself
-     * isn't silently dropped by a half-open repository query -- and each method otherwise passes
-     * repository rows straight through unmodified.
-     */
-    @Nested
-    @DisplayName("getCategoryReportData / getMerchantReportData / getMonthlyReportData (PF-823)")
-    class ReportDataDateBoundaryTests {
-
-        private final ArgumentCaptor<OffsetDateTime> startCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
-        private final ArgumentCaptor<OffsetDateTime> endCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
-
-        @Test
-        @DisplayName("getCategoryReportData anchors the caller-inclusive end date to UTC midnight of the *next* day")
-        void shouldAnchorCategoryReportDateBoundsHalfOpen() {
-            // arrange
-            when(transactionReportRepository.findCategoryReportData(eq(USER_ID), any(), any())).thenReturn(List.of());
-
-            // act
-            reportService.getCategoryReportData(USER_ID, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
-
-            // assert & verify
-            verify(transactionReportRepository).findCategoryReportData(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
-            assertEquals(OffsetDateTime.parse("2026-03-01T00:00:00Z"), startCaptor.getValue());
-            assertEquals(OffsetDateTime.parse("2026-04-01T00:00:00Z"), endCaptor.getValue(),
-                    "the caller's inclusive endDate (3/31) must become the exclusive bound 4/1, "
-                            + "not 3/31 itself -- otherwise same-day activity on 3/31 would be dropped");
-        }
-
-        @Test
-        @DisplayName("getMerchantReportData anchors the caller-inclusive end date to UTC midnight of the *next* day")
-        void shouldAnchorMerchantReportDateBoundsHalfOpen() {
-            // arrange
-            when(merchantRepository.findMerchantReportData(eq(USER_ID), any(), any())).thenReturn(List.of());
-
-            // act
-            reportService.getMerchantReportData(USER_ID, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
-
-            // assert & verify
-            verify(merchantRepository).findMerchantReportData(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
-            assertEquals(OffsetDateTime.parse("2026-03-01T00:00:00Z"), startCaptor.getValue());
-            assertEquals(OffsetDateTime.parse("2026-04-01T00:00:00Z"), endCaptor.getValue());
-        }
-
-        @Test
-        @DisplayName("getMonthlyReportData anchors the caller-inclusive end date to UTC midnight of the *next* day")
-        void shouldAnchorMonthlyReportDateBoundsHalfOpen() {
-            // arrange
-            when(transactionReportRepository.findMonthlyIncomeExpense(eq(USER_ID), any(), any())).thenReturn(List.of());
-
-            // act
-            reportService.getMonthlyReportData(USER_ID, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
-
-            // assert & verify
-            verify(transactionReportRepository).findMonthlyIncomeExpense(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
-            assertEquals(OffsetDateTime.parse("2026-03-01T00:00:00Z"), startCaptor.getValue());
-            assertEquals(OffsetDateTime.parse("2026-04-01T00:00:00Z"), endCaptor.getValue());
-        }
-
-        @Test
-        @DisplayName("getCategoryReportData passes each repository row straight through unmodified")
-        void shouldPassThroughCategoryReportRows() {
-            // arrange
-            List<CategoryReportDataDto> rows = List.of(new CategoryReportDataDto(null, new BigDecimal("42.00"), 3L));
-            when(transactionReportRepository.findCategoryReportData(eq(USER_ID), any(), any())).thenReturn(rows);
-
-            // act
-            List<CategoryReportDataDto> result = reportService.getCategoryReportData(
-                    USER_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
-
-            // assert & verify
-            assertEquals(rows, result);
-        }
-
-        @Test
-        @DisplayName("getMerchantReportData passes each repository row straight through unmodified")
-        void shouldPassThroughMerchantReportRows() {
-            // arrange
-            List<MerchantReportDataDto> rows = List.of(
-                    new MerchantReportDataDto(1L, "Whole Foods", new BigDecimal("42.00"), 3L, List.of("Groceries")));
-            when(merchantRepository.findMerchantReportData(eq(USER_ID), any(), any())).thenReturn(rows);
-
-            // act
-            List<MerchantReportDataDto> result = reportService.getMerchantReportData(
-                    USER_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
-
-            // assert & verify
-            assertEquals(rows, result);
-        }
-
-        @Test
-        @DisplayName("getMonthlyReportData passes each repository row straight through unmodified")
-        void shouldPassThroughMonthlyReportRows() {
-            // arrange
-            List<MonthlyReportDataDto> rows = List.of(
-                    new MonthlyReportDataDto(2026, 1, new BigDecimal("100.00"), new BigDecimal("60.00")));
-            when(transactionReportRepository.findMonthlyIncomeExpense(eq(USER_ID), any(), any())).thenReturn(rows);
-
-            // act
-            List<MonthlyReportDataDto> result = reportService.getMonthlyReportData(
-                    USER_ID, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
-
-            // assert & verify
-            assertEquals(rows, result);
-        }
-    }
 }

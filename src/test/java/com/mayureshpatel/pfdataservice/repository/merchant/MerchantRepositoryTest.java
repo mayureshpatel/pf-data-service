@@ -4,7 +4,6 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
-import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,9 +20,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -194,26 +191,6 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
             assertEquals(MERCHANT_WHOLE_FOODS, breakdown.representativeMerchantId());
             assertTrue(breakdown.total().compareTo(BigDecimal.ZERO) > 0);
         }
-
-        @Test
-        @DisplayName("should report a transaction count matching the report query's count for each merchant")
-        void shouldFindMerchantTransactionCounts() {
-            // arrange
-            OffsetDateTime start = LocalDate.of(2025, 9, 1).atStartOfDay().atOffset(ZoneOffset.UTC);
-            OffsetDateTime end = LocalDate.of(2026, 3, 31).atTime(23, 59, 59).atOffset(ZoneOffset.UTC);
-
-            // act
-            List<MerchantBreakdownDto> totals = repository.findMerchantTotals(USER_1, start, end);
-            Map<Long, Long> reportCounts = repository.findMerchantReportData(USER_1, start, end).stream()
-                    .collect(Collectors.toMap(MerchantReportDataDto::representativeMerchantId, MerchantReportDataDto::count));
-
-            // assert & verify
-            assertFalse(totals.isEmpty());
-            for (MerchantBreakdownDto row : totals) {
-                assertTrue(row.transactionCount() > 0);
-                assertEquals(reportCounts.get(row.representativeMerchantId()), row.transactionCount());
-            }
-        }
     }
 
     /**
@@ -333,72 +310,4 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
     }
 
-    /**
-     * A PF-823 fix: {@code findMerchantReportData} aggregates every matching transaction, not just
-     * the newest 1000 -- proven by bulk-seeding 1,500 real rows directly via SQL (one set-based
-     * {@code INSERT...generate_series}, not 1,500 round trips) and asserting the real count and
-     * dollar total, which a silent 1000-row cap would have undercounted. It also reports an empty
-     * {@code categories} list, not a null placeholder, when every transaction for a merchant is
-     * uncategorized -- the underlying SQL's {@code array_remove} strips the null entry {@code
-     * array_agg} would otherwise contribute for an uncategorized row.
-     */
-    @Nested
-    @DisplayName("PF-823: Reports server-side aggregation (Merchants)")
-    class ReportDataAggregation {
-
-        @Test
-        @DisplayName("findMerchantReportData sums every matching transaction, not just the newest 1000")
-        void shouldAggregateMerchantTotalsPastThousandRows() {
-            // arrange -- 1,500 EXPENSE transactions for user 1, $10 each, one per day starting
-            // 2020-01-01 -- account 1, category 7 (Groceries), merchant 1 (Whole Foods). A single
-            // set-based INSERT rather than 1,500 round trips.
-            jdbcClient.sql("""
-                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
-                    select 1, 7, 1, 10.00, (date '2020-01-01' + s.n)::timestamptz, 'Bulk Test Txn ' || s.n, 'EXPENSE'
-                    from generate_series(0, 1499) as s(n)
-                    """).update();
-
-            // act -- range covers all 1,500 seeded days plus margin
-            List<MerchantReportDataDto> result = repository.findMerchantReportData(
-                    USER_1,
-                    OffsetDateTime.parse("2020-01-01T00:00:00Z"),
-                    OffsetDateTime.parse("2024-12-31T00:00:00Z"));
-
-            // assert & verify
-            MerchantReportDataDto wholeFoods = result.stream()
-                    .filter(r -> "Whole Foods".equals(r.displayName()))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError("expected a Whole Foods entry, got: " + result));
-            assertEquals(1500L, wholeFoods.count(),
-                    "a 1000-row cap would silently drop 500 of these -- got count=" + wholeFoods.count());
-            assertEquals(0, new BigDecimal("15000.00").compareTo(wholeFoods.total()),
-                    "expected 1500 * $10.00, got " + wholeFoods.total());
-            assertTrue(wholeFoods.categories().contains("Groceries"),
-                    "expected the associated category name to be aggregated, got: " + wholeFoods.categories());
-        }
-
-        @Test
-        @DisplayName("findMerchantReportData reports an empty categories list, not a null placeholder, "
-                + "when every transaction for a merchant is uncategorized")
-        void shouldReportEmptyCategoriesListWhenAllUncategorized() {
-            // arrange -- merchant 2 (Amazon) with a single uncategorized expense on an otherwise
-            // empty future date, isolated from baseline data
-            jdbcClient.sql("""
-                    insert into transactions (account_id, merchant_id, amount, date, description, type)
-                    values (1, 2, 42.00, '2031-06-01T00:00:00Z', 'Uncategorized Amazon Order', 'EXPENSE')
-                    """).update();
-
-            // act
-            List<MerchantReportDataDto> result = repository.findMerchantReportData(
-                    USER_1,
-                    OffsetDateTime.parse("2031-06-01T00:00:00Z"),
-                    OffsetDateTime.parse("2031-06-02T00:00:00Z"));
-
-            // assert & verify
-            assertEquals(1, result.size());
-            assertEquals(MERCHANT_AMAZON, result.get(0).representativeMerchantId());
-            assertEquals(List.of(), result.get(0).categories(),
-                    "array_remove must strip the null placeholder array_agg would otherwise contribute");
-        }
-    }
 }
