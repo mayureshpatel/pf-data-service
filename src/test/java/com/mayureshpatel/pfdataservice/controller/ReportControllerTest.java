@@ -7,6 +7,8 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreMeasure;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreResultDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRowDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
 import com.mayureshpatel.pfdataservice.dto.report.CategoryReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.MerchantReportDataDto;
 import com.mayureshpatel.pfdataservice.dto.report.MonthlyReportDataDto;
@@ -41,6 +43,7 @@ class ReportControllerTest extends BaseControllerTest {
     private static final String PARAM_END_DATE = "endDate";
     private static final String EXPLORE_URL = "/api/v1/reports/explore";
     private static final String PARAM_MEASURE = "measure";
+    private static final String MEASURE_SPENDING = "SPENDING";
     private static final String PARAM_GROUP_BY = "groupBy";
     private static final String JAN_1 = "2026-01-01";
     private static final String JAN_31 = "2026-01-31";
@@ -224,7 +227,7 @@ class ReportControllerTest extends BaseControllerTest {
 
             // act & assert & verify
             mockMvc.perform(get(EXPLORE_URL)
-                            .param(PARAM_MEASURE, "SPENDING").param(PARAM_GROUP_BY, "CATEGORY")
+                            .param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_GROUP_BY, "CATEGORY")
                             .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
                     .andExpect(status().isOk());
         }
@@ -248,8 +251,66 @@ class ReportControllerTest extends BaseControllerTest {
         void explore_shouldReturn400ForUnknownGrouping() throws Exception {
             // act & assert & verify
             mockMvc.perform(get(EXPLORE_URL)
-                            .param(PARAM_MEASURE, "SPENDING").param(PARAM_GROUP_BY, "NOPE")
+                            .param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_GROUP_BY, "NOPE")
                             .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    /** The trend and transaction-list endpoints take the explorer's filters, and the list is paged. */
+    @Nested
+    @DisplayName("explore trend and transactions")
+    class ExploreTrendAndTransactionsTests {
+
+        private static final String TREND_URL = "/api/v1/reports/explore/trend";
+        private static final String TRANSACTIONS_URL = "/api/v1/reports/explore/transactions";
+
+        @Test
+        @DisplayName("GET /explore/trend should return current and comparison buckets without needing a grouping")
+        void trend_shouldReturnBuckets() throws Exception {
+            // arrange
+            ExploreTrendDto trend = new ExploreTrendDto(
+                    List.of(new ExploreTrendDto.Bucket(LocalDate.of(2026, 1, 1), new BigDecimal("100.00"), true)),
+                    List.of(new ExploreTrendDto.Bucket(LocalDate.of(2025, 1, 1), new BigDecimal("80.00"), false)));
+            when(exploreService.trend(eq(USER_ID), eq(ExploreMeasure.SPENDING), eq(ExploreSide.SPENDING),
+                    any(LocalDate.class), any(LocalDate.class), eq(ExploreCompare.SAME_DAYS_LAST_YEAR), eq(ExploreFilter.none())))
+                    .thenReturn(trend);
+
+            // act & assert & verify
+            mockMvc.perform(get(TREND_URL)
+                            .param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31)
+                            .param("compare", "SAME_DAYS_LAST_YEAR"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.current[0].start").value("2026-01-01"))
+                    .andExpect(jsonPath("$.current[0].partial").value(true))
+                    .andExpect(jsonPath("$.comparison[0].value").value(80.00));
+        }
+
+        @Test
+        @DisplayName("GET /explore/transactions should return a page of the transactions behind the number")
+        void transactions_shouldReturnAPage() throws Exception {
+            // arrange
+            ExploreTransactionDto row = new ExploreTransactionDto(9L, LocalDate.of(2026, 1, 5), "WHOLEFDS", "Whole Foods", "Checking",
+                    "Groceries", new BigDecimal("84.12"), com.mayureshpatel.pfdataservice.domain.transaction.TransactionType.EXPENSE);
+            when(exploreService.transactions(eq(USER_ID), eq(ExploreMeasure.SPENDING), eq(ExploreSide.SPENDING),
+                    any(LocalDate.class), any(LocalDate.class), any(ExploreFilter.class), eq(1), eq(20)))
+                    .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(row),
+                            org.springframework.data.domain.PageRequest.of(1, 20), 21));
+
+            // act & assert & verify
+            mockMvc.perform(get(TRANSACTIONS_URL)
+                            .param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31)
+                            .param("categoryId", "7").param("page", "1").param("size", "20"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].merchantName").value("Whole Foods"))
+                    .andExpect(jsonPath("$.content[0].amount").value(84.12));
+        }
+
+        @Test
+        @DisplayName("GET /explore should require a grouping")
+        void explore_shouldRequireAGrouping() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(get(EXPLORE_URL).param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
                     .andExpect(status().isBadRequest());
         }
     }

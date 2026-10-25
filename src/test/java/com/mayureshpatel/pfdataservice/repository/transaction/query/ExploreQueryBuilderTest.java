@@ -134,4 +134,34 @@ class ExploreQueryBuilderTest {
         assertTrue(query.sql().contains("transactions.type not in ('INCOME', 'EXPENSE')"));
         assertTrue(query.sql().contains("accounts.id in (:accountIds)"));
     }
+
+    @Test
+    @DisplayName("should build the transaction list newest first with the same filters, a types list and paging")
+    void shouldBuildTransactionList() {
+        // act
+        BuiltQuery query = ExploreQueryBuilder.buildTransactionList(
+                new ExploreFilter(List.of(1L), 7L, false, null, false, null, false, null, null));
+
+        // assert & verify
+        assertTrue(query.sql().contains("merchants.name as merchant_name"));
+        assertTrue(query.sql().contains("transactions.type in (:types)"));
+        assertTrue(query.sql().contains("order by transactions.date desc, transactions.id desc"));
+        assertTrue(query.sql().contains("limit :limit offset :offset"));
+        assertTrue(query.sql().contains("accounts.id in (:accountIds)"));
+        assertTrue(query.sql().contains("accounts.user_id = :userId"));
+        assertTrue(query.sql().contains("transactions.deleted_at is null"));
+        assertEquals(7L, query.params().get("categoryId"));
+    }
+
+    @Test
+    @DisplayName("should build the transaction count with the same conditions and no paging")
+    void shouldBuildTransactionCount() {
+        // act
+        BuiltQuery query = ExploreQueryBuilder.buildTransactionCount(ExploreFilter.none());
+
+        // assert & verify
+        assertTrue(query.sql().startsWith("select count(*)"));
+        assertTrue(query.sql().contains("transactions.type in (:types)"));
+        assertFalse(query.sql().contains("limit"));
+    }
 }

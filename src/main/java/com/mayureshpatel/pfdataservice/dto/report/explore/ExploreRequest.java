@@ -62,9 +62,6 @@ public record ExploreRequest(
      * @return the stacked filters the request describes
      */
     public ExploreFilter toFilter() {
-        return new ExploreFilter(
-                accountIds == null ? List.of() : accountIds,
-                categoryId, Boolean.TRUE.equals(uncategorized), merchantId, Boolean.TRUE.equals(noMerchant),
-                tagId, Boolean.TRUE.equals(noTag), minAmount, maxAmount);
+        return ExploreFilter.of(accountIds, categoryId, uncategorized, merchantId, noMerchant, tagId, noTag, minAmount, maxAmount);
     }
 }

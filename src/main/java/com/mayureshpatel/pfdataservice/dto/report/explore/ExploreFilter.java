@@ -35,4 +35,26 @@ public record ExploreFilter(
     public static ExploreFilter none() {
         return new ExploreFilter(List.of(), null, false, null, false, null, false, null, null);
     }
+
+    /**
+     * Builds a filter from request parameters, where a missing list or flag means "no restriction".
+     *
+     * @param accountIds    restrict to these accounts, or null
+     * @param categoryId    restrict to a category
+     * @param uncategorized restrict to transactions with no category, or null
+     * @param merchantId    restrict to a merchant
+     * @param noMerchant    restrict to transactions with no merchant, or null
+     * @param tagId         restrict to transactions carrying a tag
+     * @param noTag         restrict to transactions carrying no tag, or null
+     * @param minAmount     smallest amount to include
+     * @param maxAmount     largest amount to include
+     * @return the filter
+     */
+    public static ExploreFilter of(List<Long> accountIds, Long categoryId, Boolean uncategorized, Long merchantId, Boolean noMerchant,
+                                   Long tagId, Boolean noTag, BigDecimal minAmount, BigDecimal maxAmount) {
+        return new ExploreFilter(
+                accountIds == null ? List.of() : accountIds,
+                categoryId, Boolean.TRUE.equals(uncategorized), merchantId, Boolean.TRUE.equals(noMerchant),
+                tagId, Boolean.TRUE.equals(noTag), minAmount, maxAmount);
+    }
 }

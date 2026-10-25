@@ -18,6 +18,10 @@ public final class ExploreQueryBuilder {
 
     private static final String UTC_DATE = "transactions.date at time zone 'UTC'";
 
+    private static final String COUNT_SELECT = "select count(*)\n";
+    private static final String MERCHANT_JOIN = "    left join merchants on transactions.merchant_id = merchants.id\n";
+    private static final String TYPES_CONDITION = "  and transactions.type in (:types)\n";
+
     private static final String BASE_FROM = """
             from transactions
                 join accounts on transactions.account_id = accounts.id
@@ -76,10 +80,54 @@ public final class ExploreQueryBuilder {
      */
     public static BuiltQuery buildExcludedCount(ExploreFilter filter) {
         Map<String, Object> params = new HashMap<>();
-        String sql = "select count(*)\n"
+        String sql = COUNT_SELECT
                 + BASE_FROM
                 + BASE_WHERE
                 + "  and transactions.type not in ('INCOME', 'EXPENSE')\n"
+                + filterConditions(filter, params);
+        return new BuiltQuery(sql, params);
+    }
+
+    /**
+     * Builds the query listing the transactions behind an explorer number, newest first. The caller adds
+     * {@code types} (the transaction types to include), {@code limit} and {@code offset}.
+     *
+     * @param filter the stacked filters
+     * @return the SQL and its filter parameters
+     */
+    public static BuiltQuery buildTransactionList(ExploreFilter filter) {
+        Map<String, Object> params = new HashMap<>();
+        String sql = "select transactions.id as id,\n"
+                + "       (" + UTC_DATE + ")::date as tx_date,\n"
+                + "       transactions.description as description,\n"
+                + "       merchants.name as merchant_name,\n"
+                + "       accounts.name as account_name,\n"
+                + "       categories.name as category_name,\n"
+                + "       transactions.amount as amount,\n"
+                + "       transactions.type as type\n"
+                + BASE_FROM
+                + MERCHANT_JOIN
+                + BASE_WHERE
+                + TYPES_CONDITION
+                + filterConditions(filter, params)
+                + "order by transactions.date desc, transactions.id desc\n"
+                + "limit :limit offset :offset\n";
+        return new BuiltQuery(sql, params);
+    }
+
+    /**
+     * Builds the query counting the transactions {@link #buildTransactionList} would page through. The
+     * caller adds {@code types}.
+     *
+     * @param filter the stacked filters
+     * @return the SQL and its filter parameters
+     */
+    public static BuiltQuery buildTransactionCount(ExploreFilter filter) {
+        Map<String, Object> params = new HashMap<>();
+        String sql = COUNT_SELECT
+                + BASE_FROM
+                + BASE_WHERE
+                + TYPES_CONDITION
                 + filterConditions(filter, params);
         return new BuiltQuery(sql, params);
     }
@@ -106,7 +154,7 @@ public final class ExploreQueryBuilder {
         LABELS.put(ExploreGroupBy.ACCOUNT, "accounts.name");
         LABELS.put(ExploreGroupBy.TAG, "coalesce(tags.name, 'No tag')");
 
-        EXTRA_JOINS.put(ExploreGroupBy.MERCHANT, "    left join merchants on transactions.merchant_id = merchants.id\n");
+        EXTRA_JOINS.put(ExploreGroupBy.MERCHANT, MERCHANT_JOIN);
         EXTRA_JOINS.put(ExploreGroupBy.TAG, "    left join transaction_tags group_tags on group_tags.transaction_id = transactions.id\n"
                 + "    left join tags on tags.id = group_tags.tag_id\n");
     }

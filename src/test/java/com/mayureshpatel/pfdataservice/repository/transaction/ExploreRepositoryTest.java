@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.repository.transaction;
 import com.mayureshpatel.pfdataservice.dto.report.explore.DateWindow;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreFilter;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreGroupBy;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository.ExploreRowData;
 import org.junit.jupiter.api.BeforeEach;
@@ -278,5 +279,50 @@ class ExploreRepositoryTest extends BaseRepositoryTest {
         assertEquals(2L, repository.countExcluded(USER_1,
                 new ExploreFilter(List.of(CHECKING), null, false, null, false, null, false, null, null), YEAR_2031));
         assertEquals(0L, repository.countExcluded(USER_2, ExploreFilter.none(), YEAR_2031));
+    }
+
+    @Test
+    @DisplayName("should list exactly the transactions behind a group's number, newest first")
+    void shouldListTheTransactionsBehindANumber() {
+        // arrange
+        ExploreFilter groceries = new ExploreFilter(List.of(), GROCERIES, false, null, false, null, false, null, null);
+
+        // act
+        org.springframework.data.domain.Page<ExploreTransactionDto> page = repository.findTransactions(
+                USER_1, groceries, YEAR_2031, List.of(EXPENSE), org.springframework.data.domain.PageRequest.of(0, 20));
+        List<ExploreRowData> group = repository.findGroups(USER_1, ExploreGroupBy.SUBCATEGORY, groceries, YEAR_2031);
+
+        // assert & verify
+        assertEquals(2, page.getTotalElements());
+        assertEquals(List.of(new BigDecimal("50.00"), new BigDecimal("100.00")),
+                page.getContent().stream().map(t -> t.amount().setScale(2)).toList());
+        BigDecimal listed = page.getContent().stream().map(ExploreTransactionDto::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertEquals(0, listed.compareTo(row(group, String.valueOf(GROCERIES)).expense()));
+        ExploreTransactionDto newest = page.getContent().get(0);
+        assertEquals("Whole Foods", newest.merchantName());
+        assertEquals("Main Checking", newest.accountName());
+        assertEquals("Groceries", newest.categoryName());
+        assertEquals(LocalDate.of(2031, 3, 20), newest.date());
+    }
+
+    @Test
+    @DisplayName("should page the transaction list and exclude transfers, adjustments, deleted and other users' rows")
+    void shouldPageAndExcludeInTheTransactionList() {
+        // act
+        org.springframework.data.domain.Page<ExploreTransactionDto> first = repository.findTransactions(
+                USER_1, ExploreFilter.none(), YEAR_2031, List.of(EXPENSE, INCOME), org.springframework.data.domain.PageRequest.of(0, 3));
+        org.springframework.data.domain.Page<ExploreTransactionDto> second = repository.findTransactions(
+                USER_1, ExploreFilter.none(), YEAR_2031, List.of(EXPENSE, INCOME), org.springframework.data.domain.PageRequest.of(1, 3));
+
+        // assert & verify
+        assertEquals(6, first.getTotalElements());
+        assertEquals(3, first.getContent().size());
+        assertEquals(3, second.getContent().size());
+        assertTrue(first.getContent().get(0).date().isAfter(second.getContent().get(2).date().minusDays(1)));
+        assertTrue(java.util.stream.Stream.concat(first.getContent().stream(), second.getContent().stream())
+                .noneMatch(t -> t.type() == com.mayureshpatel.pfdataservice.domain.transaction.TransactionType.TRANSFER_IN
+                        || t.type() == com.mayureshpatel.pfdataservice.domain.transaction.TransactionType.ADJUSTMENT
+                        || t.amount().compareTo(new BigDecimal("999.00")) == 0
+                        || t.amount().compareTo(new BigDecimal("777.00")) == 0));
     }
 }

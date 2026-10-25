@@ -8,10 +8,15 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreMeasure;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreResultDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRowDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto.Bucket;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository.ExploreRowData;
 import com.mayureshpatel.pfdataservice.service.ExploreRanges.ResolvedRanges;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +44,11 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ExploreService {
+
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final String EXPENSE = "EXPENSE";
+    private static final String INCOME = "INCOME";
+    private static final ExploreRowData EMPTY = new ExploreRowData(null, "", BigDecimal.ZERO, BigDecimal.ZERO, 0, 0);
 
     private final ExploreRepository repository;
 
@@ -102,6 +112,120 @@ public class ExploreService {
                 comparisonWindow == null ? null : comparisonWindow.end().minusDays(1).toLocalDate(),
                 ranges.comparisonLabel(),
                 ranges.inProgress());
+    }
+
+    /**
+     * Runs the trend for today's date.
+     *
+     * @param userId    the user id
+     * @param measure   what to measure
+     * @param side      which side count and average look at
+     * @param startDate the first day, inclusive
+     * @param endDate   the last day, inclusive
+     * @param compare   which earlier period to compare with
+     * @param filter    the stacked filters
+     * @return the measure per bucket, with the comparison period's buckets lined up by position
+     */
+    public ExploreTrendDto trend(Long userId, ExploreMeasure measure, ExploreSide side, LocalDate startDate, LocalDate endDate,
+                                 ExploreCompare compare, ExploreFilter filter) {
+        return trend(userId, measure, side, startDate, endDate, compare, filter, LocalDate.now(ZoneOffset.UTC));
+    }
+
+    /**
+     * Runs the trend as of a given date. Buckets are days up to 31 days, weeks up to 92 days and months
+     * beyond; empty buckets are filled in, and when the period runs past today the last bucket is flagged
+     * partial. The comparison has as many buckets as the current period, lined up by position.
+     *
+     * @param userId    the user id
+     * @param measure   what to measure
+     * @param side      which side count and average look at
+     * @param startDate the first day, inclusive
+     * @param endDate   the last day, inclusive
+     * @param compare   which earlier period to compare with
+     * @param filter    the stacked filters
+     * @param today     the date treated as today
+     * @return the measure per bucket, with the comparison period's buckets lined up by position
+     */
+    public ExploreTrendDto trend(Long userId, ExploreMeasure measure, ExploreSide side, LocalDate startDate, LocalDate endDate,
+                                 ExploreCompare compare, ExploreFilter filter, LocalDate today) {
+        ResolvedRanges ranges = ExploreRanges.resolve(startDate, endDate, compare, today);
+        LocalDate first = ranges.current().start().toLocalDate();
+        LocalDate last = ranges.current().end().minusDays(1).toLocalDate();
+        if (last.isBefore(first)) {
+            return new ExploreTrendDto(List.of(), List.of());
+        }
+        ExploreGroupBy granularity = ExploreBuckets.granularityFor(ChronoUnit.DAYS.between(first, last) + 1);
+        int count = ExploreBuckets.count(granularity, first, last);
+
+        List<Bucket> current = buckets(userId, measure, side, granularity, filter, ranges.current(), count, ranges.inProgress());
+        DateWindow comparisonWindow = ranges.comparison();
+        List<Bucket> earlier = comparisonWindow == null
+                ? List.of()
+                : buckets(userId, measure, side, granularity, filter, comparisonWindow, count, false);
+        return new ExploreTrendDto(current, earlier);
+    }
+
+    /**
+     * Pages through the transactions behind an explorer number for today's date.
+     *
+     * @param userId    the user id
+     * @param measure   what to measure (decides whether expenses, income or both are listed)
+     * @param side      which side count and average look at
+     * @param startDate the first day, inclusive
+     * @param endDate   the last day, inclusive
+     * @param filter    the stacked filters
+     * @param page      the zero-based page
+     * @param size      the page size (capped at 100)
+     * @return the page of transactions, newest first
+     */
+    public Page<ExploreTransactionDto> transactions(Long userId, ExploreMeasure measure, ExploreSide side, LocalDate startDate,
+                                                    LocalDate endDate, ExploreFilter filter, int page, int size) {
+        return transactions(userId, measure, side, startDate, endDate, filter, page, size, LocalDate.now(ZoneOffset.UTC));
+    }
+
+    /**
+     * Pages through the transactions behind an explorer number as of a given date.
+     *
+     * @param userId    the user id
+     * @param measure   what to measure (decides whether expenses, income or both are listed)
+     * @param side      which side count and average look at
+     * @param startDate the first day, inclusive
+     * @param endDate   the last day, inclusive
+     * @param filter    the stacked filters
+     * @param page      the zero-based page
+     * @param size      the page size (capped at 100)
+     * @param today     the date treated as today
+     * @return the page of transactions, newest first
+     */
+    public Page<ExploreTransactionDto> transactions(Long userId, ExploreMeasure measure, ExploreSide side, LocalDate startDate,
+                                                    LocalDate endDate, ExploreFilter filter, int page, int size, LocalDate today) {
+        DateWindow window = ExploreRanges.resolve(startDate, endDate, ExploreCompare.NONE, today).current();
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, MAX_PAGE_SIZE)));
+        return repository.findTransactions(userId, filter, window, typesFor(measure, side), pageRequest);
+    }
+
+    private static List<String> typesFor(ExploreMeasure measure, ExploreSide side) {
+        return switch (measure) {
+            case SPENDING -> List.of(EXPENSE);
+            case INCOME -> List.of(INCOME);
+            case NET, SAVINGS_RATE -> List.of(EXPENSE, INCOME);
+            case COUNT, AVERAGE -> List.of(side == ExploreSide.INCOME ? INCOME : EXPENSE);
+        };
+    }
+
+    private List<Bucket> buckets(Long userId, ExploreMeasure measure, ExploreSide side, ExploreGroupBy granularity, ExploreFilter filter,
+                                 DateWindow window, int count, boolean lastIsPartial) {
+        Map<String, ExploreRowData> byStart = new HashMap<>();
+        repository.findGroups(userId, granularity, filter, window).forEach(row -> byStart.put(row.key(), row));
+        LocalDate first = ExploreBuckets.bucketStart(granularity, window.start().toLocalDate());
+
+        List<Bucket> buckets = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            LocalDate start = ExploreBuckets.advance(granularity, first, i);
+            ExploreRowData data = byStart.getOrDefault(start.toString(), EMPTY);
+            buckets.add(new Bucket(start, ExploreMeasures.value(measure, side, data), lastIsPartial && i == count - 1));
+        }
+        return buckets;
     }
 
     /**

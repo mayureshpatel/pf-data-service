@@ -1,12 +1,17 @@
 package com.mayureshpatel.pfdataservice.repository.transaction;
 
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.report.explore.DateWindow;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreFilter;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreGroupBy;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.repository.SqlParams;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.ExploreQueryBuilder;
 import com.mayureshpatel.pfdataservice.repository.transaction.query.ExploreQueryBuilder.BuiltQuery;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -28,6 +33,7 @@ public class ExploreRepository {
 
     private static final String START = "start";
     private static final String END = "end";
+    private static final String TYPES = "types";
 
     private final JdbcClient jdbcClient;
 
@@ -81,6 +87,55 @@ public class ExploreRepository {
                 .params(query.params())
                 .query(Long.class)
                 .single();
+    }
+
+    /**
+     * Pages through the transactions behind an explorer number, newest first.
+     *
+     * @param userId   the owning user's id
+     * @param filter   the stacked filters
+     * @param window   the half-open UTC window to look at
+     * @param types    the transaction types to include (income, expense)
+     * @param pageable the page to fetch
+     * @return the page of transactions with the total match count
+     */
+    public Page<ExploreTransactionDto> findTransactions(Long userId, ExploreFilter filter, DateWindow window, List<String> types, Pageable pageable) {
+        BuiltQuery count = ExploreQueryBuilder.buildTransactionCount(filter);
+        long total = jdbcClient.sql(count.sql())
+                .param(SqlParams.USER_ID, userId)
+                .param(START, window.start())
+                .param(END, window.end())
+                .param(TYPES, types)
+                .params(count.params())
+                .query(Long.class)
+                .single();
+        if (total == 0) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+        BuiltQuery list = ExploreQueryBuilder.buildTransactionList(filter);
+        List<ExploreTransactionDto> content = jdbcClient.sql(list.sql())
+                .param(SqlParams.USER_ID, userId)
+                .param(START, window.start())
+                .param(END, window.end())
+                .param(TYPES, types)
+                .param("limit", pageable.getPageSize())
+                .param("offset", pageable.getOffset())
+                .params(list.params())
+                .query((rs, rowNum) -> mapTransaction(rs))
+                .list();
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private ExploreTransactionDto mapTransaction(ResultSet rs) throws SQLException {
+        return new ExploreTransactionDto(
+                rs.getLong("id"),
+                rs.getDate("tx_date").toLocalDate(),
+                rs.getString("description"),
+                rs.getString("merchant_name"),
+                rs.getString("account_name"),
+                rs.getString("category_name"),
+                rs.getBigDecimal("amount"),
+                TransactionType.valueOf(rs.getString("type")));
     }
 
     private ExploreRowData mapRow(ResultSet rs) throws SQLException {

@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreMeasure;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreResultDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRowDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
+import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository.ExploreRowData;
 import org.junit.jupiter.api.DisplayName;
@@ -267,5 +268,156 @@ class ExploreServiceTest {
 
         // assert & verify
         assertValue(AMOUNT_80, only(result).comparisonValue());
+    }
+
+    /** The trend buckets by day, week or month depending on the window, zero-fills empty buckets, flags the bucket still in progress, and lines the comparison up by position. */
+    @org.junit.jupiter.api.Nested
+    @DisplayName("trend")
+    class TrendTests {
+
+        private ExploreTrendDto trend(ExploreMeasure measure, LocalDate start, LocalDate end, ExploreCompare compare) {
+            return service.trend(USER_ID, measure, ExploreSide.SPENDING, start, end, compare, NO_FILTER, TODAY);
+        }
+
+        @Test
+        @DisplayName("should choose day, week and month buckets by window length")
+        void shouldChooseGranularity() {
+            // arrange
+            when(repository.findGroups(eq(USER_ID), any(), any(), any())).thenReturn(List.of());
+
+            // act
+            trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), ExploreCompare.NONE);
+            trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), ExploreCompare.NONE);
+            trend(ExploreMeasure.SPENDING, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31), ExploreCompare.NONE);
+
+            // assert & verify
+            verify(repository).findGroups(eq(USER_ID), eq(ExploreGroupBy.DAY), any(), any());
+            verify(repository).findGroups(eq(USER_ID), eq(ExploreGroupBy.WEEK), any(), any());
+            verify(repository).findGroups(eq(USER_ID), eq(ExploreGroupBy.MONTH), any(), any());
+        }
+
+        @Test
+        @DisplayName("should zero-fill empty buckets and compute the measure per bucket")
+        void shouldZeroFillAndComputeMeasure() {
+            // arrange -- January and March have spending, February has none
+            when(repository.findGroups(eq(USER_ID), eq(ExploreGroupBy.WEEK), any(), any())).thenReturn(List.of(
+                    data("2026-01-05", "2026-01-05", "0", AMOUNT_100, 0, 1),
+                    data("2026-02-02", "2026-02-02", "0", "50.00", 0, 1)));
+
+            // act
+            ExploreTrendDto result = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 1, 5), LocalDate.of(2026, 2, 8), ExploreCompare.NONE);
+
+            // assert & verify -- 5 weekly buckets from Jan 5 to Feb 8
+            assertEquals(5, result.current().size());
+            assertEquals(LocalDate.of(2026, 1, 5), result.current().get(0).start());
+            assertValue(AMOUNT_100, result.current().get(0).value());
+            assertValue("0", result.current().get(1).value());
+            assertValue("50.00", result.current().get(4).value());
+            assertTrue(result.comparison().isEmpty());
+        }
+
+        @Test
+        @DisplayName("should flag the bucket still in progress as partial")
+        void shouldFlagPartialBucket() {
+            // arrange
+            when(repository.findGroups(eq(USER_ID), any(), any(), any())).thenReturn(List.of());
+
+            // act -- the whole year was asked for, but it is Oct 25
+            ExploreTrendDto result = trend(ExploreMeasure.SPENDING, JAN_1, LocalDate.of(2026, 12, 31), ExploreCompare.NONE);
+
+            // assert & verify
+            assertEquals(10, result.current().size());
+            assertTrue(result.current().get(9).partial());
+            assertFalse(result.current().get(8).partial());
+        }
+
+        @Test
+        @DisplayName("should line the comparison buckets up by position")
+        void shouldAlignComparisonByIndex() {
+            // arrange
+            when(repository.findGroups(eq(USER_ID), eq(ExploreGroupBy.MONTH), any(), any())).thenReturn(
+                    List.of(data("2026-01-01", "2026-01-01", "0", AMOUNT_100, 0, 1)),
+                    List.of(data("2025-01-01", "2025-01-01", "0", "80.00", 0, 1)));
+
+            // act
+            ExploreTrendDto result = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30), ExploreCompare.SAME_DAYS_LAST_YEAR);
+
+            // assert & verify
+            assertEquals(6, result.current().size());
+            assertEquals(6, result.comparison().size());
+            assertValue("80.00", result.comparison().get(0).value());
+            assertEquals(LocalDate.of(2025, 1, 1), result.comparison().get(0).start());
+        }
+
+        @Test
+        @DisplayName("should give a savings rate bucket without income no value")
+        void shouldLeaveSavingsRateEmptyWithoutIncome() {
+            // arrange
+            when(repository.findGroups(eq(USER_ID), any(), any(), any())).thenReturn(List.of());
+
+            // act
+            ExploreTrendDto result = trend(ExploreMeasure.SAVINGS_RATE, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), ExploreCompare.NONE);
+
+            // assert & verify
+            assertTrue(result.current().stream().allMatch(b -> b.value() == null));
+        }
+
+        @Test
+        @DisplayName("should pass the filters to the repository")
+        void shouldFollowTheFilters() {
+            // arrange
+            ExploreFilter filter = new ExploreFilter(List.of(1L), 7L, false, null, false, null, false, null, null);
+            when(repository.findGroups(eq(USER_ID), any(), eq(filter), any())).thenReturn(List.of());
+
+            // act
+            service.trend(USER_ID, ExploreMeasure.SPENDING, ExploreSide.SPENDING, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
+                    ExploreCompare.NONE, filter, TODAY);
+
+            // assert & verify
+            verify(repository).findGroups(eq(USER_ID), any(), eq(filter), any());
+        }
+    }
+
+    /** The transaction list covers the side(s) the measure looks at and caps the page size. */
+    @org.junit.jupiter.api.Nested
+    @DisplayName("transactions")
+    class TransactionsTests {
+
+        @Test
+        @DisplayName("should list expenses for spending, income for income, and both for net")
+        void shouldChooseTypesByMeasure() {
+            // arrange
+            when(repository.findTransactions(eq(USER_ID), any(), any(), any(), any()))
+                    .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+            // act
+            service.transactions(USER_ID, ExploreMeasure.SPENDING, ExploreSide.SPENDING, JAN_1, JAN_31, NO_FILTER, 0, 20, TODAY);
+            service.transactions(USER_ID, ExploreMeasure.INCOME, ExploreSide.SPENDING, JAN_1, JAN_31, NO_FILTER, 0, 20, TODAY);
+            service.transactions(USER_ID, ExploreMeasure.NET, ExploreSide.SPENDING, JAN_1, JAN_31, NO_FILTER, 0, 20, TODAY);
+            service.transactions(USER_ID, ExploreMeasure.COUNT, ExploreSide.INCOME, JAN_1, JAN_31, NO_FILTER, 0, 20, TODAY);
+
+            // assert & verify
+            verify(repository).findTransactions(eq(USER_ID), any(), any(), eq(List.of("EXPENSE")), any());
+            verify(repository, org.mockito.Mockito.times(2)).findTransactions(eq(USER_ID), any(), any(), eq(List.of("INCOME")), any());
+            verify(repository).findTransactions(eq(USER_ID), any(), any(), eq(List.of("EXPENSE", "INCOME")), any());
+        }
+
+        @Test
+        @DisplayName("should cap the page size at 100 and never go below 1")
+        void shouldCapThePageSize() {
+            // arrange
+            when(repository.findTransactions(eq(USER_ID), any(), any(), any(), any()))
+                    .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+            // act
+            service.transactions(USER_ID, ExploreMeasure.SPENDING, ExploreSide.SPENDING, JAN_1, JAN_31, NO_FILTER, 0, 5000, TODAY);
+            service.transactions(USER_ID, ExploreMeasure.SPENDING, ExploreSide.SPENDING, JAN_1, JAN_31, NO_FILTER, 0, 0, TODAY);
+
+            // assert & verify
+            ArgumentCaptor<org.springframework.data.domain.Pageable> pages = ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+            verify(repository, org.mockito.Mockito.times(2)).findTransactions(eq(USER_ID), any(), any(), any(), pages.capture());
+            assertEquals(100, pages.getAllValues().get(0).getPageSize());
+            assertEquals(1, pages.getAllValues().get(1).getPageSize());
+        }
     }
 }
