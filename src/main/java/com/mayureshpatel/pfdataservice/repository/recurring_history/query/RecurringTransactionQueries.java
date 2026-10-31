@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.recurring_history.query;
 
+import com.mayureshpatel.pfdataservice.service.DescriptionKeys;
 import lombok.NoArgsConstructor;
 
 /** SQL query constants for {@code RecurringTransactionRepository}. */
@@ -28,32 +29,6 @@ public final class RecurringTransactionQueries {
                 left join merchants on recurring_transactions.merchant_id = merchants.id
             where recurring_transactions.id = :id
                 and recurring_transactions.deleted_at is null
-            """;
-
-    // language=SQL
-    public static final String FIND_BY_USER_ID_ACTIVE_ORDER_BY_NEXT_DATE = """
-            select
-                recurring_transactions.*,
-                accounts.name as account_name,
-                accounts.bank_name as account_bank_name,
-                account_types.code as account_type_code,
-                account_types.label as account_type_label,
-                account_types.color as account_type_color,
-                account_types.icon as account_type_icon,
-                account_types.is_asset as account_type_is_asset,
-                currencies.code as currency_code,
-                currencies.name as currency_name,
-                currencies.symbol as currency_symbol,
-                merchants.name as merchant_name
-            from recurring_transactions
-                left join accounts on recurring_transactions.account_id = accounts.id
-                left join currencies on accounts.currency_code = currencies.code
-                left join account_types on accounts.type = account_types.code
-                left join merchants on recurring_transactions.merchant_id = merchants.id
-            where recurring_transactions.user_id = :userId
-                and recurring_transactions.active = true
-                and recurring_transactions.deleted_at is null
-            order by recurring_transactions.next_date
             """;
 
     // language=SQL
@@ -139,8 +114,8 @@ public final class RecurringTransactionQueries {
 
     // language=SQL -- PF-884: matches each tracked item to the user's real expense charges of the last
     // three years, through the item's merchant id or through a description linked to that merchant
-    // (folded exactly like the link key: trim, collapse whitespace, lower case), and keeps the 12 newest
-    // per item. each description is folded once (not once per tracked item), and both matches are plain
+    // (folded exactly like the link key: trim, collapse whitespace, lower case), and keeps the 60 newest
+    // per item (a year of weekly charges, so a weekly price change keeps its real start date). each description is folded once (not once per tracked item), and both matches are plain
     // equi-joins so the planner can hash them; union removes a charge both matches found.
     public static final String FIND_RECENT_CHARGES_BY_RECURRING_ID = """
             with user_charges as (
@@ -148,7 +123,7 @@ public final class RecurringTransactionQueries {
                        transactions.merchant_id,
                        transactions.date,
                        transactions.amount,
-                       lower(btrim(regexp_replace(transactions.description, '\\s+', ' ', 'g'))) as norm_description
+                       ${descriptionKey} as norm_description
                 from transactions
                     join accounts on transactions.account_id = accounts.id
                 where accounts.user_id = :userId
@@ -185,9 +160,9 @@ public final class RecurringTransactionQueries {
                        ) as rn
                 from matched
             ) ranked
-            where ranked.rn <= 12
+            where ranked.rn <= 60
             order by ranked.recurring_id, ranked.rn
-            """;
+            """.replace("${descriptionKey}", DescriptionKeys.sqlFold("transactions.description"));
 
     // language=SQL -- PF-884: whether a tracked item still uses a merchant (blocks deleting it)
     public static final String COUNT_ACTIVE_BY_MERCHANT_ID = """

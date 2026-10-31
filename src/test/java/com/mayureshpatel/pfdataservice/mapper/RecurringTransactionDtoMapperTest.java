@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.transaction.RecurringTransaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.recurring.RecurringTransactionDto;
+import com.mayureshpatel.pfdataservice.service.RecurringProjection;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,11 +36,17 @@ class RecurringTransactionDtoMapperTest {
     @DisplayName("Method: toDto")
     class ToDtoMappingTests {
 
+        private static final RecurringProjection.Projection NO_PROJECTION = new RecurringProjection.Projection(null, null, null, false, null);
+
+        private static RecurringProjection.Projection projectionFor(RecurringTransaction rt) {
+            return new RecurringProjection.Projection(null, null, rt.getNextDate(), false, null);
+        }
+
         @Test
         @DisplayName("should return null when source is null")
         void toDto_shouldReturnNullWhenSourceIsNull() {
             // act
-            RecurringTransactionDto result = RecurringTransactionDtoMapper.toDto(null);
+            RecurringTransactionDto result = RecurringTransactionDtoMapper.toDto(null, NO_PROJECTION);
 
             // assert & verify
             assertNull(result);
@@ -60,7 +67,7 @@ class RecurringTransactionDtoMapperTest {
                     .build();
 
             // act
-            RecurringTransactionDto dto = RecurringTransactionDtoMapper.toDto(rt);
+            RecurringTransactionDto dto = RecurringTransactionDtoMapper.toDto(rt, projectionFor(rt));
 
             // assert & verify
             assertNotNull(dto);
@@ -83,7 +90,7 @@ class RecurringTransactionDtoMapperTest {
                     .build();
 
             // act
-            RecurringTransactionDto dto = RecurringTransactionDtoMapper.toDto(rt);
+            RecurringTransactionDto dto = RecurringTransactionDtoMapper.toDto(rt, projectionFor(rt));
 
             // assert & verify
             assertNotNull(dto);

@@ -60,22 +60,6 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should find active by user ID ordered by next date")
-        void shouldFindActiveByUserId() {
-            // act
-            List<RecurringTransaction> result = repository.findByUserIdAndActiveTrueOrderByNextDate(USER_1);
-
-            // assert & verify
-            assertFalse(result.isEmpty());
-            assertTrue(result.stream().allMatch(RecurringTransaction::isActive));
-            // Verify order
-            for (int i = 0; i < result.size() - 1; i++) {
-                assertTrue(result.get(i).getNextDate().isBefore(result.get(i + 1).getNextDate()) 
-                        || result.get(i).getNextDate().isEqual(result.get(i + 1).getNextDate()));
-            }
-        }
-
-        @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
             // arrange
@@ -253,7 +237,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
-    /** {@code findRecentChargesByRecurringId} matches a tracked item to the user's real expense charges through its merchant id or its merchant's linked descriptions (folded for case and spacing), newest first, at most 12 per item, never crossing users or counting deleted or non-expense rows. */
+    /** {@code findRecentChargesByRecurringId} matches a tracked item to the user's real expense charges through its merchant id or its merchant's linked descriptions (folded for case and spacing), newest first, at most 60 per item, never crossing users or counting deleted or non-expense rows. */
     @Nested
     @DisplayName("findRecentChargesByRecurringId")
     class FindRecentChargesTests {
@@ -343,19 +327,20 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should return at most 12 newest first per item")
-        void shouldCapAtTwelveNewestFirst() {
+        @DisplayName("should return at most 60 newest first per item, enough for a year of weekly charges")
+        void shouldCapAtSixtyNewestFirst() {
             // arrange
-            for (int day = 1; day <= 15; day++) {
-                insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "5.00", String.format("2026-08-%02dT12:00:00Z", day), "AMAZON", EXPENSE);
+            java.time.LocalDate first = java.time.LocalDate.of(2026, 1, 1);
+            for (int week = 0; week < 65; week++) {
+                insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "5.00", first.plusWeeks(week) + "T12:00:00Z", "AMAZON", EXPENSE);
             }
 
             // act
             var charges = chargesOfAmazonItem();
 
             // assert & verify
-            assertEquals(12, charges.size());
-            assertTrue(charges.get(0).date().isAfter(charges.get(11).date()));
+            assertEquals(60, charges.size());
+            assertTrue(charges.get(0).date().isAfter(charges.get(59).date()));
         }
 
         @Test
@@ -373,7 +358,6 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
 
             // act & assert & verify
             assertEquals(2, repository.findAllByUserId(USER_1).size());
-            assertEquals(1, repository.findByUserIdAndActiveTrueOrderByNextDate(USER_1).size());
         }
     }
 }

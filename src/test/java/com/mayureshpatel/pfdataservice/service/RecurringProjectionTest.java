@@ -54,14 +54,26 @@ class RecurringProjectionTest {
         }
 
         @Test
-        @DisplayName("should flag a stored next date in the past as overdue")
+        @DisplayName("should flag a stored next date well in the past as overdue")
         void shouldFlagPastStoredDate() {
             // act
-            Projection result = RecurringProjection.project(item(MONTHLY, TODAY.minusDays(3)), List.of(), TODAY);
+            Projection result = RecurringProjection.project(item(MONTHLY, TODAY.minusDays(10)), List.of(), TODAY);
 
             // assert & verify
             assertTrue(result.overdue());
-            assertEquals(TODAY.minusDays(3), result.projectedNextDate());
+            assertEquals(TODAY.minusDays(10), result.projectedNextDate());
+        }
+
+        @Test
+        @DisplayName("should give a late statement a grace period before flagging it overdue")
+        void shouldGiveGracePeriod() {
+            // act
+            Projection justLate = RecurringProjection.project(item(MONTHLY, TODAY.minusDays(7)), List.of(), TODAY);
+            Projection weeklyLate = RecurringProjection.project(item("WEEKLY", TODAY.minusDays(3)), List.of(), TODAY);
+
+            // assert & verify -- seven days for a monthly charge, two for a weekly one
+            assertFalse(justLate.overdue());
+            assertTrue(weeklyLate.overdue());
         }
     }
 
@@ -128,11 +140,11 @@ class RecurringProjectionTest {
         void shouldFlagOverdueAfterRolling() {
             // act
             Projection result = RecurringProjection.project(
-                    item(MONTHLY, TODAY.minusMonths(3)), List.of(charge(TODAY.minusMonths(1).minusDays(4), STORED_AMOUNT)), TODAY);
+                    item(MONTHLY, TODAY.minusMonths(3)), List.of(charge(TODAY.minusMonths(1).minusDays(12), STORED_AMOUNT)), TODAY);
 
             // assert & verify
             assertTrue(result.overdue());
-            assertEquals(TODAY.minusDays(4), result.projectedNextDate());
+            assertEquals(TODAY.minusDays(12), result.projectedNextDate());
         }
     }
 

@@ -49,7 +49,7 @@ public final class RecurringProjection {
     public static Projection project(RecurringTransaction item, List<RecurringCharge> chargesNewestFirst, LocalDate today) {
         if (chargesNewestFirst == null || chargesNewestFirst.isEmpty()) {
             LocalDate stored = item.getNextDate();
-            return new Projection(null, null, stored, stored != null && stored.isBefore(today), null);
+            return new Projection(null, null, stored, isOverdue(stored, item, today), null);
         }
         RecurringCharge newest = chargesNewestFirst.get(0);
         LocalDate rolled = Frequency.fromCode(item.getFrequency()).advance(newest.date());
@@ -57,8 +57,26 @@ public final class RecurringProjection {
         // stale one has been overtaken by the real charges
         LocalDate stored = item.getNextDate();
         LocalDate next = stored != null && stored.isAfter(rolled) ? stored : rolled;
-        return new Projection(newest.date(), newest.amount(), next, next.isBefore(today),
+        return new Projection(newest.date(), newest.amount(), next, isOverdue(next, item, today),
                 findPriceChange(item.getAmount(), chargesNewestFirst));
+    }
+
+    /**
+     * A date is overdue once it is further past than the item's grace period: a statement imported
+     * a few days late, or a charge that posts a few days late, is not yet worth an amber warning.
+     */
+    private static boolean isOverdue(LocalDate expected, RecurringTransaction item, LocalDate today) {
+        return expected != null && expected.plusDays(graceDays(Frequency.fromCode(item.getFrequency()))).isBefore(today);
+    }
+
+    private static int graceDays(Frequency frequency) {
+        return switch (frequency) {
+            case WEEKLY -> 2;
+            case BI_WEEKLY -> 4;
+            case MONTHLY -> 7;
+            case QUARTERLY -> 10;
+            case YEARLY -> 14;
+        };
     }
 
     private static boolean sameAmount(BigDecimal a, BigDecimal b) {
