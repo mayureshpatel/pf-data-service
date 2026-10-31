@@ -10,6 +10,9 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
+import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthBreakdownDto;
+import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthCompare;
+import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthGroupBy;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -18,11 +21,13 @@ import org.springframework.http.MediaType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,6 +45,7 @@ class ReportControllerTest extends BaseControllerTest {
     private static final String PARAM_END_DATE = "endDate";
     private static final String EXPLORE_URL = "/api/v1/reports/explore";
     private static final String PARAM_MEASURE = "measure";
+    private static final String PARAM_COMPARE = "compare";
     private static final String MEASURE_SPENDING = "SPENDING";
     private static final String PARAM_GROUP_BY = "groupBy";
     private static final String JAN_1 = "2026-01-01";
@@ -220,6 +226,86 @@ class ReportControllerTest extends BaseControllerTest {
             // act & assert & verify
             mockMvc.perform(get(EXPLORE_URL).param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    /** {@code GET /api/v1/reports/net-worth/breakdown} binds its parameters by name, applies the documented defaults, and answers 400 for anything the service rejects. */
+    @Nested
+    @DisplayName("getNetWorthBreakdown")
+    class GetNetWorthBreakdownTests {
+
+        private static final String BREAKDOWN_URL = "/api/v1/reports/net-worth/breakdown";
+
+        private NetWorthBreakdownDto empty() {
+            return new NetWorthBreakdownDto(List.of(), null, LocalDate.of(2026, 1, 31), null, null, null, List.of());
+        }
+
+        @Test
+        @DisplayName("GET /net-worth/breakdown should bind every parameter")
+        void breakdown_shouldBindEveryParameter() throws Exception {
+            // arrange
+            when(netWorthService.breakdown(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(empty());
+
+            // act
+            mockMvc.perform(get(BREAKDOWN_URL)
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31)
+                            .param(PARAM_GROUP_BY, "ACCOUNT").param("accountIds", "3", "4").param("typeCode", "SAVINGS")
+                            .param(PARAM_COMPARE, "YEAR_AGO").param("asOf", "2026-01"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.asOf").value("2026-01-31"));
+
+            // assert & verify
+            verify(netWorthService).breakdown(eq(USER_ID), eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 1, 31)),
+                    eq(NetWorthGroupBy.ACCOUNT), eq(List.of(3L, 4L)), eq("SAVINGS"), eq(NetWorthCompare.YEAR_AGO),
+                    eq(YearMonth.of(2026, 1)), any(LocalDate.class));
+        }
+
+        @Test
+        @DisplayName("GET /net-worth/breakdown should apply the defaults when nothing is given")
+        void breakdown_shouldApplyTheDefaults() throws Exception {
+            // arrange
+            when(netWorthService.breakdown(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(empty());
+            LocalDate today = LocalDate.now();
+
+            // act
+            mockMvc.perform(get(BREAKDOWN_URL)).andExpect(status().isOk());
+
+            // assert & verify -- the last 12 months ending today, grouped by type, not comparing
+            verify(netWorthService).breakdown(eq(USER_ID), eq(today.minusMonths(11).withDayOfMonth(1)), eq(today),
+                    eq(NetWorthGroupBy.TYPE), eq(List.of()), isNull(), eq(NetWorthCompare.NONE), isNull(), eq(today));
+        }
+
+        @Test
+        @DisplayName("GET /net-worth/breakdown should return 400 when the service rejects the input")
+        void breakdown_shouldReturn400WhenTheServiceRejectsTheInput() throws Exception {
+            // arrange
+            when(netWorthService.breakdown(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenThrow(new IllegalArgumentException("The end date must not be before the start date."));
+
+            // act & assert & verify
+            mockMvc.perform(get(BREAKDOWN_URL).param(PARAM_START_DATE, JAN_31).param(PARAM_END_DATE, JAN_1))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("GET /net-worth/breakdown should return 400 for an unknown grouping or comparison")
+        void breakdown_shouldReturn400ForAnUnknownGroupingOrComparison() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(get(BREAKDOWN_URL).param(PARAM_GROUP_BY, "NOPE")).andExpect(status().isBadRequest());
+            mockMvc.perform(get(BREAKDOWN_URL).param(PARAM_COMPARE, "NOPE")).andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("GET /net-worth/breakdown should scope the request to the authenticated user")
+        void breakdown_shouldScopeTheRequestToTheAuthenticatedUser() throws Exception {
+            // arrange
+            when(netWorthService.breakdown(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(empty());
+
+            // act
+            mockMvc.perform(get(BREAKDOWN_URL)).andExpect(status().isOk());
+
+            // assert & verify
+            verify(netWorthService).breakdown(eq(USER_ID), any(), any(), any(), any(), any(), any(), any(), any());
         }
     }
 }

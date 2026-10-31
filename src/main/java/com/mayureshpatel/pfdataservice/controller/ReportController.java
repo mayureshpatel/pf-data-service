@@ -6,7 +6,10 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreScopeRequest;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
 import com.mayureshpatel.pfdataservice.service.ExploreService;
+import com.mayureshpatel.pfdataservice.service.NetWorthService;
 import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
+import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthBreakdownDto;
+import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthBreakdownRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +42,7 @@ public class ReportController {
 
     private final ReportService reportService;
     private final ExploreService exploreService;
+    private final NetWorthService netWorthService;
 
     /**
      * Returns the user's total net worth as of the end of each month in the requested range,
@@ -61,6 +65,28 @@ public class ReportController {
         LocalDate resolvedStart = startDate != null ? startDate : resolvedEnd.minusMonths(11).withDayOfMonth(1);
 
         return ResponseEntity.ok(reportService.getNetWorthOverTime(userDetails.getId(), resolvedStart, resolvedEnd));
+    }
+
+    /**
+     * Returns the Reports net worth view in one response: month-end assets, debts and net worth, the rows by
+     * account type or account, the cards' figures, what moved net worth, and an optional comparison.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the range, grouping, filters and comparison, bound by name (all optional)
+     * @return the whole view
+     */
+    @Operation(summary = "Net worth breakdown", description = "Month-end assets, debts and net worth by account type or account, what moved net worth, and an optional comparison")
+    @ApiResponse(responseCode = "200", description = "Breakdown returned")
+    @ApiResponse(responseCode = "400", description = "The range is reversed, the account type is unknown, or the month is outside the range")
+    @GetMapping("/net-worth/breakdown")
+    public ResponseEntity<NetWorthBreakdownDto> getNetWorthBreakdown(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @ModelAttribute NetWorthBreakdownRequest request) {
+        LocalDate today = LocalDate.now();
+        return ResponseEntity.ok(netWorthService.breakdown(
+                userDetails.getId(), request.startDateOrDefault(today), request.endDateOrDefault(today),
+                request.groupByOrDefault(), request.accountIdsOrEmpty(), request.typeCode(),
+                request.compareOrDefault(), request.asOf(), today));
     }
 
     /**
