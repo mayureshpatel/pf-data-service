@@ -135,9 +135,9 @@ class NetWorthRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    @DisplayName("should put adjustments and plain transfers in the other bucket")
-    void shouldPutAdjustmentsAndPlainTransfersInTheOtherBucket() {
-        // arrange
+    @DisplayName("should count a plain transfer as money out and keep an adjustment signed")
+    void shouldCountAPlainTransferAsMoneyOutAndKeepAnAdjustmentSigned() {
+        // arrange -- Transaction.getNetChange() signs a plain transfer as -abs(amount); only an adjustment is raw
         insert(SAVINGS, "TRANSFER", "7.00", utc(2031, 5, 1));
         insert(SAVINGS, ADJUSTMENT, "-3.00", utc(2031, 5, 2));
 
@@ -145,8 +145,22 @@ class NetWorthRepositoryTest extends BaseRepositoryTest {
         StoryFlows savings = repository.findStoryFlows(USER_1, YEAR_2031).get(SAVINGS);
 
         // assert & verify
-        assertMoney("4.00", savings.interestAndAdjustments());
+        assertMoney("7.00", savings.withdrawals());
+        assertMoney("-3.00", savings.interestAndAdjustments());
         assertMoney(AMOUNT_20, savings.deposits());
+    }
+
+    @Test
+    @DisplayName("should sign a plain transfer as money out in the monthly flows")
+    void shouldSignAPlainTransferAsMoneyOutInTheMonthlyFlows() {
+        // arrange
+        insert(SAVINGS, "TRANSFER", "7.00", utc(2031, 5, 1));
+
+        // act
+        Map<Long, Map<YearMonth, BigDecimal>> flows = repository.findMonthlyNetFlow(USER_1, LocalDate.of(2031, 1, 1));
+
+        // assert & verify -- the may flow on savings is -7, not +7
+        assertMoney("-7.00", flows.get(SAVINGS).get(YearMonth.of(2031, 5)));
     }
 
     @Test

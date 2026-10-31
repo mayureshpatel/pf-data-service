@@ -53,6 +53,7 @@ class NetWorthServiceTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 25);
     private static final LocalDate AUG_1 = LocalDate.of(2026, 8, 1);
     private static final String CHECKING = "CHECKING";
+    private static final String CHECKING_BALANCE = "1000";
     private static final String SAVINGS = "SAVINGS";
     private static final String CREDIT_CARD = "CREDIT_CARD";
     private static final String CASH = "CASH";
@@ -93,7 +94,7 @@ class NetWorthServiceTest {
 
     private static final OffsetDateTime LONG_AGO = OffsetDateTime.of(2020, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
 
-    private final Account checking = account(CHECKING_ID, "Everyday", CHECKING, true, "1000", LONG_AGO);
+    private final Account checking = account(CHECKING_ID, "Everyday", CHECKING, true, CHECKING_BALANCE, LONG_AGO);
     private final Account savings = account(SAVINGS_ID, "Rainy day", SAVINGS, true, FIVE_THOUSAND, LONG_AGO);
     private final Account card = account(CARD_ID, "Visa", CREDIT_CARD, false, OWED_400, LONG_AGO);
 
@@ -134,7 +135,7 @@ class NetWorthServiceTest {
         NetWorthBreakdownDto dto = run(NetWorthGroupBy.ACCOUNT, List.of(), null, NetWorthCompare.NONE, null);
 
         // assert & verify -- october is in progress, so every account shows exactly its current balance
-        assertMoney("1000", group(dto, "1").balance());
+        assertMoney(CHECKING_BALANCE, group(dto, "1").balance());
         assertMoney(FIVE_THOUSAND, group(dto, "2").balance());
         assertMoney(OWED_400, group(dto, "3").balance());
         assertTrue(dto.points().get(2).partial());
@@ -266,10 +267,28 @@ class NetWorthServiceTest {
         // assert & verify -- checking: opening 920, closing 1000; deposits 130 - withdrawals 50 + other 0 = 80
         var story = group(dto, "1").story();
         assertMoney("920", story.openingBalance());
-        assertMoney("1000", story.closingBalance());
+        assertMoney(CHECKING_BALANCE, story.closingBalance());
         assertEquals(0, story.closingBalance().subtract(story.openingBalance())
                 .compareTo(story.deposits().subtract(story.withdrawals()).add(story.interestAndAdjustments())));
         assertNull(group(run(), CHECKING).story());
+    }
+
+    @Test
+    @DisplayName("should close the story gap for an account created inside the range")
+    void shouldCloseTheStoryGapForAnAccountCreatedInsideTheRange() {
+        // arrange -- checking was opened on Sep 10, after the range starts; its history before that is still in its flows
+        Account youngChecking = account(CHECKING_ID, "Everyday", CHECKING, true, CHECKING_BALANCE, OffsetDateTime.of(2026, 9, 10, 0, 0, 0, 0, ZoneOffset.UTC));
+        when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(youngChecking));
+
+        // act
+        NetWorthBreakdownDto dto = run(NetWorthGroupBy.ACCOUNT, List.of(), null, NetWorthCompare.NONE, null);
+
+        // assert & verify -- opening 920 (not 0), closing 1000; deposits 130 - withdrawals 50 + other 0 = 80
+        var story = group(dto, "1").story();
+        assertMoney("920", story.openingBalance());
+        assertMoney(CHECKING_BALANCE, story.closingBalance());
+        assertEquals(0, story.closingBalance().subtract(story.openingBalance())
+                .compareTo(story.deposits().subtract(story.withdrawals()).add(story.interestAndAdjustments())));
     }
 
     @Test

@@ -42,6 +42,15 @@ final class NetWorthBooks {
         if (!NetWorthBalances.existedAsOf(account.getAudit() == null ? null : account.getAudit().getCreatedAt(), monthEnd)) {
             return null;
         }
+        return rawBalance(account, monthEnd);
+    }
+
+    /**
+     * @param account  the account
+     * @param monthEnd the month end
+     * @return the account's balance at the month end from its flows, even before the account was created
+     */
+    BigDecimal rawBalance(Account account, LocalDate monthEnd) {
         return NetWorthBalances.balanceAt(account.getCurrentBalance(), flows.getOrDefault(account.getId(), Map.of()), monthEnd, today);
     }
 

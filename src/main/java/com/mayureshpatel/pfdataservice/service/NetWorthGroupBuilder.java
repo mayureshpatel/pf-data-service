@@ -74,10 +74,10 @@ final class NetWorthGroupBuilder {
     }
 
     private static NetWorthStoryDto story(Account account, NetWorthBooks books, Context context, StoryFlows flows) {
-        BigDecimal opening = books.balance(account, context.openingEnd());
-        BigDecimal closing = books.balance(account, context.monthEnds().get(context.monthEnds().size() - 1));
+        BigDecimal opening = books.rawBalance(account, context.openingEnd());
+        BigDecimal closing = books.rawBalance(account, context.monthEnds().get(context.monthEnds().size() - 1));
         StoryFlows shown = flows == null ? new StoryFlows(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO) : flows;
-        return new NetWorthStoryDto(opening == null ? BigDecimal.ZERO : opening, closing == null ? BigDecimal.ZERO : closing,
+        return new NetWorthStoryDto(opening, closing,
                 shown.deposits(), shown.withdrawals(), shown.interestAndAdjustments());
     }
 }

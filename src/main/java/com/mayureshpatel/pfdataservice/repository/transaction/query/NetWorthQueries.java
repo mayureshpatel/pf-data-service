@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
  * SQL query constants for {@code NetWorthRepository}. Every query joins {@code accounts}, filters
  * {@code accounts.user_id = :userId} and leaves soft-deleted transactions out. The signed flow
  * expression mirrors the balance math in {@code TransactionQueries.GET_NET_FLOW_AFTER_DATE}: income and
- * transfers in add, expenses and transfers out subtract, anything else adds as it is.
+ * transfers in add, expenses and transfers out subtract, an adjustment adds as it is, anything else subtracts (as Transaction.getNetChange does).
  */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class NetWorthQueries {
@@ -19,9 +19,9 @@ public final class NetWorthQueries {
             select transactions.account_id,
                    to_char(date_trunc('month', transactions.date at time zone 'UTC'), 'YYYY-MM') as flow_month,
                    sum(case
-                           when transactions.type in ('INCOME', 'TRANSFER_IN') then transactions.amount
-                           when transactions.type in ('EXPENSE', 'TRANSFER_OUT') then -transactions.amount
-                           else transactions.amount
+                           when transactions.type in ('INCOME', 'TRANSFER_IN') then abs(transactions.amount)
+                           when transactions.type = 'ADJUSTMENT' then transactions.amount
+                           else -abs(transactions.amount)
                        end) as net_flow
             from transactions
                      join accounts on accounts.id = transactions.account_id
@@ -35,8 +35,8 @@ public final class NetWorthQueries {
     public static final String FIND_STORY_FLOWS = """
             select transactions.account_id,
                    coalesce(sum(transactions.amount) filter (where transactions.type in ('INCOME', 'TRANSFER_IN')), 0) as deposits,
-                   coalesce(sum(transactions.amount) filter (where transactions.type in ('EXPENSE', 'TRANSFER_OUT')), 0) as withdrawals,
-                   coalesce(sum(transactions.amount) filter (where transactions.type not in ('INCOME', 'TRANSFER_IN', 'EXPENSE', 'TRANSFER_OUT')), 0) as other_flow
+                   coalesce(sum(transactions.amount) filter (where transactions.type in ('EXPENSE', 'TRANSFER_OUT', 'TRANSFER')), 0) as withdrawals,
+                   coalesce(sum(transactions.amount) filter (where transactions.type not in ('INCOME', 'TRANSFER_IN', 'EXPENSE', 'TRANSFER_OUT', 'TRANSFER')), 0) as other_flow
             from transactions
                      join accounts on accounts.id = transactions.account_id
             where accounts.user_id = :userId
