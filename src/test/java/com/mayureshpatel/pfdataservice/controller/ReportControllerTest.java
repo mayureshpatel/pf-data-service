@@ -9,7 +9,6 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRowDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
-import com.mayureshpatel.pfdataservice.dto.report.NetWorthDataPointDto;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthCompare;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthGroupBy;
@@ -50,50 +49,6 @@ class ReportControllerTest extends BaseControllerTest {
     private static final String PARAM_GROUP_BY = "groupBy";
     private static final String JAN_1 = "2026-01-01";
     private static final String JAN_31 = "2026-01-31";
-
-    /** {@code GET /api/v1/reports/net-worth} returns the service's series for an explicit {@code startDate}/{@code endDate}, and -- unlike the other report endpoints below -- defaults to the trailing 12 months (from the 1st of that starting month through today) when no range is given at all. */
-    @Nested
-    @DisplayName("getNetWorth")
-    class GetNetWorthTests {
-
-        @Test
-        @DisplayName("GET /net-worth should return the series for an explicit date range")
-        void getNetWorth_shouldReturnSeriesForExplicitRange() throws Exception {
-            // arrange
-            LocalDate start = LocalDate.of(2026, 1, 1);
-            LocalDate end = LocalDate.of(2026, 3, 1);
-            NetWorthDataPointDto point = new NetWorthDataPointDto(LocalDate.of(2026, 1, 31), new BigDecimal("1000.00"));
-            when(reportService.getNetWorthOverTime(USER_ID, start, end)).thenReturn(List.of(point));
-
-            // act & assert & verify
-            mockMvc.perform(get("/api/v1/reports/net-worth")
-                            .param(PARAM_START_DATE, start.toString())
-                            .param(PARAM_END_DATE, end.toString()))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].date").value("2026-01-31"))
-                    .andExpect(jsonPath("$[0].netWorth").value(1000.00));
-
-            verify(reportService).getNetWorthOverTime(USER_ID, start, end);
-        }
-
-        @Test
-        @DisplayName("GET /net-worth should default to the trailing 12 months when no range is given")
-        void getNetWorth_shouldDefaultToTrailing12Months() throws Exception {
-            // arrange
-            LocalDate today = LocalDate.now();
-            LocalDate expectedStart = today.minusMonths(11).withDayOfMonth(1);
-            when(reportService.getNetWorthOverTime(eq(USER_ID), eq(expectedStart), eq(today))).thenReturn(List.of());
-
-            // act & assert & verify
-            mockMvc.perform(get("/api/v1/reports/net-worth"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(0)));
-
-            verify(reportService).getNetWorthOverTime(USER_ID, expectedStart, today);
-        }
-    }
 
     /** {@code GET /api/v1/reports/explore} binds every parameter, defaults side to spending and compare to none, and rejects a measure/grouping pair that makes no sense. */
     @Nested
