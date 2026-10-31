@@ -15,15 +15,6 @@ public final class RecurringTransactionDtoMapper {
     }
 
     /**
-     * @param recurring the domain recurring-transaction template to convert, or {@code null}
-     * @return the equivalent DTO, or {@code null} if {@code recurring} was {@code null}
-     */
-    public static RecurringTransactionDto toDto(RecurringTransaction recurring) {
-        if (recurring == null) return null;
-        return toDto(recurring, new RecurringProjection.Projection(null, null, recurring.getNextDate(), false, null));
-    }
-
-    /**
      * @param recurring  the domain recurring-transaction template to convert, or {@code null}
      * @param projection what the template's real charges say about it (last charge, next date, price change)
      * @return the equivalent DTO, or {@code null} if {@code recurring} was {@code null}

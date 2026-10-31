@@ -644,10 +644,10 @@ class RecurringSuggestionFinderTest {
         }
 
         @Test
-        @DisplayName("should accept a quarterly group whose gaps vary by 8 days")
+        @DisplayName("should accept a quarterly group whose gaps vary by 9 days")
         void shouldToleratePeriodicSlipForQuarterly() {
             // act & assert & verify
-            assertEquals(Frequency.QUARTERLY, find(withGaps(VENDOR, 82, 98, 90)).get(0).frequency());
+            assertEquals(Frequency.QUARTERLY, find(withGaps(VENDOR, 81, 99, 90)).get(0).frequency());
         }
 
         @Test

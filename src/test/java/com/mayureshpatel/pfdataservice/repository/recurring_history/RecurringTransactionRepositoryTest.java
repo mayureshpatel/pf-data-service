@@ -60,22 +60,6 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should find active by user ID ordered by next date")
-        void shouldFindActiveByUserId() {
-            // act
-            List<RecurringTransaction> result = repository.findByUserIdAndActiveTrueOrderByNextDate(USER_1);
-
-            // assert & verify
-            assertFalse(result.isEmpty());
-            assertTrue(result.stream().allMatch(RecurringTransaction::isActive));
-            // Verify order
-            for (int i = 0; i < result.size() - 1; i++) {
-                assertTrue(result.get(i).getNextDate().isBefore(result.get(i + 1).getNextDate()) 
-                        || result.get(i).getNextDate().isEqual(result.get(i + 1).getNextDate()));
-            }
-        }
-
-        @Test
         @DisplayName("should find by ID")
         void shouldFindById() {
             // arrange
@@ -373,7 +357,6 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
 
             // act & assert & verify
             assertEquals(2, repository.findAllByUserId(USER_1).size());
-            assertEquals(1, repository.findByUserIdAndActiveTrueOrderByNextDate(USER_1).size());
         }
     }
 }

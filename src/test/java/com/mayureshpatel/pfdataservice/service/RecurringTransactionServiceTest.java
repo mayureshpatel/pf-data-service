@@ -116,7 +116,7 @@ class RecurringTransactionServiceTest {
             // arrange
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
             when(accountRepository.findById(10L)).thenReturn(Optional.of(Account.builder().id(10L).userId(USER_ID).build()));
-            when(merchantRepository.findById(20L)).thenReturn(Optional.of(Merchant.builder().id(20L).build()));
+            when(merchantRepository.findByIdAndUserId(20L, USER_ID)).thenReturn(Optional.of(Merchant.builder().id(20L).build()));
             when(recurringRepository.insert(any(), eq(USER_ID))).thenReturn(1);
 
             RecurringTransactionCreateRequest request = RecurringTransactionCreateRequest.builder()
@@ -158,7 +158,7 @@ class RecurringTransactionServiceTest {
         @DisplayName("should throw ResourceNotFoundException if merchant not found")
         void shouldThrowOnMerchantNotFound() {
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().build()));
-            when(merchantRepository.findById(20L)).thenReturn(Optional.empty());
+            when(merchantRepository.findByIdAndUserId(20L, USER_ID)).thenReturn(Optional.empty());
             RecurringTransactionCreateRequest request = RecurringTransactionCreateRequest.builder().merchantId(20L).build();
             assertThrows(ResourceNotFoundException.class, () -> recurringService.createRecurringTransaction(USER_ID, request));
         }
@@ -182,7 +182,7 @@ class RecurringTransactionServiceTest {
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(USER_ID).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
             when(accountRepository.findById(10L)).thenReturn(Optional.of(Account.builder().id(10L).userId(USER_ID).build()));
-            when(merchantRepository.findById(20L)).thenReturn(Optional.of(Merchant.builder().id(20L).build()));
+            when(merchantRepository.findByIdAndUserId(20L, USER_ID)).thenReturn(Optional.of(Merchant.builder().id(20L).build()));
             when(recurringRepository.update(any(), eq(USER_ID))).thenReturn(1);
 
             RecurringTransactionUpdateRequest request = RecurringTransactionUpdateRequest.builder()
@@ -235,7 +235,7 @@ class RecurringTransactionServiceTest {
         void shouldThrowOnMerchantNotFound() {
             RecurringTransaction rt = RecurringTransaction.builder().id(RECURRING_ID).userId(USER_ID).build();
             when(recurringRepository.findById(RECURRING_ID)).thenReturn(Optional.of(rt));
-            when(merchantRepository.findById(20L)).thenReturn(Optional.empty());
+            when(merchantRepository.findByIdAndUserId(20L, USER_ID)).thenReturn(Optional.empty());
             RecurringTransactionUpdateRequest request = RecurringTransactionUpdateRequest.builder().id(RECURRING_ID).merchantId(20L).build();
             assertThrows(ResourceNotFoundException.class, () -> recurringService.updateRecurringTransaction(USER_ID, request));
         }

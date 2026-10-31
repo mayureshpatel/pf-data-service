@@ -99,7 +99,7 @@ public class RecurringTransactionService {
         }
 
         if (request.merchantId() != null && request.merchantId() > 0) {
-            merchantRepository.findById(request.merchantId())
+            merchantRepository.findByIdAndUserId(request.merchantId(), userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
         }
 
@@ -135,7 +135,7 @@ public class RecurringTransactionService {
         }
 
         if (request.merchantId() != null && request.merchantId() > 0) {
-            merchantRepository.findById(request.merchantId())
+            merchantRepository.findByIdAndUserId(request.merchantId(), userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Merchant not found"));
         }
 

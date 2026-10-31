@@ -53,17 +53,6 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
                 .list();
     }
 
-    /**
-     * @param userId the owning user's id
-     * @return only the user's active templates, soonest-due first
-     */
-    public List<RecurringTransaction> findByUserIdAndActiveTrueOrderByNextDate(Long userId) {
-        return jdbcClient.sql(RecurringTransactionQueries.FIND_BY_USER_ID_ACTIVE_ORDER_BY_NEXT_DATE)
-                .param(SqlParams.USER_ID, userId)
-                .query(rowMapper)
-                .list();
-    }
-
     @Override
     public Optional<RecurringTransaction> findById(Long id) {
         return jdbcClient.sql(RecurringTransactionQueries.FIND_BY_ID)
