@@ -11,7 +11,7 @@ import lombok.Builder;
  * "Credit Card"). {@code isAsset} classifies whether the type represents money the user has
  * (checking, savings) versus money the user owes (credit cards) -- a display/grouping
  * distinction; net-worth totals are summed directly from each account's own balance regardless of
- * this flag (see {@code ReportService.getNetWorthOverTime}), so a liability-type account still
+ * this flag (see {@code NetWorthService.breakdown}), so a liability-type account still
  * needs a negative stored balance to net out correctly.
  *
  * <p>a record (PF-849): a plain class with a Lombok-generated {@code isXxx()} getter made

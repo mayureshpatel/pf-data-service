@@ -145,7 +145,7 @@ class SnapshotServiceTest {
      * CreateEndOfMonthSnapshotTests}'s logic as a pure read-only computation) does the same
      * current-balance-minus-net-flow math but never touches {@code snapshotRepository} or
      * {@code accountRepository} -- callers that only need the number, not a persisted row (e.g.
-     * {@code ReportService}), use this instead of the persisting method.
+     * a read-only report), use this instead of the persisting method.
      */
     @Nested
     @DisplayName("calculateEndOfMonthBalance (PF-304)")
