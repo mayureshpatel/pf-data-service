@@ -114,8 +114,8 @@ public final class RecurringTransactionQueries {
 
     // language=SQL -- PF-884: matches each tracked item to the user's real expense charges of the last
     // three years, through the item's merchant id or through a description linked to that merchant
-    // (folded exactly like the link key: trim, collapse whitespace, lower case), and keeps the 12 newest
-    // per item. each description is folded once (not once per tracked item), and both matches are plain
+    // (folded exactly like the link key: trim, collapse whitespace, lower case), and keeps the 60 newest
+    // per item (a year of weekly charges, so a weekly price change keeps its real start date). each description is folded once (not once per tracked item), and both matches are plain
     // equi-joins so the planner can hash them; union removes a charge both matches found.
     public static final String FIND_RECENT_CHARGES_BY_RECURRING_ID = """
             with user_charges as (
@@ -160,7 +160,7 @@ public final class RecurringTransactionQueries {
                        ) as rn
                 from matched
             ) ranked
-            where ranked.rn <= 12
+            where ranked.rn <= 60
             order by ranked.recurring_id, ranked.rn
             """.replace("${descriptionKey}", DescriptionKeys.sqlFold("transactions.description"));
 

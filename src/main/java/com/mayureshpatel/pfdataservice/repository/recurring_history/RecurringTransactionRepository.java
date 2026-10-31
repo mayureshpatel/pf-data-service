@@ -136,7 +136,7 @@ public class RecurringTransactionRepository implements JdbcRepository<RecurringT
     /**
      * Matches each of the user's tracked items to its real charges (PF-884): the user's non-deleted
      * expense transactions assigned to the item's merchant, or whose folded description equals one
-     * linked to that merchant. At most the 12 newest per item, newest first. An item with no
+     * linked to that merchant. At most the 60 newest per item, newest first. An item with no
      * matches has no entry.
      *
      * @param userId the owning user's id
