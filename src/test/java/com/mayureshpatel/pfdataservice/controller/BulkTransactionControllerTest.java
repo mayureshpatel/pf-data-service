@@ -64,8 +64,9 @@ class BulkTransactionControllerTest {
                 new FileImportResultDto("b.csv", FileImportStatus.SKIPPED_ALREADY_IMPORTED, 0, 0, null),
                 new FileImportResultDto("c.csv", FileImportStatus.FAILED, 0, 0, "boom")));
 
-        // act & assert & verify
+        // act
         mockMvc.perform(post("/api/v1/transactions/bulk").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("[]"))
+                // assert & verify
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[0].fileName").value("a.csv"))

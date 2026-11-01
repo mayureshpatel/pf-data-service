@@ -467,7 +467,7 @@ class TransactionImportServiceTest {
         void saveBulkTransactions_unexpectedFailureOnOneFile_reportsFailedWithMessageAndContinues() {
             // arrange
             when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv"))
-                    .thenThrow(new IllegalStateException("boom"));
+                    .thenThrow(new ResourceNotFoundException("Account not found with ID: 10"));
             when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv"))
                     .thenReturn(new TransactionImportService.SaveOutcome(1, 0));
 
@@ -475,8 +475,25 @@ class TransactionImportServiceTest {
             List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request("a.csv"), request("b.csv")));
 
             // assert & verify
-            assertEquals(new FileImportResultDto("a.csv", FileImportStatus.FAILED, 0, 0, "boom"), results.get(0));
+            assertEquals(new FileImportResultDto("a.csv", FileImportStatus.FAILED, 0, 0, "Account not found with ID: 10"), results.get(0));
             assertEquals(new FileImportResultDto("b.csv", FileImportStatus.IMPORTED, 1, 0, null), results.get(1));
+        }
+
+        @Test
+        @DisplayName("should hide raw exception text behind a generic message for data-access and null-message failures")
+        void saveBulkTransactions_unsafeFailures_reportGenericMessage() {
+            // arrange
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv"))
+                    .thenThrow(new org.springframework.dao.DataIntegrityViolationException("constraint transactions_pkey violated"));
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv"))
+                    .thenThrow(new IllegalStateException((String) null));
+
+            // act
+            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request("a.csv"), request("b.csv")));
+
+            // assert & verify
+            assertEquals(new FileImportResultDto("a.csv", FileImportStatus.FAILED, 0, 0, "Could not import this file."), results.get(0));
+            assertEquals(new FileImportResultDto("b.csv", FileImportStatus.FAILED, 0, 0, "Could not import this file."), results.get(1));
         }
 
         @Test

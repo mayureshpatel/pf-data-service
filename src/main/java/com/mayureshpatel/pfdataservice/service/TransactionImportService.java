@@ -182,10 +182,23 @@ public class TransactionImportService {
                 throw e;
             } catch (RuntimeException e) {
                 log.warn("Bulk import failed for file: {}", req.fileName(), e);
-                results.add(new FileImportResultDto(req.fileName(), FileImportStatus.FAILED, 0, 0, e.getMessage()));
+                results.add(new FileImportResultDto(req.fileName(), FileImportStatus.FAILED, 0, 0, safeFailureMessage(e)));
             }
         }
         return results;
+    }
+
+    /**
+     * The client-safe message for a failed file: the exception's own message only for known
+     * application exceptions (whose messages are written for users), otherwise a generic one so
+     * database or framework internals never reach the client.
+     */
+    private String safeFailureMessage(RuntimeException e) {
+        boolean knownAppException = e instanceof ResourceNotFoundException || e instanceof CsvParsingException;
+        if (knownAppException && e.getMessage() != null) {
+            return e.getMessage();
+        }
+        return "Could not import this file.";
     }
 
     /**
