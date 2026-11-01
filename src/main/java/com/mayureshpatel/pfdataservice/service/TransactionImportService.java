@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -97,7 +98,8 @@ public class TransactionImportService {
 
     /**
      * Parses an uploaded file into a preview of the transactions it contains, with a best-guess
-     * category applied to each row via the user's existing rules and categories, the merchant
+     * category applied to each row via the user's existing rules and categories (subcategories only,
+     * since the save accepts nothing else), the merchant
      * its description is already linked to (if any), and a flag for rows that duplicate an
      * already-saved transaction or an earlier row of the same file. Nothing is saved or created.
      *
@@ -145,6 +147,9 @@ public class TransactionImportService {
                         Category suggestedCategory = (categoryId != null && categoryId > 0)
                                 ? userCategories.stream()
                                 .filter(c -> c.getId().equals(categoryId))
+                                // a rule or merchant default can point at a top-level category, which
+                                // the save rejects, so only a subcategory is ever suggested
+                                .filter(Category::isSubCategory)
                                 .findFirst()
                                 .orElse(null)
                                 : null;
@@ -197,7 +202,7 @@ public class TransactionImportService {
         List<FileImportResultDto> results = new ArrayList<>();
         for (SaveTransactionRequest req : requests) {
             try {
-                SaveOutcome outcome = self.saveTransactions(userId, req.accountId(), req.transactions(), req.fileName(), req.fileHash());
+                SaveOutcome outcome = self.saveTransactions(userId, req.accountId(), req.transactions(), req.fileName(), req.fileHash(), req.merchantsReviewed());
                 results.add(new FileImportResultDto(req.fileName(), FileImportStatus.IMPORTED, outcome.saved(), outcome.duplicates(), null));
             } catch (DuplicateImportException e) {
                 results.add(new FileImportResultDto(req.fileName(), FileImportStatus.SKIPPED_ALREADY_IMPORTED, 0, 0, null));
@@ -265,12 +270,18 @@ public class TransactionImportService {
      * @param approvedDtos the previewed transactions to save
      * @param fileName     the source filename, recorded for duplicate-import history (optional)
      * @param fileHash     the source file's hash, used for whole-file duplicate detection (optional)
+     * @param merchantsReviewed {@code true} when the user reviewed every row's merchant, so a row
+     *                          without one is saved with no merchant; {@code false} fills a missing
+     *                          merchant from the description's existing link (legacy behavior)
      * @return how many transactions were saved and how many were skipped as duplicates
      * @throws AccessDeniedException      if the account belongs to a different user
      * @throws DuplicateImportException   if this exact file was already imported
+     * @throws ResourceNotFoundException  if a row names a merchant or category the user does not
+     *                                    own, or a category that is not a subcategory
      */
     @Transactional
-    public SaveOutcome saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash) {
+    public SaveOutcome saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash,
+                                        boolean merchantsReviewed) {
         log.info("Saving {} transactions for User: {}, Account ID: {}", approvedDtos.size(), userId, accountId);
 
         Account account = validateAccountOwnership(userId, accountId);
@@ -283,7 +294,11 @@ public class TransactionImportService {
         merchantService.requireOwnedMerchants(userId, approvedDtos.stream()
                 .map(d -> d.merchant() != null ? d.merchant().id() : null)
                 .toList());
-        Map<String, Long> merchantMap = resolveMerchantIds(userId, approvedDtos);
+        requireOwnedSubcategories(userId, approvedDtos.stream()
+                .map(d -> d.category() != null ? d.category().id() : null)
+                .toList());
+        // a reviewed batch's missing merchant is a deliberate "none", so skip the description match
+        Map<String, Long> merchantMap = merchantsReviewed ? Map.of() : resolveMerchantIds(userId, approvedDtos);
         Set<String> existingSignatures = findExistingSignatures(accountId, approvedDtos.stream().map(TransactionDto::date).toList());
         DedupeResult result = deduplicateTransactions(approvedDtos, existingSignatures, account, merchantMap);
         persistIfAny(account, result, fileName, fileHash);
@@ -313,6 +328,28 @@ public class TransactionImportService {
             log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);
             throw new DuplicateImportException("This file has already been imported.");
         }
+    }
+
+    /**
+     * Rejects the batch before anything is saved unless every non-null category id names one of
+     * the user's own subcategories -- the same rule {@code TransactionService} applies when a
+     * transaction is edited by hand (PF-898). Reported as {@link ResourceNotFoundException}, not
+     * {@link AccessDeniedException}, so a bulk save marks only this file FAILED with a safe message
+     * and never reveals whether another user's category exists.
+     *
+     * @param userId      the user id
+     * @param categoryIds the rows' category ids (nulls and repeats allowed)
+     * @throws ResourceNotFoundException if a category is missing, not the user's, or top-level
+     */
+    private void requireOwnedSubcategories(Long userId, List<Long> categoryIds) {
+        categoryIds.stream().filter(Objects::nonNull).distinct().forEach(id -> {
+            Category category = categoryRepository.findById(id)
+                    .filter(c -> userId.equals(c.getUserId()))
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found."));
+            if (!category.isSubCategory()) {
+                throw new ResourceNotFoundException("Only subcategories can be assigned to imported transactions.");
+            }
+        });
     }
 
     /**
@@ -369,7 +406,8 @@ public class TransactionImportService {
 
             if (!existsInDb && !existsInBatch) {
                 // a row's own reviewed merchant (PF-898, ownership already verified) wins over the
-                // description match. a description with no existing link (PF-845) just leaves
+                // description match; a reviewed batch passes an empty match map, so a cleared
+                // merchant stays cleared. a description with no existing link (PF-845) just leaves
                 // merchantId null -- the expected outcome for anything nobody has linked yet.
                 // import never creates a merchant or a link, and an override never teaches one.
                 Long merchantId = dto.merchant() != null && dto.merchant().id() != null

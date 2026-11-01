@@ -121,7 +121,7 @@ class TransactionControllerTest extends BaseControllerTest {
                     .build();
             SaveTransactionRequest request = new SaveTransactionRequest(List.of(transaction), TEST_CSV_FILENAME, "hash123", 10L);
 
-            when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq(TEST_CSV_FILENAME), eq("hash123")))
+            when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq(TEST_CSV_FILENAME), eq("hash123"), eq(false)))
                     .thenReturn(new TransactionImportService.SaveOutcome(1, 0));
 
             // act & assert & verify
@@ -132,7 +132,7 @@ class TransactionControllerTest extends BaseControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(content().string("Successfully saved 1 transactions."));
 
-            verify(transactionImportService).saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq(TEST_CSV_FILENAME), eq("hash123"));
+            verify(transactionImportService).saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq(TEST_CSV_FILENAME), eq("hash123"), eq(false));
         }
 
         @Test

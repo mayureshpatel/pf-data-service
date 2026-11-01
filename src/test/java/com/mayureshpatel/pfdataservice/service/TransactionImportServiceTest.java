@@ -117,7 +117,8 @@ class TransactionImportServiceTest {
             InputStream stream = new ByteArrayInputStream("test".getBytes());
             TransactionParser parser = mock(TransactionParser.class);
             Transaction t = Transaction.builder().description(DESCRIPTION_TEST).amount(BigDecimal.TEN).transactionDate(OffsetDateTime.now()).build();
-            Category cat = Category.builder().id(5L).name("Food").build();
+            Category cat = Category.builder().id(5L).name("Food").parentId(1L)
+                    .parent(Category.builder().id(1L).userId(USER_ID).name("Everyday").build()).build();
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
@@ -132,6 +133,29 @@ class TransactionImportServiceTest {
             // assert & verify
             assertEquals(1, result.size());
             assertEquals("Food", result.get(0).suggestedCategory().name());
+        }
+
+        @Test
+        @DisplayName("previewTransactions_guessIsTopLevelCategory_suggestsNoCategory")
+        void previewTransactions_guessIsTopLevelCategory_suggestsNoCategory() {
+            // arrange
+            TransactionParser parser = mock(TransactionParser.class);
+            Transaction t = Transaction.builder().description(DESCRIPTION_TEST).amount(BigDecimal.TEN).transactionDate(OffsetDateTime.now()).build();
+            Category parent = Category.builder().id(1L).userId(USER_ID).name("Food").build();
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(parserFactory.getTransactionParser(BANK_STANDARD)).thenReturn(parser);
+            when(parser.parse(eq(ACCOUNT_ID), any())).thenReturn(Stream.of(t));
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of(parent));
+            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(1L);
+
+            // act
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD,
+                    new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
+
+            // assert & verify
+            assertNull(result.get(0).suggestedCategory());
         }
 
         @Test
@@ -331,7 +355,7 @@ class TransactionImportServiceTest {
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of(DESCRIPTION_TEST, 1001L));
 
             // act
-            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), IMPORT_FILENAME, "hash").saved();
+            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), IMPORT_FILENAME, "hash", false).saved();
 
             // assert & verify
             assertEquals(1, result);
@@ -356,7 +380,7 @@ class TransactionImportServiceTest {
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of());
 
             // act
-            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), IMPORT_FILENAME, "hash").saved();
+            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), IMPORT_FILENAME, "hash", false).saved();
 
             // assert & verify
             assertEquals(1, result);
@@ -379,7 +403,7 @@ class TransactionImportServiceTest {
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
             // act
-            TransactionImportService.SaveOutcome outcome = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null);
+            TransactionImportService.SaveOutcome outcome = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto1, dto2), null, null, false);
             int result = outcome.saved();
 
             // assert & verify
@@ -397,7 +421,7 @@ class TransactionImportServiceTest {
             when(fileImportHistoryRepository.findByAccountIdAndFileHash(anyLong(), eq("existing"))).thenReturn(Optional.of(FileImportHistory.builder().build()));
 
             // act & assert & verify
-            assertThrows(DuplicateImportException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), IMPORT_FILENAME, "existing"));
+            assertThrows(DuplicateImportException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), IMPORT_FILENAME, "existing", false));
         }
 
         @Test
@@ -413,12 +437,12 @@ class TransactionImportServiceTest {
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("T", 1001L));
 
-            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash");
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, "hash", false);
             verify(fileImportHistoryRepository, never()).save(any());
 
             // fileHash is null case
             reset(fileImportHistoryRepository);
-            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), IMPORT_FILENAME, null);
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), IMPORT_FILENAME, null, false);
             verify(fileImportHistoryRepository, never()).save(any());
         }
 
@@ -430,7 +454,7 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
             // act
-            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, Collections.emptyList(), null, null).saved();
+            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, Collections.emptyList(), null, null, false).saved();
 
             // assert & verify
             assertEquals(0, result);
@@ -453,7 +477,7 @@ class TransactionImportServiceTest {
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("D1", 1001L));
 
             // act
-            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null).saved();
+            int result = importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null, false).saved();
 
             // assert & verify
             assertEquals(0, result);
@@ -464,7 +488,7 @@ class TransactionImportServiceTest {
         @DisplayName("should throw ResourceNotFoundException if account missing")
         void shouldThrowOnMissingAccount() {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            assertThrows(ResourceNotFoundException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null));
+            assertThrows(ResourceNotFoundException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null, false));
         }
 
         @Test
@@ -475,7 +499,7 @@ class TransactionImportServiceTest {
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
 
             // act & assert & verify
-            assertThrows(AccessDeniedException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null));
+            assertThrows(AccessDeniedException.class, () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), null, null, false));
         }
 
         @Test
@@ -493,17 +517,111 @@ class TransactionImportServiceTest {
                     .build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(categoryRepository.findById(42L)).thenReturn(Optional.of(Category.builder().id(42L).userId(USER_ID).parentId(4L).build()));
             stubBalanceUpdateSuccess();
             when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of(DESCRIPTION_TEST, 1001L));
 
             // act
-            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null);
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(dto), null, null, false);
 
             // assert & verify
             verify(transactionRepository).insertAll(argThat(list ->
                     list.size() == 1 && Long.valueOf(42L).equals(list.get(0).getCategoryId())
             ));
+        }
+    }
+
+    /**
+     * PF-898: a reviewed row's category must be one of the user's own subcategories -- the same
+     * rule {@code TransactionService} applies to a manual edit -- and a violation is rejected
+     * before anything is saved, as a {@link ResourceNotFoundException} so the bulk save reports
+     * the file as FAILED with a safe message instead of a 403 for the whole batch.
+     */
+    @Nested
+    @DisplayName("saveTransactions category validation")
+    class SaveTransactionsCategoryTests {
+        private TransactionDto rowWithCategory(Long categoryId) {
+            return TransactionDto.builder()
+                    .description(DESCRIPTION_TEST)
+                    .amount(BigDecimal.TEN)
+                    .date(OffsetDateTime.now())
+                    .type(TransactionType.EXPENSE)
+                    .category(com.mayureshpatel.pfdataservice.dto.category.CategoryDto.builder().id(categoryId).build())
+                    .build();
+        }
+
+        private void stubAccount() {
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+        }
+
+        @Test
+        @DisplayName("saveTransactions_categoryOwnedByAnotherUser_isRejectedAndNothingSaved")
+        void saveTransactions_categoryOwnedByAnotherUser_isRejectedAndNothingSaved() {
+            // arrange
+            stubAccount();
+            when(categoryRepository.findById(50L)).thenReturn(Optional.of(Category.builder().id(50L).userId(999L).parentId(4L).build()));
+            List<TransactionDto> rows = List.of(rowWithCategory(50L));
+
+            // act & assert & verify
+            ResourceNotFoundException e = assertThrows(ResourceNotFoundException.class,
+                    () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, rows, null, null, true));
+            assertEquals("Category not found.", e.getMessage());
+            verify(transactionRepository, never()).insertAll(anyList());
+        }
+
+        @Test
+        @DisplayName("saveTransactions_missingCategory_isRejectedAndNothingSaved")
+        void saveTransactions_missingCategory_isRejectedAndNothingSaved() {
+            // arrange
+            stubAccount();
+            when(categoryRepository.findById(51L)).thenReturn(Optional.empty());
+            List<TransactionDto> rows = List.of(rowWithCategory(51L));
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class,
+                    () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, rows, null, null, true));
+            verify(transactionRepository, never()).insertAll(anyList());
+        }
+
+        @Test
+        @DisplayName("saveTransactions_topLevelCategory_isRejectedAndNothingSaved")
+        void saveTransactions_topLevelCategory_isRejectedAndNothingSaved() {
+            // arrange
+            stubAccount();
+            when(categoryRepository.findById(4L)).thenReturn(Optional.of(Category.builder().id(4L).userId(USER_ID).build()));
+            List<TransactionDto> rows = List.of(rowWithCategory(4L));
+
+            // act & assert & verify
+            ResourceNotFoundException e = assertThrows(ResourceNotFoundException.class,
+                    () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, rows, null, null, true));
+            assertEquals("Only subcategories can be assigned to imported transactions.", e.getMessage());
+            verify(transactionRepository, never()).insertAll(anyList());
+        }
+
+        @Test
+        @DisplayName("saveTransactions_sameCategoryOnManyRows_isLookedUpOnce")
+        void saveTransactions_sameCategoryOnManyRows_isLookedUpOnce() {
+            // arrange
+            stubAccount();
+            stubBalanceUpdateSuccess();
+            when(categoryRepository.findById(42L)).thenReturn(Optional.of(Category.builder().id(42L).userId(USER_ID).parentId(4L).build()));
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
+            TransactionDto second = TransactionDto.builder()
+                    .description("other")
+                    .amount(BigDecimal.ONE)
+                    .date(OffsetDateTime.now())
+                    .type(TransactionType.EXPENSE)
+                    .category(com.mayureshpatel.pfdataservice.dto.category.CategoryDto.builder().id(42L).build())
+                    .build();
+
+            // act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(rowWithCategory(42L), second), null, null, true);
+
+            // assert & verify
+            verify(categoryRepository, times(1)).findById(42L);
+            verify(transactionRepository).insertAll(argThat(list -> list.size() == 2));
         }
     }
 
@@ -541,7 +659,7 @@ class TransactionImportServiceTest {
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of(DESCRIPTION_TEST, 1001L));
 
             // act
-            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, 77L)), null, null);
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, 77L)), null, null, false);
 
             // assert & verify
             verify(transactionRepository).insertAll(argThat(list -> Long.valueOf(77L).equals(list.get(0).getMerchantId())));
@@ -556,10 +674,37 @@ class TransactionImportServiceTest {
             when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of(DESCRIPTION_TEST, 1001L));
 
             // act
-            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, null)), null, null);
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, null)), null, null, false);
 
             // assert & verify
             verify(transactionRepository).insertAll(argThat(list -> Long.valueOf(1001L).equals(list.get(0).getMerchantId())));
+        }
+
+        @Test
+        @DisplayName("saveTransactions_merchantsReviewedAndRowCleared_savesNoMerchant")
+        void saveTransactions_merchantsReviewedAndRowCleared_savesNoMerchant() {
+            // arrange
+            stubHappyPath();
+
+            // act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, null)), null, null, true);
+
+            // assert & verify
+            verify(transactionRepository).insertAll(argThat(list -> list.size() == 1 && list.get(0).getMerchantId() == null));
+            verify(merchantService, never()).findMatchingMerchantIds(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("saveTransactions_merchantsReviewedAndRowHasMerchant_savesThatMerchant")
+        void saveTransactions_merchantsReviewedAndRowHasMerchant_savesThatMerchant() {
+            // arrange
+            stubHappyPath();
+
+            // act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, 77L)), null, null, true);
+
+            // assert & verify
+            verify(transactionRepository).insertAll(argThat(list -> Long.valueOf(77L).equals(list.get(0).getMerchantId())));
         }
 
         @Test
@@ -572,7 +717,7 @@ class TransactionImportServiceTest {
 
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class,
-                    () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, 999L)), null, null));
+                    () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, 999L)), null, null, false));
             verify(transactionRepository, never()).insertAll(anyList());
         }
     }
@@ -596,9 +741,9 @@ class TransactionImportServiceTest {
             // arrange
             SaveTransactionRequest first = request("a.csv");
             SaveTransactionRequest second = request("b.csv");
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, first.transactions(), "a.csv", "hash-a.csv"))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, first.transactions(), "a.csv", "hash-a.csv", false))
                     .thenThrow(new DuplicateImportException("This file has already been imported."));
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), "b.csv", "hash-b.csv"))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), "b.csv", "hash-b.csv", false))
                     .thenReturn(new TransactionImportService.SaveOutcome(3, 2));
 
             // act
@@ -608,14 +753,30 @@ class TransactionImportServiceTest {
             assertEquals(2, results.size());
             assertEquals(new FileImportResultDto("a.csv", FileImportStatus.SKIPPED_ALREADY_IMPORTED, 0, 0, null), results.get(0));
             assertEquals(new FileImportResultDto("b.csv", FileImportStatus.IMPORTED, 3, 2, null), results.get(1));
-            verify(self).saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), "b.csv", "hash-b.csv");
+            verify(self).saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), "b.csv", "hash-b.csv", false);
+        }
+
+        @Test
+        @DisplayName("should pass each request's merchantsReviewed flag through to the per-file save")
+        void saveBulkTransactions_merchantsReviewedFlag_isPassedThrough() {
+            // arrange
+            SaveTransactionRequest reviewed = new SaveTransactionRequest(List.of(), "a.csv", "hash-a.csv", ACCOUNT_ID, true);
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", true))
+                    .thenReturn(new TransactionImportService.SaveOutcome(1, 0));
+
+            // act
+            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(reviewed));
+
+            // assert & verify
+            assertEquals(FileImportStatus.IMPORTED, results.get(0).status());
+            verify(self).saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", true);
         }
 
         @Test
         @DisplayName("should report an already-imported file as skipped")
         void saveBulkTransactions_alreadyImportedFile_reportsSkippedAlreadyImported() {
             // arrange
-            when(self.saveTransactions(any(), any(), any(), any(), any()))
+            when(self.saveTransactions(any(), any(), any(), any(), any(), anyBoolean()))
                     .thenThrow(new DuplicateImportException("This file has already been imported."));
 
             // act
@@ -632,9 +793,9 @@ class TransactionImportServiceTest {
         @DisplayName("should report an unexpected failure with its message and continue")
         void saveBulkTransactions_unexpectedFailureOnOneFile_reportsFailedWithMessageAndContinues() {
             // arrange
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv"))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", false))
                     .thenThrow(new ResourceNotFoundException("Account not found with ID: 10"));
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv"))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv", false))
                     .thenReturn(new TransactionImportService.SaveOutcome(1, 0));
 
             // act
@@ -649,9 +810,9 @@ class TransactionImportServiceTest {
         @DisplayName("should hide raw exception text behind a generic message for data-access and null-message failures")
         void saveBulkTransactions_unsafeFailures_reportGenericMessage() {
             // arrange
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv"))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", false))
                     .thenThrow(new org.springframework.dao.DataIntegrityViolationException("constraint transactions_pkey violated"));
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv"))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv", false))
                     .thenThrow(new IllegalStateException((String) null));
 
             // act
@@ -666,7 +827,7 @@ class TransactionImportServiceTest {
         @DisplayName("should propagate AccessDeniedException instead of reporting FAILED")
         void saveBulkTransactions_accessDenied_propagates() {
             // arrange
-            when(self.saveTransactions(any(), any(), any(), any(), any()))
+            when(self.saveTransactions(any(), any(), any(), any(), any(), anyBoolean()))
                     .thenThrow(new AccessDeniedException("Access denied to account"));
             List<SaveTransactionRequest> requests = List.of(request("a.csv"));
 
