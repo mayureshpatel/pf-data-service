@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionPreviewDto;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
+import com.mayureshpatel.pfdataservice.service.TransactionImportService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -121,7 +122,7 @@ class TransactionControllerTest extends BaseControllerTest {
             SaveTransactionRequest request = new SaveTransactionRequest(List.of(transaction), TEST_CSV_FILENAME, "hash123", 10L);
 
             when(transactionImportService.saveTransactions(eq(USER_ID), eq(ACCOUNT_ID), anyList(), eq(TEST_CSV_FILENAME), eq("hash123")))
-                    .thenReturn(1);
+                    .thenReturn(new TransactionImportService.SaveOutcome(1, 0));
 
             // act & assert & verify
             mockMvc.perform(post("/api/v1/accounts/{accountId}/transactions", ACCOUNT_ID)

@@ -92,7 +92,7 @@ public class TransactionController {
                 request.transactions(),
                 request.fileName(),
                 request.fileHash()
-        );
+        ).saved();
 
         return ResponseEntity.ok("Successfully saved " + count + " transactions.");
     }

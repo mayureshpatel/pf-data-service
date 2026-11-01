@@ -5,6 +5,8 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.FileImportStatus;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
@@ -147,21 +149,43 @@ public class TransactionImportService {
     }
 
     /**
+     * The result of saving one batch: how many rows were inserted and how many were skipped as
+     * duplicates of existing or same-batch rows.
+     *
+     * @param saved      the number of transactions actually saved
+     * @param duplicates the number of rows skipped as duplicates
+     */
+    public record SaveOutcome(int saved, int duplicates) {
+    }
+
+    /**
      * Saves multiple previewed batches, possibly across different accounts, by calling
-     * {@link #saveTransactions} once per request. Goes through {@code self} rather than a direct
-     * call so each iteration's {@code @Transactional} applies independently.
+     * {@link #saveTransactions} once per request. Deliberately not {@code @Transactional}: each
+     * call goes through {@code self} so it commits in its own transaction, which keeps one
+     * already-imported or failing file from rolling back the others.
      *
      * @param userId   the user id
      * @param requests the batches to save
-     * @return the total number of transactions saved across all requests
+     * @return one result per request, in request order
+     * @throws AccessDeniedException if any request targets an account owned by a different user
      */
-    @Transactional
-    public int saveBulkTransactions(Long userId, List<SaveTransactionRequest> requests) {
-        int totalSaved = 0;
+    public List<FileImportResultDto> saveBulkTransactions(Long userId, List<SaveTransactionRequest> requests) {
+        List<FileImportResultDto> results = new ArrayList<>();
         for (SaveTransactionRequest req : requests) {
-            totalSaved += self.saveTransactions(userId, req.accountId(), req.transactions(), req.fileName(), req.fileHash());
+            try {
+                SaveOutcome outcome = self.saveTransactions(userId, req.accountId(), req.transactions(), req.fileName(), req.fileHash());
+                results.add(new FileImportResultDto(req.fileName(), FileImportStatus.IMPORTED, outcome.saved(), outcome.duplicates(), null));
+            } catch (DuplicateImportException e) {
+                results.add(new FileImportResultDto(req.fileName(), FileImportStatus.SKIPPED_ALREADY_IMPORTED, 0, 0, null));
+            } catch (AccessDeniedException e) {
+                // ownership violations must surface as a 403, never as a per-file failure
+                throw e;
+            } catch (RuntimeException e) {
+                log.warn("Bulk import failed for file: {}", req.fileName(), e);
+                results.add(new FileImportResultDto(req.fileName(), FileImportStatus.FAILED, 0, 0, e.getMessage()));
+            }
         }
-        return totalSaved;
+        return results;
     }
 
     /**
@@ -175,19 +199,19 @@ public class TransactionImportService {
      * @param approvedDtos the previewed transactions to save
      * @param fileName     the source filename, recorded for duplicate-import history (optional)
      * @param fileHash     the source file's hash, used for whole-file duplicate detection (optional)
-     * @return the number of transactions actually saved (excludes skipped duplicates)
+     * @return how many transactions were saved and how many were skipped as duplicates
      * @throws AccessDeniedException      if the account belongs to a different user
      * @throws DuplicateImportException   if this exact file was already imported
      */
     @Transactional
-    public int saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash) {
+    public SaveOutcome saveTransactions(Long userId, Long accountId, List<TransactionDto> approvedDtos, String fileName, String fileHash) {
         log.info("Saving {} transactions for User: {}, Account ID: {}", approvedDtos.size(), userId, accountId);
 
         Account account = validateAccountOwnership(userId, accountId);
         checkForDuplicateFileImport(accountId, fileHash);
 
         if (approvedDtos == null || approvedDtos.isEmpty()) {
-            return 0;
+            return new SaveOutcome(0, 0);
         }
 
         Map<String, Long> merchantMap = resolveMerchantIds(userId, approvedDtos);
@@ -195,7 +219,7 @@ public class TransactionImportService {
         DedupeResult result = deduplicateTransactions(approvedDtos, existingSignatures, account, merchantMap);
         persistIfAny(account, result, fileName, fileHash);
 
-        return result.uniqueTransactions().size();
+        return new SaveOutcome(result.uniqueTransactions().size(), result.duplicateCount());
     }
 
     /**

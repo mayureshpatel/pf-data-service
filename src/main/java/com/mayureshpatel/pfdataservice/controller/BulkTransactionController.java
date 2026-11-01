@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.TransactionImportService;
@@ -34,14 +35,13 @@ public class BulkTransactionController {
      *
      * @param requests    the transactions to save
      * @param userDetails the authenticated user
-     * @return a confirmation message including how many were saved
+     * @return one import result per request, in request order
      */
     @Operation(summary = "Bulk save transactions", description = "Saves multiple previewed transactions, possibly across accounts, in a single request")
-    @ApiResponse(responseCode = "200", description = "Transactions saved, confirmation message returned")
+    @ApiResponse(responseCode = "200", description = "Per-file import results returned; each file commits independently")
     @PostMapping("/bulk")
-    public ResponseEntity<String> saveBulkTransactions(@RequestBody @Valid List<SaveTransactionRequest> requests,
-                                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
-        int count = transactionImportService.saveBulkTransactions(userDetails.getId(), requests);
-        return ResponseEntity.ok("Successfully saved " + count + " transactions.");
+    public ResponseEntity<List<FileImportResultDto>> saveBulkTransactions(@RequestBody @Valid List<SaveTransactionRequest> requests,
+                                                                          @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(transactionImportService.saveBulkTransactions(userDetails.getId(), requests));
     }
 }

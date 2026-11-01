@@ -82,6 +82,8 @@ class CsvImportIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(saveRequest))))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Successfully saved 1 transactions."));
+                .andExpect(jsonPath("$[0].fileName").value("test-upload.csv"))
+                .andExpect(jsonPath("$[0].status").value("IMPORTED"))
+                .andExpect(jsonPath("$[0].savedCount").value(1));
     }
 }
