@@ -34,6 +34,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -66,6 +67,8 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     private static final String PARAM_DESCRIPTION = "description";
     private static final String PARAM_TYPE = "type";
     private static final String PARAM_MERCHANT_ID = "merchantId";
+    /** Maximum keywords used by the candidate prefilter; matches the request validation cap. */
+    private static final int MAX_CANDIDATE_KEYWORDS = 20;
 
     private final JdbcClient jdbcClient;
     private final TransactionDetailRowMapper rowMapper;
@@ -107,6 +110,52 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
+    }
+
+    /**
+     * PF-900 prefilter for the rule match preview: the same non-deleted, fully hydrated set as
+     * {@link #findByUserId(Long)}, narrowed in SQL to rows whose description contains any of the
+     * keywords (case-insensitive substring). Blank keywords are ignored, at most
+     * {@link #MAX_CANDIDATE_KEYWORDS} are used, and a null/empty/all-blank list returns an empty
+     * list without touching the database. {@code \}, {@code %} and {@code _} in each keyword are
+     * escaped so they match literally. This is only a superset: the Java rule matcher makes the
+     * final decision on which of these rows a rule really matches.
+     *
+     * @param userId   the owning user's id
+     * @param keywords the candidate keywords; may be null
+     * @return the user's non-deleted transactions whose description contains any keyword
+     */
+    public List<Transaction> findCandidatesByDescriptionKeywords(Long userId, List<String> keywords) {
+        List<String> patterns = toLikePatterns(keywords);
+        if (patterns.isEmpty()) {
+            return List.of();
+        }
+        JdbcClient.StatementSpec spec = jdbcClient
+                .sql(TransactionQueries.findCandidatesByDescriptionKeywords(patterns.size()))
+                .param(SqlParams.USER_ID, userId);
+        for (int i = 0; i < patterns.size(); i++) {
+            spec = spec.param(TransactionQueries.CANDIDATE_KEYWORD_PARAM_PREFIX + i, patterns.get(i));
+        }
+        return spec.query(rowMapper).list();
+    }
+
+    /**
+     * Turns raw keywords into lowercase, literal-escaped {@code %keyword%} like patterns: blanks
+     * are dropped, the list is capped at {@link #MAX_CANDIDATE_KEYWORDS}, and {@code \}, {@code %}
+     * and {@code _} are backslash-escaped (the backslash first, so it is not double-escaped).
+     */
+    private static List<String> toLikePatterns(List<String> keywords) {
+        if (keywords == null) {
+            return List.of();
+        }
+        return keywords.stream()
+                .filter(k -> k != null && !k.isBlank())
+                .limit(MAX_CANDIDATE_KEYWORDS)
+                .map(k -> "%" + k.toLowerCase(Locale.ROOT)
+                        .replace("\\", "\\\\")
+                        .replace("%", "\\%")
+                        .replace("_", "\\_") + "%")
+                .toList();
     }
 
     /**

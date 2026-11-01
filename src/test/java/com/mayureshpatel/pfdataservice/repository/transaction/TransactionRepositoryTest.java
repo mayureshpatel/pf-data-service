@@ -29,6 +29,8 @@ import java.util.Optional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /** Verifies {@code TransactionRepository} -- the largest and most heavily-queried repository in this codebase -- against a real PostgreSQL instance (via {@link BaseRepositoryTest}'s Testcontainers setup and a shared baseline fixture), exercising dynamic filtering, aggregation, and batch writes directly rather than mocking them. */
 @Import({TransactionRepository.class, TransactionReportRepository.class})
@@ -1215,6 +1217,168 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertEquals(3, first.getTotalElements());
             assertEquals(List.of("ZZQ C", "ZZQ A"), first.getContent().stream().map(TransactionDescriptionDto::description).toList());
             assertEquals(List.of("ZZQ B"), second.getContent().stream().map(TransactionDescriptionDto::description).toList());
+        }
+    }
+
+    /**
+     * PF-900 candidate prefilter: {@code findCandidatesByDescriptionKeywords} returns the user's
+     * non-deleted transactions whose description contains any keyword, case-insensitively, with
+     * {@code %}, {@code _} and backslash matched literally, and never queries for an empty or
+     * all-blank keyword list.
+     */
+    @Nested
+    @DisplayName("Candidate Prefilter (PF-900)")
+    class CandidateTests {
+
+        private long insertTransaction(long accountId, String description) {
+            return jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    values (:accountId, 2, 1, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
+                    returning id
+                    """)
+                    .param("accountId", accountId)
+                    .param("description", description)
+                    .query(Long.class)
+                    .single();
+        }
+
+        private List<String> descriptions(List<Transaction> transactions) {
+            return transactions.stream().map(Transaction::getDescription).sorted().toList();
+        }
+
+        @Test
+        @DisplayName("findCandidates_matchesKeywordCaseInsensitively")
+        void findCandidates_matchesKeywordCaseInsensitively() {
+            // arrange
+            insertTransaction(1L, "ZZQ Starbucks #12");
+            insertTransaction(1L, "ZZQ Other");
+
+            // act
+            List<Transaction> result = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("STARBUCKS"));
+
+            // assert & verify
+            assertEquals(List.of("ZZQ Starbucks #12"), descriptions(result));
+        }
+
+        @Test
+        @DisplayName("findCandidates_multipleKeywordsAreOr")
+        void findCandidates_multipleKeywordsAreOr() {
+            // arrange
+            insertTransaction(1L, "ZZQ Alpha");
+            insertTransaction(1L, "ZZQ Beta");
+            insertTransaction(1L, "ZZQ Gamma");
+
+            // act
+            List<Transaction> result = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("alpha", "  ", "gamma"));
+
+            // assert & verify
+            assertEquals(List.of("ZZQ Alpha", "ZZQ Gamma"), descriptions(result));
+        }
+
+        @Test
+        @DisplayName("findCandidates_percentAndUnderscoreAreLiteral")
+        void findCandidates_percentAndUnderscoreAreLiteral() {
+            // arrange
+            insertTransaction(1L, "ZZQ 500 coffee");
+            insertTransaction(1L, "ZZQ 50% off");
+            insertTransaction(1L, "ZZQ abc");
+            insertTransaction(1L, "ZZQ a_c");
+
+            // act
+            List<Transaction> percent = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("50%"));
+            List<Transaction> underscore = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("a_c"));
+
+            // assert & verify
+            assertEquals(List.of("ZZQ 50% off"), descriptions(percent));
+            assertEquals(List.of("ZZQ a_c"), descriptions(underscore));
+        }
+
+        @Test
+        @DisplayName("findCandidates_backslashIsLiteral")
+        void findCandidates_backslashIsLiteral() {
+            // arrange
+            insertTransaction(1L, "ZZQ a\\b path");
+            insertTransaction(1L, "ZZQ ab path");
+
+            // act
+            List<Transaction> result = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("a\\b"));
+
+            // assert & verify
+            assertEquals(List.of("ZZQ a\\b path"), descriptions(result));
+        }
+
+        @Test
+        @DisplayName("findCandidates_otherUsersTransactionsNeverReturned")
+        void findCandidates_otherUsersTransactionsNeverReturned() {
+            // arrange
+            insertTransaction(1L, "ZZQ Mine");
+            insertTransaction(4L, "ZZQ Theirs");
+
+            // act
+            List<Transaction> result = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("zzq"));
+
+            // assert & verify
+            assertEquals(List.of("ZZQ Mine"), descriptions(result));
+        }
+
+        @Test
+        @DisplayName("findCandidates_deletedTransactionsExcluded")
+        void findCandidates_deletedTransactionsExcluded() {
+            // arrange
+            insertTransaction(1L, "ZZQ Kept");
+            long goneId = insertTransaction(1L, "ZZQ Gone");
+            jdbcClient.sql("update transactions set deleted_at = now() where id = :id")
+                    .param("id", goneId).update();
+
+            // act
+            List<Transaction> result = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("zzq"));
+
+            // assert & verify
+            assertEquals(List.of("ZZQ Kept"), descriptions(result));
+        }
+
+        @Test
+        @DisplayName("findCandidates_emptyOrBlankKeywords_returnsEmptyWithoutQuery")
+        void findCandidates_emptyOrBlankKeywords_returnsEmptyWithoutQuery() {
+            // arrange
+            JdbcClient mockClient = mock(JdbcClient.class);
+            TransactionRepository repo = new TransactionRepository(mockClient, null, null, null, null);
+
+            // act
+            List<Transaction> nullResult = repo.findCandidatesByDescriptionKeywords(USER_ID, null);
+            List<Transaction> emptyResult = repo.findCandidatesByDescriptionKeywords(USER_ID, List.of());
+            List<Transaction> blankResult = repo.findCandidatesByDescriptionKeywords(USER_ID, List.of("", "   "));
+
+            // assert & verify
+            assertTrue(nullResult.isEmpty());
+            assertTrue(emptyResult.isEmpty());
+            assertTrue(blankResult.isEmpty());
+            verifyNoInteractions(mockClient);
+        }
+
+        @Test
+        @DisplayName("findCandidates_hydratesAccountCategoryAndMerchant")
+        void findCandidates_hydratesAccountCategoryAndMerchant() {
+            // arrange
+            insertTransaction(1L, "ZZQ Hydrated");
+
+            // act
+            List<Transaction> result = transactionRepository.findCandidatesByDescriptionKeywords(
+                    USER_ID, List.of("hydrated"));
+
+            // assert & verify
+            assertEquals(1, result.size());
+            Transaction t = result.get(0);
+            assertEquals("Main Checking", t.getAccount().getName());
+            assertEquals("Food", t.getCategory().getName());
+            assertEquals("Whole Foods", t.getMerchant().getName());
         }
     }
 }

@@ -3,6 +3,9 @@ package com.mayureshpatel.pfdataservice.repository.transaction.query;
 import com.mayureshpatel.pfdataservice.service.DescriptionKeys;
 import lombok.NoArgsConstructor;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 /**
  * SQL query constants for {@code TransactionRepository} -- by far this codebase's largest query
  * class, backing everything from basic CRUD to the dashboard pulse widget and the Reports feature's
@@ -84,6 +87,9 @@ public final class TransactionQueries {
     private static final String WHERE_USER_OWNS_ACCOUNT = " where accounts.user_id = :userId";
     private static final String AND_NOT_DELETED = "   and transactions.deleted_at is null";
 
+    /** Name prefix of the generated keyword parameters ({@code k0}, {@code k1}, ...). */
+    public static final String CANDIDATE_KEYWORD_PARAM_PREFIX = "k";
+
     // language=SQL
     // PF-308: batch-fetches tags for a whole page of transactions in one query (not per-row),
     // assembled onto each Transaction in Java by TransactionRepository.findAll -- same pattern as
@@ -128,6 +134,26 @@ public final class TransactionQueries {
             WHERE_USER_OWNS_ACCOUNT +
             AND_NOT_DELETED +
             " order by transactions.date desc";
+
+    /**
+     * Builds the PF-900 candidate-prefilter query: the same select, joins, ownership scope and
+     * soft-delete exclusion as {@link #FIND_BY_USER_ID}, restricted to rows whose lowercased
+     * description matches any of {@code keywordCount} bound {@code like} patterns. Only the
+     * generated parameter names ({@code :k0}, {@code :k1}, ...) are ever placed in the SQL text;
+     * the keyword values themselves are bound separately, so user input is never concatenated.
+     *
+     * @param keywordCount how many {@code :kN} predicates to generate; must be at least 1
+     * @return the sql with one {@code lower(description) like :kN escape '\'} predicate per keyword
+     */
+    public static String findCandidatesByDescriptionKeywords(int keywordCount) {
+        String predicates = IntStream.range(0, keywordCount)
+                .mapToObj(i -> "lower(transactions.description) like :"
+                        + CANDIDATE_KEYWORD_PARAM_PREFIX + i + " escape '\\'")
+                .collect(Collectors.joining(" or "));
+        return SELECT + ENRICHED_COLUMNS + FROM_TRANSACTIONS + ENRICHED_JOINS +
+                WHERE_USER_OWNS_ACCOUNT + AND_NOT_DELETED +
+                " and (" + predicates + ") order by transactions.date desc";
+    }
 
     // language=SQL
     public static final String FIND_EXISTING_FOR_DUPLICATE_CHECK = """
