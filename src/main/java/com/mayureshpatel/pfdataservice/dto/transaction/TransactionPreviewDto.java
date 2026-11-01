@@ -16,6 +16,7 @@ public record TransactionPreviewDto(
         BigDecimal amount,
         TransactionType type,
         CategoryDto suggestedCategory,
-        MerchantDto suggestedMerchant
+        MerchantDto suggestedMerchant,
+        boolean duplicate
 ) {
 }

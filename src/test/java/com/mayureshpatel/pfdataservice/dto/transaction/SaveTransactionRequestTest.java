@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.transaction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import jakarta.validation.ConstraintViolation;
 import org.junit.jupiter.api.DisplayName;
@@ -79,6 +80,53 @@ class SaveTransactionRequestTest extends ValidatorTestBase {
             Set<ConstraintViolation<SaveTransactionRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
             assertTrue(violations.stream().anyMatch(v -> "File hash cannot be blank".equals(v.getMessage())));
+        }
+    }
+
+    /**
+     * {@code merchantsReviewed} (PF-898) defaults to {@code false} when a client omits it, so the
+     * legacy per-account save keeps its description-match fallback, and reads {@code true} when
+     * the import dialog sends it.
+     */
+    @Nested
+    @DisplayName("Field: merchantsReviewed")
+    class MerchantsReviewedTests {
+        private final ObjectMapper objectMapper = new ObjectMapper();
+
+        @Test
+        @DisplayName("should default to false when omitted from the json body")
+        void merchantsReviewed_omitted_defaultsToFalse() throws Exception {
+            // arrange
+            String json = "{\"transactions\":[],\"fileName\":\"a.csv\",\"fileHash\":\"h\",\"accountId\":1}";
+
+            // act
+            SaveTransactionRequest request = objectMapper.readValue(json, SaveTransactionRequest.class);
+
+            // assert & verify
+            assertFalse(request.merchantsReviewed());
+        }
+
+        @Test
+        @DisplayName("should read true when sent in the json body")
+        void merchantsReviewed_sentTrue_readsTrue() throws Exception {
+            // arrange
+            String json = "{\"transactions\":[],\"fileName\":\"a.csv\",\"fileHash\":\"h\",\"accountId\":1,\"merchantsReviewed\":true}";
+
+            // act
+            SaveTransactionRequest request = objectMapper.readValue(json, SaveTransactionRequest.class);
+
+            // assert & verify
+            assertTrue(request.merchantsReviewed());
+        }
+
+        @Test
+        @DisplayName("the legacy four-argument constructor should leave the flag false")
+        void legacyConstructor_leavesFlagFalse() {
+            // act
+            SaveTransactionRequest request = new SaveTransactionRequest(List.of(), FILE_NAME, FILE_HASH, 10L);
+
+            // assert & verify
+            assertFalse(request.merchantsReviewed());
         }
     }
 }

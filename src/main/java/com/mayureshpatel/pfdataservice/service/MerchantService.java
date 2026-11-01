@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
@@ -16,9 +17,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -35,6 +39,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MerchantService {
+
+    private static final String MERCHANT_NOT_FOUND = "Merchant not found.";
 
     private final MerchantRepository merchantRepository;
     private final MerchantDescriptionLinkRepository descriptionLinkRepository;
@@ -94,7 +100,7 @@ public class MerchantService {
     @Transactional
     public int updateMerchant(Long userId, MerchantUpdateRequest request) {
         merchantRepository.findByIdAndUserId(request.getId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND));
         return merchantRepository.update(request, userId);
     }
 
@@ -113,7 +119,7 @@ public class MerchantService {
     @Transactional
     public void deleteMerchant(Long userId, Long merchantId) {
         merchantRepository.findByIdAndUserId(merchantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND));
         if (recurringRepository.countActiveByMerchantId(merchantId, userId) > 0) {
             throw new IllegalStateException("This merchant is used by a recurring item. Delete that recurring item first.");
         }
@@ -166,6 +172,51 @@ public class MerchantService {
     }
 
     /**
+     * Like {@link #findMatchingMerchantIds} but resolves each linked description to the merchant
+     * itself (PF-898, for the import preview). Lookup-only: never creates a merchant or a link.
+     *
+     * @param userId       the user id
+     * @param descriptions the raw transaction descriptions to match
+     * @return each distinct raw description that has an existing link, mapped to its merchant
+     */
+    public Map<String, Merchant> findMatchingMerchants(Long userId, Collection<String> descriptions) {
+        if (descriptions == null || descriptions.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Long> idsByDescription = findMatchingMerchantIds(userId, List.copyOf(descriptions));
+        Map<Long, Merchant> merchantsById = new HashMap<>();
+        idsByDescription.values().stream().distinct().forEach(id ->
+                merchantRepository.findByIdAndUserId(id, userId).ifPresent(m -> merchantsById.put(id, m)));
+
+        Map<String, Merchant> result = new HashMap<>();
+        idsByDescription.forEach((desc, id) -> {
+            Merchant merchant = merchantsById.get(id);
+            if (merchant != null) {
+                result.put(desc, merchant);
+            }
+        });
+        return result;
+    }
+
+    /**
+     * Verifies that every given merchant id belongs to the user (PF-898: a CSV import row may name
+     * a merchant explicitly, and the client must not be able to attach another user's merchant).
+     * Null entries are ignored and duplicates are checked once.
+     *
+     * @param userId      the user id
+     * @param merchantIds the merchant ids to check; may be null or contain nulls
+     * @throws ResourceNotFoundException if any merchant doesn't exist or isn't owned by {@code userId}
+     */
+    public void requireOwnedMerchants(Long userId, Collection<Long> merchantIds) {
+        if (merchantIds == null) {
+            return;
+        }
+        merchantIds.stream().filter(Objects::nonNull).distinct().forEach(id ->
+                merchantRepository.findByIdAndUserId(id, userId)
+                        .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND)));
+    }
+
+    /**
      * Creates or overwrites the link from a description to a merchant (last-write-wins) -- called
      * both as a side effect whenever a human assigns a merchant to a transaction
      * ({@code TransactionService}) and directly from the explicit add-link endpoint. Import never
@@ -191,7 +242,7 @@ public class MerchantService {
      */
     public List<MerchantDescriptionLinkDto> getDescriptionLinks(Long userId, Long merchantId) {
         merchantRepository.findByIdAndUserId(merchantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND));
         return descriptionLinkRepository.findByMerchantIdAndUserId(merchantId, userId).stream()
                 .map(MerchantDescriptionLinkDtoMapper::toDto)
                 .toList();

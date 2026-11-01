@@ -91,8 +91,10 @@ public class TransactionController {
                 accountId,
                 request.transactions(),
                 request.fileName(),
-                request.fileHash()
-        );
+                request.fileHash(),
+                // this legacy per-account save never reviewed merchants, so keep the description fallback
+                false
+        ).saved();
 
         return ResponseEntity.ok("Successfully saved " + count + " transactions.");
     }

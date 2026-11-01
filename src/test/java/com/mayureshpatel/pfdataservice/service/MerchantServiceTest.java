@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,7 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -419,6 +423,56 @@ class MerchantServiceTest {
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> merchantService.deleteDescriptionLink(USER_ID, 1L));
             verify(descriptionLinkRepository, never()).deleteByIdAndUserId(any(), any());
+        }
+    }
+
+    /** {@code findMatchingMerchants} (PF-898) resolves linked descriptions to merchants and leaves unlinked ones out. */
+    @Nested
+    @DisplayName("findMatchingMerchants")
+    class FindMatchingMerchantsTests {
+        @Test
+        @DisplayName("should map linked descriptions to merchants and omit unlinked ones")
+        void findMatchingMerchants_mapsLinkedOnly() {
+            // arrange
+            Merchant merchant = Merchant.builder().id(5L).name("Coffee").build();
+            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(eq(USER_ID), anyList())).thenReturn(Map.of("coffee", 5L));
+            when(merchantRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(merchant));
+
+            // act
+            Map<String, Merchant> result = merchantService.findMatchingMerchants(USER_ID, List.of("COFFEE", "OTHER"));
+
+            // assert & verify
+            assertEquals(Map.of("COFFEE", merchant), result);
+            assertTrue(merchantService.findMatchingMerchants(USER_ID, List.of()).isEmpty());
+        }
+    }
+
+    /** {@code requireOwnedMerchants} (PF-898) checks every distinct merchant id against the user's own merchants and throws {@link ResourceNotFoundException} for one that isn't theirs; null and empty inputs are fine. */
+    @Nested
+    @DisplayName("requireOwnedMerchants")
+    class RequireOwnedMerchantsTests {
+        @Test
+        @DisplayName("should pass when every merchant is owned, and ignore null/empty")
+        void shouldPassWhenOwned() {
+            // arrange
+            when(merchantRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(Merchant.builder().id(5L).build()));
+
+            // act
+            merchantService.requireOwnedMerchants(USER_ID, Arrays.asList(5L, 5L, null));
+            merchantService.requireOwnedMerchants(USER_ID, null);
+
+            // assert & verify
+            verify(merchantRepository, times(1)).findByIdAndUserId(5L, USER_ID);
+        }
+
+        @Test
+        @DisplayName("should throw when a merchant is not owned by the user")
+        void shouldThrowWhenNotOwned() {
+            // arrange
+            when(merchantRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> merchantService.requireOwnedMerchants(USER_ID, List.of(9L)));
         }
     }
 }
