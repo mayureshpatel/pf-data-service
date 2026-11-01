@@ -25,11 +25,11 @@ import com.mayureshpatel.pfdataservice.repository.transaction.TransactionReposit
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
@@ -75,8 +75,20 @@ class TransactionImportServiceTest {
     @Mock
     private TransactionImportService self;
 
-    @InjectMocks
     private TransactionImportService importService;
+
+    /**
+     * Builds the service by hand rather than via {@code @InjectMocks}: duplicate detection lives in
+     * a real {@link ImportDuplicateDetector} wired to the mocked repositories, so these tests keep
+     * exercising preview/save/import-check duplicate handling end to end through the existing
+     * {@code findExistingForDuplicateCheck} and {@code findByAccountIdAndFileHash} stubs.
+     */
+    @BeforeEach
+    void setUp() {
+        importService = new TransactionImportService(transactionRepository, accountRepository, categoryRepository,
+                parserFactory, categorizer, categoryRuleRepository, merchantService, accountBalanceUpdateService,
+                new ImportDuplicateDetector(transactionRepository, fileImportHistoryRepository), self);
+    }
 
     private static final Long USER_ID = 1L;
     private static final Long ACCOUNT_ID = 10L;
@@ -84,6 +96,12 @@ class TransactionImportServiceTest {
     private static final String DESCRIPTION_TEST = "Test";
     private static final String TEST_CSV_FILENAME = "test.csv";
     private static final String IMPORT_FILENAME = "file.csv";
+    private static final String FILE_A = "a.csv";
+    private static final String FILE_B = "b.csv";
+    private static final String HASH_A = "hash-a.csv";
+    private static final String HASH_B = "hash-b.csv";
+    private static final String AMOUNT_FIVE = "5.00";
+    private static final String DESCRIPTION_COFFEE = "COFFEE";
 
     /**
      * PF-854: mimics the real service's success path (apply the transform once, return the
@@ -252,7 +270,7 @@ class TransactionImportServiceTest {
         @DisplayName("previewTransactions_descriptionWithLinkedMerchant_setsSuggestedMerchant")
         void previewTransactions_descriptionWithLinkedMerchant_setsSuggestedMerchant() {
             // arrange
-            stubParsedRows(row("STARBUCKS #1", OffsetDateTime.now(), "5.00"));
+            stubParsedRows(row("STARBUCKS #1", OffsetDateTime.now(), AMOUNT_FIVE));
             Merchant merchant = Merchant.builder().id(7L).userId(USER_ID).name("Starbucks").build();
             when(merchantService.findMatchingMerchants(eq(USER_ID), anyCollection())).thenReturn(Map.of("STARBUCKS #1", merchant));
 
@@ -270,7 +288,7 @@ class TransactionImportServiceTest {
         @DisplayName("previewTransactions_unlinkedDescription_leavesMerchantNull")
         void previewTransactions_unlinkedDescription_leavesMerchantNull() {
             // arrange
-            stubParsedRows(row("UNKNOWN SHOP", OffsetDateTime.now(), "5.00"));
+            stubParsedRows(row("UNKNOWN SHOP", OffsetDateTime.now(), AMOUNT_FIVE));
             when(merchantService.findMatchingMerchants(eq(USER_ID), anyCollection())).thenReturn(Map.of());
 
             // act
@@ -285,10 +303,10 @@ class TransactionImportServiceTest {
         void previewTransactions_rowMatchingSavedTransaction_isFlaggedDuplicate() {
             // arrange
             OffsetDateTime date = OffsetDateTime.parse("2026-10-01T00:00:00Z");
-            stubParsedRows(row("COFFEE", date, "5.00"), row("LUNCH", date, "9.00"));
+            stubParsedRows(row(DESCRIPTION_COFFEE, date, AMOUNT_FIVE), row("LUNCH", date, "9.00"));
             // the saved amount has different trailing zeros: the signature must still match
             when(transactionRepository.findExistingForDuplicateCheck(eq(ACCOUNT_ID), any(), any()))
-                    .thenReturn(List.of(row("COFFEE", date, "5.0")));
+                    .thenReturn(List.of(row(DESCRIPTION_COFFEE, date, "5.0")));
 
             // act
             List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
@@ -303,7 +321,7 @@ class TransactionImportServiceTest {
         void previewTransactions_repeatedRowInSameFile_secondIsFlaggedDuplicate() {
             // arrange
             OffsetDateTime date = OffsetDateTime.parse("2026-10-01T00:00:00Z");
-            stubParsedRows(row("COFFEE", date, "5.00"), row("COFFEE", date, "5.00"));
+            stubParsedRows(row(DESCRIPTION_COFFEE, date, AMOUNT_FIVE), row(DESCRIPTION_COFFEE, date, AMOUNT_FIVE));
 
             // act
             List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
@@ -739,11 +757,11 @@ class TransactionImportServiceTest {
         @DisplayName("should still import the other files when one is already imported")
         void saveBulkTransactions_oneAlreadyImportedFile_stillImportsTheOthers() {
             // arrange
-            SaveTransactionRequest first = request("a.csv");
-            SaveTransactionRequest second = request("b.csv");
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, first.transactions(), "a.csv", "hash-a.csv", false))
+            SaveTransactionRequest first = request(FILE_A);
+            SaveTransactionRequest second = request(FILE_B);
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, first.transactions(), FILE_A, HASH_A, false))
                     .thenThrow(new DuplicateImportException("This file has already been imported."));
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), "b.csv", "hash-b.csv", false))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), FILE_B, HASH_B, false))
                     .thenReturn(new TransactionImportService.SaveOutcome(3, 2));
 
             // act
@@ -751,17 +769,17 @@ class TransactionImportServiceTest {
 
             // assert & verify
             assertEquals(2, results.size());
-            assertEquals(new FileImportResultDto("a.csv", FileImportStatus.SKIPPED_ALREADY_IMPORTED, 0, 0, null), results.get(0));
-            assertEquals(new FileImportResultDto("b.csv", FileImportStatus.IMPORTED, 3, 2, null), results.get(1));
-            verify(self).saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), "b.csv", "hash-b.csv", false);
+            assertEquals(new FileImportResultDto(FILE_A, FileImportStatus.SKIPPED_ALREADY_IMPORTED, 0, 0, null), results.get(0));
+            assertEquals(new FileImportResultDto(FILE_B, FileImportStatus.IMPORTED, 3, 2, null), results.get(1));
+            verify(self).saveTransactions(USER_ID, ACCOUNT_ID, second.transactions(), FILE_B, HASH_B, false);
         }
 
         @Test
         @DisplayName("should pass each request's merchantsReviewed flag through to the per-file save")
         void saveBulkTransactions_merchantsReviewedFlag_isPassedThrough() {
             // arrange
-            SaveTransactionRequest reviewed = new SaveTransactionRequest(List.of(), "a.csv", "hash-a.csv", ACCOUNT_ID, true);
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", true))
+            SaveTransactionRequest reviewed = new SaveTransactionRequest(List.of(), FILE_A, HASH_A, ACCOUNT_ID, true);
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), FILE_A, HASH_A, true))
                     .thenReturn(new TransactionImportService.SaveOutcome(1, 0));
 
             // act
@@ -769,7 +787,7 @@ class TransactionImportServiceTest {
 
             // assert & verify
             assertEquals(FileImportStatus.IMPORTED, results.get(0).status());
-            verify(self).saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", true);
+            verify(self).saveTransactions(USER_ID, ACCOUNT_ID, List.of(), FILE_A, HASH_A, true);
         }
 
         @Test
@@ -780,12 +798,12 @@ class TransactionImportServiceTest {
                     .thenThrow(new DuplicateImportException("This file has already been imported."));
 
             // act
-            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request("a.csv")));
+            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request(FILE_A)));
 
             // assert & verify
             assertEquals(1, results.size());
             assertEquals(FileImportStatus.SKIPPED_ALREADY_IMPORTED, results.get(0).status());
-            assertEquals("a.csv", results.get(0).fileName());
+            assertEquals(FILE_A, results.get(0).fileName());
             assertNull(results.get(0).error());
         }
 
@@ -793,34 +811,34 @@ class TransactionImportServiceTest {
         @DisplayName("should report an unexpected failure with its message and continue")
         void saveBulkTransactions_unexpectedFailureOnOneFile_reportsFailedWithMessageAndContinues() {
             // arrange
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", false))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), FILE_A, HASH_A, false))
                     .thenThrow(new ResourceNotFoundException("Account not found with ID: 10"));
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv", false))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), FILE_B, HASH_B, false))
                     .thenReturn(new TransactionImportService.SaveOutcome(1, 0));
 
             // act
-            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request("a.csv"), request("b.csv")));
+            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request(FILE_A), request(FILE_B)));
 
             // assert & verify
-            assertEquals(new FileImportResultDto("a.csv", FileImportStatus.FAILED, 0, 0, "Account not found with ID: 10"), results.get(0));
-            assertEquals(new FileImportResultDto("b.csv", FileImportStatus.IMPORTED, 1, 0, null), results.get(1));
+            assertEquals(new FileImportResultDto(FILE_A, FileImportStatus.FAILED, 0, 0, "Account not found with ID: 10"), results.get(0));
+            assertEquals(new FileImportResultDto(FILE_B, FileImportStatus.IMPORTED, 1, 0, null), results.get(1));
         }
 
         @Test
         @DisplayName("should hide raw exception text behind a generic message for data-access and null-message failures")
         void saveBulkTransactions_unsafeFailures_reportGenericMessage() {
             // arrange
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "a.csv", "hash-a.csv", false))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), FILE_A, HASH_A, false))
                     .thenThrow(new org.springframework.dao.DataIntegrityViolationException("constraint transactions_pkey violated"));
-            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), "b.csv", "hash-b.csv", false))
+            when(self.saveTransactions(USER_ID, ACCOUNT_ID, List.of(), FILE_B, HASH_B, false))
                     .thenThrow(new IllegalStateException((String) null));
 
             // act
-            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request("a.csv"), request("b.csv")));
+            List<FileImportResultDto> results = importService.saveBulkTransactions(USER_ID, List.of(request(FILE_A), request(FILE_B)));
 
             // assert & verify
-            assertEquals(new FileImportResultDto("a.csv", FileImportStatus.FAILED, 0, 0, "Could not import this file."), results.get(0));
-            assertEquals(new FileImportResultDto("b.csv", FileImportStatus.FAILED, 0, 0, "Could not import this file."), results.get(1));
+            assertEquals(new FileImportResultDto(FILE_A, FileImportStatus.FAILED, 0, 0, "Could not import this file."), results.get(0));
+            assertEquals(new FileImportResultDto(FILE_B, FileImportStatus.FAILED, 0, 0, "Could not import this file."), results.get(1));
         }
 
         @Test
@@ -829,7 +847,7 @@ class TransactionImportServiceTest {
             // arrange
             when(self.saveTransactions(any(), any(), any(), any(), any(), anyBoolean()))
                     .thenThrow(new AccessDeniedException("Access denied to account"));
-            List<SaveTransactionRequest> requests = List.of(request("a.csv"));
+            List<SaveTransactionRequest> requests = List.of(request(FILE_A));
 
             // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> importService.saveBulkTransactions(USER_ID, requests));

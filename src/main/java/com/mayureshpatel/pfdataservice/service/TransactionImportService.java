@@ -3,10 +3,8 @@ package com.mayureshpatel.pfdataservice.service;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
-import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportStatus;
 import com.mayureshpatel.pfdataservice.dto.transaction.ImportHashCheckRequest;
@@ -22,8 +20,8 @@ import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
-import com.mayureshpatel.pfdataservice.repository.file_import_history.FileImportHistoryRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
+import com.mayureshpatel.pfdataservice.service.ImportDuplicateDetector.DedupeResult;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
@@ -36,14 +34,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -51,7 +47,8 @@ import java.util.stream.Stream;
  * (with a best-guess category per row) without touching the database; {@link #saveTransactions}
  * and {@link #saveBulkTransactions} commit a previously previewed batch, de-duplicating against
  * both already-saved transactions and the rest of the same batch by a
- * (date, amount, description, type) signature.
+ * (date, amount, description, type) signature. Duplicate detection itself (row signatures and
+ * the file-hash import history) lives in {@link ImportDuplicateDetector} (PF-898).
  */
 @Service
 @Slf4j
@@ -59,12 +56,12 @@ public class TransactionImportService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
-    private final FileImportHistoryRepository fileImportHistoryRepository;
     private final TransactionParserFactory parserFactory;
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
     private final MerchantService merchantService;
     private final AccountBalanceUpdateService accountBalanceUpdateService;
+    private final ImportDuplicateDetector duplicateDetector;
     private final TransactionImportService self;
 
     /**
@@ -77,22 +74,22 @@ public class TransactionImportService {
     public TransactionImportService(TransactionRepository transactionRepository,
                                     AccountRepository accountRepository,
                                     CategoryRepository categoryRepository,
-                                    FileImportHistoryRepository fileImportHistoryRepository,
                                     TransactionParserFactory parserFactory,
                                     TransactionCategorizer categorizer,
                                     CategoryRuleRepository categoryRuleRepository,
                                     MerchantService merchantService,
                                     AccountBalanceUpdateService accountBalanceUpdateService,
+                                    ImportDuplicateDetector duplicateDetector,
                                     @Lazy TransactionImportService self) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.categoryRepository = categoryRepository;
-        this.fileImportHistoryRepository = fileImportHistoryRepository;
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
         this.categoryRuleRepository = categoryRuleRepository;
         this.merchantService = merchantService;
         this.accountBalanceUpdateService = accountBalanceUpdateService;
+        this.duplicateDetector = duplicateDetector;
         this.self = self;
     }
 
@@ -137,7 +134,7 @@ public class TransactionImportService {
             // read-only lookups: an existing description link resolves to a merchant, nothing is created
             Map<String, Merchant> merchantsByDescription = merchantService.findMatchingMerchants(userId,
                     parsed.stream().map(Transaction::getDescription).toList());
-            Set<String> existingSignatures = findExistingSignatures(accountId,
+            Set<String> existingSignatures = duplicateDetector.findExistingSignatures(accountId,
                     parsed.stream().map(Transaction::getTransactionDate).toList());
             Set<String> seenInFile = new HashSet<>();
 
@@ -153,7 +150,7 @@ public class TransactionImportService {
                                 .findFirst()
                                 .orElse(null)
                                 : null;
-                        String signature = buildSignature(t.getTransactionDate(), t.getAmount(), t.getDescription(), t.getType());
+                        String signature = ImportDuplicateDetector.buildSignature(t.getTransactionDate(), t.getAmount(), t.getDescription(), t.getType());
                         // add() is false when an earlier row of this file already had the signature
                         boolean duplicate = existingSignatures.contains(signature) || !seenInFile.add(signature);
                         return TransactionPreviewDto.builder()
@@ -239,7 +236,7 @@ public class TransactionImportService {
             }
         }
         for (ImportHashCheckRequest candidate : candidates) {
-            if (fileImportHistoryRepository.findByAccountIdAndFileHash(candidate.accountId(), candidate.fileHash()).isPresent()) {
+            if (duplicateDetector.isAlreadyImported(candidate.accountId(), candidate.fileHash())) {
                 alreadyImported.add(candidate);
             }
         }
@@ -285,7 +282,7 @@ public class TransactionImportService {
         log.info("Saving {} transactions for User: {}, Account ID: {}", approvedDtos.size(), userId, accountId);
 
         Account account = validateAccountOwnership(userId, accountId);
-        checkForDuplicateFileImport(accountId, fileHash);
+        duplicateDetector.requireNotAlreadyImported(accountId, fileHash);
 
         if (approvedDtos == null || approvedDtos.isEmpty()) {
             return new SaveOutcome(0, 0);
@@ -299,8 +296,8 @@ public class TransactionImportService {
                 .toList());
         // a reviewed batch's missing merchant is a deliberate "none", so skip the description match
         Map<String, Long> merchantMap = merchantsReviewed ? Map.of() : resolveMerchantIds(userId, approvedDtos);
-        Set<String> existingSignatures = findExistingSignatures(accountId, approvedDtos.stream().map(TransactionDto::date).toList());
-        DedupeResult result = deduplicateTransactions(approvedDtos, existingSignatures, account, merchantMap);
+        Set<String> existingSignatures = duplicateDetector.findExistingSignatures(accountId, approvedDtos.stream().map(TransactionDto::date).toList());
+        DedupeResult result = duplicateDetector.deduplicate(approvedDtos, existingSignatures, account, merchantMap);
         persistIfAny(account, result, fileName, fileHash);
 
         return new SaveOutcome(result.uniqueTransactions().size(), result.duplicateCount());
@@ -317,17 +314,6 @@ public class TransactionImportService {
             throw new AccessDeniedException("Access denied to account");
         }
         return account;
-    }
-
-    /**
-     * Rejects the whole batch outright if its file hash matches a previously imported file
-     * (PF-809: extracted from {@link #saveTransactions}).
-     */
-    private void checkForDuplicateFileImport(Long accountId, String fileHash) {
-        if (fileHash != null && fileImportHistoryRepository.findByAccountIdAndFileHash(accountId, fileHash).isPresent()) {
-            log.warn("Duplicate file hash detected during save. Account ID: {}, Hash: {}", accountId, fileHash);
-            throw new DuplicateImportException("This file has already been imported.");
-        }
     }
 
     /**
@@ -361,77 +347,6 @@ public class TransactionImportService {
     }
 
     /**
-     * The (date, amount, description, type) signatures of every already-saved transaction within
-     * the date range spanned by the given dates (PF-809: extracted from {@link #saveTransactions};
-     * shared with {@link #previewTransactions} in PF-898), to check incoming rows against.
-     */
-    private Set<String> findExistingSignatures(Long accountId, List<OffsetDateTime> dates) {
-        OffsetDateTime earliest = dates.stream().min(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
-        OffsetDateTime latest = dates.stream().max(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
-
-        List<Transaction> existingTransactions = transactionRepository.findExistingForDuplicateCheck(accountId, earliest, latest);
-
-        return existingTransactions.stream()
-                .map(t -> buildSignature(t.getTransactionDate(), t.getAmount(), t.getDescription(), t.getType()))
-                .collect(Collectors.toSet());
-    }
-
-    /**
-     * The single definition of a transaction's duplicate-detection signature, used by both
-     * preview and save so the two can never disagree about what counts as a duplicate.
-     * (PF-898: extracted from the save path.)
-     */
-    private static String buildSignature(OffsetDateTime date, BigDecimal amount, String description, TransactionType type) {
-        return String.format("%s_%s_%s_%s", date, amount.stripTrailingZeros(), description, type == null ? null : type.name());
-    }
-
-    /**
-     * The transactions actually ready to insert, plus how many were skipped as duplicates of
-     * either an existing row or an earlier row in this same batch (PF-809: extracted from
-     * {@link #saveTransactions}).
-     */
-    private record DedupeResult(List<TransactionCreateRequest> uniqueTransactions, int duplicateCount) {
-    }
-
-    private DedupeResult deduplicateTransactions(List<TransactionDto> approvedDtos, Set<String> existingSignatures, Account account, Map<String, Long> merchantMap) {
-        List<TransactionCreateRequest> uniqueTransactions = new ArrayList<>();
-        Set<String> batchSignatures = new HashSet<>();
-        int duplicateCount = 0;
-
-        for (TransactionDto dto : approvedDtos) {
-            String signature = buildSignature(dto.date(), dto.amount(), dto.description(), dto.type());
-
-            boolean existsInDb = existingSignatures.contains(signature);
-            boolean existsInBatch = batchSignatures.contains(signature);
-
-            if (!existsInDb && !existsInBatch) {
-                // a row's own reviewed merchant (PF-898, ownership already verified) wins over the
-                // description match; a reviewed batch passes an empty match map, so a cleared
-                // merchant stays cleared. a description with no existing link (PF-845) just leaves
-                // merchantId null -- the expected outcome for anything nobody has linked yet.
-                // import never creates a merchant or a link, and an override never teaches one.
-                Long merchantId = dto.merchant() != null && dto.merchant().id() != null
-                        ? dto.merchant().id()
-                        : merchantMap.get(dto.description());
-                TransactionCreateRequest t = mapToEntity(dto)
-                        .toBuilder()
-                        .accountId(account.getId())
-                        .merchantId(merchantId)
-                        .build();
-                uniqueTransactions.add(t);
-                batchSignatures.add(signature);
-            } else {
-                duplicateCount++;
-                if (log.isTraceEnabled()) {
-                    log.trace("Skipping duplicate transaction: {} - {} - {}", dto.date(), dto.description(), dto.amount());
-                }
-            }
-        }
-
-        return new DedupeResult(uniqueTransactions, duplicateCount);
-    }
-
-    /**
      * Inserts the batch's unique transactions, updates the account balance, and records file
      * import history, only if there's anything to save (PF-809: extracted from
      * {@link #saveTransactions}).
@@ -442,36 +357,11 @@ public class TransactionImportService {
             transactionRepository.insertAll(uniqueTransactions);
             updateAccountBalance(account, uniqueTransactions);
 
-            if (fileName != null && fileHash != null) {
-                FileImportHistory history = FileImportHistory.builder()
-                        .account(account)
-                        .fileName(fileName)
-                        .fileHash(fileHash)
-                        .transactionCount(uniqueTransactions.size())
-                        .build();
-                fileImportHistoryRepository.save(history);
-            }
+            duplicateDetector.recordImport(account, fileName, fileHash, uniqueTransactions.size());
             log.info("Successfully saved {} new transactions. Skipped {} duplicates.", uniqueTransactions.size(), result.duplicateCount());
         } else {
             log.info("No new transactions to save. All {} inputs were duplicates.", result.duplicateCount());
         }
-    }
-
-    /**
-     * Converts a previewed transaction back into the request shape the repository layer expects.
-     *
-     * @param dto the previewed transaction
-     * @return the equivalent create request
-     */
-    private TransactionCreateRequest mapToEntity(TransactionDto dto) {
-        return TransactionCreateRequest.builder()
-                .transactionDate(dto.date())
-                .postDate(dto.postDate())
-                .description(dto.description())
-                .amount(dto.amount())
-                .type(dto.type().name())
-                .categoryId(dto.category() != null ? dto.category().id() : null)
-                .build();
     }
 
     /**

@@ -39,6 +39,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(BulkTransactionController.class)
 class BulkTransactionControllerTest {
 
+    private static final String IMPORT_CHECK_URL = "/api/v1/transactions/import-check";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -91,7 +93,7 @@ class BulkTransactionControllerTest {
                 .thenReturn(List.of(new ImportHashCheckRequest(7L, "abc")));
 
         // act
-        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(IMPORT_CHECK_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"accountId\":7,\"fileHash\":\"abc\"},{\"accountId\":7,\"fileHash\":\"def\"}]"))
                 // assert & verify
                 .andExpect(status().isOk())
@@ -105,7 +107,7 @@ class BulkTransactionControllerTest {
     @WithCustomMockUser(id = 1L)
     void shouldRejectInvalidImportCheckItems() throws Exception {
         // act
-        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(IMPORT_CHECK_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"accountId\":null,\"fileHash\":\" \"}]"))
                 // assert & verify
                 .andExpect(status().isBadRequest());
@@ -119,7 +121,7 @@ class BulkTransactionControllerTest {
         String body = "[" + String.join(",", Collections.nCopies(1001, "{\"accountId\":1,\"fileHash\":\"h\"}")) + "]";
 
         // act
-        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post(IMPORT_CHECK_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
                 // assert & verify
                 .andExpect(status().isBadRequest());
     }
@@ -129,7 +131,7 @@ class BulkTransactionControllerTest {
     @WithCustomMockUser(id = 1L)
     void shouldRejectNullImportCheckEntry() throws Exception {
         // act
-        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("[null]"))
+        mockMvc.perform(post(IMPORT_CHECK_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("[null]"))
                 // assert & verify
                 .andExpect(status().isBadRequest());
     }
@@ -143,7 +145,7 @@ class BulkTransactionControllerTest {
                 .thenThrow(new ResourceNotFoundException("Account not found with ID: 9"));
 
         // act
-        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(IMPORT_CHECK_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"accountId\":9,\"fileHash\":\"h\"}]"))
                 // assert & verify
                 .andExpect(status().isNotFound());

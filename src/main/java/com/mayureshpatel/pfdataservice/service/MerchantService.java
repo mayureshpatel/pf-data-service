@@ -40,6 +40,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MerchantService {
 
+    private static final String MERCHANT_NOT_FOUND = "Merchant not found.";
+
     private final MerchantRepository merchantRepository;
     private final MerchantDescriptionLinkRepository descriptionLinkRepository;
     private final RecurringTransactionRepository recurringRepository;
@@ -98,7 +100,7 @@ public class MerchantService {
     @Transactional
     public int updateMerchant(Long userId, MerchantUpdateRequest request) {
         merchantRepository.findByIdAndUserId(request.getId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND));
         return merchantRepository.update(request, userId);
     }
 
@@ -117,7 +119,7 @@ public class MerchantService {
     @Transactional
     public void deleteMerchant(Long userId, Long merchantId) {
         merchantRepository.findByIdAndUserId(merchantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND));
         if (recurringRepository.countActiveByMerchantId(merchantId, userId) > 0) {
             throw new IllegalStateException("This merchant is used by a recurring item. Delete that recurring item first.");
         }
@@ -211,7 +213,7 @@ public class MerchantService {
         }
         merchantIds.stream().filter(Objects::nonNull).distinct().forEach(id ->
                 merchantRepository.findByIdAndUserId(id, userId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Merchant not found.")));
+                        .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND)));
     }
 
     /**
@@ -240,7 +242,7 @@ public class MerchantService {
      */
     public List<MerchantDescriptionLinkDto> getDescriptionLinks(Long userId, Long merchantId) {
         merchantRepository.findByIdAndUserId(merchantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND));
         return descriptionLinkRepository.findByMerchantIdAndUserId(merchantId, userId).stream()
                 .map(MerchantDescriptionLinkDtoMapper::toDto)
                 .toList();
