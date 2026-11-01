@@ -9,11 +9,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,12 +27,15 @@ import java.util.List;
  * account: this endpoint accepts a batch that can span accounts.
  */
 @Tag(name = "Transactions", description = "Querying, creating, updating, and deleting the authenticated user's transactions")
-@Validated
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
 public class BulkTransactionController {
+    /** Maximum number of (account, hash) pairs accepted by a single import-check call. */
+    private static final int MAX_IMPORT_CHECK_ITEMS = 1000;
+
     private final TransactionImportService transactionImportService;
+    private final Validator validator;
 
     /**
      * Saves multiple previewed transactions in a single request.
@@ -62,8 +65,21 @@ public class BulkTransactionController {
     @ApiResponse(responseCode = "403", description = "A candidate account belongs to another user")
     @PostMapping("/import-check")
     public ResponseEntity<List<ImportHashCheckRequest>> checkAlreadyImported(
-            @RequestBody @Valid @Size(max = 1000, message = "At most 1000 files can be checked at once") List<@Valid ImportHashCheckRequest> candidates,
+            @RequestBody List<ImportHashCheckRequest> candidates,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        // validated by hand (not via a class-level @Validated) so the existing /bulk endpoint's validation is untouched
+        if (candidates == null || candidates.size() > MAX_IMPORT_CHECK_ITEMS) {
+            throw new IllegalArgumentException("Between 0 and " + MAX_IMPORT_CHECK_ITEMS + " files can be checked at once");
+        }
+        for (ImportHashCheckRequest candidate : candidates) {
+            if (candidate == null) {
+                throw new IllegalArgumentException("Import check entries must not be null");
+            }
+            var violations = validator.validate(candidate);
+            if (!violations.isEmpty()) {
+                throw new ConstraintViolationException(violations);
+            }
+        }
         return ResponseEntity.ok(transactionImportService.findAlreadyImported(userDetails.getId(), candidates));
     }
 }
