@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportStatus;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
@@ -408,6 +409,76 @@ class TransactionImportServiceTest {
             verify(transactionRepository).insertAll(argThat(list ->
                     list.size() == 1 && Long.valueOf(42L).equals(list.get(0).getCategoryId())
             ));
+        }
+    }
+
+    /**
+     * PF-898: a reviewed row's own merchant wins over the description-matched one, a row without
+     * one falls back to the match, and a merchant the user doesn't own is rejected before anything
+     * is saved.
+     */
+    @Nested
+    @DisplayName("saveTransactions merchant precedence")
+    class SaveTransactionsMerchantTests {
+        private TransactionDto row(String description, Long merchantId) {
+            return TransactionDto.builder()
+                    .description(description)
+                    .amount(BigDecimal.TEN)
+                    .date(OffsetDateTime.now())
+                    .type(TransactionType.EXPENSE)
+                    .merchant(merchantId == null ? null : MerchantDto.builder().id(merchantId).build())
+                    .build();
+        }
+
+        private Account stubHappyPath() {
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            stubBalanceUpdateSuccess();
+            when(transactionRepository.findExistingForDuplicateCheck(anyLong(), any(), any())).thenReturn(List.of());
+            return account;
+        }
+
+        @Test
+        @DisplayName("saveTransactions_rowWithMerchantOverride_savesThatMerchantId")
+        void saveTransactions_rowWithMerchantOverride_savesThatMerchantId() {
+            // arrange
+            stubHappyPath();
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of(DESCRIPTION_TEST, 1001L));
+
+            // act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, 77L)), null, null);
+
+            // assert & verify
+            verify(transactionRepository).insertAll(argThat(list -> Long.valueOf(77L).equals(list.get(0).getMerchantId())));
+            verify(merchantService, never()).recordDescriptionLink(anyLong(), anyLong(), anyString());
+        }
+
+        @Test
+        @DisplayName("saveTransactions_rowWithoutMerchant_usesDescriptionMatchedMerchant")
+        void saveTransactions_rowWithoutMerchant_usesDescriptionMatchedMerchant() {
+            // arrange
+            stubHappyPath();
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of(DESCRIPTION_TEST, 1001L));
+
+            // act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, null)), null, null);
+
+            // assert & verify
+            verify(transactionRepository).insertAll(argThat(list -> Long.valueOf(1001L).equals(list.get(0).getMerchantId())));
+        }
+
+        @Test
+        @DisplayName("saveTransactions_merchantNotOwnedByUser_isRejectedAndNothingSaved")
+        void saveTransactions_merchantNotOwnedByUser_isRejectedAndNothingSaved() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(BigDecimal.ZERO).version(1L).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            doThrow(new ResourceNotFoundException("Merchant not found.")).when(merchantService).requireOwnedMerchants(eq(USER_ID), any());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class,
+                    () -> importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row(DESCRIPTION_TEST, 999L)), null, null));
+            verify(transactionRepository, never()).insertAll(anyList());
         }
     }
 

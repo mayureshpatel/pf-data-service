@@ -227,6 +227,9 @@ public class TransactionImportService {
             return new SaveOutcome(0, 0);
         }
 
+        merchantService.requireOwnedMerchants(userId, approvedDtos.stream()
+                .map(d -> d.merchant() != null ? d.merchant().id() : null)
+                .toList());
         Map<String, Long> merchantMap = resolveMerchantIds(userId, approvedDtos);
         Set<String> existingSignatures = findExistingSignatures(accountId, approvedDtos);
         DedupeResult result = deduplicateTransactions(approvedDtos, existingSignatures, account, merchantMap);
@@ -303,10 +306,13 @@ public class TransactionImportService {
             boolean existsInBatch = batchSignatures.contains(signature);
 
             if (!existsInDb && !existsInBatch) {
-                // a description with no existing link (PF-845) just leaves merchantId null --
-                // that's the expected outcome for anything nobody has linked yet, not an edge
-                // case to fall back on. Import never creates a merchant or a link.
-                Long merchantId = merchantMap.get(dto.description());
+                // a row's own reviewed merchant (PF-898, ownership already verified) wins over the
+                // description match. a description with no existing link (PF-845) just leaves
+                // merchantId null -- the expected outcome for anything nobody has linked yet.
+                // import never creates a merchant or a link, and an override never teaches one.
+                Long merchantId = dto.merchant() != null && dto.merchant().id() != null
+                        ? dto.merchant().id()
+                        : merchantMap.get(dto.description());
                 TransactionCreateRequest t = mapToEntity(dto)
                         .toBuilder()
                         .accountId(account.getId())

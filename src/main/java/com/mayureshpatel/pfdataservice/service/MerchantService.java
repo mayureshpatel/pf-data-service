@@ -16,9 +16,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -163,6 +165,24 @@ public class MerchantService {
         return distinctDescriptions.stream()
                 .filter(desc -> normalizedKeyToMerchantId.containsKey(descriptionToNormalizedKey.get(desc)))
                 .collect(Collectors.toMap(desc -> desc, desc -> normalizedKeyToMerchantId.get(descriptionToNormalizedKey.get(desc))));
+    }
+
+    /**
+     * Verifies that every given merchant id belongs to the user (PF-898: a CSV import row may name
+     * a merchant explicitly, and the client must not be able to attach another user's merchant).
+     * Null entries are ignored and duplicates are checked once.
+     *
+     * @param userId      the user id
+     * @param merchantIds the merchant ids to check; may be null or contain nulls
+     * @throws ResourceNotFoundException if any merchant doesn't exist or isn't owned by {@code userId}
+     */
+    public void requireOwnedMerchants(Long userId, Collection<Long> merchantIds) {
+        if (merchantIds == null) {
+            return;
+        }
+        merchantIds.stream().filter(Objects::nonNull).distinct().forEach(id ->
+                merchantRepository.findByIdAndUserId(id, userId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Merchant not found.")));
     }
 
     /**
