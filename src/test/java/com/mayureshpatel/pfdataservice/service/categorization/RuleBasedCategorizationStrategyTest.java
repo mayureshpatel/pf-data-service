@@ -23,7 +23,7 @@ class RuleBasedCategorizationStrategyTest {
     private static final String MAX_AMOUNT = "20.00";
     private static final String MIN_AMOUNT = "5.00";
 
-    private final RuleBasedCategorizationStrategy strategy = new RuleBasedCategorizationStrategy();
+    private final RuleBasedCategorizationStrategy strategy = new RuleBasedCategorizationStrategy(new RuleMatcher());
 
     /**
      * {@code categorize(Transaction, ...)} matches a rule when its keywords appear

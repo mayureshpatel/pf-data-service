@@ -4,11 +4,10 @@ import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionUpdateRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -37,10 +36,16 @@ import java.util.Optional;
  * least one. A single-keyword rule (the common case, and every rule that existed before PF-315)
  * behaves identically under either match type, so nothing about the original single-keyword
  * behavior changed for those rules.
+ * <p>
+ * The per-rule keyword and amount-range checks live in {@link RuleMatcher}, shared with the rule
+ * match preview so import and preview can never disagree.
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
+
+    private final RuleMatcher ruleMatcher;
 
     /**
      * {@inheritDoc}
@@ -54,8 +59,7 @@ public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
 
         // search for a matching rule on the transaction
         for (CategoryRule rule : context.getRules()) {
-            if (matchesKeywords(transaction.getDescription(), rule)
-                    && matchesAmountRange(transaction.getAmount(), rule)) {
+            if (ruleMatcher.matches(transaction.getDescription(), transaction.getAmount(), rule)) {
                 return Optional.of(rule.getCategory().getId());
             }
         }
@@ -75,62 +79,12 @@ public class RuleBasedCategorizationStrategy implements CategorizationStrategy {
 
         // search for a matching rule on the transaction
         for (CategoryRule rule : context.getRules()) {
-            if (matchesKeywords(transaction.getDescription(), rule)
-                    && matchesAmountRange(transaction.getAmount(), rule)) {
+            if (ruleMatcher.matches(transaction.getDescription(), transaction.getAmount(), rule)) {
                 return Optional.of(rule.getCategory().getId());
             }
         }
 
         return Optional.empty();
-    }
-
-    /**
-     * Checks a rule's keyword set against a description (PF-315), case-insensitively, combining
-     * per the rule's {@link MatchType}. A rule with no keywords never matches -- deliberately not
-     * left to fall out of {@code allMatch}'s vacuous truth on an empty stream, which would
-     * otherwise make an empty-keyword {@code AND} rule match every transaction.
-     *
-     * @param description the transaction description to match against
-     * @param rule        the rule whose keyword set to check
-     * @return true if the rule's keyword set matches the description
-     */
-    private boolean matchesKeywords(String description, CategoryRule rule) {
-        if (rule.getKeywords() == null || rule.getKeywords().isEmpty()) {
-            return false;
-        }
-
-        String lowerDescription = description.toLowerCase(Locale.ROOT);
-        if (rule.getMatchType() == MatchType.AND) {
-            return rule.getKeywords().stream().allMatch(keyword -> lowerDescription.contains(keyword.toLowerCase(Locale.ROOT)));
-        }
-        return rule.getKeywords().stream().anyMatch(keyword -> lowerDescription.contains(keyword.toLowerCase(Locale.ROOT)));
-    }
-
-    /**
-     * Checks a rule's optional amount range (PF-314) against a transaction's absolute amount. A
-     * rule with neither bound set always passes -- keyword match alone remains sufficient. A rule
-     * with a range set but an unknown (null) transaction amount never passes, since there's nothing
-     * to compare. Compares the amount's magnitude rather than its raw signed value, matching how a
-     * range like "under $20" or "over $100" is naturally understood regardless of expense/income
-     * sign.
-     *
-     * @param amount the transaction's amount, may be null
-     * @param rule   the rule whose range to check
-     * @return true if the rule's range (if any) permits a match
-     */
-    private boolean matchesAmountRange(BigDecimal amount, CategoryRule rule) {
-        if (rule.getMinAmount() == null && rule.getMaxAmount() == null) {
-            return true;
-        }
-        if (amount == null) {
-            return false;
-        }
-
-        BigDecimal magnitude = amount.abs();
-        if (rule.getMinAmount() != null && magnitude.compareTo(rule.getMinAmount()) < 0) {
-            return false;
-        }
-        return rule.getMaxAmount() == null || magnitude.compareTo(rule.getMaxAmount()) <= 0;
     }
 
     /**

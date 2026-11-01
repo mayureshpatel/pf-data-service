@@ -129,7 +129,7 @@ class TransactionCategorizerTest {
         @DisplayName("should fall back to the merchant's default category when no rule matches")
         void shouldFallBackToMerchantDefault() {
             // arrange
-            strategies.add(new RuleBasedCategorizationStrategy());
+            strategies.add(new RuleBasedCategorizationStrategy(new RuleMatcher()));
             strategies.add(new MerchantDefaultCategoryStrategy(transactionRepository));
             when(transactionRepository.findWeightedDefaultCategoryId(eq(5L), eq(1L), anyLong(), anyInt()))
                     .thenReturn(Optional.of(77L));
@@ -155,7 +155,7 @@ class TransactionCategorizerTest {
                     .keywords(List.of("COFFEE"))
                     .category(Category.builder().id(10L).build())
                     .build();
-            strategies.add(new RuleBasedCategorizationStrategy());
+            strategies.add(new RuleBasedCategorizationStrategy(new RuleMatcher()));
             strategies.add(new MerchantDefaultCategoryStrategy(transactionRepository));
 
             Transaction t = Transaction.builder()
