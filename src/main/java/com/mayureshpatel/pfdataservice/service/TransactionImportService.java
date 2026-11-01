@@ -4,7 +4,9 @@ import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportStatus;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
@@ -15,6 +17,7 @@ import com.mayureshpatel.pfdataservice.exception.CsvParsingException;
 import com.mayureshpatel.pfdataservice.exception.DuplicateImportException;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
+import com.mayureshpatel.pfdataservice.mapper.MerchantDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
@@ -34,6 +37,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,8 +96,9 @@ public class TransactionImportService {
 
     /**
      * Parses an uploaded file into a preview of the transactions it contains, with a best-guess
-     * category applied to each row via the user's existing rules and categories. Nothing is
-     * saved.
+     * category applied to each row via the user's existing rules and categories, the merchant
+     * its description is already linked to (if any), and a flag for rows that duplicate an
+     * already-saved transaction or an earlier row of the same file. Nothing is saved or created.
      *
      * @param userId      the user id
      * @param accountId   the account the file will be imported into
@@ -120,7 +125,20 @@ public class TransactionImportService {
         List<Category> userCategories = categoryRepository.findByUserId(userId);
 
         try (Stream<Transaction> rawTransactionStream = parser.parse(accountId, fileContent)) {
-            List<TransactionPreviewDto> previews = rawTransactionStream
+            List<Transaction> parsed = rawTransactionStream.toList();
+            if (parsed.isEmpty()) {
+                log.info("Generated 0 transaction previews (empty file)");
+                return List.of();
+            }
+
+            // read-only lookups: an existing description link resolves to a merchant, nothing is created
+            Map<String, Merchant> merchantsByDescription = merchantService.findMatchingMerchants(userId,
+                    parsed.stream().map(Transaction::getDescription).toList());
+            Set<String> existingSignatures = findExistingSignatures(accountId,
+                    parsed.stream().map(Transaction::getTransactionDate).toList());
+            Set<String> seenInFile = new HashSet<>();
+
+            List<TransactionPreviewDto> previews = parsed.stream()
                     .map(t -> {
                         Long categoryId = categorizer.guessCategory(t, userRules, userCategories);
                         Category suggestedCategory = (categoryId != null && categoryId > 0)
@@ -129,6 +147,9 @@ public class TransactionImportService {
                                 .findFirst()
                                 .orElse(null)
                                 : null;
+                        String signature = buildSignature(t.getTransactionDate(), t.getAmount(), t.getDescription(), t.getType());
+                        // add() is false when an earlier row of this file already had the signature
+                        boolean duplicate = existingSignatures.contains(signature) || !seenInFile.add(signature);
                         return TransactionPreviewDto.builder()
                                 .date(t.getTransactionDate())
                                 .postDate(t.getPostDate())
@@ -136,6 +157,8 @@ public class TransactionImportService {
                                 .amount(t.getAmount())
                                 .type(t.getType())
                                 .suggestedCategory(CategoryDtoMapper.toDto(suggestedCategory))
+                                .suggestedMerchant(MerchantDtoMapper.toDto(merchantsByDescription.get(t.getDescription())))
+                                .duplicate(duplicate)
                                 .build();
                     })
                     .toList();
@@ -231,7 +254,7 @@ public class TransactionImportService {
                 .map(d -> d.merchant() != null ? d.merchant().id() : null)
                 .toList());
         Map<String, Long> merchantMap = resolveMerchantIds(userId, approvedDtos);
-        Set<String> existingSignatures = findExistingSignatures(accountId, approvedDtos);
+        Set<String> existingSignatures = findExistingSignatures(accountId, approvedDtos.stream().map(TransactionDto::date).toList());
         DedupeResult result = deduplicateTransactions(approvedDtos, existingSignatures, account, merchantMap);
         persistIfAny(account, result, fileName, fileHash);
 
@@ -272,18 +295,27 @@ public class TransactionImportService {
 
     /**
      * The (date, amount, description, type) signatures of every already-saved transaction within
-     * the batch's own date range (PF-809: extracted from {@link #saveTransactions}), to check
-     * incoming rows against.
+     * the date range spanned by the given dates (PF-809: extracted from {@link #saveTransactions};
+     * shared with {@link #previewTransactions} in PF-898), to check incoming rows against.
      */
-    private Set<String> findExistingSignatures(Long accountId, List<TransactionDto> approvedDtos) {
-        OffsetDateTime earliest = approvedDtos.stream().map(TransactionDto::date).min(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
-        OffsetDateTime latest = approvedDtos.stream().map(TransactionDto::date).max(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
+    private Set<String> findExistingSignatures(Long accountId, List<OffsetDateTime> dates) {
+        OffsetDateTime earliest = dates.stream().min(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
+        OffsetDateTime latest = dates.stream().max(OffsetDateTime::compareTo).orElse(OffsetDateTime.now());
 
         List<Transaction> existingTransactions = transactionRepository.findExistingForDuplicateCheck(accountId, earliest, latest);
 
         return existingTransactions.stream()
-                .map(t -> String.format("%s_%s_%s_%s", t.getTransactionDate(), t.getAmount().stripTrailingZeros(), t.getDescription(), t.getType().name()))
+                .map(t -> buildSignature(t.getTransactionDate(), t.getAmount(), t.getDescription(), t.getType()))
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * The single definition of a transaction's duplicate-detection signature, used by both
+     * preview and save so the two can never disagree about what counts as a duplicate.
+     * (PF-898: extracted from the save path.)
+     */
+    private static String buildSignature(OffsetDateTime date, BigDecimal amount, String description, TransactionType type) {
+        return String.format("%s_%s_%s_%s", date, amount.stripTrailingZeros(), description, type == null ? null : type.name());
     }
 
     /**
@@ -296,11 +328,11 @@ public class TransactionImportService {
 
     private DedupeResult deduplicateTransactions(List<TransactionDto> approvedDtos, Set<String> existingSignatures, Account account, Map<String, Long> merchantMap) {
         List<TransactionCreateRequest> uniqueTransactions = new ArrayList<>();
-        Set<String> batchSignatures = new java.util.HashSet<>();
+        Set<String> batchSignatures = new HashSet<>();
         int duplicateCount = 0;
 
         for (TransactionDto dto : approvedDtos) {
-            String signature = String.format("%s_%s_%s_%s", dto.date(), dto.amount().stripTrailingZeros(), dto.description(), dto.type().name());
+            String signature = buildSignature(dto.date(), dto.amount(), dto.description(), dto.type());
 
             boolean existsInDb = existingSignatures.contains(signature);
             boolean existsInBatch = batchSignatures.contains(signature);

@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -165,6 +167,33 @@ public class MerchantService {
         return distinctDescriptions.stream()
                 .filter(desc -> normalizedKeyToMerchantId.containsKey(descriptionToNormalizedKey.get(desc)))
                 .collect(Collectors.toMap(desc -> desc, desc -> normalizedKeyToMerchantId.get(descriptionToNormalizedKey.get(desc))));
+    }
+
+    /**
+     * Like {@link #findMatchingMerchantIds} but resolves each linked description to the merchant
+     * itself (PF-898, for the import preview). Lookup-only: never creates a merchant or a link.
+     *
+     * @param userId       the user id
+     * @param descriptions the raw transaction descriptions to match
+     * @return each distinct raw description that has an existing link, mapped to its merchant
+     */
+    public Map<String, Merchant> findMatchingMerchants(Long userId, Collection<String> descriptions) {
+        if (descriptions == null || descriptions.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Long> idsByDescription = findMatchingMerchantIds(userId, List.copyOf(descriptions));
+        Map<Long, Merchant> merchantsById = new HashMap<>();
+        idsByDescription.values().stream().distinct().forEach(id ->
+                merchantRepository.findByIdAndUserId(id, userId).ifPresent(m -> merchantsById.put(id, m)));
+
+        Map<String, Merchant> result = new HashMap<>();
+        idsByDescription.forEach((desc, id) -> {
+            Merchant merchant = merchantsById.get(id);
+            if (merchant != null) {
+                result.put(desc, merchant);
+            }
+        });
+        return result;
     }
 
     /**

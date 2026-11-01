@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
@@ -206,6 +207,99 @@ class TransactionImportServiceTest {
 
             // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, null, TEST_CSV_FILENAME));
+        }
+
+        /** Stubs account ownership, parser lookup and the parsed rows shared by the PF-898 preview tests. */
+        private void stubParsedRows(Transaction... rows) {
+            TransactionParser parser = mock(TransactionParser.class);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(parserFactory.getTransactionParser(BANK_STANDARD)).thenReturn(parser);
+            when(parser.parse(eq(ACCOUNT_ID), any())).thenReturn(Stream.of(rows));
+        }
+
+        private Transaction row(String description, OffsetDateTime date, String amount) {
+            return Transaction.builder().description(description).amount(new BigDecimal(amount))
+                    .transactionDate(date).type(TransactionType.EXPENSE).build();
+        }
+
+        @Test
+        @DisplayName("previewTransactions_descriptionWithLinkedMerchant_setsSuggestedMerchant")
+        void previewTransactions_descriptionWithLinkedMerchant_setsSuggestedMerchant() {
+            // arrange
+            stubParsedRows(row("STARBUCKS #1", OffsetDateTime.now(), "5.00"));
+            Merchant merchant = Merchant.builder().id(7L).userId(USER_ID).name("Starbucks").build();
+            when(merchantService.findMatchingMerchants(eq(USER_ID), anyCollection())).thenReturn(Map.of("STARBUCKS #1", merchant));
+
+            // act
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
+
+            // assert & verify
+            assertEquals(7L, result.get(0).suggestedMerchant().id());
+            assertEquals("Starbucks", result.get(0).suggestedMerchant().name());
+            verify(merchantService, never()).createMerchant(any(), any());
+            verify(merchantService, never()).recordDescriptionLink(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("previewTransactions_unlinkedDescription_leavesMerchantNull")
+        void previewTransactions_unlinkedDescription_leavesMerchantNull() {
+            // arrange
+            stubParsedRows(row("UNKNOWN SHOP", OffsetDateTime.now(), "5.00"));
+            when(merchantService.findMatchingMerchants(eq(USER_ID), anyCollection())).thenReturn(Map.of());
+
+            // act
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
+
+            // assert & verify
+            assertNull(result.get(0).suggestedMerchant());
+        }
+
+        @Test
+        @DisplayName("previewTransactions_rowMatchingSavedTransaction_isFlaggedDuplicate")
+        void previewTransactions_rowMatchingSavedTransaction_isFlaggedDuplicate() {
+            // arrange
+            OffsetDateTime date = OffsetDateTime.parse("2026-10-01T00:00:00Z");
+            stubParsedRows(row("COFFEE", date, "5.00"), row("LUNCH", date, "9.00"));
+            // the saved amount has different trailing zeros: the signature must still match
+            when(transactionRepository.findExistingForDuplicateCheck(eq(ACCOUNT_ID), any(), any()))
+                    .thenReturn(List.of(row("COFFEE", date, "5.0")));
+
+            // act
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
+
+            // assert & verify
+            assertTrue(result.get(0).duplicate());
+            assertFalse(result.get(1).duplicate());
+        }
+
+        @Test
+        @DisplayName("previewTransactions_repeatedRowInSameFile_secondIsFlaggedDuplicate")
+        void previewTransactions_repeatedRowInSameFile_secondIsFlaggedDuplicate() {
+            // arrange
+            OffsetDateTime date = OffsetDateTime.parse("2026-10-01T00:00:00Z");
+            stubParsedRows(row("COFFEE", date, "5.00"), row("COFFEE", date, "5.00"));
+
+            // act
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
+
+            // assert & verify
+            assertFalse(result.get(0).duplicate());
+            assertTrue(result.get(1).duplicate());
+        }
+
+        @Test
+        @DisplayName("previewTransactions_headerOnlyFile_returnsEmptyList")
+        void previewTransactions_headerOnlyFile_returnsEmptyList() {
+            // arrange
+            stubParsedRows();
+
+            // act
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(merchantService);
         }
     }
 

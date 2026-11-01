@@ -32,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -421,6 +423,27 @@ class MerchantServiceTest {
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> merchantService.deleteDescriptionLink(USER_ID, 1L));
             verify(descriptionLinkRepository, never()).deleteByIdAndUserId(any(), any());
+        }
+    }
+
+    /** {@code findMatchingMerchants} (PF-898) resolves linked descriptions to merchants and leaves unlinked ones out. */
+    @Nested
+    @DisplayName("findMatchingMerchants")
+    class FindMatchingMerchantsTests {
+        @Test
+        @DisplayName("should map linked descriptions to merchants and omit unlinked ones")
+        void findMatchingMerchants_mapsLinkedOnly() {
+            // arrange
+            Merchant merchant = Merchant.builder().id(5L).name("Coffee").build();
+            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(eq(USER_ID), anyList())).thenReturn(Map.of("coffee", 5L));
+            when(merchantRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(merchant));
+
+            // act
+            Map<String, Merchant> result = merchantService.findMatchingMerchants(USER_ID, List.of("COFFEE", "OTHER"));
+
+            // assert & verify
+            assertEquals(Map.of("COFFEE", merchant), result);
+            assertTrue(merchantService.findMatchingMerchants(USER_ID, List.of()).isEmpty());
         }
     }
 
