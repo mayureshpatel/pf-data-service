@@ -4,19 +4,29 @@ import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
+import com.mayureshpatel.pfdataservice.dto.category.RuleMatchPreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.RuleMatchPreviewRequest;
+import com.mayureshpatel.pfdataservice.dto.category.RuleMatchRowDto;
+import com.mayureshpatel.pfdataservice.dto.category.RuleVerdict;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.http.MediaType;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Collections;
+import java.util.stream.IntStream;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -166,6 +176,124 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("id", "categoryId", "keywords")));
+        }
+    }
+
+    /** {@code POST /api/v1/category-rules/match-preview} returns the read-only match preview for a draft rule, 400 on validation failures, 404 for a rule that is not the caller's, and is closed to anonymous callers. */
+    @Nested
+    @DisplayName("matchPreview")
+    class MatchPreviewTests {
+
+        private static final String URL = BASE_URL + "/match-preview";
+        private static final String KEYWORD = "AMAZON";
+
+        private RuleMatchPreviewRequest draft(Long ruleId, List<String> keywords) {
+            return new RuleMatchPreviewRequest(ruleId, keywords, MatchType.OR, 0, null, null);
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 200 with the preview body")
+        void matchPreview_validRequest_returns200WithBody() throws Exception {
+            // arrange
+            RuleMatchRowDto row = new RuleMatchRowDto(5L, OffsetDateTime.parse("2026-10-01T00:00:00Z"),
+                    "AMAZON MKTP", new BigDecimal("-25.00"), "Checking", null,
+                    RuleVerdict.WILL_CATEGORIZE, List.of());
+            RuleMatchPreviewDto preview = new RuleMatchPreviewDto(1, 1, 0, 0, false, List.of(row));
+            when(ruleMatchPreviewService.preview(eq(USER_ID), any(RuleMatchPreviewRequest.class))).thenReturn(preview);
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, List.of(KEYWORD)))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalMatches").value(1))
+                    .andExpect(jsonPath("$.willCategorizeCount").value(1))
+                    .andExpect(jsonPath("$.truncated").value(false))
+                    .andExpect(jsonPath("$.rows", hasSize(1)))
+                    .andExpect(jsonPath("$.rows[0].transactionId").value(5))
+                    .andExpect(jsonPath("$.rows[0].verdict").value("WILL_CATEGORIZE"));
+
+            verify(ruleMatchPreviewService).preview(eq(USER_ID), eq(draft(null, List.of(KEYWORD))));
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 400 when a keyword is blank")
+        void matchPreview_blankKeyword_returns400() throws Exception {
+            // arrange
+            RuleMatchPreviewRequest request = draft(null, List.of(KEYWORD, " "));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(ruleMatchPreviewService);
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 400 when there are more than 20 keywords")
+        void matchPreview_moreThan20Keywords_returns400() throws Exception {
+            // arrange
+            List<String> keywords = IntStream.rangeClosed(1, 21).mapToObj(i -> "KW" + i).toList();
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, keywords))))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(ruleMatchPreviewService);
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 200 with an empty preview for an empty keyword list")
+        void matchPreview_emptyKeywordList_returns200Empty() throws Exception {
+            // arrange
+            when(ruleMatchPreviewService.preview(eq(USER_ID), any(RuleMatchPreviewRequest.class)))
+                    .thenReturn(RuleMatchPreviewDto.empty());
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, List.of()))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalMatches").value(0))
+                    .andExpect(jsonPath("$.rows", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 404 for an unknown or foreign rule id")
+        void matchPreview_unknownOrForeignRuleId_returns404() throws Exception {
+            // arrange
+            when(ruleMatchPreviewService.preview(eq(USER_ID), any(RuleMatchPreviewRequest.class)))
+                    .thenThrow(new ResourceNotFoundException("Rule not found"));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(999L, List.of(KEYWORD)))))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("POST /match-preview should reject an unauthenticated caller")
+        void matchPreview_requiresAuthentication() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, List.of(KEYWORD)))))
+                    .andExpect(status().is(org.hamcrest.Matchers.anyOf(
+                            org.hamcrest.Matchers.is(401), org.hamcrest.Matchers.is(403))));
+
+            verifyNoInteractions(ruleMatchPreviewService);
         }
     }
 

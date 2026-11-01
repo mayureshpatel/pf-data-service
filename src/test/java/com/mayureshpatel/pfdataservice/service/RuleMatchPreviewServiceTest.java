@@ -10,6 +10,7 @@ import com.mayureshpatel.pfdataservice.dto.category.RuleMatchPreviewRequest;
 import com.mayureshpatel.pfdataservice.dto.category.RuleMatchRowDto;
 import com.mayureshpatel.pfdataservice.dto.category.RuleRefDto;
 import com.mayureshpatel.pfdataservice.dto.category.RuleVerdict;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.service.categorization.RuleMatcher;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -389,5 +391,31 @@ class RuleMatchPreviewServiceTest {
         verify(categoryRuleRepository).findByUserId(USER_ID);
         verify(transactionRepository).findCandidatesByDescriptionKeywords(USER_ID, List.of(AMAZON, MKTP));
         verifyNoMoreInteractions(categoryRuleRepository, transactionRepository);
+    }
+
+    @Test
+    @DisplayName("a ruleId that is not one of the caller's own rules is a not-found, and no transactions are read")
+    void preview_foreignOrUnknownRuleId_throwsNotFound() {
+        // arrange -- rule 99 belongs to someone else (or does not exist); it is not in the caller's rules
+        givenRules(rule(OTHER_RULE_ID, 0, AMAZON));
+
+        // act & assert & verify
+        assertThatThrownBy(() -> service.preview(USER_ID, request(99L, 0, AMAZON)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Rule not found");
+        verifyNoInteractions(transactionRepository);
+    }
+
+    @Test
+    @DisplayName("a foreign ruleId is a not-found even when the keywords are empty")
+    void preview_foreignRuleIdWithEmptyKeywords_throwsNotFound() {
+        // arrange
+        givenRules();
+        RuleMatchPreviewRequest empty = new RuleMatchPreviewRequest(99L, List.of(), null, null, null, null);
+
+        // act & assert & verify
+        assertThatThrownBy(() -> service.preview(USER_ID, empty))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verifyNoInteractions(transactionRepository);
     }
 }

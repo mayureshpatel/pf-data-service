@@ -4,8 +4,11 @@ import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.category.RuleMatchPreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.RuleMatchPreviewRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.CategoryRuleService;
+import com.mayureshpatel.pfdataservice.service.RuleMatchPreviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +33,7 @@ import java.util.List;
 public class CategoryRuleController {
 
     private final CategoryRuleService categoryRuleService;
+    private final RuleMatchPreviewService ruleMatchPreviewService;
 
     /**
      * Returns the authenticated user's category rules.
@@ -91,6 +95,25 @@ public class CategoryRuleController {
     @GetMapping("/preview")
     public ResponseEntity<List<RuleChangePreviewDto>> previewApply(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(categoryRuleService.previewApply(userDetails.getId()));
+    }
+
+    /**
+     * Previews which of the user's transactions a draft rule would match and what would happen to
+     * each, without saving or changing anything. A POST because the draft travels in the body.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the draft rule; {@code ruleId} is set when editing a saved rule
+     * @return the match counts and up to 50 matching rows
+     */
+    @Operation(summary = "Preview a draft rule's matches", description = "Shows which transactions a draft rule would match and whether it would categorize each, lose to another rule, or leave it alone; read-only")
+    @ApiResponse(responseCode = "200", description = "Preview returned (possibly empty)")
+    @ApiResponse(responseCode = "400", description = "Validation failed, for example a blank keyword or more than 20 keywords")
+    @ApiResponse(responseCode = "404", description = "ruleId is not one of the authenticated user's rules")
+    @PostMapping("/match-preview")
+    public ResponseEntity<RuleMatchPreviewDto> matchPreview(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid RuleMatchPreviewRequest request) {
+        return ResponseEntity.ok(ruleMatchPreviewService.preview(userDetails.getId(), request));
     }
 
     /**

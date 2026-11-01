@@ -8,6 +8,7 @@ import com.mayureshpatel.pfdataservice.dto.category.RuleMatchPreviewRequest;
 import com.mayureshpatel.pfdataservice.dto.category.RuleMatchRowDto;
 import com.mayureshpatel.pfdataservice.dto.category.RuleRefDto;
 import com.mayureshpatel.pfdataservice.dto.category.RuleVerdict;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.CategoryDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -63,8 +64,13 @@ public class RuleMatchPreviewService {
      * @param userId  the calling user's id; only their rules and transactions are read
      * @param request the draft rule
      * @return the counts over all matches and up to {@link #MAX_ROWS} rows
+     * @throws ResourceNotFoundException if {@code ruleId} is set but is not one of the caller's own
+     *                                   rules; a rule owned by someone else looks exactly like a missing one
      */
     public RuleMatchPreviewDto preview(Long userId, RuleMatchPreviewRequest request) {
+        // ownership is checked before anything else so an empty draft cannot probe rule ids either
+        List<CategoryRule> savedRules = request.ruleId() != null ? ownedRules(userId, request.ruleId()) : null;
+
         List<String> keywords = nonBlank(request.keywords());
         if (keywords.isEmpty()) {
             return RuleMatchPreviewDto.empty();
@@ -72,7 +78,8 @@ public class RuleMatchPreviewService {
 
         CategoryRule draft = toDraft(request, keywords);
         List<CategoryRule> ranked = RuleOrdering.rank(
-                categoryRuleRepository.findByUserId(userId), draft, request.ruleId());
+                savedRules != null ? savedRules : categoryRuleRepository.findByUserId(userId),
+                draft, request.ruleId());
 
         List<RuleMatchRowDto> matches = transactionRepository.findCandidatesByDescriptionKeywords(userId, keywords)
                 .stream()
@@ -88,6 +95,15 @@ public class RuleMatchPreviewService {
                 count(matches, RuleVerdict.ALREADY_CATEGORIZED),
                 matches.size() > MAX_ROWS,
                 matches.stream().limit(MAX_ROWS).toList());
+    }
+
+    /** Loads the caller's rules and requires {@code ruleId} to be one of them, else not-found. */
+    private List<CategoryRule> ownedRules(Long userId, Long ruleId) {
+        List<CategoryRule> rules = categoryRuleRepository.findByUserId(userId);
+        if (rules.stream().noneMatch(rule -> ruleId.equals(rule.getId()))) {
+            throw new ResourceNotFoundException("Rule not found");
+        }
+        return rules;
     }
 
     /**
