@@ -290,8 +290,8 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(draft(null, List.of(KEYWORD)))))
-                    .andExpect(status().is(org.hamcrest.Matchers.anyOf(
-                            org.hamcrest.Matchers.is(401), org.hamcrest.Matchers.is(403))));
+                    // no custom authentication entry point, so spring security answers 403
+                    .andExpect(status().isForbidden());
 
             verifyNoInteractions(ruleMatchPreviewService);
         }
