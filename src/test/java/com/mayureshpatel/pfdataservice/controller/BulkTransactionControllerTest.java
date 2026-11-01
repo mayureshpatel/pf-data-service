@@ -3,6 +3,7 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportStatus;
+import com.mayureshpatel.pfdataservice.dto.transaction.ImportHashCheckRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
@@ -77,5 +78,47 @@ class BulkTransactionControllerTest {
                 .andExpect(jsonPath("$[1].status").value("SKIPPED_ALREADY_IMPORTED"))
                 .andExpect(jsonPath("$[2].status").value("FAILED"))
                 .andExpect(jsonPath("$[2].error").value("boom"));
+    }
+
+    @Test
+    @DisplayName("should return the already-imported subset from import-check")
+    @WithCustomMockUser(id = 1L)
+    void shouldReturnAlreadyImportedHashes() throws Exception {
+        // arrange
+        when(transactionImportService.findAlreadyImported(eq(1L), any()))
+                .thenReturn(List.of(new ImportHashCheckRequest(7L, "abc")));
+
+        // act
+        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("[{\"accountId\":7,\"fileHash\":\"abc\"},{\"accountId\":7,\"fileHash\":\"def\"}]"))
+                // assert & verify
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].accountId").value(7))
+                .andExpect(jsonPath("$[0].fileHash").value("abc"));
+    }
+
+    @Test
+    @DisplayName("should reject import-check items with a blank hash or null account")
+    @WithCustomMockUser(id = 1L)
+    void shouldRejectInvalidImportCheckItems() throws Exception {
+        // act
+        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("[{\"accountId\":null,\"fileHash\":\" \"}]"))
+                // assert & verify
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("should reject import-check lists over 1000 items")
+    @WithCustomMockUser(id = 1L)
+    void shouldRejectOversizedImportCheckList() throws Exception {
+        // arrange
+        String body = "[" + String.join(",", java.util.Collections.nCopies(1001, "{\"accountId\":1,\"fileHash\":\"h\"}")) + "]";
+
+        // act
+        mockMvc.perform(post("/api/v1/transactions/import-check").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                // assert & verify
+                .andExpect(status().isBadRequest());
     }
 }

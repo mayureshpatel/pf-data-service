@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportStatus;
+import com.mayureshpatel.pfdataservice.dto.transaction.ImportHashCheckRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
@@ -209,6 +210,35 @@ public class TransactionImportService {
             }
         }
         return results;
+    }
+
+    /**
+     * Reports which (account, file hash) candidates were already imported, using the same history
+     * lookup as the save path so the Review step can flag a file before the user commits. Each
+     * distinct account is ownership-checked (and loaded) once.
+     *
+     * @param userId     the user id
+     * @param candidates the (account, hash) pairs to check
+     * @return the subset of candidates already in the import history, in request order
+     * @throws AccessDeniedException     if any candidate targets an account owned by a different user
+     * @throws ResourceNotFoundException if a candidate targets an account that does not exist
+     */
+    @Transactional(readOnly = true)
+    public List<ImportHashCheckRequest> findAlreadyImported(Long userId, List<ImportHashCheckRequest> candidates) {
+        Set<Long> verifiedAccountIds = new HashSet<>();
+        List<ImportHashCheckRequest> alreadyImported = new ArrayList<>();
+        for (ImportHashCheckRequest candidate : candidates) {
+            // verify every account before touching history, so one bad account fails the whole call
+            if (verifiedAccountIds.add(candidate.accountId())) {
+                validateAccountOwnership(userId, candidate.accountId());
+            }
+        }
+        for (ImportHashCheckRequest candidate : candidates) {
+            if (fileImportHistoryRepository.findByAccountIdAndFileHash(candidate.accountId(), candidate.fileHash()).isPresent()) {
+                alreadyImported.add(candidate);
+            }
+        }
+        return alreadyImported;
     }
 
     /**

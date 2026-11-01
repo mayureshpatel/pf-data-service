@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportResultDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.FileImportStatus;
+import com.mayureshpatel.pfdataservice.dto.transaction.ImportHashCheckRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.SaveTransactionRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDto;
@@ -671,6 +672,59 @@ class TransactionImportServiceTest {
 
             // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> importService.saveBulkTransactions(USER_ID, requests));
+        }
+    }
+
+    /**
+     * {@code findAlreadyImported} returns the subset of (account, hash) candidates already in the
+     * import history, enforcing ownership of every candidate account and loading each account once.
+     */
+    @Nested
+    @DisplayName("findAlreadyImported")
+    class FindAlreadyImportedTests {
+        @Test
+        @DisplayName("should return only the candidates whose hash is in the import history")
+        void findAlreadyImported_returnsOnlyHashesInHistory() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(fileImportHistoryRepository.findByAccountIdAndFileHash(ACCOUNT_ID, "seen"))
+                    .thenReturn(Optional.of(FileImportHistory.builder().build()));
+            when(fileImportHistoryRepository.findByAccountIdAndFileHash(ACCOUNT_ID, "new"))
+                    .thenReturn(Optional.empty());
+            ImportHashCheckRequest seen = new ImportHashCheckRequest(ACCOUNT_ID, "seen");
+            ImportHashCheckRequest fresh = new ImportHashCheckRequest(ACCOUNT_ID, "new");
+
+            // act
+            List<ImportHashCheckRequest> result = importService.findAlreadyImported(USER_ID, List.of(seen, fresh));
+
+            // assert & verify
+            assertEquals(List.of(seen), result);
+            verify(accountRepository, times(1)).findById(ACCOUNT_ID);
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException for another user's account")
+        void findAlreadyImported_otherUsersAccount_throwsAccessDenied() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(999L).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            List<ImportHashCheckRequest> candidates = List.of(new ImportHashCheckRequest(ACCOUNT_ID, "h"));
+
+            // act & assert & verify
+            assertThrows(AccessDeniedException.class, () -> importService.findAlreadyImported(USER_ID, candidates));
+            verifyNoInteractions(fileImportHistoryRepository);
+        }
+
+        @Test
+        @DisplayName("should return an empty list for an empty candidate list")
+        void findAlreadyImported_emptyList_returnsEmpty() {
+            // act
+            List<ImportHashCheckRequest> result = importService.findAlreadyImported(USER_ID, List.of());
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(accountRepository, fileImportHistoryRepository);
         }
     }
 }
