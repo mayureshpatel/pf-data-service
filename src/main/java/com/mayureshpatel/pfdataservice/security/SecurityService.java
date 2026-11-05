@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.tag.TagRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -28,6 +29,7 @@ public class SecurityService {
     private final BudgetRepository budgetRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
     private final MerchantRepository merchantRepository;
+    private final MerchantRuleRepository merchantRuleRepository;
     private final TagRepository tagRepository;
 
     /**
@@ -81,6 +83,21 @@ public class SecurityService {
     public boolean isRuleOwner(Long ruleId, CustomUserDetails userDetails) {
         if (ruleId == null || userDetails == null) return false;
         return categoryRuleRepository.findById(ruleId)
+                .map(rule -> rule.getUser().getId().equals(userDetails.getId()))
+                .orElse(false);
+    }
+
+    /**
+     * Like {@link #isRuleOwner}, ownership is read through the rule's {@code getUser()}
+     * association.
+     *
+     * @param ruleId the merchant rule to check
+     * @param userDetails the authenticated caller
+     * @return true if the rule exists and belongs to {@code userDetails}
+     */
+    public boolean isMerchantRuleOwner(Long ruleId, CustomUserDetails userDetails) {
+        if (ruleId == null || userDetails == null) return false;
+        return merchantRuleRepository.findById(ruleId)
                 .map(rule -> rule.getUser().getId().equals(userDetails.getId()))
                 .orElse(false);
     }

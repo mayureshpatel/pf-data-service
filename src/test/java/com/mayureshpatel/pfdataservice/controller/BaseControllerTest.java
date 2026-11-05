@@ -50,6 +50,8 @@ public abstract class BaseControllerTest {
     @MockitoBean
     protected CategoryRuleService categoryRuleService;
     @MockitoBean
+    protected MerchantRuleService merchantRuleService;
+    @MockitoBean
     protected RuleMatchPreviewService ruleMatchPreviewService;
     @MockitoBean
     protected DashboardService dashboardService;
@@ -84,6 +86,7 @@ public abstract class BaseControllerTest {
         org.mockito.Mockito.when(securityService.isTransactionOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isCategoryOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isRuleOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        org.mockito.Mockito.when(securityService.isMerchantRuleOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isBudgetOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isRecurringTransactionOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
         org.mockito.Mockito.when(securityService.isMerchantOwner(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
