@@ -140,7 +140,7 @@ class MerchantDefaultCategoryStrategyTest {
     void shouldRunAfterRuleBasedStrategy() {
         // arrange
         strategy = new MerchantDefaultCategoryStrategy(transactionRepository);
-        RuleBasedCategorizationStrategy ruleBasedStrategy = new RuleBasedCategorizationStrategy();
+        RuleBasedCategorizationStrategy ruleBasedStrategy = new RuleBasedCategorizationStrategy(new RuleMatcher());
 
         // act & assert -- lower getOrder() runs first (TransactionCategorizer sorts ascending)
         assertTrue(strategy.getOrder() > ruleBasedStrategy.getOrder());
