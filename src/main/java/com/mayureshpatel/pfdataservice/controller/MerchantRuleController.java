@@ -44,7 +44,7 @@ public class MerchantRuleController {
      * @param userDetails the authenticated user
      * @return the user's rules
      */
-    @Operation(summary = "List merchant rules", description = "Returns the authenticated user's merchant rules in priority order")
+    @Operation(operationId = "getMerchantRules", summary = "List merchant rules", description = "Returns the authenticated user's merchant rules in priority order")
     @ApiResponse(responseCode = "200", description = "Rules returned (possibly empty)")
     @GetMapping
     public ResponseEntity<List<MerchantRuleDto>> getRules(@AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -58,7 +58,7 @@ public class MerchantRuleController {
      * @param request     the rule to create
      * @return the new rule's generated id
      */
-    @Operation(summary = "Create a merchant rule", description = "Creates a new merchant rule for the authenticated user")
+    @Operation(operationId = "createMerchantRule", summary = "Create a merchant rule", description = "Creates a new merchant rule for the authenticated user")
     @ApiResponse(responseCode = "200", description = "Rule created, id returned")
     @ApiResponse(responseCode = "400", description = "Validation failed, for example a blank keyword or more than 20 keywords")
     @ApiResponse(responseCode = "404", description = "The merchant does not exist or is not the authenticated user's")
@@ -77,7 +77,7 @@ public class MerchantRuleController {
      * @param request     the rule to update, including its id
      * @return the number of rows updated
      */
-    @Operation(summary = "Update a merchant rule", description = "Updates a merchant rule owned by the authenticated user")
+    @Operation(operationId = "updateMerchantRule", summary = "Update a merchant rule", description = "Updates a merchant rule owned by the authenticated user")
     @ApiResponse(responseCode = "200", description = "Rule updated, rows affected returned")
     @ApiResponse(responseCode = "400", description = "Validation failed")
     @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this rule")
@@ -97,7 +97,7 @@ public class MerchantRuleController {
      * @param id          the rule id to delete
      * @return 204 once deleted
      */
-    @Operation(summary = "Delete a merchant rule", description = "Deletes a merchant rule owned by the authenticated user")
+    @Operation(operationId = "deleteMerchantRule", summary = "Delete a merchant rule", description = "Deletes a merchant rule owned by the authenticated user")
     @ApiResponse(responseCode = "204", description = "Rule deleted")
     @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this rule")
     @DeleteMapping("/{id}")
@@ -118,7 +118,7 @@ public class MerchantRuleController {
      * @param request     the draft rule; {@code ruleId} is set when editing a saved rule
      * @return the match counts and up to 50 matching rows
      */
-    @Operation(summary = "Preview a draft merchant rule's matches", description = "Shows which transactions a draft merchant rule would match and whether it would assign a merchant, lose to another rule, or leave the transaction alone; read-only")
+    @Operation(operationId = "matchMerchantRulePreview", summary = "Preview a draft merchant rule's matches", description = "Shows which transactions a draft merchant rule would match and whether it would assign a merchant, lose to another rule, or leave the transaction alone; read-only")
     @ApiResponse(responseCode = "200", description = "Preview returned (possibly empty)")
     @ApiResponse(responseCode = "400", description = "Validation failed, for example a blank keyword or more than 20 keywords")
     @ApiResponse(responseCode = "404", description = "ruleId or merchantId is not the authenticated user's")
@@ -136,7 +136,7 @@ public class MerchantRuleController {
      * @param userDetails the authenticated user
      * @return the transactions that would get a merchant, and the rule that decided each
      */
-    @Operation(summary = "Preview applying merchant rules", description = "Lists the merchant-less transactions the current rules would give a merchant, and the rule that decided each; read-only")
+    @Operation(operationId = "previewMerchantRuleApply", summary = "Preview applying merchant rules", description = "Lists the merchant-less transactions the current rules would give a merchant, and the rule that decided each; read-only")
     @ApiResponse(responseCode = "200", description = "Preview returned (possibly empty)")
     @GetMapping("/preview")
     public ResponseEntity<List<MerchantRuleChangePreviewDto>> previewApply(@AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -150,7 +150,7 @@ public class MerchantRuleController {
      * @param userDetails the authenticated user
      * @return the number of transactions that got a merchant
      */
-    @Operation(summary = "Apply merchant rules", description = "Gives a merchant to the merchant-less transactions the current rules match and returns how many changed; never touches a transaction that already has a merchant")
+    @Operation(operationId = "applyMerchantRules", summary = "Apply merchant rules", description = "Gives a merchant to the merchant-less transactions the current rules match and returns how many changed; never touches a transaction that already has a merchant")
     @ApiResponse(responseCode = "200", description = "Rules applied, number of changed transactions returned")
     @PostMapping("/apply")
     public ResponseEntity<Integer> applyRules(@AuthenticationPrincipal CustomUserDetails userDetails) {

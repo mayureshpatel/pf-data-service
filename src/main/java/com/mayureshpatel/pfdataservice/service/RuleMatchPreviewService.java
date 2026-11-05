@@ -28,8 +28,8 @@ import java.util.List;
  * ranked ahead of it, or leave it alone because it already has a category. Read-only; nothing is
  * saved or changed.
  *
- * <p>Verdicts compare rule against rule, because for any transaction the draft matches, the rule
- * strategy decides before the merchant-default strategy in {@code TransactionCategorizer}. The
+ * <p>Verdicts compare rule against rule, because rules are the only source of a category
+ * in {@code TransactionCategorizer}. The
  * draft is ranked among the saved rules by {@link RuleOrdering} (the same order the SQL gives
  * import and "Apply rules") and matched by the shared {@link RuleMatcher}, so the preview and
  * reality cannot drift.

@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.dto.merchant;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mayureshpatel.pfdataservice.domain.category.MatchType;
+import com.mayureshpatel.pfdataservice.domain.rule.MatchableRule;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
@@ -28,15 +29,12 @@ import java.util.List;
 @ToString
 public class MerchantRuleCreateRequest {
 
-    /** The most keywords a rule may carry, matching the category rule match preview's cap. */
-    public static final int MAX_KEYWORDS = 20;
-
     @NotNull(message = "Merchant ID cannot be null.")
     @Positive(message = "Merchant ID must be a positive number.")
     private final Long merchantId;
 
     @NotEmpty(message = "At least one keyword is required.")
-    @Size(max = MAX_KEYWORDS, message = "A rule can have at most 20 keywords.")
+    @Size(max = MatchableRule.MAX_KEYWORDS, message = MatchableRule.MAX_KEYWORDS_MESSAGE)
     private final List<@NotBlank(message = "Keyword cannot be blank.")
                         @Size(max = 255, message = "Keyword cannot exceed 255 characters.") String> keywords;
 

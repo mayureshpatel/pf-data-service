@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.merchant;
 
+import com.mayureshpatel.pfdataservice.domain.rule.MatchableRule;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,7 +37,7 @@ public class MerchantRuleUpdateRequest {
     private final Long merchantId;
 
     @NotEmpty(message = "At least one keyword is required.")
-    @Size(max = MerchantRuleCreateRequest.MAX_KEYWORDS, message = "A rule can have at most 20 keywords.")
+    @Size(max = MatchableRule.MAX_KEYWORDS, message = MatchableRule.MAX_KEYWORDS_MESSAGE)
     private final List<@NotBlank(message = "Keyword cannot be blank.")
                         @Size(max = 255, message = "Keyword cannot exceed 255 characters.") String> keywords;
 

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -98,6 +99,25 @@ class CategoryRuleUpdateRequestTest extends ValidatorTestBase {
     @Nested
     @DisplayName("Field: keywords (PF-315)")
     class KeywordsValidationTests {
+        /** At most 20 keywords are accepted (PF-911): 20 passes, 21 fails with the same message the form uses. */
+        @Test
+        @DisplayName("should allow exactly 20 keywords and fail with 21")
+        void shouldCapKeywordsAtTwenty() {
+            // arrange
+            List<String> twenty = IntStream.rangeClosed(1, 20).mapToObj(i -> "KW" + i).toList();
+            List<String> twentyOne = IntStream.rangeClosed(1, 21).mapToObj(i -> "KW" + i).toList();
+            CategoryRuleUpdateRequest valid = CategoryRuleUpdateRequest.builder().categoryId(1L).id(1L).keywords(twenty).build();
+            CategoryRuleUpdateRequest tooMany = valid.toBuilder().keywords(twentyOne).build();
+
+            // act
+            Set<ConstraintViolation<CategoryRuleUpdateRequest>> atLimit = validator().validate(valid);
+            Set<ConstraintViolation<CategoryRuleUpdateRequest>> overLimit = validator().validate(tooMany);
+
+            // assert & verify
+            assertTrue(atLimit.isEmpty());
+            assertTrue(overLimit.stream().anyMatch(v -> "A rule can have at most 20 keywords.".equals(v.getMessage())));
+        }
+
         @Test
         @DisplayName("should fail when keywords is empty")
         void shouldFailWhenKeywordsIsEmpty() {
