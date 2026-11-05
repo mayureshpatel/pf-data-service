@@ -2,8 +2,11 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
+import com.mayureshpatel.pfdataservice.service.MerchantRuleMatchPreviewService;
 import com.mayureshpatel.pfdataservice.service.MerchantRuleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,7 +23,8 @@ import java.util.List;
 /**
  * Rules that point keywords at one of the user's merchants (PF-904), so a chain can be
  * recognized from any store's description. This controller covers storage only: list, create,
- * update and delete. Previewing and applying rules are separate endpoints added later.
+ * update and delete, plus the read-only match preview of a draft rule (PF-905). Applying rules is a
+ * separate endpoint added later.
  */
 @Tag(name = "Merchant Rules", description = "Keyword rules that point at a merchant")
 @RestController
@@ -29,6 +33,7 @@ import java.util.List;
 public class MerchantRuleController {
 
     private final MerchantRuleService merchantRuleService;
+    private final MerchantRuleMatchPreviewService merchantRuleMatchPreviewService;
 
     /**
      * Returns the authenticated user's merchant rules, in rule priority order.
@@ -99,5 +104,25 @@ public class MerchantRuleController {
             @PathVariable Long id) {
         merchantRuleService.deleteRule(userDetails.getId(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Previews which of the user's transactions a draft merchant rule would match and what would
+     * happen to each, without saving or changing anything. A POST because the draft travels in
+     * the body.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the draft rule; {@code ruleId} is set when editing a saved rule
+     * @return the match counts and up to 50 matching rows
+     */
+    @Operation(summary = "Preview a draft merchant rule's matches", description = "Shows which transactions a draft merchant rule would match and whether it would assign a merchant, lose to another rule, or leave the transaction alone; read-only")
+    @ApiResponse(responseCode = "200", description = "Preview returned (possibly empty)")
+    @ApiResponse(responseCode = "400", description = "Validation failed, for example a blank keyword or more than 20 keywords")
+    @ApiResponse(responseCode = "404", description = "ruleId or merchantId is not the authenticated user's")
+    @PostMapping("/match-preview")
+    public ResponseEntity<MerchantRuleMatchPreviewDto> matchPreview(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid MerchantRuleMatchPreviewRequest request) {
+        return ResponseEntity.ok(merchantRuleMatchPreviewService.preview(userDetails.getId(), request));
     }
 }

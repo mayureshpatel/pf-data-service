@@ -3,6 +3,11 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchRowDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleVerdict;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
@@ -13,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -45,6 +51,7 @@ class MerchantRuleControllerTest extends BaseControllerTest {
     private static final Long RULE_ID = 1L;
     private static final Long MERCHANT_ID = 10L;
     private static final String KEYWORD = "KROGER";
+    private static final String MERCHANT_NAME = "Kroger";
 
     private MerchantRuleCreateRequest.MerchantRuleCreateRequestBuilder validCreate() {
         return MerchantRuleCreateRequest.builder().merchantId(MERCHANT_ID).keywords(List.of(KEYWORD));
@@ -63,7 +70,7 @@ class MerchantRuleControllerTest extends BaseControllerTest {
         @DisplayName("GET should return list of rules for authenticated user")
         void getRules_shouldReturnList() throws Exception {
             // arrange
-            MerchantDto merchant = MerchantDto.builder().id(MERCHANT_ID).name("Kroger").build();
+            MerchantDto merchant = MerchantDto.builder().id(MERCHANT_ID).name(MERCHANT_NAME).build();
             MerchantRuleDto ruleDto = MerchantRuleDto.builder()
                     .id(RULE_ID).keywords(List.of(KEYWORD)).priority(1).merchant(merchant).build();
             when(merchantRuleService.getRules(USER_ID)).thenReturn(List.of(ruleDto));
@@ -75,7 +82,7 @@ class MerchantRuleControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].id").value(RULE_ID))
                     .andExpect(jsonPath("$[0].keywords[0]").value(KEYWORD))
-                    .andExpect(jsonPath("$[0].merchant.name").value("Kroger"));
+                    .andExpect(jsonPath("$[0].merchant.name").value(MERCHANT_NAME));
 
             verify(merchantRuleService).getRules(USER_ID);
         }
@@ -337,6 +344,122 @@ class MerchantRuleControllerTest extends BaseControllerTest {
                     .andExpect(status().isForbidden());
 
             verifyNoInteractions(merchantRuleService);
+        }
+    }
+
+    /** {@code POST /api/v1/merchant-rules/match-preview} returns the read-only preview for a draft rule, 400 on validation failures, 404 for a rule or merchant that is not the caller's, and is closed to anonymous callers. */
+    @Nested
+    @DisplayName("matchPreview")
+    class MatchPreviewTests {
+
+        private static final String URL = BASE_URL + "/match-preview";
+
+        private MerchantRuleMatchPreviewRequest draft(Long ruleId, List<String> keywords) {
+            return new MerchantRuleMatchPreviewRequest(ruleId, keywords, MatchType.OR, 0, null, null, MERCHANT_ID);
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 200 with the preview body")
+        void matchPreview_validRequest_returns200WithBody() throws Exception {
+            // arrange
+            MerchantRuleMatchRowDto row = new MerchantRuleMatchRowDto(5L, OffsetDateTime.parse("2026-10-01T00:00:00Z"),
+                    "KROGER #1", new BigDecimal("-25.00"), "Checking", null,
+                    MerchantRuleVerdict.WILL_ASSIGN, List.of(), null);
+            MerchantRuleMatchPreviewDto preview = new MerchantRuleMatchPreviewDto(MERCHANT_NAME, 1, 1, 0, 0, 0, false, List.of(row));
+            when(merchantRuleMatchPreviewService.preview(eq(USER_ID), any(MerchantRuleMatchPreviewRequest.class))).thenReturn(preview);
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, List.of(KEYWORD)))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.targetMerchantName").value(MERCHANT_NAME))
+                    .andExpect(jsonPath("$.totalMatches").value(1))
+                    .andExpect(jsonPath("$.willAssignCount").value(1))
+                    .andExpect(jsonPath("$.linkedCount").value(0))
+                    .andExpect(jsonPath("$.truncated").value(false))
+                    .andExpect(jsonPath("$.rows", hasSize(1)))
+                    .andExpect(jsonPath("$.rows[0].transactionId").value(5))
+                    .andExpect(jsonPath("$.rows[0].verdict").value("WILL_ASSIGN"));
+
+            verify(merchantRuleMatchPreviewService).preview(eq(USER_ID), eq(draft(null, List.of(KEYWORD))));
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 400 when a keyword is blank")
+        void matchPreview_blankKeyword_returns400() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, List.of(KEYWORD, " ")))))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(merchantRuleMatchPreviewService);
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 400 when there are more than 20 keywords")
+        void matchPreview_moreThan20Keywords_returns400() throws Exception {
+            // arrange
+            List<String> keywords = IntStream.rangeClosed(1, 21).mapToObj(i -> "KW" + i).toList();
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, keywords))))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(merchantRuleMatchPreviewService);
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 200 with an empty preview for an empty keyword list")
+        void matchPreview_emptyKeywordList_returns200Empty() throws Exception {
+            // arrange
+            when(merchantRuleMatchPreviewService.preview(eq(USER_ID), any(MerchantRuleMatchPreviewRequest.class)))
+                    .thenReturn(MerchantRuleMatchPreviewDto.empty(null));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, List.of()))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalMatches").value(0))
+                    .andExpect(jsonPath("$.rows", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("POST /match-preview should return 404 for an unknown or foreign rule or merchant id")
+        void matchPreview_unknownOrForeignId_returns404() throws Exception {
+            // arrange
+            when(merchantRuleMatchPreviewService.preview(eq(USER_ID), any(MerchantRuleMatchPreviewRequest.class)))
+                    .thenThrow(new ResourceNotFoundException("Rule not found"));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(999L, List.of(KEYWORD)))))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("POST /match-preview should reject an unauthenticated caller")
+        void matchPreview_requiresAuthentication() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(draft(null, List.of(KEYWORD)))))
+                    // no custom authentication entry point, so spring security answers 403
+                    .andExpect(status().isForbidden());
+
+            verifyNoInteractions(merchantRuleMatchPreviewService);
         }
     }
 }

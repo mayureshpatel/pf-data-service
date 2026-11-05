@@ -211,9 +211,21 @@ public class MerchantService {
         if (merchantIds == null) {
             return;
         }
-        merchantIds.stream().filter(Objects::nonNull).distinct().forEach(id ->
-                merchantRepository.findByIdAndUserId(id, userId)
-                        .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND)));
+        merchantIds.stream().filter(Objects::nonNull).distinct().forEach(id -> requireOwnedMerchant(userId, id));
+    }
+
+    /**
+     * Loads one merchant and requires it to belong to the user (PF-905: the merchant rule preview
+     * names the draft's target merchant).
+     *
+     * @param userId     the user id
+     * @param merchantId the merchant id
+     * @return the merchant
+     * @throws ResourceNotFoundException if the merchant doesn't exist or isn't owned by {@code userId}
+     */
+    public Merchant requireOwnedMerchant(Long userId, Long merchantId) {
+        return merchantRepository.findByIdAndUserId(merchantId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException(MERCHANT_NOT_FOUND));
     }
 
     /**
