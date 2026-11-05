@@ -14,6 +14,15 @@ import java.util.List;
 public interface MatchableRule {
 
     /**
+     * The most keywords a rule may carry. Enforced when a rule is created or updated and when a
+     * draft is previewed, and equal to the candidate query's cap so a preview is never silently partial.
+     */
+    int MAX_KEYWORDS = 20;
+
+    /** The validation message shown when a rule has more than {@value #MAX_KEYWORDS} keywords. */
+    String MAX_KEYWORDS_MESSAGE = "A rule can have at most 20 keywords.";
+
+    /**
      * The rule's id, null for an unsaved draft.
      *
      * @return the id, or null

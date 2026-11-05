@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
+import com.mayureshpatel.pfdataservice.domain.rule.MatchableRule;
 import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -29,6 +30,7 @@ public class CategoryRuleUpdateRequest {
     private final Long categoryId;
 
     @NotEmpty(message = "At least one keyword is required.")
+    @Size(max = MatchableRule.MAX_KEYWORDS, message = MatchableRule.MAX_KEYWORDS_MESSAGE)
     private final List<@NotBlank(message = "Keyword cannot be blank.")
                         @Size(max = 255, message = "Keyword cannot exceed 255 characters.") String> keywords;
 

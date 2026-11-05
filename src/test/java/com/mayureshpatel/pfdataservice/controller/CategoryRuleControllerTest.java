@@ -41,6 +41,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CategoryRuleControllerTest extends BaseControllerTest {
 
     private static final String BASE_URL = "/api/v1/category-rules";
+    private static final String VALIDATION_FIELDS = "$.validationErrors[*].field";
+    private static final String FIELD_KEYWORDS = "keywords";
     private static final Long RULE_ID = 1L;
 
     /** {@code GET /api/v1/category-rules} returns the user's rules, or an empty list, not an error, when there are none. */
@@ -114,6 +116,25 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
 
         @Test
+        @DisplayName("POST should return 400 when there are more than 20 keywords (PF-911)")
+        void createRule_moreThan20Keywords_returns400() throws Exception {
+            // arrange
+            List<String> keywords = IntStream.rangeClosed(1, 21).mapToObj(i -> "KW" + i).toList();
+            CategoryRuleCreateRequest request = CategoryRuleCreateRequest.builder()
+                    .userId(USER_ID).categoryId(1L).keywords(keywords).build();
+
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath(VALIDATION_FIELDS, org.hamcrest.Matchers.hasItem(FIELD_KEYWORDS)));
+
+            verifyNoInteractions(categoryRuleService);
+        }
+
+        @Test
         @DisplayName("POST should return 400 Bad Request when validation fails")
         void createRule_shouldReturn400OnInvalidInput() throws Exception {
             // arrange - missing keywords and categoryId
@@ -128,7 +149,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("keywords", "categoryId")));
+                    .andExpect(jsonPath(VALIDATION_FIELDS, org.hamcrest.Matchers.containsInAnyOrder(FIELD_KEYWORDS, "categoryId")));
         }
     }
 
@@ -162,6 +183,25 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
 
         @Test
+        @DisplayName("PUT should return 400 when there are more than 20 keywords (PF-911)")
+        void updateRule_moreThan20Keywords_returns400() throws Exception {
+            // arrange
+            List<String> keywords = IntStream.rangeClosed(1, 21).mapToObj(i -> "KW" + i).toList();
+            CategoryRuleUpdateRequest request = CategoryRuleUpdateRequest.builder()
+                    .id(1L).categoryId(1L).keywords(keywords).build();
+
+            // act & assert & verify
+            mockMvc.perform(put(BASE_URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath(VALIDATION_FIELDS, org.hamcrest.Matchers.hasItem(FIELD_KEYWORDS)));
+
+            verifyNoInteractions(categoryRuleService);
+        }
+
+        @Test
         @DisplayName("PUT should return 400 Bad Request when validation fails")
         void updateRule_shouldReturn400OnInvalidInput() throws Exception {
             // arrange - missing id and categoryId
@@ -175,7 +215,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.validationErrors[*].field", org.hamcrest.Matchers.containsInAnyOrder("id", "categoryId", "keywords")));
+                    .andExpect(jsonPath(VALIDATION_FIELDS, org.hamcrest.Matchers.containsInAnyOrder("id", "categoryId", FIELD_KEYWORDS)));
         }
     }
 
