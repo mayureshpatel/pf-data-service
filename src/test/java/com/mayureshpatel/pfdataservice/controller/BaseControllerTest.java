@@ -56,6 +56,8 @@ public abstract class BaseControllerTest {
     @MockitoBean
     protected MerchantRuleMatchPreviewService merchantRuleMatchPreviewService;
     @MockitoBean
+    protected MerchantRuleApplyService merchantRuleApplyService;
+    @MockitoBean
     protected DashboardService dashboardService;
     @MockitoBean
     protected RecurringTransactionService recurringTransactionService;

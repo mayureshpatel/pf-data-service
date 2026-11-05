@@ -1,11 +1,13 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
+import com.mayureshpatel.pfdataservice.service.MerchantRuleApplyService;
 import com.mayureshpatel.pfdataservice.service.MerchantRuleMatchPreviewService;
 import com.mayureshpatel.pfdataservice.service.MerchantRuleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,8 +25,8 @@ import java.util.List;
 /**
  * Rules that point keywords at one of the user's merchants (PF-904), so a chain can be
  * recognized from any store's description. This controller covers storage only: list, create,
- * update and delete, plus the read-only match preview of a draft rule (PF-905). Applying rules is a
- * separate endpoint added later.
+ * update and delete, plus the read-only match preview of a draft rule (PF-905), and previewing and
+ * applying the saved rules to existing transactions (PF-907).
  */
 @Tag(name = "Merchant Rules", description = "Keyword rules that point at a merchant")
 @RestController
@@ -34,6 +36,7 @@ public class MerchantRuleController {
 
     private final MerchantRuleService merchantRuleService;
     private final MerchantRuleMatchPreviewService merchantRuleMatchPreviewService;
+    private final MerchantRuleApplyService merchantRuleApplyService;
 
     /**
      * Returns the authenticated user's merchant rules, in rule priority order.
@@ -124,5 +127,33 @@ public class MerchantRuleController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid MerchantRuleMatchPreviewRequest request) {
         return ResponseEntity.ok(merchantRuleMatchPreviewService.preview(userDetails.getId(), request));
+    }
+
+    /**
+     * Lists the changes applying the user's merchant rules would make to transactions that have
+     * no merchant, without changing anything.
+     *
+     * @param userDetails the authenticated user
+     * @return the transactions that would get a merchant, and the rule that decided each
+     */
+    @Operation(summary = "Preview applying merchant rules", description = "Lists the merchant-less transactions the current rules would give a merchant, and the rule that decided each; read-only")
+    @ApiResponse(responseCode = "200", description = "Preview returned (possibly empty)")
+    @GetMapping("/preview")
+    public ResponseEntity<List<MerchantRuleChangePreviewDto>> previewApply(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(merchantRuleApplyService.preview(userDetails.getId()));
+    }
+
+    /**
+     * Applies the user's merchant rules to transactions that have no merchant, in one batch.
+     * Transactions that already have a merchant or a linked description are never changed.
+     *
+     * @param userDetails the authenticated user
+     * @return the number of transactions that got a merchant
+     */
+    @Operation(summary = "Apply merchant rules", description = "Gives a merchant to the merchant-less transactions the current rules match and returns how many changed; never touches a transaction that already has a merchant")
+    @ApiResponse(responseCode = "200", description = "Rules applied, number of changed transactions returned")
+    @PostMapping("/apply")
+    public ResponseEntity<Integer> applyRules(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(merchantRuleApplyService.apply(userDetails.getId()));
     }
 }

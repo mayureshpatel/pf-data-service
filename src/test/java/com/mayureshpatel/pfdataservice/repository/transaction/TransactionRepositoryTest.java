@@ -27,6 +27,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -48,6 +49,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
     private static final Long USER_ID = 1L;
     private static final String AMOUNT = "42.00";
+    private static final String PARAM_DESCRIPTION = "description";
 
     /**
      * {@code findAll(TransactionSpecification, Pageable)} builds its {@code WHERE} clause
@@ -1051,7 +1053,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     values (:accountId, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
                     """)
                     .param("accountId", accountId)
-                    .param("description", description)
+                    .param(PARAM_DESCRIPTION, description)
                     .update();
         }
 
@@ -1062,7 +1064,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     """)
                     .param("userId", userId)
                     .param("merchantId", merchantId)
-                    .param("description", description)
+                    .param(PARAM_DESCRIPTION, description)
                     .param("normalized", normalized)
                     .update();
         }
@@ -1237,7 +1239,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     returning id
                     """)
                     .param("accountId", accountId)
-                    .param("description", description)
+                    .param(PARAM_DESCRIPTION, description)
                     .query(Long.class)
                     .single();
         }
@@ -1379,6 +1381,105 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertEquals("Main Checking", t.getAccount().getName());
             assertEquals("Food", t.getCategory().getName());
             assertEquals("Whole Foods", t.getMerchant().getName());
+        }
+    }
+
+    /**
+     * PF-907: {@code findMerchantlessByUserId} returns only the user's non-deleted merchant-less
+     * rows, and {@code assignMerchantsWhereMissing} sets a merchant only where one is still missing,
+     * for the right user, returning the real count.
+     */
+    @Nested
+    @DisplayName("Merchant Rule Apply (PF-907)")
+    class MerchantApplyTests {
+
+        private long insert(long accountId, Long merchantId, String description) {
+            return jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    values (:accountId, 2, :merchantId, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
+                    returning id
+                    """)
+                    .param("accountId", accountId)
+                    .param("merchantId", merchantId)
+                    .param(PARAM_DESCRIPTION, description)
+                    .query(Long.class)
+                    .single();
+        }
+
+        private Long merchantOf(long transactionId) {
+            return jdbcClient.sql("select merchant_id from transactions where id = :id")
+                    .param("id", transactionId).query(Long.class).optional().orElse(null);
+        }
+
+        private List<String> zzm(List<Transaction> transactions) {
+            return transactions.stream().map(Transaction::getDescription)
+                    .filter(d -> d.startsWith("ZZM")).sorted().toList();
+        }
+
+        @Test
+        @DisplayName("findMerchantless_excludesMerchantDeletedAndOtherUsersRows")
+        void findMerchantless_excludesMerchantDeletedAndOtherUsersRows() {
+            // arrange
+            insert(1L, null, "ZZM Mine");
+            insert(1L, 1L, "ZZM Has Merchant");
+            long gone = insert(1L, null, "ZZM Gone");
+            jdbcClient.sql("update transactions set deleted_at = now() where id = :id").param("id", gone).update();
+            insert(4L, null, "ZZM Theirs");
+
+            // act
+            List<Transaction> result = transactionRepository.findMerchantlessByUserId(USER_ID);
+
+            // assert & verify
+            assertEquals(List.of("ZZM Mine"), zzm(result));
+        }
+
+        @Test
+        @DisplayName("assignMerchants_changesOnlyMerchantlessRowsOfTheUserAndCountsThem")
+        void assignMerchants_changesOnlyMerchantlessRowsOfTheUserAndCountsThem() {
+            // arrange
+            long open = insert(1L, null, "ZZM Open");
+            long taken = insert(1L, 2L, "ZZM Taken");
+            long theirs = insert(4L, null, "ZZM Theirs");
+            long gone = insert(1L, null, "ZZM Gone");
+            jdbcClient.sql("update transactions set deleted_at = now() where id = :id").param("id", gone).update();
+
+            // act
+            int changed = transactionRepository.assignMerchantsWhereMissing(USER_ID,
+                    Map.of(open, 3L, taken, 3L, theirs, 3L, gone, 3L));
+
+            // assert & verify
+            assertEquals(1, changed);
+            assertEquals(3L, merchantOf(open));
+            assertEquals(2L, merchantOf(taken));
+            assertNull(merchantOf(theirs));
+            assertNull(merchantOf(gone));
+        }
+
+        @Test
+        @DisplayName("assignMerchants_rowThatGainedMerchantSincePreview_isNotOverwrittenAndSecondRunChangesNothing")
+        void assignMerchants_rowThatGainedMerchantSincePreview_isNotOverwrittenAndSecondRunChangesNothing() {
+            // arrange
+            long raced = insert(1L, null, "ZZM Raced");
+            long plain = insert(1L, null, "ZZM Plain");
+            jdbcClient.sql("update transactions set merchant_id = 4 where id = :id").param("id", raced).update();
+
+            // act
+            int first = transactionRepository.assignMerchantsWhereMissing(USER_ID, Map.of(raced, 3L, plain, 3L));
+            int second = transactionRepository.assignMerchantsWhereMissing(USER_ID, Map.of(raced, 3L, plain, 3L));
+
+            // assert & verify
+            assertEquals(1, first);
+            assertEquals(0, second);
+            assertEquals(4L, merchantOf(raced));
+            assertEquals(3L, merchantOf(plain));
+        }
+
+        @Test
+        @DisplayName("assignMerchants_emptyInput_returnsZero")
+        void assignMerchants_emptyInput_returnsZero() {
+            // act & assert & verify
+            assertEquals(0, transactionRepository.assignMerchantsWhereMissing(USER_ID, Map.of()));
+            assertEquals(0, transactionRepository.assignMerchantsWhereMissing(USER_ID, null));
         }
     }
 }

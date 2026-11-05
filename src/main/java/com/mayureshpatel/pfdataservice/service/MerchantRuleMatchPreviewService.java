@@ -191,7 +191,7 @@ public class MerchantRuleMatchPreviewService {
     }
 
     /** Maps a saved rule to the compact reference shown on a preview row. */
-    private static MerchantRuleRefDto toRef(MerchantRule rule) {
+    static MerchantRuleRefDto toRef(MerchantRule rule) {
         return new MerchantRuleRefDto(
                 rule.getId(),
                 rule.getKeywords(),

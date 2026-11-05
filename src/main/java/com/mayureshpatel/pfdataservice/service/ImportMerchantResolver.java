@@ -113,10 +113,23 @@ public class ImportMerchantResolver {
      * is missing is skipped, never an error, and matching carries on with the next rule.
      */
     private <T> T firstMatchingRuleMerchant(List<MerchantRule> rules, ImportRow row, Function<Merchant, T> fromRule) {
+        MerchantRule rule = firstMatchingRule(rules, row);
+        return rule == null ? null : fromRule.apply(rule.getMerchant());
+    }
+
+    /**
+     * The first rule (in rank order) that matches the row and points at a merchant, or null. Shared
+     * with applying rules to existing transactions (PF-907) so both pick winners identically.
+     *
+     * @param rules the user's rules in rank order, as {@link MerchantRuleRepository#findByUserId} returns them
+     * @param row   the description and amount to match
+     * @return the winning rule, or null when none matches
+     */
+    public MerchantRule firstMatchingRule(List<MerchantRule> rules, ImportRow row) {
         for (MerchantRule rule : rules) {
             Merchant merchant = rule.getMerchant();
             if (merchant != null && merchant.getId() != null && ruleMatcher.matches(row.description(), row.amount(), rule)) {
-                return fromRule.apply(merchant);
+                return rule;
             }
         }
         return null;

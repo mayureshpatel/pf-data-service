@@ -1,7 +1,9 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleRefDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewRequest;
@@ -460,6 +462,56 @@ class MerchantRuleControllerTest extends BaseControllerTest {
                     .andExpect(status().isForbidden());
 
             verifyNoInteractions(merchantRuleMatchPreviewService);
+        }
+    }
+
+    /** {@code GET /preview} lists the changes and {@code POST /apply} returns how many changed; both answer 403 when anonymous. */
+    @Nested
+    @DisplayName("preview and apply")
+    class ApplyTests {
+
+        @Test
+        @DisplayName("GET /preview should return the changes for the signed-in user")
+        void previewApply_returnsChanges() throws Exception {
+            // arrange
+            MerchantDto merchant = MerchantDto.builder().id(MERCHANT_ID).name(MERCHANT_NAME).build();
+            MerchantRuleChangePreviewDto change = new MerchantRuleChangePreviewDto(
+                    5L, OffsetDateTime.parse("2026-01-02T00:00:00Z"), "KROGER #1", new BigDecimal("-12.50"),
+                    "Main Checking", merchant, new MerchantRuleRefDto(RULE_ID, List.of(KEYWORD), MERCHANT_NAME, 1));
+            when(merchantRuleApplyService.preview(USER_ID)).thenReturn(List.of(change));
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/preview"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].transactionId").value(5))
+                    .andExpect(jsonPath("$[0].merchant.name").value(MERCHANT_NAME))
+                    .andExpect(jsonPath("$[0].rule.id").value(RULE_ID));
+            verify(merchantRuleApplyService).preview(USER_ID);
+        }
+
+        @Test
+        @DisplayName("POST /apply should return the number of changed transactions")
+        void applyRules_returnsCount() throws Exception {
+            // arrange
+            when(merchantRuleApplyService.apply(USER_ID)).thenReturn(3);
+
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL + "/apply").with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("3"));
+            verify(merchantRuleApplyService).apply(USER_ID);
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("GET /preview and POST /apply should reject an unauthenticated caller")
+        void previewAndApply_requireAuthentication() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/preview")).andExpect(status().isForbidden());
+            mockMvc.perform(post(BASE_URL + "/apply").with(csrf())).andExpect(status().isForbidden());
+
+            verifyNoInteractions(merchantRuleApplyService);
         }
     }
 }
