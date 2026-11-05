@@ -152,6 +152,24 @@ class ImportDuplicateDetectorTest {
     }
 
     @Test
+    @DisplayName("deduplicate_perRowResolution_usesEachRowsOwnResolvedMerchantAndRowMerchantStillWins")
+    void deduplicate_perRowResolution_usesEachRowsOwnResolvedMerchantAndRowMerchantStillWins() {
+        // arrange
+        TransactionDto first = dto(COFFEE, AMOUNT_FIVE, null);
+        TransactionDto second = dto(COFFEE, "9.00", null);
+        TransactionDto third = dto(COFFEE, "11.00", MerchantDto.builder().id(7L).build());
+        TransactionDto fourth = dto("LUNCH", "3.00", null);
+        List<Long> resolved = java.util.Arrays.asList(41L, 42L, 43L, null);
+
+        // act
+        DedupeResult result = detector.deduplicate(List.of(first, second, third, fourth), Set.of(), account, resolved);
+
+        // assert & verify
+        assertThat(result.uniqueTransactions()).extracting(TransactionCreateRequest::getMerchantId)
+                .containsExactly(41L, 42L, 7L, null);
+    }
+
+    @Test
     @DisplayName("deduplicate_rowMerchantWinsOverDescriptionMatch")
     void deduplicate_rowMerchantWinsOverDescriptionMatch() {
         // arrange

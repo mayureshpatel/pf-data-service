@@ -156,6 +156,43 @@ public final class TransactionQueries {
     }
 
     // language=SQL
+    // PF-907: the merchant-less candidates for applying merchant rules; same scope as FIND_BY_USER_ID
+    public static final String FIND_MERCHANTLESS_BY_USER_ID = SELECT + ENRICHED_COLUMNS +
+            FROM_TRANSACTIONS + ENRICHED_JOINS +
+            WHERE_USER_OWNS_ACCOUNT +
+            AND_NOT_DELETED +
+            "   and transactions.merchant_id is null" +
+            " order by transactions.date desc, transactions.id desc";
+
+    /** Name prefix of the generated transaction id parameters of the merchant batch update. */
+    public static final String ASSIGN_ID_PARAM_PREFIX = "tx";
+
+    /** Name prefix of the generated merchant id parameters of the merchant batch update. */
+    public static final String ASSIGN_MERCHANT_PARAM_PREFIX = "mx";
+
+    /**
+     * Builds the PF-907 batch update that sets {@code merchant_id} for many rows in one statement.
+     * Each row only changes when it is still merchant-less, not deleted and owned by the user, so
+     * a merchant set by a concurrent edit is never overwritten. Only generated parameter names
+     * ({@code :tx0}/{@code :mx0}, ...) are placed in the sql text; the values are bound separately.
+     *
+     * @param pairCount how many (transaction id, merchant id) pairs to generate; must be at least 1
+     * @return the update sql
+     */
+    public static String assignMerchantsChunk(int pairCount) {
+        String pairs = IntStream.range(0, pairCount)
+                .mapToObj(i -> "(cast(:" + ASSIGN_ID_PARAM_PREFIX + i + " as bigint), cast(:"
+                        + ASSIGN_MERCHANT_PARAM_PREFIX + i + " as bigint))")
+                .collect(Collectors.joining(", "));
+        return "update transactions set merchant_id = v.merchant_id, updated_at = CURRENT_TIMESTAMP"
+                + " from (values " + pairs + ") as v(id, merchant_id)"
+                + " where transactions.id = v.id"
+                + " and transactions.merchant_id is null"
+                + " and transactions.deleted_at is null"
+                + " and transactions.account_id in (select id from accounts where user_id = :userId)";
+    }
+
+    // language=SQL
     public static final String FIND_EXISTING_FOR_DUPLICATE_CHECK = """
             select *
             from transactions

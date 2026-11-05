@@ -113,6 +113,50 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     /**
+     * PF-907 candidates for applying merchant rules: the user's non-deleted transactions that have
+     * no merchant, fully hydrated, in one query.
+     *
+     * @param userId the owning user's id
+     * @return the user's non-deleted, merchant-less transactions
+     */
+    public List<Transaction> findMerchantlessByUserId(Long userId) {
+        return jdbcClient.sql(TransactionQueries.FIND_MERCHANTLESS_BY_USER_ID)
+                .param(SqlParams.USER_ID, userId)
+                .query(rowMapper)
+                .list();
+    }
+
+    /**
+     * PF-907 batch merchant assignment, in chunks of 500 pairs per statement. A row changes only if
+     * it is owned by the user, not deleted and still has no merchant, so a merchant set by a
+     * concurrent edit since the candidates were loaded is never overwritten.
+     *
+     * @param userId              the owning user's id
+     * @param merchantByTransaction the merchant id to assign, keyed by transaction id; null or empty is a no-op
+     * @return the number of rows actually changed
+     */
+    public int assignMerchantsWhereMissing(Long userId, Map<Long, Long> merchantByTransaction) {
+        if (merchantByTransaction == null || merchantByTransaction.isEmpty()) {
+            return 0;
+        }
+        List<Map.Entry<Long, Long>> entries = List.copyOf(merchantByTransaction.entrySet());
+        int batchSize = 500;
+        int changed = 0;
+        for (int from = 0; from < entries.size(); from += batchSize) {
+            List<Map.Entry<Long, Long>> chunk = entries.subList(from, Math.min(from + batchSize, entries.size()));
+            JdbcClient.StatementSpec spec = jdbcClient
+                    .sql(TransactionQueries.assignMerchantsChunk(chunk.size()))
+                    .param(SqlParams.USER_ID, userId);
+            for (int i = 0; i < chunk.size(); i++) {
+                spec = spec.param(TransactionQueries.ASSIGN_ID_PARAM_PREFIX + i, chunk.get(i).getKey())
+                        .param(TransactionQueries.ASSIGN_MERCHANT_PARAM_PREFIX + i, chunk.get(i).getValue());
+            }
+            changed += spec.update();
+        }
+        return changed;
+    }
+
+    /**
      * PF-900 prefilter for the rule match preview: the same non-deleted, fully hydrated set as
      * {@link #findByUserId(Long)}, narrowed in SQL to rows whose description contains any of the
      * keywords (case-insensitive substring). Blank keywords are ignored, at most

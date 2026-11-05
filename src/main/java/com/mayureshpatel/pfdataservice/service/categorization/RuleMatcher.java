@@ -1,17 +1,17 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.MatchType;
+import com.mayureshpatel.pfdataservice.domain.rule.MatchableRule;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.Locale;
 
 /**
- * Decides whether a single {@link CategoryRule} matches a description and amount: the rule's
+ * Decides whether a single {@link MatchableRule} (a category rule or a merchant rule) matches a description and amount: the rule's
  * keywords must match the description (PF-315) and the amount must fall within the rule's
- * optional range (PF-314). Shared by {@link RuleBasedCategorizationStrategy} (import) and the
- * rule match preview so both apply identical semantics.
+ * optional range (PF-314). Shared by {@link RuleBasedCategorizationStrategy} (import), the
+ * rule match previews and merchant rules so all apply identical semantics.
  */
 @Component
 public class RuleMatcher {
@@ -24,7 +24,7 @@ public class RuleMatcher {
      * @param rule        the rule to check
      * @return true if both the keyword match and the amount range permit a match
      */
-    public boolean matches(String description, BigDecimal amount, CategoryRule rule) {
+    public boolean matches(String description, BigDecimal amount, MatchableRule rule) {
         return description != null
                 && matchesKeywords(description, rule)
                 && matchesAmountRange(amount, rule);
@@ -40,7 +40,7 @@ public class RuleMatcher {
      * @param rule        the rule whose keyword set to check
      * @return true if the rule's keyword set matches the description
      */
-    private boolean matchesKeywords(String description, CategoryRule rule) {
+    private boolean matchesKeywords(String description, MatchableRule rule) {
         if (rule.getKeywords() == null || rule.getKeywords().isEmpty()) {
             return false;
         }
@@ -64,7 +64,7 @@ public class RuleMatcher {
      * @param rule   the rule whose range to check
      * @return true if the rule's range (if any) permits a match
      */
-    private boolean matchesAmountRange(BigDecimal amount, CategoryRule rule) {
+    private boolean matchesAmountRange(BigDecimal amount, MatchableRule rule) {
         if (rule.getMinAmount() == null && rule.getMaxAmount() == null) {
             return true;
         }

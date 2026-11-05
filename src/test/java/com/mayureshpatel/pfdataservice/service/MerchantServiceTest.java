@@ -475,4 +475,33 @@ class MerchantServiceTest {
             assertThrows(ResourceNotFoundException.class, () -> merchantService.requireOwnedMerchants(USER_ID, List.of(9L)));
         }
     }
+
+    /** {@code requireOwnedMerchant} (PF-905) returns the user's merchant or throws {@link ResourceNotFoundException}. */
+    @Nested
+    @DisplayName("requireOwnedMerchant")
+    class RequireOwnedMerchantTests {
+        @Test
+        @DisplayName("should return the merchant when it is owned")
+        void shouldReturnWhenOwned() {
+            // arrange
+            Merchant merchant = Merchant.builder().id(5L).name("Kroger").build();
+            when(merchantRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(merchant));
+
+            // act
+            Merchant result = merchantService.requireOwnedMerchant(USER_ID, 5L);
+
+            // assert & verify
+            org.assertj.core.api.Assertions.assertThat(result).isSameAs(merchant);
+        }
+
+        @Test
+        @DisplayName("should throw when the merchant is not owned")
+        void shouldThrowWhenNotOwned() {
+            // arrange
+            when(merchantRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> merchantService.requireOwnedMerchant(USER_ID, 9L));
+        }
+    }
 }

@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
+import com.mayureshpatel.pfdataservice.domain.merchant.MerchantRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
@@ -14,6 +15,7 @@ import com.mayureshpatel.pfdataservice.repository.budget.BudgetRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.tag.TagRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
@@ -55,6 +57,9 @@ class SecurityServiceTest {
 
     @Mock
     private MerchantRepository merchantRepository;
+
+    @Mock
+    private MerchantRuleRepository merchantRuleRepository;
 
     @Mock
     private TagRepository tagRepository;
@@ -330,6 +335,53 @@ class SecurityServiceTest {
             boolean result = securityService.isRuleOwner(RULE_ID, userDetails);
 
             assertThat(result).isFalse();
+        }
+    }
+
+    /** {@code isMerchantRuleOwner} is true only for a matching owner, and false for a mismatched owner, a not-found rule, or either argument being null; ownership is read through {@code rule.getUser()}. */
+    @Nested
+    @DisplayName("isMerchantRuleOwner")
+    class IsMerchantRuleOwnerTest {
+        private MerchantRule buildMerchantRule(Long userId) {
+            return MerchantRule.builder()
+                    .id(RULE_ID)
+                    .user(User.builder().id(userId).build())
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should return true when user owns the merchant rule")
+        void isMerchantRuleOwner_matchingId_returnsTrue() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            when(merchantRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(buildMerchantRule(USER_ID)));
+
+            assertThat(securityService.isMerchantRuleOwner(RULE_ID, userDetails)).isTrue();
+        }
+
+        @Test
+        @DisplayName("should return false when mismatched userId")
+        void isMerchantRuleOwner_mismatchedId_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            when(merchantRuleRepository.findById(RULE_ID)).thenReturn(Optional.of(buildMerchantRule(ANOTHER_USER_ID)));
+
+            assertThat(securityService.isMerchantRuleOwner(RULE_ID, userDetails)).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when the rule is not found")
+        void isMerchantRuleOwner_notFound_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            when(merchantRuleRepository.findById(RULE_ID)).thenReturn(Optional.empty());
+
+            assertThat(securityService.isMerchantRuleOwner(RULE_ID, userDetails)).isFalse();
+        }
+
+        @Test
+        @DisplayName("should return false when args are null")
+        void isMerchantRuleOwner_nullArgs_returnsFalse() {
+            CustomUserDetails userDetails = buildUserDetails(USER_ID);
+            assertThat(securityService.isMerchantRuleOwner(null, userDetails)).isFalse();
+            assertThat(securityService.isMerchantRuleOwner(RULE_ID, null)).isFalse();
         }
     }
 

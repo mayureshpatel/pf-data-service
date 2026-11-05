@@ -1,6 +1,6 @@
 package com.mayureshpatel.pfdataservice.service.categorization;
 
-import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
+import com.mayureshpatel.pfdataservice.domain.rule.MatchableRule;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -19,10 +19,10 @@ public final class RuleOrdering {
      * Priority descending; a null priority sorts first, as postgres places nulls first in a
      * descending sort.
      */
-    private static final Comparator<CategoryRule> ORDER = Comparator
-            .comparing(CategoryRule::getPriority, Comparator.nullsFirst(Comparator.<Integer>reverseOrder()))
+    private static final Comparator<MatchableRule> ORDER = Comparator
+            .comparing(MatchableRule::getPriority, Comparator.nullsFirst(Comparator.<Integer>reverseOrder()))
             .thenComparing(RuleOrdering::keywordLength, Comparator.reverseOrder())
-            .thenComparing(CategoryRule::getId, Comparator.nullsLast(Comparator.<Long>naturalOrder()));
+            .thenComparing(MatchableRule::getId, Comparator.nullsLast(Comparator.<Long>naturalOrder()));
 
     private RuleOrdering() {
     }
@@ -34,14 +34,15 @@ public final class RuleOrdering {
      * {@code Long.MAX_VALUE} as its id so it ranks after saved rules it fully ties with, as it
      * would after being saved with a fresh, higher id.
      *
+     * @param <R>            the rule type, a category rule or a merchant rule
      * @param existing       the user's saved rules, in any order
      * @param draft          the draft rule to place
      * @param replacesRuleId the id of the saved rule the draft replaces, or null for a new draft
      * @return a new list with every kept saved rule and the draft, in effective order
      */
-    public static List<CategoryRule> rank(List<CategoryRule> existing, CategoryRule draft, Long replacesRuleId) {
-        List<CategoryRule> ranked = new ArrayList<>(existing.size() + 1);
-        for (CategoryRule rule : existing) {
+    public static <R extends MatchableRule> List<R> rank(List<R> existing, R draft, Long replacesRuleId) {
+        List<R> ranked = new ArrayList<>(existing.size() + 1);
+        for (R rule : existing) {
             if (replacesRuleId == null || !replacesRuleId.equals(rule.getId())) {
                 ranked.add(rule);
             }
@@ -55,7 +56,7 @@ public final class RuleOrdering {
      * The rule's specificity as the SQL computes it: the sum of its keywords' lengths in
      * characters (code points, as postgres {@code length()} counts them, not utf-16 units).
      */
-    private static int keywordLength(CategoryRule rule) {
+    private static int keywordLength(MatchableRule rule) {
         if (rule.getKeywords() == null) {
             return 0;
         }

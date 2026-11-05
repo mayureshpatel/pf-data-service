@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.domain.category;
 
 import com.mayureshpatel.pfdataservice.domain.TableAudit;
+import com.mayureshpatel.pfdataservice.domain.rule.MatchableRule;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -20,7 +21,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class CategoryRule {
+public class CategoryRule implements MatchableRule {
 
     @EqualsAndHashCode.Include
     private Long id;
