@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -162,11 +163,36 @@ public class ImportDuplicateDetector {
      */
     public DedupeResult deduplicate(List<TransactionDto> approvedDtos, Set<String> existingSignatures, Account account,
                                     Map<String, Long> merchantMap) {
+        return deduplicate(approvedDtos, existingSignatures, account,
+                index -> merchantMap.get(approvedDtos.get(index).description()));
+    }
+
+    /**
+     * Like {@link #deduplicate(List, Set, Account, Map)} but with a resolved merchant id per row
+     * (PF-906: link-then-rule resolution is per row, since an amount-range rule can differ between
+     * rows that share a description). A row's own merchant still wins over the resolved one.
+     *
+     * @param approvedDtos       the approved rows, in batch order
+     * @param existingSignatures the signatures of already-saved transactions
+     * @param account            the account the rows are being saved to
+     * @param resolvedMerchantIds the resolved merchant id per row, aligned with {@code approvedDtos};
+     *                            null entries mean no merchant
+     * @return the rows to insert and the duplicate count
+     */
+    public DedupeResult deduplicate(List<TransactionDto> approvedDtos, Set<String> existingSignatures, Account account,
+                                    List<Long> resolvedMerchantIds) {
+        return deduplicate(approvedDtos, existingSignatures, account, resolvedMerchantIds::get);
+    }
+
+    /** Shared body: {@code resolvedMerchantId} maps a row's index in the batch to its resolved merchant id. */
+    private DedupeResult deduplicate(List<TransactionDto> approvedDtos, Set<String> existingSignatures, Account account,
+                                     IntFunction<Long> resolvedMerchantId) {
         List<TransactionCreateRequest> uniqueTransactions = new ArrayList<>();
         Set<String> batchSignatures = new HashSet<>();
         int duplicateCount = 0;
 
-        for (TransactionDto dto : approvedDtos) {
+        for (int index = 0; index < approvedDtos.size(); index++) {
+            TransactionDto dto = approvedDtos.get(index);
             String signature = buildSignature(dto.date(), dto.amount(), dto.description(), dto.type());
 
             boolean existsInDb = existingSignatures.contains(signature);
@@ -180,7 +206,7 @@ public class ImportDuplicateDetector {
                 // import never creates a merchant or a link, and an override never teaches one.
                 Long merchantId = dto.merchant() != null && dto.merchant().id() != null
                         ? dto.merchant().id()
-                        : merchantMap.get(dto.description());
+                        : resolvedMerchantId.apply(index);
                 TransactionCreateRequest t = mapToEntity(dto)
                         .toBuilder()
                         .accountId(account.getId())

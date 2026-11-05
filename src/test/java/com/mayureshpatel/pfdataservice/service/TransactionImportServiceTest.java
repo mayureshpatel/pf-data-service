@@ -2,7 +2,9 @@ package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
+import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
+import com.mayureshpatel.pfdataservice.domain.merchant.MerchantRule;
 import com.mayureshpatel.pfdataservice.domain.transaction.FileImportHistory;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
@@ -21,7 +23,9 @@ import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.file_import_history.FileImportHistoryRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
+import com.mayureshpatel.pfdataservice.service.categorization.RuleMatcher;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
@@ -71,6 +75,8 @@ class TransactionImportServiceTest {
     @Mock
     private MerchantService merchantService;
     @Mock
+    private MerchantRuleRepository merchantRuleRepository;
+    @Mock
     private AccountBalanceUpdateService accountBalanceUpdateService;
     @Mock
     private TransactionImportService self;
@@ -86,7 +92,8 @@ class TransactionImportServiceTest {
     @BeforeEach
     void setUp() {
         importService = new TransactionImportService(transactionRepository, accountRepository, categoryRepository,
-                parserFactory, categorizer, categoryRuleRepository, merchantService, accountBalanceUpdateService,
+                parserFactory, categorizer, categoryRuleRepository,
+                new ImportMerchantResolver(merchantService, merchantRuleRepository, new RuleMatcher()), accountBalanceUpdateService,
                 new ImportDuplicateDetector(transactionRepository, fileImportHistoryRepository), self);
     }
 
@@ -280,6 +287,26 @@ class TransactionImportServiceTest {
             // assert & verify
             assertEquals(7L, result.get(0).suggestedMerchant().id());
             assertEquals("Starbucks", result.get(0).suggestedMerchant().name());
+            verify(merchantService, never()).createMerchant(any(), any());
+            verify(merchantService, never()).recordDescriptionLink(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("previewTransactions_unlinkedDescriptionMatchingRule_suggestsRuleMerchantAndCreatesNothing")
+        void previewTransactions_unlinkedDescriptionMatchingRule_suggestsRuleMerchantAndCreatesNothing() {
+            // arrange
+            stubParsedRows(row("KROGER #9", OffsetDateTime.now(), AMOUNT_FIVE), row("UNKNOWN SHOP", OffsetDateTime.now().minusDays(1), AMOUNT_FIVE));
+            Merchant kroger = Merchant.builder().id(8L).userId(USER_ID).name("Kroger").build();
+            when(merchantService.findMatchingMerchants(eq(USER_ID), anyCollection())).thenReturn(Map.of());
+            when(merchantRuleRepository.findByUserId(USER_ID)).thenReturn(List.of(MerchantRule.builder().id(1L)
+                    .keywords(List.of("kroger")).matchType(MatchType.OR).priority(0).merchant(kroger).build()));
+
+            // act
+            List<TransactionPreviewDto> result = importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, new ByteArrayInputStream(new byte[0]), TEST_CSV_FILENAME);
+
+            // assert & verify
+            assertEquals(8L, result.get(0).suggestedMerchant().id());
+            assertNull(result.get(1).suggestedMerchant());
             verify(merchantService, never()).createMerchant(any(), any());
             verify(merchantService, never()).recordDescriptionLink(any(), any(), any());
         }
@@ -696,6 +723,42 @@ class TransactionImportServiceTest {
 
             // assert & verify
             verify(transactionRepository).insertAll(argThat(list -> Long.valueOf(1001L).equals(list.get(0).getMerchantId())));
+        }
+
+        @Test
+        @DisplayName("saveTransactions_legacyRowsWithoutLink_useMatchingRuleMerchantPerRowAndLinkStillWins")
+        void saveTransactions_legacyRowsWithoutLink_useMatchingRuleMerchantPerRowAndLinkStillWins() {
+            // arrange
+            stubHappyPath();
+            Merchant ruleMerchant = Merchant.builder().id(2002L).userId(USER_ID).name("Kroger").build();
+            when(merchantService.findMatchingMerchantIds(eq(USER_ID), any())).thenReturn(Map.of("LINKED KROGER", 1001L));
+            when(merchantRuleRepository.findByUserId(USER_ID)).thenReturn(List.of(MerchantRule.builder().id(1L)
+                    .keywords(List.of("KROGER")).matchType(MatchType.OR).priority(0).merchant(ruleMerchant).build()));
+
+            // act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID,
+                    List.of(row("LINKED KROGER", null), row("KROGER #2", null), row("OTHER", null)), null, null, false);
+
+            // assert & verify
+            verify(transactionRepository).insertAll(argThat(list -> list.size() == 3
+                    && Long.valueOf(1001L).equals(list.get(0).getMerchantId())
+                    && Long.valueOf(2002L).equals(list.get(1).getMerchantId())
+                    && list.get(2).getMerchantId() == null));
+            verify(merchantService, never()).recordDescriptionLink(anyLong(), anyLong(), anyString());
+        }
+
+        @Test
+        @DisplayName("saveTransactions_merchantsReviewedWithMatchingRule_ignoresRulesAndKeepsClientMerchant")
+        void saveTransactions_merchantsReviewedWithMatchingRule_ignoresRulesAndKeepsClientMerchant() {
+            // arrange
+            stubHappyPath();
+
+            // act
+            importService.saveTransactions(USER_ID, ACCOUNT_ID, List.of(row("KROGER #2", null)), null, null, true);
+
+            // assert & verify
+            verify(transactionRepository).insertAll(argThat(list -> list.size() == 1 && list.get(0).getMerchantId() == null));
+            verifyNoInteractions(merchantRuleRepository);
         }
 
         @Test

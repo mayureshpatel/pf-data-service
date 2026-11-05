@@ -22,6 +22,7 @@ import com.mayureshpatel.pfdataservice.repository.category.CategoryRepository;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.service.ImportDuplicateDetector.DedupeResult;
+import com.mayureshpatel.pfdataservice.service.ImportMerchantResolver.ImportRow;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -59,7 +61,7 @@ public class TransactionImportService {
     private final TransactionParserFactory parserFactory;
     private final TransactionCategorizer categorizer;
     private final CategoryRuleRepository categoryRuleRepository;
-    private final MerchantService merchantService;
+    private final ImportMerchantResolver merchantResolver;
     private final AccountBalanceUpdateService accountBalanceUpdateService;
     private final ImportDuplicateDetector duplicateDetector;
     private final TransactionImportService self;
@@ -77,7 +79,7 @@ public class TransactionImportService {
                                     TransactionParserFactory parserFactory,
                                     TransactionCategorizer categorizer,
                                     CategoryRuleRepository categoryRuleRepository,
-                                    MerchantService merchantService,
+                                    ImportMerchantResolver merchantResolver,
                                     AccountBalanceUpdateService accountBalanceUpdateService,
                                     ImportDuplicateDetector duplicateDetector,
                                     @Lazy TransactionImportService self) {
@@ -87,7 +89,7 @@ public class TransactionImportService {
         this.parserFactory = parserFactory;
         this.categorizer = categorizer;
         this.categoryRuleRepository = categoryRuleRepository;
-        this.merchantService = merchantService;
+        this.merchantResolver = merchantResolver;
         this.accountBalanceUpdateService = accountBalanceUpdateService;
         this.duplicateDetector = duplicateDetector;
         this.self = self;
@@ -96,8 +98,8 @@ public class TransactionImportService {
     /**
      * Parses an uploaded file into a preview of the transactions it contains, with a best-guess
      * category applied to each row via the user's existing rules and categories (subcategories only,
-     * since the save accepts nothing else), the merchant
-     * its description is already linked to (if any), and a flag for rows that duplicate an
+     * since the save accepts nothing else), the merchant chosen by {@link ImportMerchantResolver}
+     * (the description's exact link, else the best matching merchant rule, else none), and a flag for rows that duplicate an
      * already-saved transaction or an earlier row of the same file. Nothing is saved or created.
      *
      * @param userId      the user id
@@ -131,15 +133,16 @@ public class TransactionImportService {
                 return List.of();
             }
 
-            // read-only lookups: an existing description link resolves to a merchant, nothing is created
-            Map<String, Merchant> merchantsByDescription = merchantService.findMatchingMerchants(userId,
-                    parsed.stream().map(Transaction::getDescription).toList());
+            // read-only lookups: a description link, else a merchant rule, resolves to a merchant; nothing is created
+            List<Merchant> suggestedMerchants = merchantResolver.resolveMerchants(userId,
+                    parsed.stream().map(t -> new ImportRow(t.getDescription(), t.getAmount())).toList());
             Set<String> existingSignatures = duplicateDetector.findExistingSignatures(accountId,
                     parsed.stream().map(Transaction::getTransactionDate).toList());
             Set<String> seenInFile = new HashSet<>();
 
-            List<TransactionPreviewDto> previews = parsed.stream()
-                    .map(t -> {
+            List<TransactionPreviewDto> previews = IntStream.range(0, parsed.size())
+                    .mapToObj(i -> {
+                        Transaction t = parsed.get(i);
                         Long categoryId = categorizer.guessCategory(t, userRules, userCategories);
                         Category suggestedCategory = (categoryId != null && categoryId > 0)
                                 ? userCategories.stream()
@@ -160,7 +163,7 @@ public class TransactionImportService {
                                 .amount(t.getAmount())
                                 .type(t.getType())
                                 .suggestedCategory(CategoryDtoMapper.toDto(suggestedCategory))
-                                .suggestedMerchant(MerchantDtoMapper.toDto(merchantsByDescription.get(t.getDescription())))
+                                .suggestedMerchant(MerchantDtoMapper.toDto(suggestedMerchants.get(i)))
                                 .duplicate(duplicate)
                                 .build();
                     })
@@ -269,7 +272,8 @@ public class TransactionImportService {
      * @param fileHash     the source file's hash, used for whole-file duplicate detection (optional)
      * @param merchantsReviewed {@code true} when the user reviewed every row's merchant, so a row
      *                          without one is saved with no merchant; {@code false} fills a missing
-     *                          merchant from the description's existing link (legacy behavior)
+     *                          merchant from the description's existing link, else the best matching
+     *                          merchant rule (PF-906, legacy behavior)
      * @return how many transactions were saved and how many were skipped as duplicates
      * @throws AccessDeniedException      if the account belongs to a different user
      * @throws DuplicateImportException   if this exact file was already imported
@@ -288,16 +292,17 @@ public class TransactionImportService {
             return new SaveOutcome(0, 0);
         }
 
-        merchantService.requireOwnedMerchants(userId, approvedDtos.stream()
+        merchantResolver.requireOwnedMerchants(userId, approvedDtos.stream()
                 .map(d -> d.merchant() != null ? d.merchant().id() : null)
                 .toList());
         requireOwnedSubcategories(userId, approvedDtos.stream()
                 .map(d -> d.category() != null ? d.category().id() : null)
                 .toList());
         // a reviewed batch's missing merchant is a deliberate "none", so skip the description match
-        Map<String, Long> merchantMap = merchantsReviewed ? Map.of() : resolveMerchantIds(userId, approvedDtos);
         Set<String> existingSignatures = duplicateDetector.findExistingSignatures(accountId, approvedDtos.stream().map(TransactionDto::date).toList());
-        DedupeResult result = duplicateDetector.deduplicate(approvedDtos, existingSignatures, account, merchantMap);
+        DedupeResult result = merchantsReviewed
+                ? duplicateDetector.deduplicate(approvedDtos, existingSignatures, account, Map.<String, Long>of())
+                : duplicateDetector.deduplicate(approvedDtos, existingSignatures, account, resolveMerchantIds(userId, approvedDtos));
         persistIfAny(account, result, fileName, fileHash);
 
         return new SaveOutcome(result.uniqueTransactions().size(), result.duplicateCount());
@@ -341,9 +346,9 @@ public class TransactionImportService {
     /**
      * (PF-809: extracted from {@link #saveTransactions}).
      */
-    private Map<String, Long> resolveMerchantIds(Long userId, List<TransactionDto> approvedDtos) {
-        List<String> incomingDescriptions = approvedDtos.stream().map(TransactionDto::description).toList();
-        return merchantService.findMatchingMerchantIds(userId, incomingDescriptions);
+    private List<Long> resolveMerchantIds(Long userId, List<TransactionDto> approvedDtos) {
+        return merchantResolver.resolveMerchantIds(userId,
+                approvedDtos.stream().map(d -> new ImportRow(d.description(), d.amount())).toList());
     }
 
     /**
