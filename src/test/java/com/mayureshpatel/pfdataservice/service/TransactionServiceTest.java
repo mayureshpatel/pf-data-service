@@ -769,6 +769,28 @@ class TransactionServiceTest {
         }
 
         @Test
+        @DisplayName("should leave the transaction uncategorized when a merchant is set but no rule matches")
+        void shouldStayUncategorizedWhenMerchantSetAndNoRuleMatches() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(categoryRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(categorizer.guessCategory(any(), anyList(), anyList())).thenReturn(-1L);
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID).type(TYPE_INCOME).description("Has Merchant").merchantId(5L).build();
+
+            // act
+            transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            verify(transactionRepository).insert((Transaction) argThat(t ->
+                    ((Transaction) t).getCategory() == null && ((Transaction) t).getMerchant() != null));
+        }
+
+        @Test
         @DisplayName("should handle category guessing when ID is null or zero")
         void shouldHandleGuessedCategoryNullOrZero() {
             // arrange

@@ -15,7 +15,7 @@ import java.util.Optional;
 /**
  * Guesses a category for a transaction by running every registered {@link CategorizationStrategy}
  * in priority order and taking the first match. Currently there's only one strategy
- * ({@link RuleBasedCategorizationStrategy}), but new ones can be added without touching this
+ * ({@link RuleBasedCategorizationStrategy}) -- categories come only from rules -- but new ones can be added without touching this
  * class.
  */
 @Component

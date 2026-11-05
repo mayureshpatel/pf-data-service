@@ -147,7 +147,7 @@ public class TransactionImportService {
                         Category suggestedCategory = (categoryId != null && categoryId > 0)
                                 ? userCategories.stream()
                                 .filter(c -> c.getId().equals(categoryId))
-                                // a rule or merchant default can point at a top-level category, which
+                                // a rule can point at a top-level category, which
                                 // the save rejects, so only a subcategory is ever suggested
                                 .filter(Category::isSubCategory)
                                 .findFirst()
