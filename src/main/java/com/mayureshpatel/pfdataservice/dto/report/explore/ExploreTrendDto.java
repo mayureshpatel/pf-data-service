@@ -11,8 +11,9 @@ import java.util.List;
  *
  * @param current    the shown period's buckets, in order, with empty buckets filled in
  * @param comparison the comparison period's buckets, in order, or empty when not comparing
+ * @param granularity how coarse the buckets are, decided by the server from the length of the period
  */
-public record ExploreTrendDto(List<Bucket> current, List<Bucket> comparison) {
+public record ExploreTrendDto(List<Bucket> current, List<Bucket> comparison, TrendGranularity granularity) {
 
     /**
      * One day, week or month of the trend.

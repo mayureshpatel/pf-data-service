@@ -9,10 +9,12 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRowDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.TrendGranularity;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthCompare;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthGroupBy;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,6 +51,13 @@ class ReportControllerTest extends BaseControllerTest {
     private static final String PARAM_GROUP_BY = "groupBy";
     private static final String JAN_1 = "2026-01-01";
     private static final String JAN_31 = "2026-01-31";
+    private static final String GROUP_CATEGORY = "CATEGORY";
+    private static final LocalDate TODAY = LocalDate.of(2026, 10, 25);
+
+    @BeforeEach
+    void resolveToday() {
+        when(exploreToday.resolve(any())).thenReturn(TODAY);
+    }
 
     /** {@code GET /api/v1/reports/explore} binds every parameter, defaults side to spending and compare to none, and rejects a measure/grouping pair that makes no sense. */
     @Nested
@@ -68,7 +77,7 @@ class ReportControllerTest extends BaseControllerTest {
             // arrange
             ExploreFilter filter = new ExploreFilter(List.of(1L, 2L), 7L, false, null, true, 3L, false, new BigDecimal("5"), new BigDecimal("500"));
             when(exploreService.explore(eq(USER_ID), eq(ExploreMeasure.COUNT), eq(ExploreSide.INCOME), eq(ExploreGroupBy.MERCHANT),
-                    eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 1, 31)), eq(ExploreCompare.SAME_DAYS_LAST_YEAR), eq(filter)))
+                    eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 1, 31)), eq(ExploreCompare.SAME_DAYS_LAST_YEAR), eq(filter), eq(TODAY)))
                     .thenReturn(result());
 
             // act & assert & verify
@@ -91,12 +100,12 @@ class ReportControllerTest extends BaseControllerTest {
         void explore_shouldApplyDefaults() throws Exception {
             // arrange
             when(exploreService.explore(eq(USER_ID), eq(ExploreMeasure.SPENDING), eq(ExploreSide.SPENDING), eq(ExploreGroupBy.CATEGORY),
-                    any(LocalDate.class), any(LocalDate.class), eq(ExploreCompare.NONE), eq(ExploreFilter.none())))
+                    any(LocalDate.class), any(LocalDate.class), eq(ExploreCompare.NONE), eq(ExploreFilter.none()), eq(TODAY)))
                     .thenReturn(result());
 
             // act & assert & verify
             mockMvc.perform(get(EXPLORE_URL)
-                            .param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_GROUP_BY, "CATEGORY")
+                            .param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_GROUP_BY, GROUP_CATEGORY)
                             .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
                     .andExpect(status().isOk());
         }
@@ -105,12 +114,12 @@ class ReportControllerTest extends BaseControllerTest {
         @DisplayName("GET /explore should return 400 for an invalid measure/grouping pair")
         void explore_shouldReturn400ForInvalidPair() throws Exception {
             // arrange
-            when(exploreService.explore(any(), eq(ExploreMeasure.NET), any(), eq(ExploreGroupBy.CATEGORY), any(), any(), any(), any()))
+            when(exploreService.explore(any(), eq(ExploreMeasure.NET), any(), eq(ExploreGroupBy.CATEGORY), any(), any(), any(), any(), any()))
                     .thenThrow(new IllegalArgumentException("Net only groups by time"));
 
             // act & assert & verify
             mockMvc.perform(get(EXPLORE_URL)
-                            .param(PARAM_MEASURE, "NET").param(PARAM_GROUP_BY, "CATEGORY")
+                            .param(PARAM_MEASURE, "NET").param(PARAM_GROUP_BY, GROUP_CATEGORY)
                             .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
                     .andExpect(status().isBadRequest());
         }
@@ -122,6 +131,84 @@ class ReportControllerTest extends BaseControllerTest {
             mockMvc.perform(get(EXPLORE_URL)
                             .param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_GROUP_BY, "NOPE")
                             .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    /** The client's local date is passed through the resolver, and bad dates or ranges answer 400 with the reason. */
+    @Nested
+    @DisplayName("explore today and bounds")
+    class ExploreTodayAndBoundsTests {
+
+        private static final String TREND_URL = "/api/v1/reports/explore/trend";
+        private static final String TRANSACTIONS_URL = "/api/v1/reports/explore/transactions";
+        private static final String PARAM_TODAY = "today";
+        private static final String DETAIL = "$.detail";
+
+        @Test
+        @DisplayName("GET /explore/trend should hand the today parameter to the resolver")
+        void trend_shouldPassTodayToTheResolver() throws Exception {
+            // arrange
+            when(exploreService.trend(any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(new ExploreTrendDto(List.of(), List.of(), TrendGranularity.DAY));
+
+            // act
+            mockMvc.perform(get(TREND_URL).param(PARAM_MEASURE, MEASURE_SPENDING)
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31).param(PARAM_TODAY, "2026-10-26"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.granularity").value("day"));
+
+            // assert & verify
+            verify(exploreToday).resolve(LocalDate.of(2026, 10, 26));
+        }
+
+        @Test
+        @DisplayName("GET /explore should return 400 with the message when today is too far from the server's date")
+        void explore_shouldReturn400WhenTodayIsOutOfReach() throws Exception {
+            // arrange
+            when(exploreToday.resolve(any())).thenThrow(new IllegalArgumentException("The today date 2026-12-01 is not within a day of the server's date"));
+
+            // act & assert & verify
+            mockMvc.perform(get(EXPLORE_URL).param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_GROUP_BY, GROUP_CATEGORY)
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31).param(PARAM_TODAY, "2026-12-01"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath(DETAIL).value(org.hamcrest.Matchers.containsString("not within a day")));
+        }
+
+        @Test
+        @DisplayName("GET /explore/trend should return 400 with the message for an out-of-bounds range")
+        void trend_shouldReturn400ForAnOutOfBoundsRange() throws Exception {
+            // arrange
+            when(exploreService.trend(any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenThrow(new IllegalArgumentException("The start date cannot be before 2000-01-01"));
+
+            // act & assert & verify
+            mockMvc.perform(get(TREND_URL).param(PARAM_MEASURE, MEASURE_SPENDING)
+                            .param(PARAM_START_DATE, "0002-01-01").param(PARAM_END_DATE, JAN_31))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath(DETAIL).value("The start date cannot be before 2000-01-01"));
+        }
+
+        @Test
+        @DisplayName("GET /explore/transactions should return 400 with the message for an out-of-bounds range")
+        void transactions_shouldReturn400ForAnOutOfBoundsRange() throws Exception {
+            // arrange
+            when(exploreService.transactions(any(), any(), any(), any(), any(), any(), eq(0), eq(20), any()))
+                    .thenThrow(new IllegalArgumentException("The end date cannot be after 2027-10-25"));
+
+            // act & assert & verify
+            mockMvc.perform(get(TRANSACTIONS_URL).param(PARAM_MEASURE, MEASURE_SPENDING)
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, "2099-01-01"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath(DETAIL).value("The end date cannot be after 2027-10-25"));
+        }
+
+        @Test
+        @DisplayName("GET /explore should return 400 for a today that is not a date")
+        void explore_shouldReturn400ForANonDateToday() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(get(EXPLORE_URL).param(PARAM_MEASURE, MEASURE_SPENDING).param(PARAM_GROUP_BY, GROUP_CATEGORY)
+                            .param(PARAM_START_DATE, JAN_1).param(PARAM_END_DATE, JAN_31).param(PARAM_TODAY, "tomorrow"))
                     .andExpect(status().isBadRequest());
         }
     }
@@ -140,9 +227,10 @@ class ReportControllerTest extends BaseControllerTest {
             // arrange
             ExploreTrendDto trend = new ExploreTrendDto(
                     List.of(new ExploreTrendDto.Bucket(LocalDate.of(2026, 1, 1), new BigDecimal("100.00"), true)),
-                    List.of(new ExploreTrendDto.Bucket(LocalDate.of(2025, 1, 1), new BigDecimal("80.00"), false)));
+                    List.of(new ExploreTrendDto.Bucket(LocalDate.of(2025, 1, 1), new BigDecimal("80.00"), false)),
+                    TrendGranularity.MONTH);
             when(exploreService.trend(eq(USER_ID), eq(ExploreMeasure.SPENDING), eq(ExploreSide.SPENDING),
-                    any(LocalDate.class), any(LocalDate.class), eq(ExploreCompare.SAME_DAYS_LAST_YEAR), eq(ExploreFilter.none())))
+                    any(LocalDate.class), any(LocalDate.class), eq(ExploreCompare.SAME_DAYS_LAST_YEAR), eq(ExploreFilter.none()), eq(TODAY)))
                     .thenReturn(trend);
 
             // act & assert & verify
@@ -152,7 +240,8 @@ class ReportControllerTest extends BaseControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.current[0].start").value("2026-01-01"))
                     .andExpect(jsonPath("$.current[0].partial").value(true))
-                    .andExpect(jsonPath("$.comparison[0].value").value(80.00));
+                    .andExpect(jsonPath("$.comparison[0].value").value(80.00))
+                    .andExpect(jsonPath("$.granularity").value("month"));
         }
 
         @Test
@@ -162,7 +251,7 @@ class ReportControllerTest extends BaseControllerTest {
             ExploreTransactionDto row = new ExploreTransactionDto(9L, LocalDate.of(2026, 1, 5), "WHOLEFDS", "Whole Foods", "Checking",
                     "Groceries", new BigDecimal("84.12"), com.mayureshpatel.pfdataservice.domain.transaction.TransactionType.EXPENSE);
             when(exploreService.transactions(eq(USER_ID), eq(ExploreMeasure.SPENDING), eq(ExploreSide.SPENDING),
-                    any(LocalDate.class), any(LocalDate.class), any(ExploreFilter.class), eq(1), eq(20)))
+                    any(LocalDate.class), any(LocalDate.class), any(ExploreFilter.class), eq(1), eq(20), eq(TODAY)))
                     .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(row),
                             org.springframework.data.domain.PageRequest.of(1, 20), 21));
 
