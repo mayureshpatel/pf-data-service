@@ -63,7 +63,7 @@ class SnapshotServiceTest {
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal(BALANCE)).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.getNetFlowAfterDate(eq(ACCOUNT_ID), eq(endOfMonth))).thenReturn(new BigDecimal("100.00"));
+            when(transactionRepository.getNetFlowFromDate(eq(ACCOUNT_ID), eq(endOfMonth.plusDays(1)))).thenReturn(new BigDecimal("100.00"));
             when(snapshotRepository.findByAccountIdAndSnapshotDate(ACCOUNT_ID, endOfMonth)).thenReturn(Optional.empty());
 
             // act
@@ -87,7 +87,7 @@ class SnapshotServiceTest {
             AccountSnapshot existing = AccountSnapshot.builder().id(1L).balance(BigDecimal.ZERO).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.getNetFlowAfterDate(eq(ACCOUNT_ID), eq(endOfMonth))).thenReturn(BigDecimal.ZERO);
+            when(transactionRepository.getNetFlowFromDate(eq(ACCOUNT_ID), eq(endOfMonth.plusDays(1)))).thenReturn(BigDecimal.ZERO);
             when(snapshotRepository.findByAccountIdAndSnapshotDate(ACCOUNT_ID, endOfMonth)).thenReturn(Optional.of(existing));
 
             // act
@@ -108,7 +108,7 @@ class SnapshotServiceTest {
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal(BALANCE)).build();
 
             when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(transactionRepository.getNetFlowAfterDate(anyLong(), any())).thenReturn(null);
+            when(transactionRepository.getNetFlowFromDate(anyLong(), any())).thenReturn(null);
             when(snapshotRepository.findByAccountIdAndSnapshotDate(anyLong(), any())).thenReturn(Optional.empty());
 
             // act
@@ -157,7 +157,7 @@ class SnapshotServiceTest {
             // arrange
             LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal(BALANCE)).build();
-            when(transactionRepository.getNetFlowAfterDate(ACCOUNT_ID, endOfMonth)).thenReturn(new BigDecimal("100.00"));
+            when(transactionRepository.getNetFlowFromDate(ACCOUNT_ID, endOfMonth.plusDays(1))).thenReturn(new BigDecimal("100.00"));
 
             // act
             BigDecimal result = snapshotService.calculateEndOfMonthBalance(account, endOfMonth);
@@ -169,12 +169,30 @@ class SnapshotServiceTest {
         }
 
         @Test
+        @DisplayName("bug regression: should count the last day of the month as inside the month by asking for the flow "
+                + "from the first day of the next month (PF-895)")
+        void shouldCountLastDayInsideTheMonth() {
+            // arrange
+            LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
+            LocalDate firstDayOfNextMonth = LocalDate.of(2026, 4, 1);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal(BALANCE)).build();
+            when(transactionRepository.getNetFlowFromDate(ACCOUNT_ID, firstDayOfNextMonth)).thenReturn(new BigDecimal("100.00"));
+
+            // act
+            BigDecimal result = snapshotService.calculateEndOfMonthBalance(account, endOfMonth);
+
+            // assert & verify
+            assertEquals(0, result.compareTo(new BigDecimal("900.00")));
+            verify(transactionRepository).getNetFlowFromDate(ACCOUNT_ID, firstDayOfNextMonth);
+        }
+
+        @Test
         @DisplayName("should treat a null net flow as zero")
         void shouldHandleNullNetFlow() {
             // arrange
             LocalDate endOfMonth = LocalDate.of(2026, 3, 31);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal(BALANCE)).build();
-            when(transactionRepository.getNetFlowAfterDate(ACCOUNT_ID, endOfMonth)).thenReturn(null);
+            when(transactionRepository.getNetFlowFromDate(ACCOUNT_ID, endOfMonth.plusDays(1))).thenReturn(null);
 
             // act
             BigDecimal result = snapshotService.calculateEndOfMonthBalance(account, endOfMonth);

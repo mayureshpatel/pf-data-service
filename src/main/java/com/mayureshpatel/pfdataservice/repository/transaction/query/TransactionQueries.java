@@ -355,7 +355,7 @@ public final class TransactionQueries {
             """;
 
     // language=SQL
-    public static final String GET_NET_FLOW_AFTER_DATE = """
+    public static final String GET_NET_FLOW_FROM_DATE = """
             select coalesce(sum(
                 case
                     when transactions.type in ('INCOME', 'TRANSFER_IN') then transactions.amount
@@ -365,7 +365,7 @@ public final class TransactionQueries {
             ), 0)
             from transactions
             where transactions.account_id = :accountId
-              and transactions.date > :date
+              and transactions.date >= :date
               and transactions.deleted_at is null
             """;
 

@@ -511,19 +511,20 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     }
 
     /**
-     * Net effect on an account's balance from every non-deleted transaction strictly after
-     * {@code date}, computed directly in SQL. Note this trusts each transaction's raw stored
+     * Net effect on an account's balance from every non-deleted transaction on or after the start of
+     * {@code date} (UTC), computed directly in SQL. Half-open like the net worth view's windows: a month end
+     * is read by passing the first day of the next month, so the whole last day stays inside the month (PF-895). Note this trusts each transaction's raw stored
      * {@code amount} sign for income/expense (adds income, subtracts expense) rather than forcing
      * it via {@code abs()} the way {@link Transaction#getNetChange()} does in Java -- the two are
      * only guaranteed to agree if amounts are always stored consistent with their type, which
      * nothing at the persistence layer currently enforces.
      *
      * @param accountId the account to sum
-     * @param date      the exclusive lower bound
-     * @return the net flow since {@code date}, or zero if there are no matching transactions
+     * @param date      the inclusive lower bound, taken as 00:00 UTC on that day
+     * @return the net flow from {@code date} on, or zero if there are no matching transactions
      */
-    public BigDecimal getNetFlowAfterDate(Long accountId, LocalDate date) {
-        return jdbcClient.sql(TransactionQueries.GET_NET_FLOW_AFTER_DATE)
+    public BigDecimal getNetFlowFromDate(Long accountId, LocalDate date) {
+        return jdbcClient.sql(TransactionQueries.GET_NET_FLOW_FROM_DATE)
                 .param(PARAM_ACCOUNT_ID, accountId)
                 .param(PARAM_DATE, date.atStartOfDay(UTC_ZONE).toOffsetDateTime())
                 .query(BigDecimal.class)
