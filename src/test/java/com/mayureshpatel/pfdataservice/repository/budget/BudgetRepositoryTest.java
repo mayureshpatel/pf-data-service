@@ -98,6 +98,26 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("should purge only the soft-deleted budgets of the category (PF-876)")
+        void shouldPurgeOnlySoftDeletedBudgets() {
+            // arrange -- one removed (soft-deleted) budget and one active budget, same category
+            budgetRepository.insert(BudgetCreateRequest.builder()
+                    .userId(USER_1).categoryId(CAT_RENT).amount(BigDecimal.TEN).month(6).year(2026).build());
+            budgetRepository.insert(BudgetCreateRequest.builder()
+                    .userId(USER_1).categoryId(CAT_RENT).amount(BigDecimal.TEN).month(7).year(2026).build());
+            Budget removed = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(USER_1, CAT_RENT, 6, 2026).orElseThrow();
+            budgetRepository.delete(removed);
+
+            // act
+            int rows = budgetRepository.deleteSoftDeletedByUserIdAndCategoryId(USER_1, CAT_RENT);
+
+            // assert & verify
+            assertEquals(1, rows);
+            assertTrue(budgetRepository.findByUserIdAndCategoryIdAndMonthAndYearAndDeletedAtIsNull(USER_1, CAT_RENT, 7, 2026).isPresent());
+            assertEquals(0, budgetRepository.deleteSoftDeletedByUserIdAndCategoryId(USER_1, CAT_RENT));
+        }
+
+        @Test
         @DisplayName("should handle delete by ID directly")
         void shouldDeleteById() {
             // act

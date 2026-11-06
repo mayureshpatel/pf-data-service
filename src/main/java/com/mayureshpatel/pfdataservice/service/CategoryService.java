@@ -127,7 +127,8 @@ public class CategoryService {
     /**
      * Deletes a category owned by the user. Refuses to delete a category that still has
      * subcategories, transactions, category rules, or a budget assigned to it — each is a
-     * dependent record that would otherwise be left pointing at a deleted category.
+     * dependent record that would otherwise be left pointing at a deleted category. Budgets that
+     * were already removed (soft-deleted) don't block the delete; they are purged with it.
      *
      * @param userId     the user id
      * @param categoryId the category id to delete
@@ -145,6 +146,10 @@ public class CategoryService {
         }
 
         requireNoDependents(categoryId);
+
+        // soft-deleted budget rows still hold a foreign key to the category (PF-876), so purge
+        // them in this same transaction before deleting the category itself
+        budgetRepository.deleteSoftDeletedByUserIdAndCategoryId(userId, categoryId);
 
         return categoryRepository.delete(category);
     }

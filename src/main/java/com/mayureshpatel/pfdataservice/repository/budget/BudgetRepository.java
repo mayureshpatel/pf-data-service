@@ -33,6 +33,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
     private static final ZoneOffset UTC_ZONE = ZoneOffset.UTC;
     private static final String PARAM_MONTH = "month";
     private static final String PARAM_YEAR = "year";
+    private static final String PARAM_CATEGORY_ID = "categoryId";
 
     private final JdbcClient jdbcClient;
     private final BudgetRowMapper rowMapper;
@@ -54,7 +55,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcClient.sql(BudgetQueries.INSERT)
                 .param(SqlParams.USER_ID, request.getUserId())
-                .param("categoryId", request.getCategoryId())
+                .param(PARAM_CATEGORY_ID, request.getCategoryId())
                 .param("amount", request.getAmount())
                 .param(PARAM_MONTH, request.getMonth())
                 .param(PARAM_YEAR, request.getYear())
@@ -158,7 +159,7 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
             Long userId, Long categoryId, Integer month, Integer year) {
         return jdbcClient.sql(BudgetQueries.FIND_BY_USER_ID_AND_CATEGORY_ID_AND_MONTH_AND_YEAR)
                 .param(SqlParams.USER_ID, userId)
-                .param("categoryId", categoryId)
+                .param(PARAM_CATEGORY_ID, categoryId)
                 .param(PARAM_MONTH, month)
                 .param(PARAM_YEAR, year)
                 .query(rowMapper)
@@ -202,8 +203,24 @@ public class BudgetRepository implements JdbcRepository<Budget, Long>, SoftDelet
      */
     public long countByCategoryIdAndDeletedAtIsNull(Long categoryId) {
         return jdbcClient.sql(BudgetQueries.COUNT_BY_CATEGORY_ID)
-                .param("categoryId", categoryId)
+                .param(PARAM_CATEGORY_ID, categoryId)
                 .query(Long.class)
                 .single();
+    }
+
+    /**
+     * Permanently removes the soft-deleted budgets of one category. Budgets are soft-deleted
+     * (PF-876), but the row still holds a foreign key to the category, so it would block the
+     * category's own delete; active budgets are never touched.
+     *
+     * @param userId     the owning user's id
+     * @param categoryId the category whose soft-deleted budgets should be purged
+     * @return the number of rows removed
+     */
+    public int deleteSoftDeletedByUserIdAndCategoryId(Long userId, Long categoryId) {
+        return jdbcClient.sql(BudgetQueries.PURGE_SOFT_DELETED_BY_USER_ID_AND_CATEGORY_ID)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_CATEGORY_ID, categoryId)
+                .update();
     }
 }
