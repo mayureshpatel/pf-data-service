@@ -64,7 +64,9 @@ public class SnapshotService {
 
     /**
      * Computes (without persisting) an account's balance as of the end of the given month.
-     * Logic: Balance(EndOfMonth) = CurrentBalance - NetFlow(AfterEndOfMonth). Extracted from
+     * Logic: Balance(EndOfMonth) = CurrentBalance - NetFlow(from the day after EndOfMonth, 00:00 UTC). That
+     * half-open boundary matches the net worth view, so a transaction on the last day of the month (any time
+     * of day) is inside the month and one at 00:00 UTC on the next month's first day is outside it (PF-895). Extracted from
      * {@link #createEndOfMonthSnapshot} (PF-304) so a read-only caller -- a net-worth-over-time
      * report, for one -- can reuse the same math without the write side effect that method's own
      * snapshot-persistence contract requires.
@@ -77,7 +79,8 @@ public class SnapshotService {
     public BigDecimal calculateEndOfMonthBalance(Account account, LocalDate endOfMonth) {
         BigDecimal currentBalance = account.getCurrentBalance();
 
-        BigDecimal changesAfterDate = transactionRepository.getNetFlowAfterDate(account.getId(), endOfMonth);
+        // the first instant after the month end, so the whole last day counts as inside the month
+        BigDecimal changesAfterDate = transactionRepository.getNetFlowFromDate(account.getId(), endOfMonth.plusDays(1));
         if (changesAfterDate == null) {
             changesAfterDate = BigDecimal.ZERO;
         }

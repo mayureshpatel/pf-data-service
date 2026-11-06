@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 /**
  * SQL query constants for {@code NetWorthRepository}. Every query joins {@code accounts}, filters
  * {@code accounts.user_id = :userId} and leaves soft-deleted transactions out. The signed flow
- * expression mirrors the balance math in {@code TransactionQueries.GET_NET_FLOW_AFTER_DATE}: income and
+ * expression mirrors the balance math in {@code TransactionQueries.GET_NET_FLOW_FROM_DATE}: income and
  * transfers in add, expenses and transfers out subtract, an adjustment adds as it is, anything else subtracts (as Transaction.getNetChange does).
  */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)

@@ -545,7 +545,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
     /**
      * {@code getSumByDateRange}/{@code findCategoryTotals}/{@code findMonthlySums}/{@code
-     * getUncategorizedExpenseTotals}/{@code getNetFlowAfterDate} each aggregate real baseline
+     * getUncategorizedExpenseTotals}/{@code getNetFlowFromDate} each aggregate real baseline
      * transaction amounts correctly over a date range or category. A PF-848 case: {@code
      * findTransferInOnCreditCardAccounts} finds TRANSFER_IN rows only on credit-card accounts,
      * never on a checking account carrying the same (mis-typed) value. A PF-828 regression case:
@@ -698,20 +698,45 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should calculate net flow after a date, income positive and expense negative")
-        void shouldGetNetFlowAfterDate() {
-            // act -- only 1000 (EXPENSE 25.50) and 1002 (INCOME 500.00) on account 1 are after 2026-02-28
-            BigDecimal result = transactionRepository.getNetFlowAfterDate(1L, LocalDate.of(2026, 2, 28));
+        @DisplayName("should calculate net flow from a date, income positive and expense negative")
+        void shouldGetNetFlowFromDate() {
+            // act -- only 1000 (EXPENSE 25.50) and 1002 (INCOME 500.00) on account 1 are on or after 2026-03-01
+            BigDecimal result = transactionRepository.getNetFlowFromDate(1L, LocalDate.of(2026, 3, 1));
 
             // assert & verify
             assertEquals(0, new BigDecimal("474.50").compareTo(result));
         }
 
         @Test
-        @DisplayName("should return zero net flow after a date with no later transactions")
-        void shouldGetZeroNetFlowAfterLatestDate() {
+        @DisplayName("bug regression: net flow from a date includes 00:00 UTC on that day and excludes the instant before it (PF-895)")
+        void shouldIncludeTheFirstInstantOfTheDateAndExcludeTheInstantBefore() {
+            // arrange
+            insertFlowRow("INCOME", "20.00", "2033-01-31T23:59:59Z");
+            insertFlowRow("EXPENSE", "50.00", "2033-02-01T00:00:00Z");
+
             // act
-            BigDecimal result = transactionRepository.getNetFlowAfterDate(1L, LocalDate.of(2026, 12, 31));
+            BigDecimal fromFebruary = transactionRepository.getNetFlowFromDate(1L, LocalDate.of(2033, 2, 1));
+            BigDecimal fromLastDayOfJanuary = transactionRepository.getNetFlowFromDate(1L, LocalDate.of(2033, 1, 31));
+
+            // assert & verify
+            assertEquals(0, new BigDecimal("-50.00").compareTo(fromFebruary));
+            assertEquals(0, new BigDecimal("-30.00").compareTo(fromLastDayOfJanuary));
+        }
+
+        private void insertFlowRow(String type, String amount, String instant) {
+            jdbcClient.sql("insert into transactions (account_id, amount, date, description, type) "
+                            + "values (1, :amount, :date, 'flow boundary test', :type)")
+                    .param("amount", new BigDecimal(amount))
+                    .param("date", OffsetDateTime.parse(instant))
+                    .param("type", type)
+                    .update();
+        }
+
+        @Test
+        @DisplayName("should return zero net flow from a date with no later transactions")
+        void shouldGetZeroNetFlowFromLatestDate() {
+            // act
+            BigDecimal result = transactionRepository.getNetFlowFromDate(1L, LocalDate.of(2026, 12, 31));
 
             // assert & verify
             assertEquals(0, BigDecimal.ZERO.compareTo(result));
