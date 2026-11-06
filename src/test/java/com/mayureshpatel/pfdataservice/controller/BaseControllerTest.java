@@ -48,6 +48,8 @@ public abstract class BaseControllerTest {
     @MockitoBean
     protected CategoryService categoryService;
     @MockitoBean
+    protected CategoryBatchService categoryBatchService;
+    @MockitoBean
     protected CategoryRuleService categoryRuleService;
     @MockitoBean
     protected MerchantRuleService merchantRuleService;
