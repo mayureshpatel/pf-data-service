@@ -1,9 +1,12 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBatchRequest;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryBatchResultDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
+import com.mayureshpatel.pfdataservice.service.CategoryBatchService;
 import com.mayureshpatel.pfdataservice.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,6 +31,7 @@ import java.util.List;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final CategoryBatchService categoryBatchService;
 
     /**
      * Returns all categories for the authenticated user, flat (not grouped by parent).
@@ -85,6 +89,25 @@ public class CategoryController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryCreateRequest request) {
         return ResponseEntity.status(201).body(categoryService.createCategory(userDetails.getId(), request));
+    }
+
+    /**
+     * Creates many categories at once (PF-897): parents with their subcategories, atomically.
+     * Names that already exist for the user are skipped and reported instead of duplicated.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the parents and subcategory names to create
+     * @return 200 with the created counts and the skipped names
+     */
+    @Operation(operationId = "createCategoriesBatch", summary = "Create categories in a batch",
+            description = "Creates parents with their subcategories in one atomic call; existing names are skipped and reported")
+    @ApiResponse(responseCode = "200", description = "Batch processed, counts and skipped names returned")
+    @ApiResponse(responseCode = "400", description = "Validation failed (empty, blank or over-long names, too many names)")
+    @PostMapping("/batch")
+    public ResponseEntity<CategoryBatchResultDto> createCategoriesBatch(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid CategoryBatchRequest request) {
+        return ResponseEntity.ok(categoryBatchService.createBatch(userDetails.getId(), request));
     }
 
     /**
