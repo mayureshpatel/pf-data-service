@@ -50,7 +50,8 @@ class RefreshTokenServiceTest {
     @BeforeEach
     void setUp() {
         RefreshTokenProperties properties = new RefreshTokenProperties(
-                Duration.ofDays(14), Duration.ofDays(60), Duration.ofHours(8), Duration.ofHours(24));
+                Duration.ofDays(14), Duration.ofDays(60), Duration.ofHours(8), Duration.ofHours(24),
+                "pf_refresh", true, "Strict");
         service = new RefreshTokenService(refreshTokenRepository, userRepository, properties,
                 Clock.fixed(NOW_INSTANT, ZoneOffset.UTC));
     }
@@ -85,7 +86,7 @@ class RefreshTokenServiceTest {
             assertThat(saved.getIdleExpiresAt()).isEqualTo(NOW.plusDays(14));
             assertThat(saved.getAbsoluteExpiresAt()).isEqualTo(NOW.plusDays(60));
             assertThat(issued.rememberMe()).isTrue();
-            assertThat(issued.maxAgeSeconds()).isEqualTo(Duration.ofDays(60).toSeconds());
+            assertThat(issued.maxAgeSeconds()).isEqualTo(Duration.ofDays(14).toSeconds());
         }
 
         @Test
@@ -132,10 +133,13 @@ class RefreshTokenServiceTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
             // act
-            Optional<User> result = service.renew(RAW);
+            Optional<RenewedRefreshToken> result = service.renew(RAW);
 
             // assert & verify
-            assertThat(result).containsSame(user);
+            assertThat(result).isPresent();
+            assertThat(result.get().user()).isSameAs(user);
+            assertThat(result.get().rememberMe()).isFalse();
+            assertThat(result.get().maxAgeSeconds()).isNull();
             verify(refreshTokenRepository).touch(TOKEN_ID, NOW, NOW.plusHours(8));
         }
 

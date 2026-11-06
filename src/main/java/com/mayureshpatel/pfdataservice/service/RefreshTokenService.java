@@ -26,7 +26,8 @@ import java.util.Optional;
  * token is a random 256-bit value handed out once; only its SHA-256 hash is stored. Tokens are NOT
  * rotated: the same raw token stays valid, its idle expiry slides on each renewal (never past the
  * absolute expiry), and it ends on idle or absolute expiry or on sign-out. Time comes from the
- * injected {@link Clock}.
+ * injected {@link Clock}. The cookie {@code Max-Age} of a remember-me session is the time to its idle
+ * expiry, so it slides with each renewal.
  */
 @Slf4j
 @Service
@@ -67,18 +68,17 @@ public class RefreshTokenService {
                 .absoluteExpiresAt(absolute)
                 .build(), now);
 
-        Long maxAge = rememberMe ? Duration.between(now, absolute).toSeconds() : null;
-        return new IssuedRefreshToken(rawToken, rememberMe, maxAge);
+        return new IssuedRefreshToken(rawToken, rememberMe, cookieMaxAge(now, rememberMe, idle));
     }
 
     /**
      * Validates a presented token and, when valid, slides its idle expiry (no rotation).
      *
      * @param rawToken the raw token from the cookie; may be null or blank
-     * @return the token's user, or empty when the token is unknown, revoked, idle- or absolute-expired,
+     * @return the token's user plus the cookie facts (remember-me flag and a fresh sliding {@code Max-Age}), or empty when the token is unknown, revoked, idle- or absolute-expired,
      *         or its user no longer exists
      */
-    public Optional<User> renew(String rawToken) {
+    public Optional<RenewedRefreshToken> renew(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) {
             return Optional.empty();
         }
@@ -102,9 +102,10 @@ public class RefreshTokenService {
             return Optional.empty();
         }
 
-        refreshTokenRepository.touch(token.getId(), now,
-                slidIdleExpiry(now, token.isRememberMe(), token.getAbsoluteExpiresAt()));
-        return user;
+        OffsetDateTime newIdle = slidIdleExpiry(now, token.isRememberMe(), token.getAbsoluteExpiresAt());
+        refreshTokenRepository.touch(token.getId(), now, newIdle);
+        return Optional.of(new RenewedRefreshToken(user.get(), token.isRememberMe(),
+                cookieMaxAge(now, token.isRememberMe(), newIdle)));
     }
 
     /**
@@ -130,6 +131,11 @@ public class RefreshTokenService {
         int deleted = refreshTokenRepository.deleteExpiredOrRevokedBefore(now().minus(PURGE_GRACE));
         log.info("purged {} expired or revoked refresh tokens", deleted);
         return deleted;
+    }
+
+    // the cookie lives as long as the server would keep an idle session, so the browser drops it together with the row
+    private Long cookieMaxAge(OffsetDateTime now, boolean rememberMe, OffsetDateTime idleExpiry) {
+        return rememberMe ? Duration.between(now, idleExpiry).toSeconds() : null;
     }
 
     private OffsetDateTime slidIdleExpiry(OffsetDateTime now, boolean rememberMe, OffsetDateTime absolute) {

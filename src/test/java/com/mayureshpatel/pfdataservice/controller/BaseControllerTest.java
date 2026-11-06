@@ -2,12 +2,15 @@ package com.mayureshpatel.pfdataservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.config.SecurityConfig;
+import com.mayureshpatel.pfdataservice.config.RefreshTokenProperties;
 import com.mayureshpatel.pfdataservice.security.JwtAuthenticationFilter;
 import com.mayureshpatel.pfdataservice.security.JwtService;
+import com.mayureshpatel.pfdataservice.security.RefreshCookieFactory;
 import com.mayureshpatel.pfdataservice.security.SecurityService;
 import com.mayureshpatel.pfdataservice.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -20,7 +23,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * By defining all shared mocks here, Spring caches the context for the entire suite.
  */
 @WebMvcTest
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, RefreshCookieFactory.class})
+@EnableConfigurationProperties(RefreshTokenProperties.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public abstract class BaseControllerTest {

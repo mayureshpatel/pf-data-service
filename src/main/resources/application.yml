@@ -34,6 +34,9 @@ app:
       remember-me-absolute: ${REFRESH_REMEMBER_ME_ABSOLUTE:60d}
       session-only-idle: ${REFRESH_SESSION_ONLY_IDLE:8h}
       session-only-absolute: ${REFRESH_SESSION_ONLY_ABSOLUTE:24h}
+      cookie-name: ${REFRESH_COOKIE_NAME:pf_refresh}
+      cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+      cookie-same-site: ${REFRESH_COOKIE_SAME_SITE:Strict}
       purge-cron: ${REFRESH_PURGE_CRON:0 30 3 * * *}
 
 cors:
