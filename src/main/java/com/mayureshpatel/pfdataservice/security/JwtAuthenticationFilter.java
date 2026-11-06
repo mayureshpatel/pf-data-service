@@ -35,6 +35,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserService userService;
 
+    /**
+     * Skips the auth endpoints: login, register, refresh and logout take no Bearer credential, and a stale
+     * access token that the browser still attaches must not turn a refresh into a "token expired" 401.
+     *
+     * @param request the incoming request
+     * @return true for paths under {@code /api/v1/auth/}
+     */
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/api/v1/auth/");
+    }
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
