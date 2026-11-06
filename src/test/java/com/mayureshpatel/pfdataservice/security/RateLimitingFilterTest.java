@@ -117,6 +117,33 @@ class RateLimitingFilterTest {
     }
 
     @Test
+    @DisplayName("should give /refresh its own generous bucket (60/min), independent of login")
+    void refreshEndpoint_hasIndependentGenerousLimit() throws Exception {
+        when(request.getRemoteAddr()).thenReturn(CLIENT_IP);
+
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        when(response.getWriter()).thenReturn(pw);
+
+        // exhaust /authenticate's 10/min bucket
+        when(request.getRequestURI()).thenReturn(AUTH_URI);
+        for (int i = 0; i < 11; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        verify(response, times(1)).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+
+        // /refresh is unaffected by it and allows 60 requests before blocking the 61st
+        when(request.getRequestURI()).thenReturn("/api/v1/auth/refresh");
+        for (int i = 0; i < RateLimitingFilter.MAX_REFRESH_REQUESTS_PER_MINUTE; i++) {
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        verify(response, times(1)).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+
+        filter.doFilterInternal(request, response, filterChain);
+        verify(response, times(2)).setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+    }
+
+    @Test
     @DisplayName("should use remote address and ignore X-Forwarded-For header")
     void rateLimiter_usesRemoteAddr_ignoringXForwardedFor() throws Exception {
         when(request.getRequestURI()).thenReturn(AUTH_URI);

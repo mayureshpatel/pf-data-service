@@ -1,3 +1,10 @@
 spring:
   flyway:
     validate-on-migrate: false
+
+app:
+  session:
+    refresh:
+      # plain http://localhost cannot carry a Secure cookie, and dev is cross-port (4200 to 8080)
+      cookie-secure: ${REFRESH_COOKIE_SECURE:false}
+      cookie-same-site: ${REFRESH_COOKIE_SAME_SITE:Lax}

@@ -26,20 +26,22 @@ public class RegistrationService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * Registers a new user: rejects the request if the honeypot field is filled (an
      * unsophisticated bot, not a real user -- the real form never shows or fills it), then
      * checks the username and email are both unused, hashes the password, persists the user,
-     * and returns a JWT for the newly created account.
+     * and returns a JWT for the newly created account together with a session-only refresh token
+     * (registration signs the user in without remember-me).
      *
      * @param request the new user's details
-     * @return a token for the newly created user
+     * @return a token for the newly created user plus its refresh token for the cookie
      * @throws UserAlreadyExistsException if the username or email is already taken
      * @throws IllegalArgumentException   if the honeypot field is non-blank
      */
     @Transactional
-    public AuthenticationResponse register(RegistrationRequest request) {
+    public AuthenticationResult register(RegistrationRequest request) {
         if (request.getWebsite() != null && !request.getWebsite().isBlank()) {
             throw new IllegalArgumentException("Registration failed. Please try again.");
         }
@@ -73,8 +75,8 @@ public class RegistrationService {
 
         String jwtToken = jwtService.generateToken(extraClaims, userDetails);
 
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .build();
+        IssuedRefreshToken refreshToken = refreshTokenService.issue(savedUser, false);
+
+        return new AuthenticationResult(AuthenticationResponse.builder().token(jwtToken).build(), refreshToken);
     }
 }

@@ -26,6 +26,8 @@ public class WebConfig implements WebMvcConfigurer {
         corsRegistry.addMapping("/api/**")
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "Accept");
+                .allowedHeaders("Authorization", "Content-Type", "Accept")
+                // the refresh cookie needs credentialed calls; safe only because the origins are explicit, never "*"
+                .allowCredentials(true);
     }
 }

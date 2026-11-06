@@ -28,6 +28,8 @@ class RegistrationServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private JwtService jwtService;
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private RegistrationService registrationService;
@@ -62,13 +64,19 @@ class RegistrationServiceTest {
             when(userService.isUserExistsByEmail(EMAIL)).thenReturn(false);
             when(passwordEncoder.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
             when(jwtService.generateToken(anyMap(), any())).thenReturn(TOKEN);
+            IssuedRefreshToken issued = new IssuedRefreshToken("raw", false, null);
+            when(userService.insert(any())).thenReturn(5);
+            when(refreshTokenService.issue(any(), eq(false))).thenReturn(issued);
 
             // act
-            AuthenticationResponse response = registrationService.register(request);
+            AuthenticationResult result = registrationService.register(request);
+            AuthenticationResponse response = result.response();
 
             // assert & verify
             assertNotNull(response);
             assertEquals(TOKEN, response.token());
+            assertSame(issued, result.refreshToken());
+            verify(refreshTokenService).issue(argThat(u -> u.getId() == 5L), eq(false));
             verify(userService).insert(argThat(user ->
                     USERNAME.equals(user.getUsername()) &&
                             EMAIL.equals(user.getEmail()) &&
@@ -145,7 +153,7 @@ class RegistrationServiceTest {
             when(jwtService.generateToken(anyMap(), any())).thenReturn(TOKEN);
 
             // act
-            AuthenticationResponse response = registrationService.register(request);
+            AuthenticationResponse response = registrationService.register(request).response();
 
             // assert & verify
             assertNotNull(response);

@@ -59,6 +59,8 @@ class JwtAuthenticationFilterTest {
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
+        // a non-auth path, so shouldNotFilter lets the request through to the filter logic
+        lenient().when(request.getRequestURI()).thenReturn("/api/v1/accounts");
     }
 
     /** A request with no {@code Authorization} header, or one that isn't a Bearer token, passes through to the rest of the chain without ever calling {@code jwtService}, leaving the security context untouched. */
@@ -229,6 +231,23 @@ class JwtAuthenticationFilterTest {
             verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             verify(filterChain, never()).doFilter(request, response);
             assertTrue(capturedBody.toString().contains("\"detail\""));
+        }
+    }
+
+    /** Auth endpoints take no Bearer credential, so the filter must not even look at a (possibly expired) one there. */
+    @Nested
+    @DisplayName("shouldNotFilter")
+    class ShouldNotFilterTests {
+
+        @Test
+        @DisplayName("should skip every /api/v1/auth/ path but filter other endpoints")
+        void shouldSkipAuthPathsOnly() {
+            // arrange
+            when(request.getRequestURI()).thenReturn("/api/v1/auth/refresh", "/api/v1/accounts");
+
+            // act & assert
+            assertTrue(jwtAuthenticationFilter.shouldNotFilter(request));
+            assertFalse(jwtAuthenticationFilter.shouldNotFilter(request));
         }
     }
 }

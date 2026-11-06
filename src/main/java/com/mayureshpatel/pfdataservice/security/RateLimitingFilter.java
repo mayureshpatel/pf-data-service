@@ -25,7 +25,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private static final int MAX_REQUESTS_PER_MINUTE = 10;
     private static final int MAX_REGISTER_REQUESTS_PER_MINUTE = 5;
+    /** refresh is silent and may fire from several tabs, so it gets a far more generous budget than login. */
+    static final int MAX_REFRESH_REQUESTS_PER_MINUTE = 60;
     private static final String REGISTER_PATH = "/api/v1/auth/register";
+    private static final String REFRESH_PATH = "/api/v1/auth/refresh";
 
     private final Cache<String, TokenBucket> buckets = Caffeine.newBuilder()
             .expireAfterAccess(5, TimeUnit.MINUTES)
@@ -41,7 +44,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         // only rate limit authentication and registration endpoints
         if (path.startsWith("/api/v1/auth/")) {
             String bucketKey = getClientIp(request) + ":" + path;
-            int limit = REGISTER_PATH.equals(path) ? MAX_REGISTER_REQUESTS_PER_MINUTE : MAX_REQUESTS_PER_MINUTE;
+            int limit = limitFor(path);
             TokenBucket bucket = buckets.get(bucketKey, k -> new TokenBucket(limit));
 
             if (!bucket.tryConsume()) {
@@ -52,6 +55,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private int limitFor(String path) {
+        if (REGISTER_PATH.equals(path)) {
+            return MAX_REGISTER_REQUESTS_PER_MINUTE;
+        }
+        return REFRESH_PATH.equals(path) ? MAX_REFRESH_REQUESTS_PER_MINUTE : MAX_REQUESTS_PER_MINUTE;
     }
 
     private String getClientIp(HttpServletRequest request) {
