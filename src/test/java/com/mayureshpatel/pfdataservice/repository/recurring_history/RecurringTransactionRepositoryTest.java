@@ -237,7 +237,7 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
-    /** {@code findRecentChargesByRecurringId} matches a tracked item to the user's real expense charges through its merchant id or its merchant's linked descriptions (folded for case and spacing), newest first, at most 60 per item, never crossing users or counting deleted or non-expense rows. */
+    /** {@code findRecentChargesByRecurringId} matches a tracked item to the user's real expense charges through its merchant id or its merchant's linked descriptions (folded for case and spacing), newest first, at most 300 per item, never crossing users or counting deleted or non-expense rows. */
     @Nested
     @DisplayName("findRecentChargesByRecurringId")
     class FindRecentChargesTests {
@@ -327,11 +327,11 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
-        @DisplayName("should return at most 60 newest first per item, enough for a year of weekly charges")
-        void shouldCapAtSixtyNewestFirst() {
+        @DisplayName("should return at most 300 newest first per item, enough for unrelated purchases beside a year of weekly charges")
+        void shouldCapAtThreeHundredNewestFirst() {
             // arrange
             java.time.LocalDate first = java.time.LocalDate.of(2026, 1, 1);
-            for (int week = 0; week < 65; week++) {
+            for (int week = 0; week < 305; week++) {
                 insertCharge(ACCOUNT_1, MERCHANT_AMAZON, "5.00", first.plusWeeks(week) + "T12:00:00Z", "AMAZON", EXPENSE);
             }
 
@@ -339,8 +339,8 @@ class RecurringTransactionRepositoryTest extends BaseRepositoryTest {
             var charges = chargesOfAmazonItem();
 
             // assert & verify
-            assertEquals(60, charges.size());
-            assertTrue(charges.get(0).date().isAfter(charges.get(59).date()));
+            assertEquals(300, charges.size());
+            assertTrue(charges.get(0).date().isAfter(charges.get(299).date()));
         }
 
         @Test
