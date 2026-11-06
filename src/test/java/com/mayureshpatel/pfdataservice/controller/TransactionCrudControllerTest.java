@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -24,6 +25,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -407,6 +409,16 @@ class TransactionCrudControllerTest extends BaseControllerTest {
             // act & assert & verify
             mockMvc.perform(get(BASE_URL + "/descriptions")).andExpect(status().isOk());
             verify(transactionService).getDescriptions(eq(USER_ID), isNull(), eq(false), any(Pageable.class));
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("GET /descriptions should reject an unauthenticated caller")
+        void getDescriptions_requiresAuthentication() throws Exception {
+            // act & assert & verify -- no custom authentication entry point, so spring security answers 403
+            mockMvc.perform(get(BASE_URL + "/descriptions")).andExpect(status().isForbidden());
+
+            verifyNoInteractions(transactionService);
         }
     }
 }
