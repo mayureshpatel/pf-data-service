@@ -11,6 +11,7 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto.Bucket;
+import com.mayureshpatel.pfdataservice.dto.report.explore.TrendGranularity;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository.ExploreRowData;
 import com.mayureshpatel.pfdataservice.service.ExploreRanges.ResolvedRanges;
@@ -85,11 +86,12 @@ public class ExploreService {
      * @param filter    the stacked filters
      * @param today     the date treated as today
      * @return the groups, totals and comparison
-     * @throws IllegalArgumentException if the measure only makes sense over time and the grouping is not a time bucket
+     * @throws IllegalArgumentException if the measure only makes sense over time and the grouping is not a time bucket, or the range is out of bounds
      */
     public ExploreResultDto explore(Long userId, ExploreMeasure measure, ExploreSide side, ExploreGroupBy groupBy,
                                     LocalDate startDate, LocalDate endDate, ExploreCompare compare, ExploreFilter filter, LocalDate today) {
         requireTimeGroupingIfTimeOnly(measure, groupBy);
+        ExploreRangeValidator.validate(startDate, endDate, today);
         ExploreGroupBy unit = groupBy == ExploreGroupBy.MONTH || groupBy == ExploreGroupBy.WEEK ? groupBy : null;
         ResolvedRanges ranges = ExploreRanges.resolve(startDate, endDate, compare, today, unit);
         List<ExploreRowData> current = repository.findGroups(userId, groupBy, filter, ranges.current());
@@ -162,11 +164,12 @@ public class ExploreService {
      */
     public ExploreTrendDto trend(Long userId, ExploreMeasure measure, ExploreSide side, LocalDate startDate, LocalDate endDate,
                                  ExploreCompare compare, ExploreFilter filter, LocalDate today) {
+        ExploreRangeValidator.validate(startDate, endDate, today);
         DateWindow shown = ExploreRanges.resolve(startDate, endDate, ExploreCompare.NONE, today).current();
         LocalDate first = shown.start().toLocalDate();
         LocalDate last = shown.end().minusDays(1).toLocalDate();
         if (last.isBefore(first)) {
-            return new ExploreTrendDto(List.of(), List.of());
+            return new ExploreTrendDto(List.of(), List.of(), TrendGranularity.DAY);
         }
         ExploreGroupBy granularity = ExploreBuckets.granularityFor(ChronoUnit.DAYS.between(first, last) + 1);
         int count = ExploreBuckets.count(granularity, first, last);
@@ -177,7 +180,7 @@ public class ExploreService {
         List<Bucket> earlier = comparisonWindow == null
                 ? List.of()
                 : buckets(userId, measure, side, granularity, filter, comparisonWindow, count, false);
-        return new ExploreTrendDto(current, earlier);
+        return new ExploreTrendDto(current, earlier, TrendGranularity.of(granularity));
     }
 
     /**
@@ -214,6 +217,7 @@ public class ExploreService {
      */
     public Page<ExploreTransactionDto> transactions(Long userId, ExploreMeasure measure, ExploreSide side, LocalDate startDate,
                                                     LocalDate endDate, ExploreFilter filter, int page, int size, LocalDate today) {
+        ExploreRangeValidator.validate(startDate, endDate, today);
         DateWindow window = ExploreRanges.resolve(startDate, endDate, ExploreCompare.NONE, today).current();
         PageRequest pageRequest = PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, MAX_PAGE_SIZE)));
         return repository.findTransactions(userId, filter, window, typesFor(measure, side), pageRequest);

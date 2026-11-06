@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreResultDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreRowDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreSide;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
+import com.mayureshpatel.pfdataservice.dto.report.explore.TrendGranularity;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.ExploreRepository.ExploreRowData;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /** Verifies {@code ExploreService}: how grouped income/expense rows become any measure, how a comparison period is joined, and that totals never double count (tags). */
@@ -313,6 +315,50 @@ class ExploreServiceTest {
             verify(repository).findGroups(eq(USER_ID), eq(ExploreGroupBy.DAY), any(), any());
             verify(repository).findGroups(eq(USER_ID), eq(ExploreGroupBy.WEEK), any(), any());
             verify(repository).findGroups(eq(USER_ID), eq(ExploreGroupBy.MONTH), any(), any());
+        }
+
+        @Test
+        @DisplayName("should return the granularity it chose, including for a single bucket")
+        void shouldReturnGranularity() {
+            // arrange
+            when(repository.findGroups(eq(USER_ID), any(), any(), any())).thenReturn(List.of());
+
+            // act
+            ExploreTrendDto shortRange = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), ExploreCompare.NONE);
+            ExploreTrendDto mediumRange = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), ExploreCompare.NONE);
+            ExploreTrendDto longRange = trend(ExploreMeasure.SPENDING, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31), ExploreCompare.NONE);
+            ExploreTrendDto singleMonth = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), ExploreCompare.NONE);
+            ExploreTrendDto singleDay = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 5), ExploreCompare.NONE);
+
+            // assert & verify
+            assertEquals(TrendGranularity.DAY, shortRange.granularity());
+            assertEquals(TrendGranularity.WEEK, mediumRange.granularity());
+            assertEquals(TrendGranularity.MONTH, longRange.granularity());
+            assertEquals(TrendGranularity.DAY, singleMonth.granularity());
+            assertEquals(1, singleDay.current().size());
+            assertEquals(TrendGranularity.DAY, singleDay.granularity());
+        }
+
+        @Test
+        @DisplayName("should report a single month bucket as month")
+        void shouldReportSingleMonthBucketAsMonth() {
+            // arrange
+            when(repository.findGroups(eq(USER_ID), any(), any(), any())).thenReturn(List.of());
+
+            // act -- 93 days is the first length that gets month buckets
+            ExploreTrendDto result = trend(ExploreMeasure.SPENDING, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 3), ExploreCompare.NONE);
+
+            // assert & verify
+            assertEquals(TrendGranularity.MONTH, result.granularity());
+            assertEquals(4, result.current().size());
+        }
+
+        @Test
+        @DisplayName("should reject a year 0002 start before touching the repository")
+        void shouldRejectYear0002() {
+            // act & assert & verify
+            assertThrows(IllegalArgumentException.class, () -> trend(ExploreMeasure.SPENDING, LocalDate.of(2, 1, 1), JAN_31, ExploreCompare.NONE));
+            verifyNoInteractions(repository);
         }
 
         @Test

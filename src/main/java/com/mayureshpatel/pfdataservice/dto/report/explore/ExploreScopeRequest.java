@@ -24,6 +24,7 @@ import java.util.List;
  * @param noTag         restrict to transactions carrying no tag
  * @param minAmount     smallest amount to include
  * @param maxAmount     largest amount to include
+ * @param today         the client's local date (yyyy-MM-dd), optional; must be within a day of the server's UTC date
  */
 public record ExploreScopeRequest(
         @NotNull ExploreMeasure measure,
@@ -39,7 +40,8 @@ public record ExploreScopeRequest(
         Long tagId,
         Boolean noTag,
         BigDecimal minAmount,
-        BigDecimal maxAmount
+        BigDecimal maxAmount,
+        LocalDate today
 ) {
 
     /**

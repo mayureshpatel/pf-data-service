@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreScopeRequest;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTransactionDto;
 import com.mayureshpatel.pfdataservice.dto.report.explore.ExploreTrendDto;
 import com.mayureshpatel.pfdataservice.service.ExploreService;
+import com.mayureshpatel.pfdataservice.service.ExploreToday;
 import com.mayureshpatel.pfdataservice.service.NetWorthService;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthBreakdownDto;
 import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthBreakdownRequest;
@@ -39,6 +40,7 @@ public class ReportController {
 
     private final ExploreService exploreService;
     private final NetWorthService netWorthService;
+    private final ExploreToday exploreToday;
 
     /**
      * Returns the Reports net worth view in one response: month-end assets, debts and net worth, the rows by
@@ -72,14 +74,15 @@ public class ReportController {
      */
     @Operation(summary = "Explore spending and income", description = "Any measure by any grouping under stacked filters, with an optional comparison period; transfers and adjustments are excluded")
     @ApiResponse(responseCode = "200", description = "Explorer result returned")
-    @ApiResponse(responseCode = "400", description = "The measure cannot be grouped that way (net and savings rate group by time only)")
+    @ApiResponse(responseCode = "400", description = "The measure cannot be grouped that way (net and savings rate group by time only), the range is out of bounds, or today is not within a day of the server's date")
     @GetMapping("/explore")
     public ResponseEntity<ExploreResultDto> explore(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @ModelAttribute ExploreRequest request) {
         return ResponseEntity.ok(exploreService.explore(
                 userDetails.getId(), request.measure(), request.sideOrDefault(), request.groupBy(),
-                request.startDate(), request.endDate(), request.compareOrDefault(), request.toFilter()));
+                request.startDate(), request.endDate(), request.compareOrDefault(), request.toFilter(),
+                exploreToday.resolve(request.today())));
     }
 
     /**
@@ -92,13 +95,14 @@ public class ReportController {
      */
     @Operation(summary = "Explore trend", description = "The chosen measure per day, week or month across the period, under the same filters as the explorer")
     @ApiResponse(responseCode = "200", description = "Trend returned")
+    @ApiResponse(responseCode = "400", description = "The range is out of bounds or spans too many buckets, or today is not within a day of the server's date")
     @GetMapping("/explore/trend")
     public ResponseEntity<ExploreTrendDto> exploreTrend(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @ModelAttribute ExploreScopeRequest request) {
         return ResponseEntity.ok(exploreService.trend(
                 userDetails.getId(), request.measure(), request.sideOrDefault(), request.startDate(), request.endDate(),
-                request.compareOrDefault(), request.toFilter()));
+                request.compareOrDefault(), request.toFilter(), exploreToday.resolve(request.today())));
     }
 
     /**
@@ -112,6 +116,7 @@ public class ReportController {
      */
     @Operation(summary = "Explore transactions", description = "The transactions behind an explorer number, newest first, under the same filters")
     @ApiResponse(responseCode = "200", description = "Transactions returned")
+    @ApiResponse(responseCode = "400", description = "The range is out of bounds, or today is not within a day of the server's date")
     @GetMapping("/explore/transactions")
     public ResponseEntity<Page<ExploreTransactionDto>> exploreTransactions(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -120,6 +125,6 @@ public class ReportController {
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(exploreService.transactions(
                 userDetails.getId(), request.measure(), request.sideOrDefault(), request.startDate(), request.endDate(),
-                request.toFilter(), page, size));
+                request.toFilter(), page, size, exploreToday.resolve(request.today())));
     }
 }
