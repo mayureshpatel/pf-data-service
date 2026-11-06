@@ -199,4 +199,12 @@ public class BudgetQueries {
             where category_id = :categoryId
               and deleted_at is null
             """;
+
+    // language=SQL
+    public static final String PURGE_SOFT_DELETED_BY_USER_ID_AND_CATEGORY_ID = """
+            delete from budgets
+            where user_id = :userId
+              and category_id = :categoryId
+              and deleted_at is not null
+            """;
 }

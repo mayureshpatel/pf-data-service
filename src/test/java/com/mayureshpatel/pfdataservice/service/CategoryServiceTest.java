@@ -330,6 +330,8 @@ class CategoryServiceTest {
             // assert & verify
             assertEquals(1, result);
             verify(categoryRepository).delete(category);
+            // soft-deleted budgets are purged so their foreign key no longer blocks the delete (PF-876)
+            verify(budgetRepository).deleteSoftDeletedByUserIdAndCategoryId(USER_ID, CATEGORY_ID);
         }
 
         @Test
@@ -403,6 +405,9 @@ class CategoryServiceTest {
             IllegalStateException ex = assertThrows(IllegalStateException.class,
                     () -> categoryService.deleteCategory(USER_ID, CATEGORY_ID));
             assertTrue(ex.getMessage().contains("budget"));
+            // an active budget refuses the delete before anything is purged or deleted
+            verify(budgetRepository, org.mockito.Mockito.never()).deleteSoftDeletedByUserIdAndCategoryId(any(), any());
+            verify(categoryRepository, org.mockito.Mockito.never()).delete(any());
         }
 
         @Test
