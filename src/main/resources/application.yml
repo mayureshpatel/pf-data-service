@@ -25,7 +25,16 @@ spring:
   security:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
-      expiration: ${JWT_EXPIRATION:3600000}
+      expiration: ${JWT_EXPIRATION:900000}
+
+app:
+  session:
+    refresh:
+      remember-me-idle: ${REFRESH_REMEMBER_ME_IDLE:14d}
+      remember-me-absolute: ${REFRESH_REMEMBER_ME_ABSOLUTE:60d}
+      session-only-idle: ${REFRESH_SESSION_ONLY_IDLE:8h}
+      session-only-absolute: ${REFRESH_SESSION_ONLY_ABSOLUTE:24h}
+      purge-cron: ${REFRESH_PURGE_CRON:0 30 3 * * *}
 
 cors:
   allowed-origins: "http://localhost:4200"
