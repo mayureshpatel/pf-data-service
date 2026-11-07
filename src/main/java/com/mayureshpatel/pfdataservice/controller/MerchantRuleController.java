@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
@@ -67,6 +69,27 @@ public class MerchantRuleController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid MerchantRuleCreateRequest request) {
         return ResponseEntity.ok(merchantRuleService.createRule(userDetails.getId(), request));
+    }
+
+    /**
+     * Creates a merchant rule and applies it, in one all-or-nothing step, to the transactions the
+     * user chose, overwriting any merchant they have (PF-921).
+     *
+     * @param userDetails the authenticated user
+     * @param request     the rule and the chosen transaction ids
+     * @return the new rule's id and every changed transaction with its previous merchant
+     */
+    @Operation(operationId = "createMerchantRuleAndApply", summary = "Create a merchant rule and apply it to chosen transactions",
+            description = "Creates the rule and sets its merchant on the chosen transactions, overwriting existing merchants; all or nothing, and only the chosen transactions change")
+    @ApiResponse(responseCode = "200", description = "Rule created and applied; previous merchants returned for undo")
+    @ApiResponse(responseCode = "400", description = "Validation failed, for example no transactions or a blank keyword")
+    @ApiResponse(responseCode = "403", description = "A chosen transaction is not the user's; nothing changed")
+    @ApiResponse(responseCode = "404", description = "The merchant does not exist or is not the authenticated user's")
+    @PostMapping("/create-and-apply")
+    public ResponseEntity<MerchantRuleApplyResultDto> createAndApply(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid MerchantRuleApplyRequest request) {
+        return ResponseEntity.ok(merchantRuleService.createAndApply(userDetails.getId(), request));
     }
 
     /**

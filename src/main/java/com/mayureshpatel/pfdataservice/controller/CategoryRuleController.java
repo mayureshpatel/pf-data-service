@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleApplyRequest;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
@@ -62,6 +64,26 @@ public class CategoryRuleController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CategoryRuleCreateRequest request) {
         return ResponseEntity.ok(categoryRuleService.createRule(userDetails.getId(), request));
+    }
+
+    /**
+     * Creates a category rule and applies it, in one all-or-nothing step, to the transactions the
+     * user chose, overwriting any category they have (PF-920).
+     *
+     * @param userDetails the authenticated user
+     * @param request     the rule and the chosen transaction ids
+     * @return the new rule's id, every changed transaction with its previous category, and any
+     *         chosen transactions that were skipped
+     */
+    @Operation(operationId = "createCategoryRuleAndApply", summary = "Create a category rule and apply it to chosen transactions",
+            description = "Creates the rule and sets its category on the chosen transactions, overwriting existing categories; all or nothing, and only the chosen transactions change")
+    @ApiResponse(responseCode = "200", description = "Rule created and applied; previous categories returned for undo")
+    @ApiResponse(responseCode = "403", description = "A chosen transaction or the category is not the user's; nothing changed")
+    @PostMapping("/create-and-apply")
+    public ResponseEntity<CategoryRuleApplyResultDto> createAndApply(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid CategoryRuleApplyRequest request) {
+        return ResponseEntity.ok(categoryRuleService.createAndApply(userDetails.getId(), request));
     }
 
     /**

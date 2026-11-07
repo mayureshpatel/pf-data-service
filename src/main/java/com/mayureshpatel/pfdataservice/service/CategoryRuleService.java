@@ -5,8 +5,12 @@ import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.category.CategoryRule;
 import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.AppliedCategoryChangeDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleApplyRequest;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
@@ -231,5 +235,61 @@ public class CategoryRuleService {
         }
 
         return toUpdate.size();
+    }
+
+    /**
+     * PF-920: creates a category rule and applies it, in one all-or-nothing step, to the
+     * transactions the user chose, overwriting any category they have. Only the chosen
+     * transactions change (never anything else), transfers are skipped and reported because rules
+     * never apply to them, and a transaction that already has the rule's category is left alone.
+     * Every transaction that did change is returned with its previous category so the change can be
+     * undone. Settings "Apply rules" and import are untouched: they still only fill blanks.
+     *
+     * <p>Everything is checked before the first write (every chosen id must be the user's, the
+     * category must be theirs), and the whole method is one transaction, so a failure part-way,
+     * after the rule was saved, rolls the rule back too.
+     *
+     * @param userId  the user id
+     * @param request the rule to create and the chosen transaction ids
+     * @return the new rule id, the changed transactions with their previous categories, and the skipped ids
+     * @throws AccessDeniedException if a chosen transaction or the category is not the user's
+     */
+    @Transactional
+    public CategoryRuleApplyResultDto createAndApply(Long userId, CategoryRuleApplyRequest request) {
+        List<Long> ids = request.transactionIds().stream().distinct().toList();
+        List<Transaction> chosen = transactionRepository.findAllById(userId, ids);
+        if (chosen.size() != ids.size()) {
+            throw new AccessDeniedException("Access denied to transaction");
+        }
+
+        Long categoryId = request.rule().getCategoryId();
+        Long ruleId = createRule(userId, request.rule());
+
+        List<Long> skipped = chosen.stream()
+                .filter(transaction -> isTransferType(transaction.getType()))
+                .map(Transaction::getId)
+                .toList();
+        List<Transaction> toChange = chosen.stream()
+                .filter(transaction -> !isTransferType(transaction.getType()))
+                .filter(transaction -> transaction.getCategory() == null
+                        || !categoryId.equals(transaction.getCategory().getId()))
+                .toList();
+
+        if (!toChange.isEmpty()) {
+            transactionRepository.overwriteCategory(userId, categoryId, toChange.stream().map(Transaction::getId).toList());
+        }
+
+        List<AppliedCategoryChangeDto> changes = toChange.stream()
+                .map(transaction -> new AppliedCategoryChangeDto(transaction.getId(),
+                        transaction.getCategory() == null ? null : transaction.getCategory().getId()))
+                .toList();
+        return new CategoryRuleApplyResultDto(ruleId, categoryId, changes, skipped);
+    }
+
+    /** True for the transfer types, which rules never categorize. */
+    private static boolean isTransferType(TransactionType type) {
+        return type == TransactionType.TRANSFER
+                || type == TransactionType.TRANSFER_IN
+                || type == TransactionType.TRANSFER_OUT;
     }
 }
