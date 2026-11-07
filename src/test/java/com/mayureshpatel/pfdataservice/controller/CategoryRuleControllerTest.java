@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.RuleChangePreviewDto;
+import com.mayureshpatel.pfdataservice.dto.category.AppliedCategoryChangeDto;
+import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleDto;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleUpdateRequest;
@@ -422,6 +424,44 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             // act & assert & verify
             mockMvc.perform(get(BASE_URL))
                     .andExpect(status().isInternalServerError());
+        }
+    }
+
+    /** {@code POST /api/v1/category-rules/create-and-apply} (PF-920): the answer, and the validation of the rule and the id list. */
+    @Nested
+    @DisplayName("createAndApply")
+    class CreateAndApplyTests {
+
+        private static final String URL = BASE_URL + "/create-and-apply";
+        private static final String BODY_NO_IDS = "{\"rule\":{\"userId\":1,\"categoryId\":2,\"keywords\":[\"taco\"]},\"transactionIds\":[]}";
+        private static final String BODY_NO_KEYWORDS = "{\"rule\":{\"userId\":1,\"categoryId\":2,\"keywords\":[]},\"transactionIds\":[5]}";
+        private static final String BODY_OK = "{\"rule\":{\"userId\":1,\"categoryId\":2,\"keywords\":[\"taco\"]},\"transactionIds\":[5,6]}";
+
+        @Test
+        @DisplayName("POST should return the rule id, the changed rows with previous categories and the skipped ids")
+        void createAndApply_shouldReturnResult() throws Exception {
+            // arrange
+            when(categoryRuleService.createAndApply(eq(USER_ID), any())).thenReturn(new CategoryRuleApplyResultDto(
+                    9L, 2L, List.of(new AppliedCategoryChangeDto(5L, null), new AppliedCategoryChangeDto(6L, 3L)), List.of(7L)));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_OK))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.ruleId").value(9))
+                    .andExpect(jsonPath("$.changes", hasSize(2)))
+                    .andExpect(jsonPath("$.changes[1].previousCategoryId").value(3))
+                    .andExpect(jsonPath("$.skippedTransactionIds[0]").value(7));
+        }
+
+        @Test
+        @DisplayName("POST should reject an empty id list and an invalid rule without calling the service")
+        void createAndApply_shouldValidate() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_IDS))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_KEYWORDS))
+                    .andExpect(status().isBadRequest());
+            verifyNoInteractions(categoryRuleService);
         }
     }
 }

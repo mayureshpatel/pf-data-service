@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.AppliedMerchantChangeDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleChangePreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleRefDto;
@@ -512,6 +514,43 @@ class MerchantRuleControllerTest extends BaseControllerTest {
             mockMvc.perform(post(BASE_URL + "/apply").with(csrf())).andExpect(status().isForbidden());
 
             verifyNoInteractions(merchantRuleApplyService);
+        }
+    }
+
+    /** {@code POST /api/v1/merchant-rules/create-and-apply} (PF-921): the answer, and the validation of the rule and the id list. */
+    @Nested
+    @DisplayName("createAndApply")
+    class CreateAndApplyTests {
+
+        private static final String URL = BASE_URL + "/create-and-apply";
+        private static final String BODY_OK = "{\"rule\":{\"merchantId\":10,\"keywords\":[\"kroger\"]},\"transactionIds\":[5,6]}";
+        private static final String BODY_NO_IDS = "{\"rule\":{\"merchantId\":10,\"keywords\":[\"kroger\"]},\"transactionIds\":[]}";
+        private static final String BODY_NO_KEYWORDS = "{\"rule\":{\"merchantId\":10,\"keywords\":[]},\"transactionIds\":[5]}";
+
+        @Test
+        @DisplayName("POST should return the rule id and the changed rows with their previous merchants")
+        void createAndApply_shouldReturnResult() throws Exception {
+            // arrange
+            when(merchantRuleService.createAndApply(eq(USER_ID), any())).thenReturn(new MerchantRuleApplyResultDto(
+                    9L, 10L, List.of(new AppliedMerchantChangeDto(5L, null), new AppliedMerchantChangeDto(6L, 3L))));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_OK))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.ruleId").value(9))
+                    .andExpect(jsonPath("$.changes", hasSize(2)))
+                    .andExpect(jsonPath("$.changes[1].previousMerchantId").value(3));
+        }
+
+        @Test
+        @DisplayName("POST should reject an empty id list and an invalid rule without calling the service")
+        void createAndApply_shouldValidate() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_IDS))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_KEYWORDS))
+                    .andExpect(status().isBadRequest());
+            verifyNoInteractions(merchantRuleService);
         }
     }
 }

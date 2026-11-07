@@ -5,6 +5,11 @@ import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.merchant.MerchantRule;
 import com.mayureshpatel.pfdataservice.domain.user.User;
+import com.mayureshpatel.pfdataservice.dto.merchant.AppliedMerchantChangeDto;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleUpdateRequest;
@@ -35,6 +40,7 @@ public class MerchantRuleService {
     private final MerchantRuleRepository merchantRuleRepository;
     private final UserRepository userRepository;
     private final MerchantService merchantService;
+    private final TransactionRepository transactionRepository;
 
     /**
      * Get all merchant rules for a user, in rule priority order
@@ -127,5 +133,49 @@ public class MerchantRuleService {
             throw new AccessDeniedException("You do not own this rule");
         }
         return rule;
+    }
+
+    /**
+     * PF-921: creates a merchant rule and applies it, in one all-or-nothing step, to the
+     * transactions the user chose, overwriting any merchant they have. Only the chosen
+     * transactions change (never anything else), and a transaction that already has the rule's
+     * merchant is left alone. Every transaction that did change is returned with its previous
+     * merchant so the change can be undone. Settings merchant-rule apply and import are untouched:
+     * they still only fill merchant-less rows.
+     *
+     * <p>Every chosen id must be the user's and the merchant must be theirs; the rule is created
+     * (which checks the merchant) before the update, and the whole method is one transaction, so a
+     * failure part-way, after the rule was saved, rolls the rule back too.
+     *
+     * @param userId  the user id
+     * @param request the rule to create and the chosen transaction ids
+     * @return the new rule id and the changed transactions with their previous merchants
+     * @throws AccessDeniedException if a chosen transaction is not the user's
+     */
+    @Transactional
+    public MerchantRuleApplyResultDto createAndApply(Long userId, MerchantRuleApplyRequest request) {
+        List<Long> ids = request.transactionIds().stream().distinct().toList();
+        List<Transaction> chosen = transactionRepository.findAllById(userId, ids);
+        if (chosen.size() != ids.size()) {
+            throw new AccessDeniedException("Access denied to transaction");
+        }
+
+        Long merchantId = request.rule().getMerchantId();
+        Long ruleId = createRule(userId, request.rule());
+
+        List<Transaction> toChange = chosen.stream()
+                .filter(transaction -> transaction.getMerchant() == null
+                        || !merchantId.equals(transaction.getMerchant().getId()))
+                .toList();
+
+        if (!toChange.isEmpty()) {
+            transactionRepository.overwriteMerchant(userId, merchantId, toChange.stream().map(Transaction::getId).toList());
+        }
+
+        List<AppliedMerchantChangeDto> changes = toChange.stream()
+                .map(transaction -> new AppliedMerchantChangeDto(transaction.getId(),
+                        transaction.getMerchant() == null ? null : transaction.getMerchant().getId()))
+                .toList();
+        return new MerchantRuleApplyResultDto(ruleId, merchantId, changes);
     }
 }

@@ -65,6 +65,9 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     private static final String PARAM_AMOUNT = "amount";
     private static final String PARAM_DATE = "date";
     private static final String PARAM_DESCRIPTION = "description";
+    private static final String PARAM_IDS = "ids";
+    private static final String PARAM_APPLIED_ID = "appliedId";
+    private static final String PARAM_PREVIOUS_ID = "previousId";
     private static final String MERCHANT_SORT_PROPERTY = "merchant.name";
     private static final String PARAM_TYPE = "type";
     private static final String PARAM_MERCHANT_ID = "merchantId";
@@ -125,6 +128,82 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                 .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();
+    }
+
+    /**
+     * PF-920 category overwrite for chosen transactions: sets {@code categoryId} on each given
+     * transaction, whatever category it had. A row changes only if it is owned by the user and not
+     * deleted, so another user's id is silently untouched.
+     *
+     * @param userId         the owning user's id
+     * @param categoryId     the category to set
+     * @param transactionIds the transactions to change; must not be empty (an empty {@code in ()} is invalid sql)
+     * @return the number of rows actually changed
+     */
+    public int overwriteCategory(Long userId, Long categoryId, List<Long> transactionIds) {
+        return jdbcClient.sql(TransactionQueries.OVERWRITE_CATEGORY)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_CATEGORY_ID, categoryId)
+                .param(PARAM_IDS, transactionIds)
+                .update();
+    }
+
+    /**
+     * PF-921 merchant overwrite for chosen transactions: sets {@code merchantId} on each given
+     * transaction, whatever merchant it had. A row changes only if it is owned by the user and not
+     * deleted, so another user's id is silently untouched.
+     *
+     * @param userId         the owning user's id
+     * @param merchantId     the merchant to set
+     * @param transactionIds the transactions to change; must not be empty (an empty {@code in ()} is invalid sql)
+     * @return the number of rows actually changed
+     */
+    public int overwriteMerchant(Long userId, Long merchantId, List<Long> transactionIds) {
+        return jdbcClient.sql(TransactionQueries.OVERWRITE_MERCHANT)
+                .param(SqlParams.USER_ID, userId)
+                .param("merchantId", merchantId)
+                .param(PARAM_IDS, transactionIds)
+                .update();
+    }
+
+    /**
+     * PF-922 undo of {@link #overwriteCategory}: puts {@code previousCategoryId} (null for none) back
+     * on the given transactions, but only those that still have {@code appliedCategoryId}, so a
+     * category changed since is never overwritten.
+     *
+     * @param userId             the owning user's id
+     * @param appliedCategoryId  the category the apply set, which a row must still have
+     * @param previousCategoryId the category to put back, null for none
+     * @param transactionIds     the transactions to restore; must not be empty
+     * @return the number of rows actually restored
+     */
+    public int restoreCategory(Long userId, Long appliedCategoryId, Long previousCategoryId, List<Long> transactionIds) {
+        return jdbcClient.sql(TransactionQueries.RESTORE_CATEGORY)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_APPLIED_ID, appliedCategoryId)
+                .param(PARAM_PREVIOUS_ID, previousCategoryId)
+                .param(PARAM_IDS, transactionIds)
+                .update();
+    }
+
+    /**
+     * PF-922 undo of {@link #overwriteMerchant}: puts {@code previousMerchantId} (null for none) back
+     * on the given transactions, but only those that still have {@code appliedMerchantId}, so a
+     * merchant changed since is never overwritten.
+     *
+     * @param userId             the owning user's id
+     * @param appliedMerchantId  the merchant the apply set, which a row must still have
+     * @param previousMerchantId the merchant to put back, null for none
+     * @param transactionIds     the transactions to restore; must not be empty
+     * @return the number of rows actually restored
+     */
+    public int restoreMerchant(Long userId, Long appliedMerchantId, Long previousMerchantId, List<Long> transactionIds) {
+        return jdbcClient.sql(TransactionQueries.RESTORE_MERCHANT)
+                .param(SqlParams.USER_ID, userId)
+                .param(PARAM_APPLIED_ID, appliedMerchantId)
+                .param(PARAM_PREVIOUS_ID, previousMerchantId)
+                .param(PARAM_IDS, transactionIds)
+                .update();
     }
 
     /**
@@ -492,7 +571,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     public List<Transaction> findAllById(Long userId, List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         return jdbcClient.sql(TransactionQueries.FIND_ALL_BY_IDS_WITH_DETAILS)
-                .param("ids", ids)
+                .param(PARAM_IDS, ids)
                 .param(SqlParams.USER_ID, userId)
                 .query(rowMapper)
                 .list();

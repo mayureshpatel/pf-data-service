@@ -192,6 +192,64 @@ public final class TransactionQueries {
                 + " and transactions.account_id in (select id from accounts where user_id = :userId)";
     }
 
+    /**
+     * PF-920 overwrite of the category on chosen transactions, in one statement. A row changes only
+     * if it is owned by the user and not deleted; unlike {@link #assignMerchantsChunk} it does not
+     * require the row to be uncategorized, because the user chose these rows after seeing a preview.
+     */
+    // language=SQL
+    public static final String OVERWRITE_CATEGORY = """
+            update transactions
+            set category_id = :categoryId, updated_at = CURRENT_TIMESTAMP
+            where id in (:ids)
+              and deleted_at is null
+              and account_id in (select id from accounts where user_id = :userId)
+            """;
+
+    /**
+     * PF-921 overwrite of the merchant on chosen transactions, in one statement. A row changes only
+     * if it is owned by the user and not deleted; unlike {@link #assignMerchantsChunk} it does not
+     * require the row to be merchant-less, because the user chose these rows after seeing a preview.
+     */
+    // language=SQL
+    public static final String OVERWRITE_MERCHANT = """
+            update transactions
+            set merchant_id = :merchantId, updated_at = CURRENT_TIMESTAMP
+            where id in (:ids)
+              and deleted_at is null
+              and account_id in (select id from accounts where user_id = :userId)
+            """;
+
+    /**
+     * PF-922 undo of {@link #OVERWRITE_CATEGORY}: puts a previous category (possibly none) back on
+     * chosen transactions, but only on rows that still carry the category the apply set, so a row
+     * changed since is never overwritten. Scoped to the user's non-deleted transactions.
+     */
+    // language=SQL
+    public static final String RESTORE_CATEGORY = """
+            update transactions
+            set category_id = cast(:previousId as bigint), updated_at = CURRENT_TIMESTAMP
+            where id in (:ids)
+              and category_id = :appliedId
+              and deleted_at is null
+              and account_id in (select id from accounts where user_id = :userId)
+            """;
+
+    /**
+     * PF-922 undo of {@link #OVERWRITE_MERCHANT}: puts a previous merchant (possibly none) back on
+     * chosen transactions, but only on rows that still carry the merchant the apply set, so a row
+     * changed since is never overwritten. Scoped to the user's non-deleted transactions.
+     */
+    // language=SQL
+    public static final String RESTORE_MERCHANT = """
+            update transactions
+            set merchant_id = cast(:previousId as bigint), updated_at = CURRENT_TIMESTAMP
+            where id in (:ids)
+              and merchant_id = :appliedId
+              and deleted_at is null
+              and account_id in (select id from accounts where user_id = :userId)
+            """;
+
     // language=SQL
     public static final String FIND_EXISTING_FOR_DUPLICATE_CHECK = """
             select *
