@@ -13,6 +13,8 @@ import com.mayureshpatel.pfdataservice.repository.transaction.specification.Tran
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
@@ -434,6 +436,51 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertFalse(result.isEmpty()); // Should not crash and should return data
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"asc", "desc"})
+        @DisplayName("should sort by merchant name case-insensitively, merchant-less rows last ascending and first descending")
+        void shouldSortByMerchantNameWithBlanksAtTheDirectionalEnd(String direction) {
+            // arrange -- a lowercase merchant that sorts between 'Amazon' and 'Shell' only when
+            // compared case-insensitively, and a transaction with no merchant at all
+            jdbcClient.sql("insert into merchants (id, user_id, name) values (950, " + USER_ID + ", 'costco')")
+                    .update();
+            jdbcClient.sql("""
+                    insert into transactions (account_id, category_id, merchant_id, amount, date, description, type)
+                    values (1, 2, 950, 10.00, '2026-03-05T00:00:00Z', 'merchant sort lowercase', 'EXPENSE'),
+                           (1, 2, null, 10.00, '2026-03-06T00:00:00Z', 'merchant sort blank', 'EXPENSE')
+                    """).update();
+            TransactionSpecification.TransactionFilter filter = new TransactionSpecification.TransactionFilter(
+                    null, null, null, null, null, null, null, null, null, null
+            );
+            boolean ascending = "asc".equals(direction);
+            Sort sort = Sort.by(Sort.Direction.fromString(direction), "merchant.name");
+
+            // act
+            List<String> names = transactionRepository.findAll(
+                            TransactionSpecification.withFilter(USER_ID, filter), PageRequest.of(0, 500, sort))
+                    .getContent().stream()
+                    .map(t -> t.getMerchant() == null ? null : t.getMerchant().getName())
+                    .toList();
+
+            // assert & verify -- split the list into the blank run and the named run
+            int blankCount = (int) names.stream().filter(java.util.Objects::isNull).count();
+            assertTrue(blankCount > 0, "merchant-less transactions must exist");
+            List<String> blanks = ascending
+                    ? names.subList(names.size() - blankCount, names.size())
+                    : names.subList(0, blankCount);
+            List<String> named = ascending
+                    ? names.subList(0, names.size() - blankCount)
+                    : names.subList(blankCount, names.size());
+            assertTrue(blanks.stream().allMatch(java.util.Objects::isNull),
+                    "merchant-less rows must be one run at the " + (ascending ? "end" : "start"));
+            List<String> expected = new ArrayList<>(named);
+            expected.sort(ascending
+                    ? String.CASE_INSENSITIVE_ORDER
+                    : String.CASE_INSENSITIVE_ORDER.reversed());
+            assertEquals(expected, named);
+            assertTrue(named.contains("costco"));
         }
 
         @Test

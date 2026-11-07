@@ -65,6 +65,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
     private static final String PARAM_AMOUNT = "amount";
     private static final String PARAM_DATE = "date";
     private static final String PARAM_DESCRIPTION = "description";
+    private static final String MERCHANT_SORT_PROPERTY = "merchant.name";
     private static final String PARAM_TYPE = "type";
     private static final String PARAM_MERCHANT_ID = "merchantId";
     /** Maximum keywords used by the candidate prefilter; matches the request validation cap. */
@@ -595,7 +596,26 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         Sort.Order order = pageable.getSort().iterator().next();
         String col = resolveSortColumn(order.getProperty());
         String direction = order.getDirection().isAscending() ? "asc" : "desc";
+        if (MERCHANT_SORT_PROPERTY.equals(order.getProperty())) {
+            return resolveMerchantSortClause(direction);
+        }
         return " order by " + col + " " + direction;
+    }
+
+    /**
+     * Builds the merchant-name {@code order by}: case-insensitive, with merchant-less
+     * transactions (a null name from the left join) at the end of an ascending sort and the start
+     * of a descending one, so the blanks read as sitting just beyond "a" and "z" respectively.
+     * Spelled out rather than left to postgres's default, which happens to match. Ties, including
+     * the whole blank group, fall back to newest-first so pages stay stable and predictable.
+     *
+     * @param direction {@code asc} or {@code desc}, already resolved from the request
+     * @return the complete order-by clause
+     */
+    private String resolveMerchantSortClause(String direction) {
+        String nulls = "asc".equals(direction) ? "nulls last" : "nulls first";
+        return " order by lower(merchants.name) " + direction + " " + nulls +
+                ", transactions.date desc, transactions.id desc";
     }
 
     /**
@@ -606,7 +626,7 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return switch (property) {
             case "date" -> "transactions.date";
             case "description" -> "transactions.description";
-            case "merchant.name" -> "merchants.name";
+            case MERCHANT_SORT_PROPERTY -> "merchants.name";
             case "category.name" -> "categories.name";
             case "amount" -> "transactions.amount";
             case "type" -> "transactions.type";
