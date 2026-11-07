@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -369,7 +370,7 @@ class MerchantRuleControllerTest extends BaseControllerTest {
             MerchantRuleMatchRowDto row = new MerchantRuleMatchRowDto(5L, OffsetDateTime.parse("2026-10-01T00:00:00Z"),
                     "KROGER #1", new BigDecimal("-25.00"), "Checking", null,
                     MerchantRuleVerdict.WILL_ASSIGN, List.of(), null);
-            MerchantRuleMatchPreviewDto preview = new MerchantRuleMatchPreviewDto(MERCHANT_NAME, 1, 1, 0, 0, 0, false, List.of(row));
+            MerchantRuleMatchPreviewDto preview = new MerchantRuleMatchPreviewDto(MERCHANT_NAME, 1, 1, 0, 0, 0, false, List.of(row), List.of(row.transactionId()));
             when(merchantRuleMatchPreviewService.preview(eq(USER_ID), any(MerchantRuleMatchPreviewRequest.class))).thenReturn(preview);
 
             // act & assert & verify
@@ -543,14 +544,18 @@ class MerchantRuleControllerTest extends BaseControllerTest {
         }
 
         @Test
-        @DisplayName("POST should reject an empty id list and an invalid rule without calling the service")
+        @DisplayName("POST should accept an empty id list (a rule and a new merchant, no rows) but reject an invalid rule")
         void createAndApply_shouldValidate() throws Exception {
+            // arrange
+            when(merchantRuleService.createAndApply(eq(USER_ID), any()))
+                    .thenReturn(new MerchantRuleApplyResultDto(9L, 10L, List.of()));
+
             // act & assert & verify
             mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_IDS))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk());
             mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_KEYWORDS))
                     .andExpect(status().isBadRequest());
-            verifyNoInteractions(merchantRuleService);
+            verify(merchantRuleService, times(1)).createAndApply(eq(USER_ID), any());
         }
     }
 }

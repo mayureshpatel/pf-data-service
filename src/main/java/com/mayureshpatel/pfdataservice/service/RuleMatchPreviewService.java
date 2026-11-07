@@ -94,7 +94,8 @@ public class RuleMatchPreviewService {
                 count(matches, RuleVerdict.LOSES_TO_OTHER_RULE),
                 count(matches, RuleVerdict.ALREADY_CATEGORIZED),
                 matches.size() > MAX_ROWS,
-                matches.stream().limit(MAX_ROWS).toList());
+                matches.stream().limit(MAX_ROWS).toList(),
+                willCategorizeIds(matches));
     }
 
     /** Loads the caller's rules and requires {@code ruleId} to be one of them, else not-found. */
@@ -184,6 +185,19 @@ public class RuleMatchPreviewService {
     }
 
     /** Counts the rows with the given verdict. */
+    /**
+     * The ids of every match the draft would categorize, in the rows' order (newest first), capped
+     * at {@link RuleMatchPreviewDto#MAX_WILL_CATEGORIZE_IDS}. The ledger uses it to apply the rule
+     * to all of them when more match than the capped rows list.
+     */
+    private static List<Long> willCategorizeIds(List<RuleMatchRowDto> matches) {
+        return matches.stream()
+                .filter(row -> row.verdict() == RuleVerdict.WILL_CATEGORIZE)
+                .map(RuleMatchRowDto::transactionId)
+                .limit(RuleMatchPreviewDto.MAX_WILL_CATEGORIZE_IDS)
+                .toList();
+    }
+
     private static int count(List<RuleMatchRowDto> rows, RuleVerdict verdict) {
         return (int) rows.stream().filter(row -> row.verdict() == verdict).count();
     }

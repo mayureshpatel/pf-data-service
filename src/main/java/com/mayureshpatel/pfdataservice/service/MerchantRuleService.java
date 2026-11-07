@@ -9,6 +9,7 @@ import com.mayureshpatel.pfdataservice.dto.merchant.AppliedMerchantChangeDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRule;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
@@ -125,6 +126,14 @@ public class MerchantRuleService {
     /**
      * Loads a rule and confirms it belongs to the user, as category rules do.
      */
+    /** The rule's existing merchant, or the one named for it, created now if it does not exist yet. */
+    private Long resolveMerchant(Long userId, MerchantRuleApplyRule rule) {
+        if (rule.merchantId() != null) {
+            return rule.merchantId();
+        }
+        return merchantService.findOrCreateByName(userId, rule.newMerchantName());
+    }
+
     private MerchantRule requireOwnedRule(Long userId, Long ruleId) {
         MerchantRule rule = merchantRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new ResourceNotFoundException(RULE_NOT_FOUND));
@@ -143,7 +152,9 @@ public class MerchantRuleService {
      * merchant so the change can be undone. Settings merchant-rule apply and import are untouched:
      * they still only fill merchant-less rows.
      *
-     * <p>Every chosen id must be the user's and the merchant must be theirs; the rule is created
+     * <p>The merchant is an existing one of the user's or a new name, created (or an existing one with
+     * that name reused) inside the same transaction (PF-933), so a failed save leaves no stray merchant.
+     * Every chosen id must be the user's and the merchant must be theirs; the rule is created
      * (which checks the merchant) before the update, and the whole method is one transaction, so a
      * failure part-way, after the rule was saved, rolls the rule back too.
      *
@@ -160,8 +171,8 @@ public class MerchantRuleService {
             throw new AccessDeniedException("Access denied to transaction");
         }
 
-        Long merchantId = request.rule().getMerchantId();
-        Long ruleId = createRule(userId, request.rule());
+        Long merchantId = resolveMerchant(userId, request.rule());
+        Long ruleId = createRule(userId, request.rule().toCreateRequest(merchantId));
 
         List<Transaction> toChange = chosen.stream()
                 .filter(transaction -> transaction.getMerchant() == null

@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -240,7 +241,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             RuleMatchRowDto row = new RuleMatchRowDto(5L, OffsetDateTime.parse("2026-10-01T00:00:00Z"),
                     "AMAZON MKTP", new BigDecimal("-25.00"), "Checking", null,
                     RuleVerdict.WILL_CATEGORIZE, List.of());
-            RuleMatchPreviewDto preview = new RuleMatchPreviewDto(1, 1, 0, 0, false, List.of(row));
+            RuleMatchPreviewDto preview = new RuleMatchPreviewDto(1, 1, 0, 0, false, List.of(row), List.of(row.transactionId()));
             when(ruleMatchPreviewService.preview(eq(USER_ID), any(RuleMatchPreviewRequest.class))).thenReturn(preview);
 
             // act & assert & verify
@@ -454,14 +455,18 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
 
         @Test
-        @DisplayName("POST should reject an empty id list and an invalid rule without calling the service")
+        @DisplayName("POST should accept an empty id list (just the rule, no rows) but reject an invalid rule")
         void createAndApply_shouldValidate() throws Exception {
+            // arrange
+            when(categoryRuleService.createAndApply(eq(USER_ID), any()))
+                    .thenReturn(new CategoryRuleApplyResultDto(9L, 2L, List.of(), List.of()));
+
             // act & assert & verify
             mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_IDS))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk());
             mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_KEYWORDS))
                     .andExpect(status().isBadRequest());
-            verifyNoInteractions(categoryRuleService);
+            verify(categoryRuleService, times(1)).createAndApply(eq(USER_ID), any());
         }
     }
 }

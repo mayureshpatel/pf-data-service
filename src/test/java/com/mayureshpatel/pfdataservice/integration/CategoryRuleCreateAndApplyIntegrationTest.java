@@ -139,4 +139,18 @@ class CategoryRuleCreateAndApplyIntegrationTest extends BaseIntegrationTest {
         assertThat(categoryOf(92011L)).isNull();
         assertThat(ruleCount()).isZero();
     }
+
+    @Test
+    @DisplayName("should create just the rule, changing no rows, when no transactions are chosen")
+    @WithCustomMockUser(id = USER_ID)
+    void shouldCreateJustTheRuleWhenNoTransactionsAreChosen() throws Exception {
+        // act
+        mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body(List.of())))
+                // assert & verify
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes.length()").value(0));
+
+        assertThat(ruleCount()).isEqualTo(1);
+        assertThat(categoryOf(92011L)).isNull();
+    }
 }

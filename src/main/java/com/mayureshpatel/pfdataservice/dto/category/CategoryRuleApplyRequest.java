@@ -1,7 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.category;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -13,11 +12,12 @@ import java.util.List;
  *
  * @param rule           the rule to create, validated exactly as when creating a rule on its own
  * @param transactionIds the transactions to give the rule's category, overwriting any category they
- *                       have; at least one and at most {@value #MAX_TRANSACTIONS}
+ *                       have; at most {@value #MAX_TRANSACTIONS}. May be empty, which creates just the
+ *                       rule (when one kind of a combined create has nothing ticked, PF-934)
  */
 public record CategoryRuleApplyRequest(
         @NotNull @Valid CategoryRuleCreateRequest rule,
-        @NotEmpty @Size(max = CategoryRuleApplyRequest.MAX_TRANSACTIONS) List<Long> transactionIds
+        @NotNull @Size(max = CategoryRuleApplyRequest.MAX_TRANSACTIONS) List<Long> transactionIds
 ) {
 
     /** The most transactions one call may change. */

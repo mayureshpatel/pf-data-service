@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.LongStream;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,6 +53,7 @@ class RuleMatchPreviewServiceTest {
     private static final Long EDITED_RULE_ID = 7L;
     private static final Long OTHER_RULE_ID = 8L;
     private static final String AMAZON = "AMAZON";
+    private static final String AMAZON_PREFIX = "AMAZON ";
     private static final String SHOPPING = "Shopping";
     private static final String AMAZON_MKTP = "AMAZON MKTP US*123";
     private static final String MKTP = "MKTP";
@@ -277,13 +279,13 @@ class RuleMatchPreviewServiceTest {
         List<Transaction> candidates = new ArrayList<>();
         long id = 1;
         for (int i = 0; i < 20; i++) {
-            candidates.add(uncategorized(id++, "AMAZON " + i, i * 6));
+            candidates.add(uncategorized(id++, AMAZON_PREFIX + i, i * 6));
         }
         for (int i = 0; i < 60; i++) {
             candidates.add(uncategorized(id++, "AMAZON PRIME " + i, i * 2 + 1));
         }
         for (int i = 0; i < 40; i++) {
-            candidates.add(tx(id++, "AMAZON " + i, "-10.00", i * 3 + 2, groceries));
+            candidates.add(tx(id++, AMAZON_PREFIX + i, "-10.00", i * 3 + 2, groceries));
         }
         Collections.shuffle(candidates, new Random(42));
         givenRules(rule(OTHER_RULE_ID, 10, "PRIME"));
@@ -299,6 +301,7 @@ class RuleMatchPreviewServiceTest {
         assertThat(result.alreadyCategorizedCount()).isEqualTo(40);
         assertThat(result.truncated()).isTrue();
         assertThat(result.rows()).hasSize(RuleMatchPreviewService.MAX_ROWS);
+        assertThat(result.willCategorizeIds()).hasSize(20);
         List<RuleMatchRowDto> will = result.rows().subList(0, 20);
         List<RuleMatchRowDto> loses = result.rows().subList(20, 50);
         assertThat(will).allMatch(row -> row.verdict() == RuleVerdict.WILL_CATEGORIZE);
@@ -308,6 +311,58 @@ class RuleMatchPreviewServiceTest {
         // the losing rows kept are the 30 newest of the 60 (days 119 down to 61)
         assertThat(loses.get(0).date()).isEqualTo(BASE_DATE.plusDays(119));
         assertThat(loses.get(29).date()).isEqualTo(BASE_DATE.plusDays(61));
+    }
+
+    @Test
+    @DisplayName("every id the draft would categorize is listed, even beyond the row cap, newest first and without the other verdicts")
+    void preview_willCategorizeIds_coverEveryWillCategorizeMatch() {
+        // arrange -- 70 uncategorized matches only the draft covers, 10 that a higher-priority rule
+        // takes, and 5 already categorized: only the first 70 belong in the id list
+        Category groceries = Category.builder().id(60L).name(GROCERIES).build();
+        List<Transaction> candidates = new ArrayList<>();
+        long id = 1;
+        for (int i = 0; i < 70; i++) {
+            candidates.add(uncategorized(id++, AMAZON_PREFIX + i, i));
+        }
+        for (int i = 0; i < 10; i++) {
+            candidates.add(uncategorized(id++, "AMAZON PRIME " + i, 200 + i));
+        }
+        for (int i = 0; i < 5; i++) {
+            candidates.add(tx(id++, AMAZON_PREFIX + i, "-10.00", 300 + i, groceries));
+        }
+        givenRules(rule(OTHER_RULE_ID, 10, "PRIME"));
+        givenCandidates(candidates);
+
+        // act
+        RuleMatchPreviewDto result = service.preview(USER_ID, request(null, 0, AMAZON));
+
+        // assert & verify
+        assertThat(result.rows()).hasSize(RuleMatchPreviewService.MAX_ROWS);
+        assertThat(result.willCategorizeCount()).isEqualTo(70);
+        assertThat(result.willCategorizeIds()).hasSize(70).doesNotHaveDuplicates();
+        assertThat(result.willCategorizeIds()).containsExactlyInAnyOrderElementsOf(
+                LongStream.rangeClosed(1, 70).boxed().toList());
+        // newest first, so a capped list keeps the newest rows
+        assertThat(result.willCategorizeIds().get(0)).isEqualTo(70L);
+    }
+
+    @Test
+    @DisplayName("the id list stops at the same cap one create-and-apply call accepts")
+    void preview_willCategorizeIds_areCapped() {
+        // arrange
+        List<Transaction> candidates = new ArrayList<>();
+        for (long i = 1; i <= RuleMatchPreviewDto.MAX_WILL_CATEGORIZE_IDS + 25; i++) {
+            candidates.add(uncategorized(i, AMAZON_PREFIX + i, (int) (i % 300)));
+        }
+        givenRules();
+        givenCandidates(candidates);
+
+        // act
+        RuleMatchPreviewDto result = service.preview(USER_ID, request(null, 0, AMAZON));
+
+        // assert & verify -- the count is exact, the id list is capped
+        assertThat(result.willCategorizeCount()).isEqualTo(RuleMatchPreviewDto.MAX_WILL_CATEGORIZE_IDS + 25);
+        assertThat(result.willCategorizeIds()).hasSize(RuleMatchPreviewDto.MAX_WILL_CATEGORIZE_IDS);
     }
 
     @Test
