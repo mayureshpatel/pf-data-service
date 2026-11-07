@@ -108,7 +108,8 @@ public class MerchantRuleMatchPreviewService {
                 count(rows, MerchantRuleVerdict.ALREADY_HAS_MERCHANT),
                 count(rows, MerchantRuleVerdict.LINKED),
                 rows.size() > MAX_ROWS,
-                rows.stream().limit(MAX_ROWS).toList());
+                rows.stream().limit(MAX_ROWS).toList(),
+                willAssignIds(rows));
     }
 
     /**
@@ -210,6 +211,19 @@ public class MerchantRuleMatchPreviewService {
     }
 
     /** Counts the rows with the given verdict. */
+    /**
+     * The ids of every match the draft would give a merchant, in the rows' order (newest first),
+     * capped at {@link MerchantRuleMatchPreviewDto#MAX_WILL_ASSIGN_IDS}. The ledger uses it to apply
+     * the rule to all of them when more match than the capped rows list.
+     */
+    private static List<Long> willAssignIds(List<MerchantRuleMatchRowDto> rows) {
+        return rows.stream()
+                .filter(row -> row.verdict() == MerchantRuleVerdict.WILL_ASSIGN)
+                .map(MerchantRuleMatchRowDto::transactionId)
+                .limit(MerchantRuleMatchPreviewDto.MAX_WILL_ASSIGN_IDS)
+                .toList();
+    }
+
     private static int count(List<MerchantRuleMatchRowDto> rows, MerchantRuleVerdict verdict) {
         return (int) rows.stream().filter(row -> row.verdict() == verdict).count();
     }

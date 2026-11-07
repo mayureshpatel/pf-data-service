@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -454,14 +455,18 @@ class CategoryRuleControllerTest extends BaseControllerTest {
         }
 
         @Test
-        @DisplayName("POST should reject an empty id list and an invalid rule without calling the service")
+        @DisplayName("POST should accept an empty id list (just the rule, no rows) but reject an invalid rule")
         void createAndApply_shouldValidate() throws Exception {
+            // arrange
+            when(categoryRuleService.createAndApply(eq(USER_ID), any()))
+                    .thenReturn(new CategoryRuleApplyResultDto(9L, 2L, List.of(), List.of()));
+
             // act & assert & verify
             mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_IDS))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk());
             mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY_NO_KEYWORDS))
                     .andExpect(status().isBadRequest());
-            verifyNoInteractions(categoryRuleService);
+            verify(categoryRuleService, times(1)).createAndApply(eq(USER_ID), any());
         }
     }
 }

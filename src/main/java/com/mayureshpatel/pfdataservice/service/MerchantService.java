@@ -88,6 +88,25 @@ public class MerchantService {
     }
 
     /**
+     * Finds the user's merchant with this name, ignoring case and surrounding spaces, or creates
+     * one (PF-933), so naming a merchant while creating a rule never makes a duplicate. Part of the
+     * caller's transaction, so a failure later in that transaction removes a merchant created here.
+     *
+     * @param userId the authenticated user id
+     * @param name   the merchant name; must not be blank
+     * @return the id of the existing or newly created merchant
+     */
+    @Transactional
+    public Long findOrCreateByName(Long userId, String name) {
+        String wanted = name.trim();
+        return merchantRepository.findAllByUserId(userId).stream()
+                .filter(merchant -> merchant.getName() != null && merchant.getName().trim().equalsIgnoreCase(wanted))
+                .map(Merchant::getId)
+                .findFirst()
+                .orElseGet(() -> createMerchant(userId, MerchantCreateRequest.builder().name(wanted).build()));
+    }
+
+    /**
      * Updates a merchant's name and location. Ownership is checked here in addition to the
      * Controller's {@code @PreAuthorize}, matching this project's established defense-in-depth
      * pattern for owned-resource updates (see {@code AccountService.updateAccount}).

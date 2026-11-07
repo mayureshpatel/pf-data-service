@@ -7,6 +7,7 @@ import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleApplyRequest;
 import com.mayureshpatel.pfdataservice.dto.category.CategoryRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRule;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.repository.category.CategoryRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
@@ -88,8 +89,7 @@ class RuleApplicationUndoIntegrationTest extends BaseIntegrationTest {
     }
 
     private JsonNode applyMerchant(List<Long> ids) throws Exception {
-        MerchantRuleCreateRequest rule = MerchantRuleCreateRequest.builder()
-                .merchantId(TACO_BELL).keywords(List.of(KEYWORD)).build();
+        MerchantRuleApplyRule rule = new MerchantRuleApplyRule(TACO_BELL, null, List.of(KEYWORD), null, null, null, null);
         String json = mockMvc.perform(post("/api/v1/merchant-rules/create-and-apply").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MerchantRuleApplyRequest(rule, ids))))

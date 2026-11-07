@@ -360,6 +360,7 @@ class MerchantRuleMatchPreviewServiceTest {
         assertThat(result.linkedCount()).isEqualTo(40);
         assertThat(result.truncated()).isTrue();
         assertThat(result.rows()).hasSize(MerchantRuleMatchPreviewService.MAX_ROWS);
+        assertThat(result.willAssignIds()).hasSize(20);
         List<MerchantRuleMatchRowDto> will = result.rows().subList(0, 20);
         List<MerchantRuleMatchRowDto> loses = result.rows().subList(20, 50);
         assertThat(will).allMatch(row -> row.verdict() == MerchantRuleVerdict.WILL_ASSIGN);
@@ -368,6 +369,59 @@ class MerchantRuleMatchPreviewServiceTest {
         assertThat(loses).isSortedAccordingTo(Comparator.comparing(MerchantRuleMatchRowDto::date).reversed());
         assertThat(loses.get(0).date()).isEqualTo(BASE_DATE.plusDays(119));
         assertThat(loses.get(29).date()).isEqualTo(BASE_DATE.plusDays(61));
+    }
+
+    @Test
+    @DisplayName("every id the draft would give a merchant is listed, even beyond the row cap, newest first and without the other verdicts")
+    void preview_willAssignIds_coverEveryWillAssignMatch() {
+        // arrange -- 70 merchant-less matches only the draft covers, 10 that a higher-priority rule
+        // takes, and 5 that already have a merchant: only the first 70 belong in the id list
+        List<Transaction> candidates = new ArrayList<>();
+        long id = 1;
+        for (int i = 0; i < 70; i++) {
+            candidates.add(bare(id++, "KROGER " + i, i));
+        }
+        for (int i = 0; i < 10; i++) {
+            candidates.add(bare(id++, "KROGER PRIME " + i, 200 + i));
+        }
+        for (int i = 0; i < 5; i++) {
+            candidates.add(tx(id++, "KROGER OWNED " + i, "-10.00", 300 + i, OWNED));
+        }
+        givenRules(rule(OTHER_RULE_ID, 10, "PRIME"));
+        givenCandidates(candidates);
+        givenLinks(Map.of());
+
+        // act
+        MerchantRuleMatchPreviewDto result = service.preview(USER_ID, request(null, 0, KROGER));
+
+        // assert & verify
+        assertThat(result.rows()).hasSize(MerchantRuleMatchPreviewService.MAX_ROWS);
+        assertThat(result.willAssignCount()).isEqualTo(70);
+        assertThat(result.willAssignIds()).hasSize(70).doesNotHaveDuplicates();
+        assertThat(result.willAssignIds()).containsExactlyInAnyOrderElementsOf(
+                java.util.stream.LongStream.rangeClosed(1, 70).boxed().toList());
+        // newest first, so a capped list keeps the newest rows
+        assertThat(result.willAssignIds().get(0)).isEqualTo(70L);
+    }
+
+    @Test
+    @DisplayName("the id list stops at the same cap one create-and-apply call accepts")
+    void preview_willAssignIds_areCapped() {
+        // arrange
+        List<Transaction> candidates = new ArrayList<>();
+        for (long i = 1; i <= MerchantRuleMatchPreviewDto.MAX_WILL_ASSIGN_IDS + 25; i++) {
+            candidates.add(bare(i, "KROGER " + i, (int) (i % 300)));
+        }
+        givenRules();
+        givenCandidates(candidates);
+        givenLinks(Map.of());
+
+        // act
+        MerchantRuleMatchPreviewDto result = service.preview(USER_ID, request(null, 0, KROGER));
+
+        // assert & verify -- the count is exact, the id list is capped
+        assertThat(result.willAssignCount()).isEqualTo(MerchantRuleMatchPreviewDto.MAX_WILL_ASSIGN_IDS + 25);
+        assertThat(result.willAssignIds()).hasSize(MerchantRuleMatchPreviewDto.MAX_WILL_ASSIGN_IDS);
     }
 
     @Test

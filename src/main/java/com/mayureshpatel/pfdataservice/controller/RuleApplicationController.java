@@ -1,8 +1,11 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.rule.CreateBothAndApplyRequest;
+import com.mayureshpatel.pfdataservice.dto.rule.CreateBothAndApplyResultDto;
 import com.mayureshpatel.pfdataservice.dto.rule.RuleApplicationUndoRequest;
 import com.mayureshpatel.pfdataservice.dto.rule.RuleApplicationUndoResultDto;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
+import com.mayureshpatel.pfdataservice.service.RuleApplicationService;
 import com.mayureshpatel.pfdataservice.service.RuleApplicationUndoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -27,6 +30,28 @@ import org.springframework.web.bind.annotation.RestController;
 public class RuleApplicationController {
 
     private final RuleApplicationUndoService ruleApplicationUndoService;
+    private final RuleApplicationService ruleApplicationService;
+
+    /**
+     * Creates a category rule and a merchant rule from the same keyword and applies both to the
+     * transactions the user chose, all or nothing (PF-934): if either kind fails, neither is saved.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the category and merchant rules with the transactions for each
+     * @return each kind's result, which together are what an undo needs
+     */
+    @Operation(operationId = "createBothRulesAndApply", summary = "Create a category rule and a merchant rule and apply both",
+            description = "Creates both rules and applies each to its chosen transactions, overwriting existing values; all or nothing across the two kinds")
+    @ApiResponse(responseCode = "200", description = "Both rules created and applied; previous values returned for undo")
+    @ApiResponse(responseCode = "400", description = "Validation failed")
+    @ApiResponse(responseCode = "403", description = "A chosen transaction or the category is not the user's; nothing changed")
+    @ApiResponse(responseCode = "404", description = "The merchant does not exist or is not the authenticated user's")
+    @PostMapping("/create-both-and-apply")
+    public ResponseEntity<CreateBothAndApplyResultDto> createBothAndApply(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid CreateBothAndApplyRequest request) {
+        return ResponseEntity.ok(ruleApplicationService.createBothAndApply(userDetails.getId(), request));
+    }
 
     /**
      * Undoes a create-and-apply: restores the previous category and/or merchant of each transaction

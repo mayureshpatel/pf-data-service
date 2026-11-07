@@ -74,6 +74,8 @@ public abstract class BaseControllerTest {
     @MockitoBean
     protected RuleApplicationUndoService ruleApplicationUndoService;
     @MockitoBean
+    protected RuleApplicationService ruleApplicationService;
+    @MockitoBean
     protected TransactionImportService transactionImportService;
     @MockitoBean
     protected UserService userService;

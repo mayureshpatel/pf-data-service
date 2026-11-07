@@ -3,7 +3,7 @@ package com.mayureshpatel.pfdataservice.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mayureshpatel.pfdataservice.BaseIntegrationTest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRequest;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRule;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
@@ -69,9 +69,18 @@ class MerchantRuleCreateAndApplyIntegrationTest extends BaseIntegrationTest {
     private TransactionRepository transactionRepository;
 
     private String body(long merchantId, List<Long> ids) throws Exception {
-        MerchantRuleCreateRequest rule = MerchantRuleCreateRequest.builder()
-                .merchantId(merchantId).keywords(List.of(KEYWORD)).build();
+        MerchantRuleApplyRule rule = new MerchantRuleApplyRule(merchantId, null, List.of(KEYWORD), null, null, null, null);
         return objectMapper.writeValueAsString(new MerchantRuleApplyRequest(rule, ids));
+    }
+
+    private String bodyNamed(String merchantName, List<Long> ids) throws Exception {
+        MerchantRuleApplyRule rule = new MerchantRuleApplyRule(null, merchantName, List.of(KEYWORD), null, null, null, null);
+        return objectMapper.writeValueAsString(new MerchantRuleApplyRequest(rule, ids));
+    }
+
+    private int merchantsNamed(String name) {
+        return jdbcClient.sql("select count(*) from merchants where user_id = :userId and lower(name) = lower(:name)")
+                .param("userId", USER_ID).param("name", name).query(Integer.class).single();
     }
 
     private Long merchantOf(long transactionId) {
@@ -152,5 +161,89 @@ class MerchantRuleCreateAndApplyIntegrationTest extends BaseIntegrationTest {
 
         assertThat(merchantOf(93011L)).isNull();
         assertThat(ruleCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("should create the named merchant in the same step and give it to the chosen rows")
+    @WithCustomMockUser(id = USER_ID)
+    void shouldCreateANewMerchantByName() throws Exception {
+        // act
+        mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyNamed("PF921 Brand New", List.of(93011L))))
+                // assert & verify
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.merchantId").isNumber())
+                .andExpect(jsonPath("$.changes.length()").value(1));
+
+        assertThat(merchantsNamed("PF921 Brand New")).isEqualTo(1);
+        assertThat(merchantOf(93011L)).isNotNull().isNotEqualTo(TACO_BELL);
+        assertThat(ruleCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("should reuse an existing merchant whose name matches ignoring case, creating no duplicate")
+    @WithCustomMockUser(id = USER_ID)
+    void shouldReuseAnExistingMerchantNamedTheSameIgnoringCase() throws Exception {
+        // act
+        mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyNamed("pf921 TACO BELL", List.of(93011L))))
+                // assert & verify
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.merchantId").value(TACO_BELL));
+
+        assertThat(merchantsNamed("PF921 Taco Bell")).isEqualTo(1);
+        assertThat(merchantOf(93011L)).isEqualTo(TACO_BELL);
+    }
+
+    @Test
+    @DisplayName("should leave no stray merchant behind when the update fails after the merchant was created")
+    @WithCustomMockUser(id = USER_ID)
+    void shouldNotLeaveAStrayMerchantWhenTheUpdateFails() throws Exception {
+        // arrange
+        doThrow(new RuntimeException("boom")).when(transactionRepository)
+                .overwriteMerchant(anyLong(), anyLong(), any());
+
+        // act
+        mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyNamed("PF921 Stray", List.of(93011L))))
+                // assert & verify
+                .andExpect(status().is5xxServerError());
+
+        assertThat(merchantsNamed("PF921 Stray")).isZero();
+        assertThat(ruleCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("should reject a rule that names no merchant, and one that names two")
+    @WithCustomMockUser(id = USER_ID)
+    void shouldRejectNeitherOrBothMerchants() throws Exception {
+        // arrange
+        String neither = objectMapper.writeValueAsString(new MerchantRuleApplyRequest(
+                new MerchantRuleApplyRule(null, null, List.of(KEYWORD), null, null, null, null), List.of(93011L)));
+        String both = objectMapper.writeValueAsString(new MerchantRuleApplyRequest(
+                new MerchantRuleApplyRule(TACO_BELL, "Another", List.of(KEYWORD), null, null, null, null), List.of(93011L)));
+
+        // act & assert & verify
+        mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(neither))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(both))
+                .andExpect(status().isBadRequest());
+        assertThat(merchantOf(93011L)).isNull();
+    }
+
+    @Test
+    @DisplayName("should create the rule and a new merchant with no rows when no transactions are chosen")
+    @WithCustomMockUser(id = USER_ID)
+    void shouldCreateARuleAndANewMerchantWithoutAnyRows() throws Exception {
+        // act
+        mockMvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyNamed("PF921 No Rows", List.of())))
+                // assert & verify
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes.length()").value(0));
+
+        assertThat(merchantsNamed("PF921 No Rows")).isEqualTo(1);
+        assertThat(ruleCount()).isEqualTo(1);
+        assertThat(merchantOf(93011L)).isNull();
     }
 }
