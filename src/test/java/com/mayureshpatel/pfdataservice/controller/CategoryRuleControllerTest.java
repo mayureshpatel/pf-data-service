@@ -240,7 +240,7 @@ class CategoryRuleControllerTest extends BaseControllerTest {
             RuleMatchRowDto row = new RuleMatchRowDto(5L, OffsetDateTime.parse("2026-10-01T00:00:00Z"),
                     "AMAZON MKTP", new BigDecimal("-25.00"), "Checking", null,
                     RuleVerdict.WILL_CATEGORIZE, List.of());
-            RuleMatchPreviewDto preview = new RuleMatchPreviewDto(1, 1, 0, 0, false, List.of(row));
+            RuleMatchPreviewDto preview = new RuleMatchPreviewDto(1, 1, 0, 0, false, List.of(row), List.of(row.transactionId()));
             when(ruleMatchPreviewService.preview(eq(USER_ID), any(RuleMatchPreviewRequest.class))).thenReturn(preview);
 
             // act & assert & verify
