@@ -560,6 +560,52 @@ class TransactionServiceTest {
     @Nested
     @DisplayName("createTransaction")
     class CreateTransactionTests {
+
+        @Test
+        @DisplayName("PF-936: should reject the filter-only TRANSFER type, storing nothing")
+        void shouldRejectPlainTransferType() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("TRANSFER")
+                    .transactionDate(OffsetDateTime.now())
+                    .description("Test Description")
+                    .build();
+
+            // act
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> transactionService.createTransaction(USER_ID, request));
+
+            // assert & verify
+            assertTrue(ex.getMessage().contains("TRANSFER_IN") && ex.getMessage().contains("TRANSFER_OUT"));
+            verify(transactionRepository, never()).insert(any(Transaction.class));
+            verify(accountBalanceUpdateService, never()).applyWithRetry(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("PF-936: should still accept the stored transfer legs")
+        void shouldAcceptTransferLegs() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(transactionRepository.insert(any(Transaction.class))).thenReturn(1);
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("TRANSFER_OUT")
+                    .transactionDate(OffsetDateTime.now())
+                    .description("Test Description")
+                    .build();
+
+            // act
+            int result = transactionService.createTransaction(USER_ID, request);
+
+            // assert & verify
+            assertEquals(1, result);
+        }
         @Test
         @DisplayName("should create and apply transaction to account balance")
         void shouldCreate() {
@@ -927,6 +973,30 @@ class TransactionServiceTest {
     @Nested
     @DisplayName("updateTransaction")
     class UpdateTransactionTests {
+
+        @Test
+        @DisplayName("PF-936: should reject changing a transaction to the filter-only TRANSFER type, storing nothing")
+        void shouldRejectPlainTransferType() {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction original = Transaction.builder().id(TRANSACTION_ID).account(account).amount(BigDecimal.ONE).type(TransactionType.EXPENSE).build();
+            when(transactionRepository.findById(TRANSACTION_ID, USER_ID)).thenReturn(Optional.of(original));
+            TransactionUpdateRequest request = TransactionUpdateRequest.builder()
+                    .id(TRANSACTION_ID)
+                    .accountId(ACCOUNT_ID)
+                    .amount(BigDecimal.TEN)
+                    .type("TRANSFER")
+                    .description("Updated Description")
+                    .build();
+
+            // act
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> transactionService.updateTransaction(USER_ID, request));
+
+            // assert & verify
+            assertTrue(ex.getMessage().contains("TRANSFER_IN") && ex.getMessage().contains("TRANSFER_OUT"));
+            verify(transactionRepository, never()).update(any(), any(Transaction.class));
+        }
         @Test
         @DisplayName("should update transaction and update account balance")
         void shouldUpdate() {
