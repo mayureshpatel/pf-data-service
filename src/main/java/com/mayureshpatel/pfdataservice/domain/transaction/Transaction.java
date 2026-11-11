@@ -51,7 +51,8 @@ public class Transaction {
     /**
      * Calculates the net change this transaction applies to an account balance.
      * INCOME/TRANSFER_IN is positive, EXPENSE/TRANSFER_OUT is negative.
-     * ADJUSTMENT uses the raw signed amount.
+     * ADJUSTMENT uses the raw signed amount. CONTRIBUTION, EMPLOYER_CONTRIBUTION and EARNINGS are
+     * money in, so positive.
      *
      * @return the net change
      */
@@ -67,7 +68,9 @@ public class Transaction {
         }
 
         // return the absolute amount if income or transfer in
-        if (type == TransactionType.INCOME || type == TransactionType.TRANSFER_IN) {
+        if (type == TransactionType.INCOME || type == TransactionType.TRANSFER_IN
+                || type == TransactionType.CONTRIBUTION || type == TransactionType.EMPLOYER_CONTRIBUTION
+                || type == TransactionType.EARNINGS) {
             return amount.abs();
         }
 

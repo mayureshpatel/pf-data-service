@@ -95,6 +95,7 @@ public final class AccountQueries {
                  current_balance,
                  currency_code,
                  bank_name,
+                 balance_mode,
                  user_id,
                  version,
                  created_at, created_by, updated_at, updated_by
@@ -105,6 +106,7 @@ public final class AccountQueries {
                    :currentBalance,
                    :currencyCode,
                    :bankName,
+                   coalesce(cast(:balanceMode as varchar), 'DERIVED'),
                    :userId,
                    1,
                    CURRENT_TIMESTAMP, :createdBy, CURRENT_TIMESTAMP, :updatedBy
@@ -119,6 +121,7 @@ public final class AccountQueries {
                 type = :type,
                 currency_code = :currencyCode,
                 bank_name = :bankName,
+                balance_mode = coalesce(cast(:balanceMode as varchar), balance_mode),
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP, updated_by = :updatedBy
             where id = :id

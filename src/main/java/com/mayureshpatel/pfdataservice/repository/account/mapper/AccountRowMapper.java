@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.account.mapper;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.repository.JdbcMapperUtils;
 import com.mayureshpatel.pfdataservice.repository.currency.mapper.CurrencyRowMapper;
 import org.jspecify.annotations.NonNull;
@@ -82,6 +83,12 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         }
         if (hasColumn(safePrefix + "bank_name", availableColumns)) {
             builder.bankCode(rs.getString(safePrefix + "bank_name"));
+        }
+        if (hasColumn(safePrefix + "balance_mode", availableColumns)) {
+            String mode = rs.getString(safePrefix + "balance_mode");
+            if (mode != null) {
+                builder.balanceMode(BalanceMode.valueOf(mode));
+            }
         }
         if (hasColumn(safePrefix + "version", availableColumns)) {
             builder.version(rs.getLong(safePrefix + "version"));

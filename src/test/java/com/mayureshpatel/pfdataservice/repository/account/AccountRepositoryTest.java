@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.account;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
@@ -116,6 +117,42 @@ class AccountRepositoryTest extends BaseRepositoryTest {
             Account inserted = accountRepository.findById((long) newId).orElseThrow();
             assertEquals("New Savings", inserted.getName());
             assertEquals(USER_1, inserted.getUserId());
+        }
+
+        @Test
+        @DisplayName("should round-trip balanceMode on insert and update, defaulting to DERIVED")
+        void shouldRoundTripBalanceMode() {
+            // arrange
+            AccountCreateRequest manual = AccountCreateRequest.builder()
+                    .name("Brokerage")
+                    .type("INVESTMENT")
+                    .startingBalance(new BigDecimal("500.00"))
+                    .currencyCode(CURRENCY_USD)
+                    .balanceMode("MANUAL")
+                    .build();
+            AccountCreateRequest derived = manual.toBuilder().name("Plain").balanceMode(null).build();
+
+            // act
+            int manualId = accountRepository.insert(USER_1, manual);
+            int derivedId = accountRepository.insert(USER_1, derived);
+
+            // assert & verify
+            Account insertedManual = accountRepository.findById((long) manualId).orElseThrow();
+            assertEquals(BalanceMode.MANUAL, insertedManual.getBalanceMode());
+            assertTrue(insertedManual.isManualBalance());
+            assertEquals(BalanceMode.DERIVED, accountRepository.findById((long) derivedId).orElseThrow().getBalanceMode());
+
+            // act: flip the derived one to manual, then update again without a mode (keeps it)
+            Account before = accountRepository.findById((long) derivedId).orElseThrow();
+            AccountUpdateRequest flip = AccountUpdateRequest.builder()
+                    .id((long) derivedId).name("Plain").type("INVESTMENT").currencyCode(CURRENCY_USD)
+                    .balanceMode("MANUAL").version(before.getVersion()).build();
+            assertEquals(1, accountRepository.update(USER_1, flip));
+            Account flipped = accountRepository.findById((long) derivedId).orElseThrow();
+            assertEquals(BalanceMode.MANUAL, flipped.getBalanceMode());
+            AccountUpdateRequest keep = flip.toBuilder().balanceMode(null).version(flipped.getVersion()).build();
+            assertEquals(1, accountRepository.update(USER_1, keep));
+            assertEquals(BalanceMode.MANUAL, accountRepository.findById((long) derivedId).orElseThrow().getBalanceMode());
         }
 
         @Test

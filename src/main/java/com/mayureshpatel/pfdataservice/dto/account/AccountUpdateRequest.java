@@ -2,9 +2,11 @@ package com.mayureshpatel.pfdataservice.dto.account;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.account.AccountType;
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.domain.currency.Currency;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
@@ -41,6 +43,10 @@ public class AccountUpdateRequest {
     @Size(max = 50, message = "Bank name must be less than 50 characters.")
     private final String bankName;
 
+    /** {@code DERIVED} or {@code MANUAL}; null means the default (DERIVED on create, unchanged on update). */
+    @Pattern(regexp = "DERIVED|MANUAL", message = "Balance mode must be DERIVED or MANUAL.")
+    private final String balanceMode;
+
     @NotNull(message = "Version cannot be null.")
     @Positive(message = "Version must be a positive number.")
     private final Long version;
@@ -57,6 +63,7 @@ public class AccountUpdateRequest {
                 .type(AccountType.builder().code(type).build())
                 .currency(Currency.builder().code(currencyCode).build())
                 .bankCode(bankName)
+                .balanceMode(balanceMode == null ? null : BalanceMode.valueOf(balanceMode))
                 .version(version)
                 .build();
     }

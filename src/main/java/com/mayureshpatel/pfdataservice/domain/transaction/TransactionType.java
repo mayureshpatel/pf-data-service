@@ -15,7 +15,10 @@ public enum TransactionType {
     TRANSFER,
     TRANSFER_IN,
     TRANSFER_OUT,
-    ADJUSTMENT;
+    ADJUSTMENT,
+    CONTRIBUTION,
+    EMPLOYER_CONTRIBUTION,
+    EARNINGS;
 
     /**
      * Returns true if the transaction is an expense.

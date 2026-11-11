@@ -33,4 +33,8 @@ public class AccountCreateRequest {
 
     @Size(max = 50, message = "Bank name must be less than 50 characters.")
     private final String bankName;
+
+    /** {@code DERIVED} or {@code MANUAL}; null means the default (DERIVED on create, unchanged on update). */
+    @Pattern(regexp = "DERIVED|MANUAL", message = "Balance mode must be DERIVED or MANUAL.")
+    private final String balanceMode;
 }
