@@ -13,6 +13,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
+import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthGroupBy;
+import com.mayureshpatel.pfdataservice.dto.report.networth.NetWorthGroupDto;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -66,5 +69,41 @@ class NetWorthBooksTest {
         assertEquals(0, new BigDecimal("12000.00").compareTo(position.debts()));
         assertEquals(0, BigDecimal.ZERO.compareTo(position.assets()));
         assertEquals(0, BigDecimal.ZERO.compareTo(position.liquid()));
+    }
+
+    @Test
+    @DisplayName("should sum a liability stored as +500 and one stored as -500 to the same -500")
+    void sum_liabilityStoredEitherWay() {
+        BigDecimal positive = books.sum(List.of(account(1, "CREDIT_CARD", false, "500.00")), TODAY);
+        BigDecimal negative = books.sum(List.of(account(2, "CREDIT_CARD", false, "-500.00")), TODAY);
+
+        assertEquals(0, new BigDecimal("-500.00").compareTo(positive));
+        assertEquals(0, new BigDecimal("-500.00").compareTo(negative));
+        assertEquals(0, new BigDecimal("-500.00").compareTo(books.sumOrNull(List.of(account(1, "LOAN", false, "500.00")), TODAY)));
+    }
+
+    @Test
+    @DisplayName("should leave an asset sum signed as stored")
+    void sum_assetUnchanged() {
+        assertEquals(0, new BigDecimal("-20.00").compareTo(books.sum(List.of(account(1, "CHECKING", true, "-20.00")), TODAY)));
+    }
+
+    @Test
+    @DisplayName("should give a +500 and a -500 liability the identical DEBT group balance and series")
+    void group_liabilityStoredEitherWay() {
+        LocalDate monthEnd = LocalDate.of(2026, 10, 31);
+        NetWorthGroupBuilder.Context context = new NetWorthGroupBuilder.Context(List.of(TODAY, monthEnd), TODAY, TODAY, TODAY);
+
+        NetWorthGroupDto positive = NetWorthGroupBuilder.build(NetWorthGroupBy.TYPE, List.of(account(1, "CREDIT_CARD", false, "500.00")), books, context, Map.of()).get(0);
+        NetWorthGroupDto negative = NetWorthGroupBuilder.build(NetWorthGroupBy.TYPE, List.of(account(2, "CREDIT_CARD", false, "-500.00")), books, context, Map.of()).get(0);
+
+        assertEquals(0, new BigDecimal("-500.00").compareTo(positive.balance()));
+        assertEquals(0, positive.balance().compareTo(negative.balance()));
+        assertEquals(0, positive.previousBalance().compareTo(negative.previousBalance()));
+        assertEquals(0, positive.comparisonBalance().compareTo(negative.comparisonBalance()));
+        assertEquals(positive.series().size(), negative.series().size());
+        for (int i = 0; i < positive.series().size(); i++) {
+            assertEquals(0, positive.series().get(i).compareTo(negative.series().get(i)));
+        }
     }
 }

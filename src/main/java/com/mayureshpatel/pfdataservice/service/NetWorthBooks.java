@@ -15,10 +15,8 @@ import java.util.Set;
  */
 final class NetWorthBooks {
 
-    /**
-     * Liquid cash. LOAN is deliberately absent: it is a liability (is_asset = false) and never liquid, and
-     * INVESTMENT is an asset that is not cash on hand either.
-     */
+    // liquid cash. loan is deliberately absent: it is a liability (is_asset = false) and never liquid, and
+    // investment is an asset that is not cash on hand either.
     private static final Set<String> LIQUID_TYPES = Set.of("CHECKING", "SAVINGS", "CASH");
 
     private final Map<Long, Map<YearMonth, BigDecimal>> flows;
@@ -88,13 +86,14 @@ final class NetWorthBooks {
     /**
      * @param accounts the accounts to total
      * @param monthEnd the month end
-     * @return the signed sum of their balances at the month end (zero when none existed yet)
+     * @return the display sum of their balances at the month end (zero when none existed yet): assets add their balance,
+     * liabilities add -abs(balance), so a debt reads negative however it is stored
      */
     BigDecimal sum(List<Account> accounts, LocalDate monthEnd) {
         BigDecimal total = BigDecimal.ZERO;
         for (Account account : accounts) {
             BigDecimal balance = balance(account, monthEnd);
-            total = balance == null ? total : total.add(balance);
+            total = balance == null ? total : total.add(display(account, balance));
         }
         return total;
     }
@@ -102,10 +101,15 @@ final class NetWorthBooks {
     /**
      * @param accounts the accounts to total
      * @param monthEnd the month end
-     * @return the signed sum of their balances, or null when none of them existed yet
+     * @return the display sum of their balances (see {@link #sum}), or null when none of them existed yet
      */
     BigDecimal sumOrNull(List<Account> accounts, LocalDate monthEnd) {
         boolean anyExisted = accounts.stream().anyMatch(a -> balance(a, monthEnd) != null);
         return anyExisted ? sum(accounts, monthEnd) : null;
+    }
+
+    // display convention: an asset shows its balance, a liability shows what it owes as a negative number
+    private static BigDecimal display(Account account, BigDecimal balance) {
+        return account.getType().isAsset() ? balance : balance.abs().negate();
     }
 }
