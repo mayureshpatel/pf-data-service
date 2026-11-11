@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -59,6 +58,8 @@ public class AllySavingsCsvParser implements TransactionParser {
                     .map(this::mapToTransaction)
                     .toList()
                     .stream();
+        } catch (CsvParsingException e) {
+            throw e;
         } catch (Exception e) {
             throw new CsvParsingException("Failed to parse Ally savings CSV", e);
         }
@@ -72,13 +73,19 @@ public class AllySavingsCsvParser implements TransactionParser {
                 .description(description)
                 .amount(parseAmount(csvRecord, "Amount").abs())
                 .transactionDate(parseDate(csvRecord.get("Date")))
-                .type(resolveType(kind, description))
+                .type(resolveType(kind, description, csvRecord.getRecordNumber()))
                 .build();
     }
 
-    private TransactionType resolveType(String kind, String description) {
-        if ("Withdrawal".equalsIgnoreCase(kind)) {
+    private TransactionType resolveType(String kind, String description, long recordNumber) {
+        String normalizedKind = kind == null ? "" : kind.trim();
+        // unverified: no real withdrawal sample was available, confirm against an actual export
+        if ("Withdrawal".equalsIgnoreCase(normalizedKind)) {
             return TransactionType.TRANSFER_OUT;
+        }
+        if (!"Deposit".equalsIgnoreCase(normalizedKind)) {
+            throw new CsvParsingException("Unsupported Ally transaction type '" + normalizedKind
+                    + "' at row " + recordNumber + "; expected Deposit or Withdrawal.");
         }
         if (description.trim().equalsIgnoreCase("Interest Paid")) {
             return TransactionType.EARNINGS;
