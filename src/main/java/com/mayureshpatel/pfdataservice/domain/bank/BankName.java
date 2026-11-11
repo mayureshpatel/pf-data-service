@@ -14,6 +14,7 @@ public enum BankName {
     CAPITAL_ONE("Capital One"),
     DISCOVER("Discover"),
     SYNOVUS("Synovus"),
+    ALLY("Ally"),
     STANDARD("Standard CSV"),
     UNIVERSAL("Universal CSV");
 
