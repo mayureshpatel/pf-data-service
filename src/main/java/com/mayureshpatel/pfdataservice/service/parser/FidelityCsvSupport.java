@@ -28,6 +28,9 @@ final class FidelityCsvSupport {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("MM/dd/uuuu", Locale.ROOT);
     private static final Pattern DATE_PREFIX = Pattern.compile("^\\d{1,2}/\\d{1,2}/\\d{4}$");
 
+    /** Byte order mark some exports start with. */
+    private static final char BOM = (char) 0xFEFF;
+
     private FidelityCsvSupport() {
     }
 
@@ -40,7 +43,7 @@ final class FidelityCsvSupport {
                                 Function<CSVRecord, T> mapper) {
         try {
             String text = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            if (text.startsWith("﻿")) {
+            if (!text.isEmpty() && text.charAt(0) == BOM) {
                 text = text.substring(1);
             }
             int headerStart = findHeaderStart(text, headerPrefix);
@@ -101,5 +104,17 @@ final class FidelityCsvSupport {
             throw new CsvParsingException("Invalid date '" + value + "' at row " + recordNumber
                     + "; expected MM/dd/yyyy.", e);
         }
+    }
+
+    /**
+     * Requires a money-in amount to be strictly positive: a negative or zero (including blank) value
+     * on a row that resolved to CONTRIBUTION or EARNINGS would otherwise create phantom new money.
+     */
+    static java.math.BigDecimal requirePositive(java.math.BigDecimal amount, String kind, long recordNumber) {
+        if (amount.signum() <= 0) {
+            throw new CsvParsingException("Fidelity row '" + kind + "' at row " + recordNumber
+                    + " has a non-positive amount (" + amount.toPlainString() + "); expected a positive amount.");
+        }
+        return amount;
     }
 }

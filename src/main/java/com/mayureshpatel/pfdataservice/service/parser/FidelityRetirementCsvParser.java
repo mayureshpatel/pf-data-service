@@ -42,6 +42,7 @@ public class FidelityRetirementCsvParser implements TransactionParser {
         return FidelityCsvSupport.readRows(inputStream, "Date,", "retirement", this::mapToTransaction).stream();
     }
 
+    /** Maps one data row to a transaction, or null when its type is an explicitly skipped internal type. */
     private Transaction mapToTransaction(CSVRecord csvRecord) {
         String kind = csvRecord.isMapped("Transaction Type") ? csvRecord.get("Transaction Type") : "";
         TransactionType type = resolveType(kind, csvRecord.getRecordNumber());
@@ -52,7 +53,7 @@ public class FidelityRetirementCsvParser implements TransactionParser {
 
         return Transaction.builder()
                 .description(investment.isEmpty() ? kind : investment + " - " + kind)
-                .amount(parseAmount(csvRecord, "Amount ($)").abs())
+                .amount(FidelityCsvSupport.requirePositive(parseAmount(csvRecord, "Amount ($)"), kind.trim(), csvRecord.getRecordNumber()))
                 .transactionDate(FidelityCsvSupport.parseDate(csvRecord.get("Date"), csvRecord.getRecordNumber()))
                 .type(type)
                 .build();

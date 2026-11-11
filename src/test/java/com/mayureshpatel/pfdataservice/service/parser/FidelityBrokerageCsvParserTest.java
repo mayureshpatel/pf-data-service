@@ -181,4 +181,65 @@ class FidelityBrokerageCsvParserTest {
         // assert & verify
         assertThat(result).isEmpty();
     }
+
+    @Test
+    @DisplayName("Negative or zero or blank amount on a contribution or dividend row throws, never abs()")
+    void parse_nonPositiveMoneyIn_throws() {
+        // arrange
+        List<String> rows = List.of(
+                CONTRIBUTION_ROW.replace(",500,500.02,", ",-500,0.02,"),
+                DIVIDEND_ROW.replace(",0.82,500.84,", ",-0.82,500.02,"),
+                CONTRIBUTION_ROW.replace(",500,500.02,", ",0,500.02,"),
+                DIVIDEND_ROW.replace(",0.82,500.84,", ",\"\",500.84,"));
+
+        // act & assert & verify
+        for (String row : rows) {
+            assertThatThrownBy(() -> parse(PREAMBLE + HEADER + row))
+                    .isInstanceOf(CsvParsingException.class)
+                    .hasMessageContaining("row")
+                    .hasMessageContaining("amount");
+        }
+    }
+
+    @Test
+    @DisplayName("Negative amount error names the action and the amount")
+    void parse_negativeContribution_namesActionAndAmount() {
+        // arrange
+        String csv = PREAMBLE + HEADER + CONTRIBUTION_ROW.replace(",500,500.02,", ",-500,0.02,");
+
+        // act & assert & verify
+        assertThatThrownBy(() -> parse(csv))
+                .isInstanceOf(CsvParsingException.class)
+                .hasMessageContaining("CASH CONTRIBUTION")
+                .hasMessageContaining("-500");
+    }
+
+    @Test
+    @DisplayName("Skipped YOU BOUGHT row with a negative amount still does not throw")
+    void parse_skippedNegativeRows_doNotThrow() {
+        // arrange
+        String bought = "10/20/2026,YOU BOUGHT VANGUARD INDEX FDS S&P 500 ETF (VOO) (Cash),VOO,VANGUARD S&P 500 ETF,Cash,"
+                + "500.1,0.9,\"\",\"\",\"\",\"-500\",0,10/21/2026\n";
+        String csv = PREAMBLE + HEADER + bought + CONTRIBUTION_ROW;
+
+        // act
+        List<Transaction> result = parse(csv);
+
+        // assert & verify
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Disclaimer lines with quoted embedded commas are ignored; a BOM before the header is tolerated")
+    void parse_disclaimerWithCommas_andBom() {
+        // arrange
+        String csv = "\uFEFF" + PREAMBLE + HEADER + CONTRIBUTION_ROW
+                + "\n\"Brokerage services, including custody, are provided by FBS, Member NYSE, SIPC.\"\n";
+
+        // act
+        List<Transaction> result = parse(csv);
+
+        // assert & verify
+        assertThat(result).hasSize(1);
+    }
 }

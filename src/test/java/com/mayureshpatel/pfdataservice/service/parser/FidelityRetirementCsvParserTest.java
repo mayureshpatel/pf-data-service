@@ -183,4 +183,63 @@ class FidelityRetirementCsvParserTest {
         // assert & verify
         assertThat(result).isEmpty();
     }
+
+    @Test
+    @DisplayName("Negative or zero or blank amount on a Contributions or REVENUE CREDIT row throws, never abs()")
+    void parse_nonPositiveMoneyIn_throws() {
+        // arrange
+        List<String> rows = List.of(
+                "01/02/2026,SS TRGT RET 2060 III,Contributions,-1.0,-676.05\n",
+                "01/02/2026,SS TRGT RET 2060 III,REVENUE CREDIT,-0.01,-0.39\n",
+                "01/02/2026,SS TRGT RET 2060 III,Contributions,0,0\n",
+                "01/02/2026,SS TRGT RET 2060 III,REVENUE CREDIT,0,\n");
+
+        // act & assert & verify
+        for (String row : rows) {
+            assertThatThrownBy(() -> parse(PREAMBLE + HEADER + row))
+                    .isInstanceOf(CsvParsingException.class)
+                    .hasMessageContaining("row")
+                    .hasMessageContaining("amount");
+        }
+    }
+
+    @Test
+    @DisplayName("Negative amount error names the type and the amount")
+    void parse_negativeContribution_namesTypeAndAmount() {
+        // arrange
+        String csv = PREAMBLE + HEADER + "01/02/2026,SS TRGT RET 2060 III,Contributions,-1.0,-676.05\n";
+
+        // act & assert & verify
+        assertThatThrownBy(() -> parse(csv))
+                .isInstanceOf(CsvParsingException.class)
+                .hasMessageContaining("Contributions")
+                .hasMessageContaining("-676.05");
+    }
+
+    @Test
+    @DisplayName("Skipped rows with negative amounts (Exchange Out) still do not throw")
+    void parse_skippedNegativeRows_doNotThrow() {
+        // arrange
+        String csv = PREAMBLE + HEADER + EXCHANGE_OUT_ROW + CONTRIBUTION_ROW;
+
+        // act
+        List<Transaction> result = parse(csv);
+
+        // assert & verify
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Disclaimer lines with quoted embedded commas are ignored; a BOM before the header is tolerated")
+    void parse_disclaimerWithCommas_andBom() {
+        // arrange
+        String csv = "\uFEFF" + PREAMBLE + HEADER + CONTRIBUTION_ROW
+                + "\n\"Past performance, as shown here, is no guarantee, of future results.\"\n";
+
+        // act
+        List<Transaction> result = parse(csv);
+
+        // assert & verify
+        assertThat(result).hasSize(1);
+    }
 }

@@ -36,6 +36,12 @@ class FidelityImportDuplicateTest {
             + "10/30/2026,DIVIDEND RECEIVED FIDELITY GOVERNMENT MONEY MARKET (SPAXX) (Cash),SPAXX,"
             + "FIDELITY GOVERNMENT MONEY MARKET,Cash,\"\",0,\"\",\"\",\"\",0.82,500.84,\"\"\n";
 
+    private static final String SAME_AMOUNT_RETIREMENT_CSV = "\n\nDate,Investment,Transaction Type,Shares/Unit,Amount ($)\n"
+            + "11/30/2025,SS TRGT RET 2060 III,Contributions,55.587,676.05\n"
+            + "12/31/2025,SS TRGT RET 2060 III,Contributions,55.587,676.05\n";
+    private static final String SAME_AMOUNT_BROKERAGE_CSV = BROKERAGE_CSV.split("10/30/2026")[0]
+            + "11/19/2026,CASH CONTRIBUTION CURRENT YEAR (Cash),\"\",No Description,Cash,\"\",0,\"\",\"\",\"\",500,1000.02,\"\"\n";
+
     private final ImportDuplicateDetector detector = new ImportDuplicateDetector(
             Mockito.mock(TransactionRepository.class), Mockito.mock(FileImportHistoryRepository.class));
     private final Account account = Account.builder().id(10L).userId(1L).build();
@@ -84,5 +90,17 @@ class FidelityImportDuplicateTest {
     @DisplayName("brokerage file imported twice: second pass is all duplicates")
     void brokerage_secondImportIsAllDuplicates() {
         assertSecondPassIsAllDuplicates(new FidelityBrokerageCsvParser(), BROKERAGE_CSV, 2);
+    }
+
+    @Test
+    @DisplayName("retirement: same amount and description on different dates are both unique, then both duplicates")
+    void retirement_sameAmountDifferentDates() {
+        assertSecondPassIsAllDuplicates(new FidelityRetirementCsvParser(), SAME_AMOUNT_RETIREMENT_CSV, 2);
+    }
+
+    @Test
+    @DisplayName("brokerage: same amount and description on different dates are both unique, then both duplicates")
+    void brokerage_sameAmountDifferentDates() {
+        assertSecondPassIsAllDuplicates(new FidelityBrokerageCsvParser(), SAME_AMOUNT_BROKERAGE_CSV, 2);
     }
 }

@@ -45,6 +45,7 @@ public class FidelityBrokerageCsvParser implements TransactionParser {
         return FidelityCsvSupport.readRows(inputStream, "Run Date,", "brokerage", this::mapToTransaction).stream();
     }
 
+    /** Maps one data row to a transaction, or null when its action is an explicitly skipped internal action. */
     private Transaction mapToTransaction(CSVRecord csvRecord) {
         String action = csvRecord.isMapped("Action") ? csvRecord.get("Action") : "";
         TransactionType type = resolveType(action, csvRecord.getRecordNumber());
@@ -54,7 +55,7 @@ public class FidelityBrokerageCsvParser implements TransactionParser {
 
         return Transaction.builder()
                 .description(action.trim())
-                .amount(parseAmount(csvRecord, "Amount ($)").abs())
+                .amount(FidelityCsvSupport.requirePositive(parseAmount(csvRecord, "Amount ($)"), action.trim(), csvRecord.getRecordNumber()))
                 .transactionDate(FidelityCsvSupport.parseDate(csvRecord.get("Run Date"), csvRecord.getRecordNumber()))
                 .type(type)
                 .build();
