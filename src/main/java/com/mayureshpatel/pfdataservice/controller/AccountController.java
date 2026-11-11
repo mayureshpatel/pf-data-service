@@ -3,7 +3,9 @@ package com.mayureshpatel.pfdataservice.controller;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.dto.account.AccountReconcileRequest;
+import com.mayureshpatel.pfdataservice.dto.account.AccountSnapshotDto;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.account.BalanceEntryRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.AccountService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -114,5 +116,44 @@ public class AccountController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid AccountReconcileRequest request) {
         return ResponseEntity.ok(accountService.reconcileAccount(userDetails.getId(), request));
+    }
+
+    /**
+     * Records a hand-entered balance on a manual-balance account. Ownership-guarded on the
+     * request's account id.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the balance entry
+     * @return the id of the stored balance snapshot
+     */
+    @Operation(summary = "Record an account balance", description = "Records a hand-entered balance as of a date on a manual-balance account")
+    @ApiResponse(responseCode = "200", description = "Balance recorded; snapshot id returned")
+    @ApiResponse(responseCode = "400", description = "The account's balance is derived from transactions")
+    @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this account")
+    @ApiResponse(responseCode = "409", description = "The account was modified since the supplied version was read")
+    @PostMapping("/balance")
+    @PreAuthorize("@ss.isAccountOwner(#request.accountId, principal)")
+    public ResponseEntity<Integer> recordBalance(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid BalanceEntryRequest request) {
+        return ResponseEntity.ok(accountService.recordBalance(userDetails.getId(), request));
+    }
+
+    /**
+     * Lists an account's recorded balances, newest first. Ownership-guarded on the path id.
+     *
+     * @param userDetails the authenticated user
+     * @param id          the account id
+     * @return the balance history (possibly empty)
+     */
+    @Operation(summary = "List an account's balance history", description = "Returns the recorded balances for an account, newest first")
+    @ApiResponse(responseCode = "200", description = "History returned (possibly empty)")
+    @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this account")
+    @GetMapping("/{id}/balance-history")
+    @PreAuthorize("@ss.isAccountOwner(#id, principal)")
+    public ResponseEntity<List<AccountSnapshotDto>> getBalanceHistory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(accountService.getBalanceHistory(userDetails.getId(), id));
     }
 }

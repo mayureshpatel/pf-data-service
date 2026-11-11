@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
@@ -329,6 +330,114 @@ class AccountControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.validationErrors[0].field").value("version"));
+        }
+    }
+
+    /** {@code POST /api/v1/accounts/balance} and {@code GET /api/v1/accounts/{id}/balance-history}: success, validation, empty history, and the owner guard. */
+    @Nested
+    @DisplayName("balance entry and history")
+    class BalanceTests {
+
+        @Test
+        @DisplayName("POST /balance should record the balance and return the snapshot id")
+        void recordBalance_shouldReturnId() throws Exception {
+            // arrange
+            BalanceEntryRequest request = new BalanceEntryRequest(ACCOUNT_ID, new BigDecimal("12500.00"), LocalDate.of(2026, 11, 10), 1L);
+            when(accountService.recordBalance(eq(USER_ID), any(BalanceEntryRequest.class))).thenReturn(9);
+
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL + "/balance")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("9"));
+            verify(accountService).recordBalance(eq(USER_ID), any(BalanceEntryRequest.class));
+        }
+
+        @Test
+        @DisplayName("POST /balance should return 400 when the date is missing")
+        void recordBalance_shouldReturn400WhenDateMissing() throws Exception {
+            // arrange
+            BalanceEntryRequest request = new BalanceEntryRequest(ACCOUNT_ID, new BigDecimal("12500.00"), null, 1L);
+
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL + "/balance")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.validationErrors[0].field").value("asOfDate"));
+        }
+
+        @Test
+        @DisplayName("POST /balance should return 400 when the service rejects a derived account")
+        void recordBalance_shouldReturn400ForDerivedAccount() throws Exception {
+            // arrange
+            BalanceEntryRequest request = new BalanceEntryRequest(ACCOUNT_ID, new BigDecimal("1.00"), LocalDate.of(2026, 11, 10), 1L);
+            when(accountService.recordBalance(eq(USER_ID), any(BalanceEntryRequest.class)))
+                    .thenThrow(new IllegalArgumentException("Balance can only be entered on a manual-balance account."));
+
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL + "/balance")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("POST /balance should return 403 when the user does not own the account")
+        void recordBalance_shouldReturn403WhenNotOwner() throws Exception {
+            // arrange
+            BalanceEntryRequest request = new BalanceEntryRequest(ACCOUNT_ID, new BigDecimal("1.00"), LocalDate.of(2026, 11, 10), 1L);
+            when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
+
+            // act & assert & verify
+            mockMvc.perform(post(BASE_URL + "/balance")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("GET /{id}/balance-history should return the history")
+        void balanceHistory_shouldReturnList() throws Exception {
+            // arrange
+            when(accountService.getBalanceHistory(USER_ID, ACCOUNT_ID)).thenReturn(List.of(
+                    new AccountSnapshotDto(2L, null, LocalDate.of(2026, 11, 10), new BigDecimal("12500.00")),
+                    new AccountSnapshotDto(1L, null, LocalDate.of(2026, 10, 10), new BigDecimal("12000.00"))));
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/" + ACCOUNT_ID + "/balance-history"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].snapshotDate").value("2026-11-10"))
+                    .andExpect(jsonPath("$[0].balance").value(12500.00));
+        }
+
+        @Test
+        @DisplayName("GET /{id}/balance-history should return an empty list for an account with no history")
+        void balanceHistory_shouldReturnEmptyList() throws Exception {
+            // arrange
+            when(accountService.getBalanceHistory(USER_ID, ACCOUNT_ID)).thenReturn(Collections.emptyList());
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/" + ACCOUNT_ID + "/balance-history"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("GET /{id}/balance-history should return 403 when the user does not own the account")
+        void balanceHistory_shouldReturn403WhenNotOwner() throws Exception {
+            // arrange
+            when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/" + ACCOUNT_ID + "/balance-history"))
+                    .andExpect(status().isForbidden());
         }
     }
 
