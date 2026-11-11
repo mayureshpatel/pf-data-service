@@ -7,6 +7,8 @@ import com.mayureshpatel.pfdataservice.dto.account.AccountTypeDto;
 import com.mayureshpatel.pfdataservice.dto.currency.CurrencyDto;
 import com.mayureshpatel.pfdataservice.dto.user.UserDto;
 
+import java.math.BigDecimal;
+
 /** Converts the {@link Account} domain object into its API-facing {@link AccountDto}. */
 public final class AccountDtoMapper {
 
@@ -60,6 +62,16 @@ public final class AccountDtoMapper {
             bankName = BankName.fromString(account.getBankCode());
         }
 
+        // money in and gain only mean something on a hand-entered balance
+        BigDecimal moneyIn = null;
+        BigDecimal gain = null;
+        if (account.isManualBalance()) {
+            moneyIn = account.getMoneyIn();
+            if (moneyIn != null && account.getLatestRecordedBalance() != null) {
+                gain = account.getLatestRecordedBalance().subtract(moneyIn);
+            }
+        }
+
         return new AccountDto(
                 account.getId(),
                 user,
@@ -68,7 +80,10 @@ public final class AccountDtoMapper {
                 account.getCurrentBalance(),
                 currency,
                 bankName,
-                account.getVersion()
+                account.getVersion(),
+                account.getBalanceMode(),
+                moneyIn,
+                gain
         );
     }
 }

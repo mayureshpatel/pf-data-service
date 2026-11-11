@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.dto.account.*;
 import com.mayureshpatel.pfdataservice.dto.currency.CurrencyDto;
@@ -60,7 +61,10 @@ class AccountControllerTest extends BaseControllerTest {
                     new BigDecimal("1000.00"),
                     CurrencyDto.builder().code(CURRENCY_USD).build(),
                     BankName.CAPITAL_ONE,
-                    1L
+                    1L,
+                    BalanceMode.DERIVED,
+                    null,
+                    null
             );
 
             when(accountService.getAllAccountsByUserId(USER_ID)).thenReturn(List.of(accountDto));

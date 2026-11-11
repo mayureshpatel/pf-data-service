@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
@@ -55,7 +56,8 @@ public class AccountService {
     }
 
     /**
-     * Creates a new account for a user.
+     * Creates a new account for a user. A manual-balance account created with a non-zero starting
+     * balance also gets a balance-history entry dated today, so the balance and its history agree.
      *
      * @param userId  the user id
      * @param request the create account request
@@ -66,7 +68,15 @@ public class AccountService {
         this.userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        return accountRepository.insert(userId, request);
+        int accountId = accountRepository.insert(userId, request);
+
+        // a hand-entered account starts with a balance, so record it in the history too
+        BigDecimal startingBalance = request.getStartingBalance();
+        if (BalanceMode.MANUAL.name().equals(request.getBalanceMode())
+                && startingBalance != null && startingBalance.signum() != 0) {
+            snapshotRepository.upsert((long) accountId, LocalDate.now(), startingBalance);
+        }
+        return accountId;
     }
 
     /**
@@ -102,15 +112,15 @@ public class AccountService {
      * a caller whose snapshot just went stale needs to know and decide whether to reconcile again
      * with fresh data, not have that decision made for them.
      *
-     * @param userId        the user id
-     * @param request       the reconcile request
      * <p>
      * On a manual-balance account there is nothing to adjust, so this delegates to
-     * {@link #recordBalance} with today's date and returns the snapshot id instead.
+     * {@link #recordBalance} with today's date and the return value is the snapshot id instead.
      *
+     * @param userId        the user id
+     * @param request       the reconcile request
      * @return the generated id of the adjustment transaction created to account for the
      *         difference, or {@code 0} if the target balance already matched (no adjustment
-     *         needed)
+     *         needed); on a manual-balance account, the id of the stored snapshot
      * @throws OptimisticLockingFailureException if the account was concurrently modified
      */
     @Transactional

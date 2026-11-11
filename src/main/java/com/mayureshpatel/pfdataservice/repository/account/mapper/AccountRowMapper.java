@@ -90,6 +90,12 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
                 builder.balanceMode(BalanceMode.valueOf(mode));
             }
         }
+        if (hasColumn(safePrefix + "money_in", availableColumns)) {
+            builder.moneyIn(rs.getBigDecimal(safePrefix + "money_in"));
+        }
+        if (hasColumn(safePrefix + "latest_recorded_balance", availableColumns)) {
+            builder.latestRecordedBalance(rs.getBigDecimal(safePrefix + "latest_recorded_balance"));
+        }
         if (hasColumn(safePrefix + "version", availableColumns)) {
             builder.version(rs.getLong(safePrefix + "version"));
         }

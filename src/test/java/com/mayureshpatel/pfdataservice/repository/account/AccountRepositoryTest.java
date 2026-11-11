@@ -26,6 +26,9 @@ class AccountRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private org.springframework.jdbc.core.simple.JdbcClient jdbcClient;
+
     private static final Long USER_1 = 1L;
     private static final String CURRENCY_USD = "USD";
     private static final Long USER_2 = 2L;
@@ -153,6 +156,75 @@ class AccountRepositoryTest extends BaseRepositoryTest {
             AccountUpdateRequest keep = flip.toBuilder().balanceMode(null).version(flipped.getVersion()).build();
             assertEquals(1, accountRepository.update(USER_1, keep));
             assertEquals(BalanceMode.MANUAL, accountRepository.findById((long) derivedId).orElseThrow().getBalanceMode());
+        }
+
+        @Test
+        @DisplayName("should compute moneyIn in the list query from contributions less transfers out and expenses")
+        void shouldComputeMoneyIn() {
+            // arrange
+            int manualId = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("Brokerage").type("INVESTMENT").startingBalance(new BigDecimal("1000.00"))
+                    .startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode("MANUAL").build());
+            insertTransaction(manualId, "CONTRIBUTION", "500.00", false);
+            insertTransaction(manualId, "CONTRIBUTION", "500.00", false);
+            insertTransaction(manualId, "EMPLOYER_CONTRIBUTION", "300.00", false);
+            insertTransaction(manualId, "EARNINGS", "4.00", false);
+            insertTransaction(manualId, "TRANSFER_OUT", "200.00", false);
+            insertTransaction(manualId, "CONTRIBUTION", "9999.00", true);
+            int emptyId = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("Empty").type("INVESTMENT").startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode("MANUAL").build());
+
+            // act
+            List<Account> accounts = accountRepository.findAllByUserId(USER_1);
+
+            // assert & verify
+            Account manual = accounts.stream().filter(a -> a.getId() == manualId).findFirst().orElseThrow();
+            assertEquals(0, new BigDecimal("800.00").compareTo(manual.getMoneyIn()));
+            Account empty = accounts.stream().filter(a -> a.getId() == emptyId).findFirst().orElseThrow();
+            assertEquals(0, BigDecimal.ZERO.compareTo(empty.getMoneyIn()));
+        }
+
+        @Test
+        @DisplayName("should leave moneyIn null for a derived account")
+        void shouldLeaveMoneyInNullForDerived() {
+            // act
+            List<Account> accounts = accountRepository.findAllByUserId(USER_1);
+
+            // assert & verify
+            assertTrue(accounts.stream().noneMatch(Account::isManualBalance));
+            assertTrue(accounts.stream().allMatch(a -> a.getMoneyIn() == null));
+        }
+
+        @Test
+        @DisplayName("should load the latest recorded balance in the list query, null when there is none")
+        void shouldLoadLatestRecordedBalance() {
+            // arrange
+            int withHistory = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("History").type("INVESTMENT").startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode("MANUAL").build());
+            int withoutHistory = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("None").type("INVESTMENT").startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode("MANUAL").build());
+            jdbcClient.sql("insert into account_snapshots (account_id, snapshot_date, balance) values (:a, :d, :b)")
+                    .param("a", withHistory).param("d", java.time.LocalDate.of(2026, 1, 1)).param("b", new BigDecimal("900.00")).update();
+            jdbcClient.sql("insert into account_snapshots (account_id, snapshot_date, balance) values (:a, :d, :b)")
+                    .param("a", withHistory).param("d", java.time.LocalDate.of(2026, 2, 1)).param("b", new BigDecimal("1000.00")).update();
+
+            // act
+            List<Account> accounts = accountRepository.findAllByUserId(USER_1);
+
+            // assert & verify
+            Account with = accounts.stream().filter(a -> a.getId() == withHistory).findFirst().orElseThrow();
+            assertEquals(0, new BigDecimal("1000.00").compareTo(with.getLatestRecordedBalance()));
+            Account without = accounts.stream().filter(a -> a.getId() == withoutHistory).findFirst().orElseThrow();
+            assertNull(without.getLatestRecordedBalance());
+        }
+
+        private void insertTransaction(int accountId, String type, String amount, boolean deleted) {
+            jdbcClient.sql("""
+                            insert into transactions (account_id, amount, date, description, type, deleted_at)
+                            values (:a, :amt, now(), 'seed', :t, case when :del then now() else null end)
+                            """)
+                    .param("a", accountId).param("amt", new BigDecimal(amount))
+                    .param("t", type).param("del", deleted).update();
         }
 
         @Test

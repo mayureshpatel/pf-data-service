@@ -37,6 +37,10 @@ public class Account {
     private final String bankCode;
     @Builder.Default
     private final BalanceMode balanceMode = BalanceMode.DERIVED;
+    /** Net money in (contributions less transfers out and expenses); only loaded by the list query, and only meaningful for a manual balance. */
+    private final BigDecimal moneyIn;
+    /** Balance of the newest balance-history entry; only loaded by the list query, null when there is none. */
+    private final BigDecimal latestRecordedBalance;
     @ToString.Exclude
     private final TableAudit audit;
 

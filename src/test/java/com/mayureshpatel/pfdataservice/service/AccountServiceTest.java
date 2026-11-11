@@ -69,6 +69,65 @@ class AccountServiceTest {
             // assert & verify
             assertEquals(1, result.size());
             assertEquals("Checking", result.get(0).name());
+            assertEquals(BalanceMode.DERIVED, result.get(0).balanceMode());
+            assertNull(result.get(0).moneyIn());
+            assertNull(result.get(0).gain());
+        }
+
+        @Test
+        @DisplayName("should expose moneyIn and a gain of latest balance minus moneyIn for a manual account")
+        void shouldExposeMoneyInAndGain() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Brokerage")
+                    .balanceMode(BalanceMode.MANUAL)
+                    .moneyIn(new BigDecimal("800.00"))
+                    .latestRecordedBalance(new BigDecimal("1000.00"))
+                    .build();
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
+
+            // act
+            AccountDto result = accountService.getAllAccountsByUserId(USER_ID).get(0);
+
+            // assert & verify
+            assertEquals(BalanceMode.MANUAL, result.balanceMode());
+            assertEquals(0, new BigDecimal("800.00").compareTo(result.moneyIn()));
+            assertEquals(0, new BigDecimal("200.00").compareTo(result.gain()));
+        }
+
+        @Test
+        @DisplayName("should have a null gain when a manual account has no balance entry yet")
+        void shouldHaveNullGainWithoutBalanceEntry() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Brokerage")
+                    .balanceMode(BalanceMode.MANUAL)
+                    .moneyIn(new BigDecimal("800.00"))
+                    .build();
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
+
+            // act
+            AccountDto result = accountService.getAllAccountsByUserId(USER_ID).get(0);
+
+            // assert & verify
+            assertEquals(0, new BigDecimal("800.00").compareTo(result.moneyIn()));
+            assertNull(result.gain());
+        }
+
+        @Test
+        @DisplayName("should ignore money-in figures on a derived account")
+        void shouldNullMoneyInForDerived() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Checking")
+                    .moneyIn(new BigDecimal("800.00"))
+                    .latestRecordedBalance(new BigDecimal("1000.00"))
+                    .build();
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
+
+            // act
+            AccountDto result = accountService.getAllAccountsByUserId(USER_ID).get(0);
+
+            // assert & verify
+            assertNull(result.moneyIn());
+            assertNull(result.gain());
         }
     }
 
@@ -91,6 +150,56 @@ class AccountServiceTest {
             // assert & verify
             assertEquals(1, result);
             verify(accountRepository).insert(USER_ID, request);
+        }
+
+        @Test
+        @DisplayName("should pass a MANUAL balanceMode to the repository and write a balance entry dated today")
+        void shouldWriteHistoryRowForManualStartingBalance() {
+            // arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            when(accountRepository.insert(eq(USER_ID), any())).thenReturn(5);
+            AccountCreateRequest request = AccountCreateRequest.builder().name("Brokerage")
+                    .balanceMode("MANUAL").startingBalance(new BigDecimal("500.00")).build();
+
+            // act
+            int result = accountService.createAccount(USER_ID, request);
+
+            // assert & verify
+            assertEquals(5, result);
+            verify(accountRepository).insert(USER_ID, request);
+            verify(snapshotRepository).upsert(5L, LocalDate.now(), new BigDecimal("500.00"));
+        }
+
+        @Test
+        @DisplayName("should not write a balance entry for a MANUAL account with a zero or missing starting balance")
+        void shouldNotWriteHistoryRowForZeroManualBalance() {
+            // arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            when(accountRepository.insert(eq(USER_ID), any())).thenReturn(5);
+
+            // act
+            accountService.createAccount(USER_ID, AccountCreateRequest.builder().name("A")
+                    .balanceMode("MANUAL").startingBalance(BigDecimal.ZERO).build());
+            accountService.createAccount(USER_ID, AccountCreateRequest.builder().name("B")
+                    .balanceMode("MANUAL").build());
+
+            // assert & verify
+            verifyNoInteractions(snapshotRepository);
+        }
+
+        @Test
+        @DisplayName("should not write a balance entry for a DERIVED account")
+        void shouldNotWriteHistoryRowForDerived() {
+            // arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            when(accountRepository.insert(eq(USER_ID), any())).thenReturn(5);
+
+            // act
+            accountService.createAccount(USER_ID, AccountCreateRequest.builder().name("C")
+                    .startingBalance(new BigDecimal("500.00")).build());
+
+            // assert & verify
+            verifyNoInteractions(snapshotRepository);
         }
 
         @Test
