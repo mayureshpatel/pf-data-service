@@ -15,6 +15,10 @@ import java.util.Set;
  */
 final class NetWorthBooks {
 
+    /**
+     * Liquid cash. LOAN is deliberately absent: it is a liability (is_asset = false) and never liquid, and
+     * INVESTMENT is an asset that is not cash on hand either.
+     */
     private static final Set<String> LIQUID_TYPES = Set.of("CHECKING", "SAVINGS", "CASH");
 
     private final Map<Long, Map<YearMonth, BigDecimal>> flows;
@@ -71,7 +75,8 @@ final class NetWorthBooks {
             if (account.getType().isAsset()) {
                 assets = assets.add(balance);
             } else {
-                owed = owed.subtract(balance);
+                // one sign rule: a liability owes abs(balance), whether it is stored as +500 or -500
+                owed = owed.add(balance.abs());
             }
             if (LIQUID_TYPES.contains(account.getType().getCode())) {
                 liquid = liquid.add(balance);
