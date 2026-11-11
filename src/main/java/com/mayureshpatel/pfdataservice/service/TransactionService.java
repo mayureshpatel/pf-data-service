@@ -292,7 +292,7 @@ public class TransactionService {
                 .postDate(request.getPostDate())
                 .amount(request.getAmount())
                 .description(request.getDescription())
-                .type(TransactionType.valueOf(request.getType()))
+                .type(parseStoredType(request.getType()))
                 .merchant(merchantId != null ? Merchant.builder().id(merchantId).build() : null)
                 .build();
 
@@ -363,7 +363,7 @@ public class TransactionService {
                 .transactionDate(request.getTransactionDate())
                 .postDate(request.getPostDate())
                 .description(request.getDescription())
-                .type(TransactionType.valueOf(request.getType()))
+                .type(parseStoredType(request.getType()))
                 .merchant(merchantId != null ? Merchant.builder().id(merchantId).build() : null)
                 .build();
 
@@ -526,5 +526,24 @@ public class TransactionService {
      */
     public Page<TransactionDescriptionDto> getDescriptions(Long userId, String search, boolean unlinkedOnly, Pageable pageable) {
         return transactionRepository.findDescriptions(userId, search, unlinkedOnly, pageable);
+    }
+
+    /**
+     * Converts a request's type string to the type that gets stored on a transaction. Plain
+     * {@code TRANSFER} is a filter-only value, never stored (PF-936): a stored transfer must carry a
+     * direction, so only {@code TRANSFER_IN} and {@code TRANSFER_OUT} are accepted. An unknown name
+     * fails with the enum's own {@link IllegalArgumentException}, as before.
+     *
+     * @param type the type name sent by the client
+     * @return the matching stored type
+     * @throws IllegalArgumentException if the type is unknown or is the filter-only {@code TRANSFER}
+     */
+    private static TransactionType parseStoredType(String type) {
+        TransactionType parsed = TransactionType.valueOf(type);
+        if (parsed == TransactionType.TRANSFER) {
+            throw new IllegalArgumentException(
+                    "TRANSFER cannot be stored on a transaction; use TRANSFER_IN or TRANSFER_OUT.");
+        }
+        return parsed;
     }
 }
