@@ -57,14 +57,17 @@ public class AccountUpdateRequest {
      * @return the domain object representation of this request.
      */
     public Account toDomain() {
-        return Account.builder()
+        Account.AccountBuilder builder = Account.builder()
                 .id(id)
                 .name(name)
                 .type(AccountType.builder().code(type).build())
                 .currency(Currency.builder().code(currencyCode).build())
                 .bankCode(bankName)
-                .balanceMode(balanceMode == null ? null : BalanceMode.valueOf(balanceMode))
-                .version(version)
-                .build();
+                .version(version);
+        // null means "unchanged", so only set the mode when given (keeps the builder default)
+        if (balanceMode != null) {
+            builder.balanceMode(BalanceMode.valueOf(balanceMode));
+        }
+        return builder.build();
     }
 }

@@ -67,6 +67,26 @@ class NetWorthRepositoryTest extends BaseRepositoryTest {
                 .single();
     }
 
+    @Test
+    @DisplayName("FIND_MONTHLY_NET_FLOW counts contribution, employer contribution and earnings as inflow, and leaves MANUAL accounts out")
+    void monthlyNetFlow_shouldCountNewTypesAsInflowAndSkipManualAccounts() {
+        // arrange
+        jdbcClient.sql("update accounts set balance_mode = 'MANUAL' where id = :id").param("id", SAVINGS).update();
+        OffsetDateTime day = utc(2031, 3, 10);
+        insert(CHECKING, "CONTRIBUTION", "10.00", day);
+        insert(CHECKING, "EMPLOYER_CONTRIBUTION", "20.00", day);
+        insert(CHECKING, "EARNINGS", "30.00", day);
+        insert(SAVINGS, "CONTRIBUTION", "500.00", day);
+
+        // act
+        Map<Long, Map<YearMonth, BigDecimal>> flows = repository.findMonthlyNetFlow(USER_1, LocalDate.of(2031, 1, 1));
+
+        // assert & verify
+        // the seed already contributes +100 income and -30 expense in march: 70 + 10 + 20 + 30 = 130
+        assertMoney("130.00", flows.get(CHECKING).get(YearMonth.of(2031, 3)));
+        assertFalse(flows.containsKey(SAVINGS));
+    }
+
     private void assertMoney(String expected, BigDecimal actual) {
         assertEquals(0, new BigDecimal(expected).compareTo(actual), "expected " + expected + " but was " + actual);
     }

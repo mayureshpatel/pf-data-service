@@ -417,12 +417,15 @@ public final class TransactionQueries {
             select coalesce(sum(
                 case
                     when transactions.type in ('INCOME', 'TRANSFER_IN') then transactions.amount
+                    when transactions.type in ('CONTRIBUTION', 'EMPLOYER_CONTRIBUTION', 'EARNINGS') then abs(transactions.amount)
                     when transactions.type in ('EXPENSE', 'TRANSFER_OUT') then -transactions.amount
                     else transactions.amount
                 end
             ), 0)
             from transactions
+                     join accounts on accounts.id = transactions.account_id
             where transactions.account_id = :accountId
+              and accounts.balance_mode = 'DERIVED'
               and transactions.date >= :date
               and transactions.deleted_at is null
             """;

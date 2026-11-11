@@ -1460,4 +1460,54 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertEquals(0, transactionRepository.assignMerchantsWhereMissing(USER_ID, null));
         }
     }
+
+    /** {@code getNetFlowFromDate} for the contribution/earnings types, and for MANUAL-balance accounts. */
+    @Nested
+    @DisplayName("getNetFlowFromDate with manual-balance types")
+    class NetFlowManualTypesTests {
+
+        private void insertTx(long accountId, String type, String amount) {
+            jdbcClient.sql("""
+                            insert into transactions (account_id, amount, date, description, type)
+                            values (:accountId, :amount, :date, 'net flow test', :type)
+                            """)
+                    .param("accountId", accountId)
+                    .param("amount", new BigDecimal(amount))
+                    .param("date", OffsetDateTime.parse("2041-05-10T12:00:00Z"))
+                    .param("type", type)
+                    .update();
+        }
+
+        @Test
+        @DisplayName("contribution, employer contribution and earnings add their absolute amount on a DERIVED account")
+        void shouldAddNewTypesAsInflow() {
+            // arrange
+            insertTx(2L, "CONTRIBUTION", "10.00");
+            insertTx(2L, "EMPLOYER_CONTRIBUTION", "20.00");
+            insertTx(2L, "EARNINGS", "30.00");
+
+            // act
+            BigDecimal result = transactionRepository.getNetFlowFromDate(2L, LocalDate.of(2041, 5, 1));
+
+            // assert & verify
+            assertEquals(0, new BigDecimal("60.00").compareTo(result));
+        }
+
+        @Test
+        @DisplayName("a MANUAL account's transactions are excluded; a DERIVED account's are not")
+        void shouldExcludeManualAccounts() {
+            // arrange
+            jdbcClient.sql("update accounts set balance_mode = 'MANUAL' where id = 2").update();
+            insertTx(2L, "CONTRIBUTION", "500.00");
+            insertTx(1L, "CONTRIBUTION", "70.00");
+
+            // act
+            BigDecimal manual = transactionRepository.getNetFlowFromDate(2L, LocalDate.of(2041, 5, 1));
+            BigDecimal derived = transactionRepository.getNetFlowFromDate(1L, LocalDate.of(2041, 5, 1));
+
+            // assert & verify
+            assertEquals(0, BigDecimal.ZERO.compareTo(manual));
+            assertEquals(0, new BigDecimal("70.00").compareTo(derived));
+        }
+    }
 }

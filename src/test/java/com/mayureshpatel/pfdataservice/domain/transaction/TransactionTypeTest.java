@@ -13,9 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("TransactionType net-change rules")
 class TransactionTypeTest {
 
-    /** The three money-in types for manual-balance accounts. */
-    private static final String[] MONEY_IN = {"CONTRIBUTION", "EMPLOYER_CONTRIBUTION", "EARNINGS"};
-
     @ParameterizedTest
     @EnumSource(value = TransactionType.class, names = {"CONTRIBUTION", "EMPLOYER_CONTRIBUTION", "EARNINGS"})
     @DisplayName("Transaction.getNetChange is +abs for contribution and earnings types")
