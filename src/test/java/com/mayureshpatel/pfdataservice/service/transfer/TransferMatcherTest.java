@@ -1,6 +1,8 @@
 package com.mayureshpatel.pfdataservice.service.transfer;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.AccountType;
+import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransferSuggestionDto;
@@ -20,12 +22,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("TransferMatcher Unit Tests")
 class TransferMatcherTest {
 
+    private static final String CREDIT_CARD = "CREDIT_CARD";
+    private static final String CHECKING = "CHECKING";
+    private static final BigDecimal HUNDRED = new BigDecimal("100.00");
+    private static final BigDecimal TWO_FIFTY = new BigDecimal("250.00");
+
     private final TransferMatcher matcher = new TransferMatcher();
 
     private Transaction createTxn(Long id, Long accountId, BigDecimal amount, TransactionType type, OffsetDateTime date) {
         return Transaction.builder()
                 .id(id)
                 .account(Account.builder().id(accountId).build())
+                .amount(amount)
+                .type(type)
+                .transactionDate(date)
+                .description("Txn " + id)
+                .build();
+    }
+
+
+    private Transaction createTxn(Long id, Long accountId, String accountTypeCode, String categoryName, String parentCategoryName,
+                                  BigDecimal amount, TransactionType type, OffsetDateTime date) {
+        Category parent = parentCategoryName == null ? null : Category.builder().id(900L).name(parentCategoryName).build();
+        Category category = categoryName == null ? null : Category.builder().id(901L).name(categoryName).parent(parent).build();
+        return Transaction.builder()
+                .id(id)
+                .account(Account.builder().id(accountId).type(AccountType.builder().code(accountTypeCode).build()).build())
+                .category(category)
                 .amount(amount)
                 .type(type)
                 .transactionDate(date)
@@ -262,6 +285,136 @@ class TransferMatcherTest {
 
             // assert & verify
             assertTrue(result.isEmpty());
+        }
+    }
+
+    /**
+     * PF-938: a transfer whose two legs post more than 3 days apart (a credit card payment that takes a week to
+     * clear) is still suggested, but only when the rows look like the same transfer -- both filed under a Transfers
+     * category, or one of them on a credit card account -- so unrelated same-amount rows are not paired.
+     */
+    @Nested
+    @DisplayName("findMatches - wider window for rows that look like one transfer")
+    class WiderWindowTests {
+
+        private final OffsetDateTime day0 = OffsetDateTime.of(2026, 3, 1, 12, 0, 0, 0, ZoneOffset.UTC);
+
+        @Test
+        @DisplayName("should match a credit card payment posted 7 days after the checking withdrawal")
+        void shouldMatchCreditCardPaymentSevenDaysApart() {
+            // arrange
+            Transaction out = createTxn(1L, 10L, CHECKING, null, null, TWO_FIFTY, TransactionType.EXPENSE, day0);
+            Transaction in = createTxn(2L, 20L, CREDIT_CARD, null, null, TWO_FIFTY, TransactionType.INCOME, day0.plusDays(7));
+
+            // act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(out, in));
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(1L, result.get(0).sourceTransaction().id());
+            assertEquals(2L, result.get(0).targetTransaction().id());
+            assertTrue(result.get(0).confidenceScore() > 0 && result.get(0).confidenceScore() < 0.6);
+        }
+
+        @Test
+        @DisplayName("should suggest the five real checking-to-card pairs that posted 4 to 7 days apart")
+        void shouldMatchTheFiveRealPairs() {
+            // arrange
+            String[][] pairs = {
+                    {"2022-09-29", "2022-10-06", "781.90"},
+                    {"2023-06-01", "2023-06-05", "1291.02"},
+                    {"2023-09-01", "2023-09-05", "520.26"},
+                    {"2023-09-01", "2023-09-05", "446.90"},
+                    {"2024-02-29", "2024-03-04", "2233.31"}};
+            List<Transaction> all = new java.util.ArrayList<>();
+            long id = 1L;
+            for (String[] pair : pairs) {
+                BigDecimal amount = new BigDecimal(pair[2]);
+                all.add(createTxn(id++, 10L, CHECKING, null, null, amount, TransactionType.EXPENSE,
+                        java.time.LocalDate.parse(pair[0]).atStartOfDay().atOffset(ZoneOffset.UTC)));
+                all.add(createTxn(id++, 20L, CREDIT_CARD, null, null, amount, TransactionType.INCOME,
+                        java.time.LocalDate.parse(pair[1]).atStartOfDay().atOffset(ZoneOffset.UTC)));
+            }
+
+            // act
+            List<TransferSuggestionDto> result = matcher.findMatches(all);
+
+            // assert & verify
+            assertEquals(5, result.size());
+        }
+
+        @Test
+        @DisplayName("should match two rows both filed under a Transfers category 6 days apart, by parent or own name")
+        void shouldMatchBothInTransfersCategory() {
+            // arrange
+            Transaction out = createTxn(1L, 10L, CHECKING, "Credit Card Payment", "Transfers", new BigDecimal("80.00"), TransactionType.EXPENSE, day0);
+            Transaction in = createTxn(2L, 20L, "SAVINGS", "Transfers", null, new BigDecimal("80.00"), TransactionType.INCOME, day0.plusDays(6));
+
+            // act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(out, in));
+
+            // assert & verify
+            assertEquals(1, result.size());
+        }
+
+        @Test
+        @DisplayName("should not match same-amount rows beyond 3 days when nothing says they are one transfer")
+        void shouldNotMatchUnrelatedRowsBeyondThreeDays() {
+            // arrange
+            Transaction charge = createTxn(1L, 10L, CHECKING, "Groceries", "Food", new BigDecimal("42.00"), TransactionType.EXPENSE, day0);
+            Transaction refund = createTxn(2L, 20L, "SAVINGS", "Gifts", "Income", new BigDecimal("42.00"), TransactionType.INCOME, day0.plusDays(6));
+
+            // act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(charge, refund));
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should not match beyond 7 days even when the rows look related")
+        void shouldNotMatchBeyondSevenDays() {
+            // arrange
+            Transaction out = createTxn(1L, 10L, CHECKING, null, null, TWO_FIFTY, TransactionType.EXPENSE, day0);
+            Transaction in = createTxn(2L, 20L, CREDIT_CARD, null, null, TWO_FIFTY, TransactionType.INCOME, day0.plusDays(8));
+
+            // act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(out, in));
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should pair a row with the closest-dated candidate, and use each row once")
+        void shouldPreferClosestDateAndUseEachRowOnce() {
+            // arrange
+            Transaction out = createTxn(1L, 10L, CHECKING, null, null, HUNDRED, TransactionType.EXPENSE, day0);
+            Transaction farIn = createTxn(2L, 20L, CREDIT_CARD, null, null, HUNDRED, TransactionType.INCOME, day0.plusDays(2));
+            Transaction nearIn = createTxn(3L, 20L, CREDIT_CARD, null, null, HUNDRED, TransactionType.INCOME, day0.plusDays(1));
+
+            // act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(out, farIn, nearIn));
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(3L, result.get(0).targetTransaction().id());
+        }
+
+        @Test
+        @DisplayName("should prefer a closer candidate over an earlier-listed one 5 days away")
+        void shouldPreferCloserOverFirstFound() {
+            // arrange
+            Transaction out = createTxn(1L, 10L, CHECKING, null, null, HUNDRED, TransactionType.EXPENSE, day0);
+            Transaction first = createTxn(2L, 20L, CREDIT_CARD, null, null, HUNDRED, TransactionType.INCOME, day0.plusDays(2));
+            Transaction closer = createTxn(3L, 30L, CREDIT_CARD, null, null, HUNDRED, TransactionType.INCOME, day0.plusDays(2).plusHours(1));
+            Transaction closest = createTxn(4L, 40L, CREDIT_CARD, null, null, HUNDRED, TransactionType.INCOME, day0.plusHours(5));
+
+            // act
+            List<TransferSuggestionDto> result = matcher.findMatches(List.of(out, first, closer, closest));
+
+            // assert & verify
+            assertEquals(4L, result.get(0).targetTransaction().id());
         }
     }
 }
