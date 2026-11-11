@@ -15,6 +15,8 @@ public enum BankName {
     DISCOVER("Discover"),
     SYNOVUS("Synovus"),
     ALLY("Ally"),
+    FIDELITY_RETIREMENT("Fidelity 401(k)"),
+    FIDELITY_BROKERAGE("Fidelity brokerage"),
     STANDARD("Standard CSV"),
     UNIVERSAL("Universal CSV");
 
