@@ -76,6 +76,7 @@ public class TransactionService {
      * @param transactionIds the transaction ids to mark
      * @throws AccessDeniedException     if any transaction belongs to a different user
      * @throws ResourceNotFoundException if any transaction id doesn't exist
+     * @throws IllegalArgumentException  if any transaction is a CONTRIBUTION, EMPLOYER_CONTRIBUTION or EARNINGS
      */
     @Transactional
     public void markAsTransfer(Long userId, List<Long> transactionIds) {
@@ -88,6 +89,17 @@ public class TransactionService {
 
         if (transactions.size() != transactionIds.size()) {
             throw new ResourceNotFoundException("One or more transactions not found");
+        }
+
+        // contributions and earnings on a hand-balanced account are never transfers: rejecting
+        // here, before anything is written, stops a stale or hand-built request from retyping one
+        for (Transaction t : transactions) {
+            if (t.getType() == TransactionType.CONTRIBUTION
+                    || t.getType() == TransactionType.EMPLOYER_CONTRIBUTION
+                    || t.getType() == TransactionType.EARNINGS) {
+                throw new IllegalArgumentException(
+                        "Transaction " + t.getId() + " is a " + t.getType() + " and cannot be marked as a transfer.");
+            }
         }
 
         List<Transaction> updatedTransactions = new ArrayList<>();

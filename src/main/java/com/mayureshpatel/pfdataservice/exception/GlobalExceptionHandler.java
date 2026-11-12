@@ -66,14 +66,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * @param ex the parsing failure (its own message is logged but not returned to the caller)
+     * @param ex the parsing failure; its own message is returned because parser messages carry
+     *           only the file's own cell text and a row number, which is what the owner needs to
+     *           fix the file
      * @param request the failed request
-     * @return a 400 problem detail with a generic, user-facing message
+     * @return a 400 problem detail with {@code ex}'s message, or a generic one if it has none
      */
     @ExceptionHandler(CsvParsingException.class)
     public ProblemDetail handleCsvParsingException(CsvParsingException ex, HttpServletRequest request) {
         log.warn("CSV Parsing Error: {} at {}", ex.getMessage(), request.getRequestURI());
-        return createProblemDetail(HttpStatus.BAD_REQUEST, "Failed to parse the provided CSV file. Please check the file format and try again.", request);
+        String message = ex.getMessage() == null || ex.getMessage().isBlank()
+                ? "Failed to parse the provided CSV file. Please check the file format and try again."
+                : ex.getMessage();
+        ProblemDetail problemDetail = createProblemDetail(HttpStatus.BAD_REQUEST, message, request);
+        // a distinct title lets the client tell a parser message (safe to show) from any other 400
+        problemDetail.setTitle("CSV parsing error");
+        return problemDetail;
     }
 
     /**

@@ -41,6 +41,7 @@ public final class TransactionQueries {
                     accounts.currency_code as account_currency_code,
                     accounts.bank_name as account_bank_name,
                     accounts.user_id as account_user_id,
+                    accounts.balance_mode as account_balance_mode,
                     accounts.version as account_version,
                     account_types.code as account_account_type_code,
                     account_types.label as account_account_type_label,
@@ -400,7 +401,8 @@ public final class TransactionQueries {
             FROM_TRANSACTIONS + ENRICHED_JOINS +
             WHERE_USER_OWNS_ACCOUNT +
             "   and transactions.date >= :startDate" +
-            "   and transactions.type not in ('TRANSFER_IN', 'TRANSFER_OUT', 'TRANSFER')" +
+            "   and transactions.type not in ('TRANSFER_IN', 'TRANSFER_OUT', 'TRANSFER'," +
+            "       'CONTRIBUTION', 'EMPLOYER_CONTRIBUTION', 'EARNINGS')" +
             AND_NOT_DELETED +
             " order by transactions.date desc";
 

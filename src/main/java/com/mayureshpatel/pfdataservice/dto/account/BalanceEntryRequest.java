@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -18,7 +20,10 @@ import java.time.LocalDate;
  */
 public record BalanceEntryRequest(
         @NotNull(message = "Account ID is required") Long accountId,
-        @NotNull(message = "Balance is required") BigDecimal balance,
+        @NotNull(message = "Balance is required")
+        @DecimalMin(value = "-9999999999.99", message = "Balance must be greater than or equal to -9999999999.99")
+        @DecimalMax(value = "9999999999.99", message = "Balance must be less than or equal to 9999999999.99")
+        BigDecimal balance,
         @NotNull(message = "As-of date is required") LocalDate asOfDate,
         @NotNull(message = "Version is required") Long version
 ) {

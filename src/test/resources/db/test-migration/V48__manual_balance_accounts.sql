@@ -26,4 +26,5 @@ ALTER TABLE transactions
 -- LOAN account type: a liability, styled like CREDIT_CARD
 INSERT INTO account_types (code, label, icon, color, is_asset, sort_order)
 VALUES ('LOAN', 'Loan', 'pi-credit-card', 'text-purple-600', false,
-        (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM account_types));
+        (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM account_types))
+ON CONFLICT (code) DO NOTHING;
