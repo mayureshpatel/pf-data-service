@@ -179,12 +179,12 @@ class TransactionUpdateRequestTest extends ValidatorTestBase {
         }
 
         @Test
-        @DisplayName("should fail when type exceeds 20 characters")
+        @DisplayName("should fail when type exceeds 30 characters")
         void shouldFailWhenTypeIsTooLong() {
-            TransactionUpdateRequest request = createValidBuilder().type("a".repeat(21)).build();
+            TransactionUpdateRequest request = createValidBuilder().type("a".repeat(31)).build();
             Set<ConstraintViolation<TransactionUpdateRequest>> violations = validator().validate(request);
             assertFalse(violations.isEmpty());
-            assertTrue(violations.stream().anyMatch(v -> "Type must be less than 20 characters.".equals(v.getMessage())));
+            assertTrue(violations.stream().anyMatch(v -> "Type must be less than 30 characters.".equals(v.getMessage())));
         }
     }
 

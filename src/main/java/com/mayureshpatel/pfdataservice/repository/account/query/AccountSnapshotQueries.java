@@ -70,4 +70,28 @@ public final class AccountSnapshotQueries {
             delete from account_snapshots
             where id = :id
             """;
+
+    // language=SQL
+    public static final String UPSERT = """
+            insert into account_snapshots (account_id, snapshot_date, balance, created_at)
+            values (:accountId, :snapshotDate, :balance, CURRENT_TIMESTAMP)
+            on conflict (account_id, snapshot_date) do update
+            set balance = excluded.balance
+            returning id
+            """;
+
+    // language=SQL
+    public static final String FIND_ALL_BY_ACCOUNT_ID_NEWEST_FIRST = """
+            select account_snapshots.*
+            from account_snapshots
+            where account_snapshots.account_id = :accountId
+            order by account_snapshots.snapshot_date desc
+            """;
+
+    // language=SQL
+    public static final String FIND_LATEST_SNAPSHOT_DATE = """
+            select max(snapshot_date)
+            from account_snapshots
+            where account_id = :accountId
+            """;
 }

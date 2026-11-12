@@ -76,19 +76,12 @@ public class TransactionService {
      * @param transactionIds the transaction ids to mark
      * @throws AccessDeniedException     if any transaction belongs to a different user
      * @throws ResourceNotFoundException if any transaction id doesn't exist
+     * @throws IllegalArgumentException  if any transaction is a CONTRIBUTION, EMPLOYER_CONTRIBUTION or EARNINGS
      */
     @Transactional
     public void markAsTransfer(Long userId, List<Long> transactionIds) {
         List<Transaction> transactions = transactionRepository.findAllById(userId, transactionIds);
-        for (Transaction t : transactions) {
-            if (!t.getAccount().getUserId().equals(userId)) {
-                throw new AccessDeniedException("Access denied for transaction " + t.getId());
-            }
-        }
-
-        if (transactions.size() != transactionIds.size()) {
-            throw new ResourceNotFoundException("One or more transactions not found");
-        }
+        validateMarkable(userId, transactionIds, transactions);
 
         List<Transaction> updatedTransactions = new ArrayList<>();
         for (Transaction t : transactions) {
@@ -526,6 +519,36 @@ public class TransactionService {
      */
     public Page<TransactionDescriptionDto> getDescriptions(Long userId, String search, boolean unlinkedOnly, Pageable pageable) {
         return transactionRepository.findDescriptions(userId, search, unlinkedOnly, pageable);
+    }
+
+    /**
+     * Guards {@link #markAsTransfer}: every transaction must belong to the user, every requested id
+     * must have been found, and none may be a contribution or earnings on a hand-balanced account.
+     * Runs before anything is written.
+     *
+     * @throws AccessDeniedException     if any transaction belongs to a different user
+     * @throws ResourceNotFoundException if any requested id was not found
+     * @throws IllegalArgumentException  if any transaction is a contribution, employer contribution or earnings
+     */
+    private static void validateMarkable(Long userId, List<Long> transactionIds, List<Transaction> transactions) {
+        for (Transaction t : transactions) {
+            if (!t.getAccount().getUserId().equals(userId)) {
+                throw new AccessDeniedException("Access denied for transaction " + t.getId());
+            }
+        }
+
+        if (transactions.size() != transactionIds.size()) {
+            throw new ResourceNotFoundException("One or more transactions not found");
+        }
+
+        // contributions and earnings on a hand-balanced account are never transfers: rejecting
+        // here, before anything is written, stops a stale or hand-built request from retyping one
+        for (Transaction t : transactions) {
+            if (TransactionType.isContributionOrEarnings(t.getType())) {
+                throw new IllegalArgumentException(
+                        "Transaction " + t.getId() + " is a " + t.getType() + " and cannot be marked as a transfer.");
+            }
+        }
     }
 
     /**

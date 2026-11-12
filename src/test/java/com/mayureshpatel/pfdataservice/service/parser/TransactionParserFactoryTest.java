@@ -42,7 +42,9 @@ class TransactionParserFactoryTest {
                 "STANDARD, STANDARD",
                 "Standard CSV, STANDARD",
                 "UNIVERSAL, UNIVERSAL",
-                "Universal CSV, UNIVERSAL"
+                "Universal CSV, UNIVERSAL",
+                "ALLY, ALLY",
+                "Ally, ALLY"
         })
         @DisplayName("should return the correct parser for both enum name and display name")
         void getTransactionParser_knownBankName_returnsCorrectParser(String bankName, BankName expectedBank) {

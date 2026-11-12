@@ -24,6 +24,8 @@ import com.mayureshpatel.pfdataservice.service.transfer.TransferMatcher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -177,6 +179,25 @@ class TransactionServiceTest {
 
             // assert & verify
             verify(transactionRepository).updateAll(eq(USER_ID), argThat(list -> list.get(0).getType() == TransactionType.TRANSFER_OUT));
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = TransactionType.class, names = {"CONTRIBUTION", "EMPLOYER_CONTRIBUTION", "EARNINGS"})
+        @DisplayName("should reject contribution/earnings rows, which are never transfers, and change nothing")
+        void shouldRejectContributionTypes(TransactionType type) {
+            // arrange
+            Account account = createMockAccount(USER_ID);
+            Transaction t = Transaction.builder().id(1L).type(type).amount(BigDecimal.TEN).account(account).build();
+            when(transactionRepository.findAllById(eq(USER_ID), anyList())).thenReturn(List.of(t));
+
+            // act
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> transactionService.markAsTransfer(USER_ID, List.of(1L)));
+
+            // assert & verify
+            assertTrue(ex.getMessage().contains("cannot be marked as a transfer"));
+            verify(transactionRepository, never()).updateAll(any(), any());
+            verify(accountBalanceUpdateService, never()).applyWithRetry(any(), any(), any());
         }
 
         @Test

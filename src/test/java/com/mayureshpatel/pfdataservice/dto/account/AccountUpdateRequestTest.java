@@ -2,6 +2,7 @@ package com.mayureshpatel.pfdataservice.dto.account;
 
 import com.mayureshpatel.pfdataservice.dto.ValidatorTestBase;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import jakarta.validation.ConstraintViolation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,15 +17,18 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Verifies {@link AccountUpdateRequest}'s jakarta bean-validation constraints, its {@code toDomain()} mapping, and per-field validation failures, one {@code @Nested} class per field below. */
 @DisplayName("AccountUpdateRequest Unit Tests")
 class AccountUpdateRequestTest extends ValidatorTestBase {
+    private static final String NAME = "Savings";
+    private static final String TYPE = "SAVINGS";
+    private static final String CURRENCY = "USD";
 
     @Test
     @DisplayName("should pass when all fields are valid")
     void shouldPassWithValidData() {
         AccountUpdateRequest request = AccountUpdateRequest.builder()
                 .id(1L)
-                .name("Savings")
-                .type("SAVINGS")
-                .currencyCode("USD")
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
                 .bankName("Test Bank")
                 .version(1L)
                 .build();
@@ -38,9 +42,9 @@ class AccountUpdateRequestTest extends ValidatorTestBase {
     void shouldConvertToDomain() {
         AccountUpdateRequest request = AccountUpdateRequest.builder()
                 .id(1L)
-                .name("Savings")
-                .type("SAVINGS")
-                .currencyCode("USD")
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
                 .bankName("Test Bank")
                 .version(2L)
                 .build();
@@ -53,6 +57,35 @@ class AccountUpdateRequestTest extends ValidatorTestBase {
         assertEquals(request.getCurrencyCode(), account.getCurrency().getCode());
         assertEquals(request.getBankName(), account.getBankCode());
         assertEquals(request.getVersion(), account.getVersion());
+    }
+
+    @Test
+    @DisplayName("toDomain should keep the builder default (never null) when no balance mode is given")
+    void shouldKeepDefaultBalanceModeWhenAbsent() {
+        AccountUpdateRequest request = AccountUpdateRequest.builder()
+                .id(1L)
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
+                .version(1L)
+                .build();
+
+        assertEquals(BalanceMode.DERIVED, request.toDomain().getBalanceMode());
+    }
+
+    @Test
+    @DisplayName("toDomain should map an explicit balance mode")
+    void shouldMapExplicitBalanceMode() {
+        AccountUpdateRequest request = AccountUpdateRequest.builder()
+                .id(1L)
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
+                .version(1L)
+                .balanceMode("MANUAL")
+                .build();
+
+        assertEquals(BalanceMode.MANUAL, request.toDomain().getBalanceMode());
     }
 
     /** {@code id} must be non-null and positive. */

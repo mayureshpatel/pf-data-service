@@ -27,6 +27,52 @@ class AccountTest {
         assertEquals(BigDecimal.ZERO, account.getCurrentBalance());
     }
 
+    /** A {@link BalanceMode#MANUAL} account's balance is hand-entered, so applying or undoing any transaction leaves it untouched. */
+    @Nested
+    @DisplayName("Manual balance mode")
+    class ManualBalanceTests {
+
+        private Account manual() {
+            return Account.builder()
+                    .balanceMode(BalanceMode.MANUAL)
+                    .currentBalance(new BigDecimal(BALANCE_100))
+                    .build();
+        }
+
+        @Test
+        @DisplayName("balanceMode defaults to DERIVED and isManualBalance is false")
+        void balanceMode_shouldDefaultToDerived() {
+            // arrange & act
+            Account account = Account.builder().build();
+
+            // assert & verify
+            assertEquals(BalanceMode.DERIVED, account.getBalanceMode());
+            assertFalse(account.isManualBalance());
+            assertTrue(manual().isManualBalance());
+        }
+
+        @Test
+        @DisplayName("applyTransaction and undoTransaction leave a MANUAL balance unchanged (both overloads)")
+        void applyAndUndo_shouldNotChangeManualBalance() {
+            // arrange
+            Account account = manual();
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.EXPENSE)
+                    .amount(new BigDecimal(AMOUNT_50))
+                    .build();
+            TransactionCreateRequest request = TransactionCreateRequest.builder()
+                    .type(TYPE_INCOME)
+                    .amount(new BigDecimal(AMOUNT_50))
+                    .build();
+
+            // act & assert & verify
+            assertEquals(new BigDecimal(BALANCE_100), account.applyTransaction(transaction).getCurrentBalance());
+            assertEquals(new BigDecimal(BALANCE_100), account.undoTransaction(transaction).getCurrentBalance());
+            assertEquals(new BigDecimal(BALANCE_100), account.applyTransaction(request).getCurrentBalance());
+            assertEquals(new BigDecimal(BALANCE_100), account.undoTransaction(request).getCurrentBalance());
+        }
+    }
+
     /** {@link Account#applyTransaction(Transaction)} across each {@link TransactionType}, including a null starting balance. */
     @Nested
     @DisplayName("Transaction Application (Domain Object)")

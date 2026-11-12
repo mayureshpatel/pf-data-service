@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -139,6 +140,56 @@ class AccountSnapshotRepositoryTest extends BaseRepositoryTest {
             // assert & verify
             assertEquals(1, rows);
             assertTrue(repository.findById(existing.getId()).isEmpty());
+        }
+    }
+    /** {@code upsert} keeps one snapshot per account and date (a second entry replaces the first), and the list/latest lookups order by date. */
+    @Nested
+    @DisplayName("Balance history")
+    class BalanceHistoryTests {
+        private static final Long EMPTY_ACCOUNT = 2L;
+
+        @Test
+        @DisplayName("upsert twice on the same date leaves one snapshot with the second balance")
+        void shouldReplaceOnSameDate() {
+            // arrange
+            LocalDate date = LocalDate.of(2026, 11, 10);
+
+            // act
+            int first = repository.upsert(ACCOUNT_1, date, new BigDecimal("12000.00"));
+            int second = repository.upsert(ACCOUNT_1, date, new BigDecimal("12500.00"));
+
+            // assert & verify
+            assertEquals(first, second);
+            List<AccountSnapshot> all = repository.findAllByAccountIdNewestFirst(ACCOUNT_1);
+            assertEquals(1, all.stream().filter(s -> date.equals(s.getSnapshotDate())).count());
+            assertEquals(0, new BigDecimal("12500.00").compareTo(
+                    repository.findByAccountIdAndSnapshotDate(ACCOUNT_1, date).orElseThrow().getBalance()));
+        }
+
+        @Test
+        @DisplayName("findAllByAccountIdNewestFirst orders by date descending and findLatestSnapshotDate returns the newest")
+        void shouldOrderNewestFirst() {
+            // arrange
+            repository.upsert(ACCOUNT_1, LocalDate.of(2026, 1, 5), new BigDecimal("1.00"));
+            repository.upsert(ACCOUNT_1, LocalDate.of(2026, 3, 5), new BigDecimal("3.00"));
+            repository.upsert(ACCOUNT_1, LocalDate.of(2026, 2, 5), new BigDecimal("2.00"));
+
+            // act
+            List<AccountSnapshot> all = repository.findAllByAccountIdNewestFirst(ACCOUNT_1);
+
+            // assert & verify
+            assertEquals(LocalDate.of(2026, 3, 5), all.get(0).getSnapshotDate());
+            assertEquals(LocalDate.of(2026, 2, 5), all.get(1).getSnapshotDate());
+            assertEquals(LocalDate.of(2026, 1, 5), all.get(2).getSnapshotDate());
+            assertEquals(Optional.of(LocalDate.of(2026, 3, 5)), repository.findLatestSnapshotDate(ACCOUNT_1));
+        }
+
+        @Test
+        @DisplayName("an account with no snapshots yields an empty list and no latest date")
+        void shouldBeEmptyWithoutHistory() {
+            // act & assert & verify
+            assertTrue(repository.findAllByAccountIdNewestFirst(999_999L).isEmpty());
+            assertTrue(repository.findLatestSnapshotDate(999_999L).isEmpty());
         }
     }
 }

@@ -72,7 +72,23 @@ class GlobalExceptionHandlerTest {
 
             // assert & verify
             assertEquals(HttpStatus.BAD_REQUEST.value(), detail.getStatus());
-            assertEquals("Failed to parse the provided CSV file. Please check the file format and try again.", detail.getDetail());
+            // the parser's own message (the file's own cell text and a row number) is shown to the owner
+            assertEquals("Bad CSV", detail.getDetail());
+            // a distinct title lets the client tell a parser message (safe to show) from any other 400
+            assertEquals("CSV parsing error", detail.getTitle());
+        }
+
+        @Test
+        @DisplayName("should fall back to the generic CSV message when the exception has no message")
+        void handleCsvParsingException_blankMessage() {
+            // act
+            ProblemDetail nullMsg = handler.handleCsvParsingException(new CsvParsingException(null), request);
+            ProblemDetail blankMsg = handler.handleCsvParsingException(new CsvParsingException("  "), request);
+
+            // assert & verify
+            String generic = "Failed to parse the provided CSV file. Please check the file format and try again.";
+            assertEquals(generic, nullMsg.getDetail());
+            assertEquals(generic, blankMsg.getDetail());
         }
 
         @Test

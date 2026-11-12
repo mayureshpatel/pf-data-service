@@ -35,8 +35,23 @@ public class Account {
     private final Currency currency;
     private final Long version;
     private final String bankCode;
+    @Builder.Default
+    private final BalanceMode balanceMode = BalanceMode.DERIVED;
+    /** Net money in (contributions less transfers out and expenses); only loaded by the list query, and only meaningful for a manual balance. */
+    private final BigDecimal moneyIn;
+    /** Balance of the newest balance-history entry; only loaded by the list query, null when there is none. */
+    private final BigDecimal latestRecordedBalance;
     @ToString.Exclude
     private final TableAudit audit;
+
+    /**
+     * Whether this account's balance is hand-entered rather than derived from transactions.
+     *
+     * @return true if {@link #balanceMode} is {@link BalanceMode#MANUAL}
+     */
+    public boolean isManualBalance() {
+        return balanceMode == BalanceMode.MANUAL;
+    }
 
     /**
      * Returns a copy of this account with {@code transaction}'s net effect already applied to the
@@ -47,6 +62,10 @@ public class Account {
      * @return a new {@code Account} with the updated balance; this instance is unchanged
      */
     public Account applyTransaction(Transaction transaction) {
+        // a manual balance is hand-entered, so transactions never move it
+        if (isManualBalance()) {
+            return this;
+        }
         BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
         return this.toBuilder()
                 .currentBalance(balance.add(transaction.getNetChange()))
@@ -61,6 +80,10 @@ public class Account {
      * @return a new {@code Account} with the updated balance; this instance is unchanged
      */
     public Account applyTransaction(TransactionCreateRequest transaction) {
+        // a manual balance is hand-entered, so transactions never move it
+        if (isManualBalance()) {
+            return this;
+        }
         BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
         return this.toBuilder()
                 .currentBalance(balance.add(transaction.getNetChange()))
@@ -75,6 +98,10 @@ public class Account {
      * @return a new {@code Account} with the updated balance; this instance is unchanged
      */
     public Account undoTransaction(Transaction transaction) {
+        // a manual balance is hand-entered, so transactions never move it
+        if (isManualBalance()) {
+            return this;
+        }
         BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
         return this.toBuilder()
                 .currentBalance(balance.subtract(transaction.getNetChange()))
@@ -89,6 +116,10 @@ public class Account {
      * @return a new {@code Account} with the updated balance; this instance is unchanged
      */
     public Account undoTransaction(TransactionCreateRequest transaction) {
+        // a manual balance is hand-entered, so transactions never move it
+        if (isManualBalance()) {
+            return this;
+        }
         BigDecimal balance = this.currentBalance != null ? this.currentBalance : BigDecimal.ZERO;
         return this.toBuilder()
                 .currentBalance(balance.subtract(transaction.getNetChange()))

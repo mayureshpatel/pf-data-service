@@ -40,7 +40,7 @@ public class TransactionUpdateRequest {
     private final String description;
 
     @NotBlank(message = "Type cannot be blank.")
-    @Size(max = 20, message = "Type must be less than 20 characters.")
+    @Size(max = 30, message = "Type must be less than 30 characters.")
     private final String type;
 
     private final OffsetDateTime postDate;

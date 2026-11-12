@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.repository.account;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.repository.BaseRepositoryTest;
@@ -21,9 +22,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @Import(AccountRepository.class)
 @DisplayName("AccountRepository Integration Tests (PostgreSQL)")
 class AccountRepositoryTest extends BaseRepositoryTest {
+    private static final String TYPE_INVESTMENT = "INVESTMENT";
+    private static final String MODE_MANUAL = "MANUAL";
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private org.springframework.jdbc.core.simple.JdbcClient jdbcClient;
 
     private static final Long USER_1 = 1L;
     private static final String CURRENCY_USD = "USD";
@@ -116,6 +122,111 @@ class AccountRepositoryTest extends BaseRepositoryTest {
             Account inserted = accountRepository.findById((long) newId).orElseThrow();
             assertEquals("New Savings", inserted.getName());
             assertEquals(USER_1, inserted.getUserId());
+        }
+
+        @Test
+        @DisplayName("should round-trip balanceMode on insert and update, defaulting to DERIVED")
+        void shouldRoundTripBalanceMode() {
+            // arrange
+            AccountCreateRequest manual = AccountCreateRequest.builder()
+                    .name("Brokerage")
+                    .type(TYPE_INVESTMENT)
+                    .startingBalance(new BigDecimal("500.00"))
+                    .currencyCode(CURRENCY_USD)
+                    .balanceMode(MODE_MANUAL)
+                    .build();
+            AccountCreateRequest derived = manual.toBuilder().name("Plain").balanceMode(null).build();
+
+            // act
+            int manualId = accountRepository.insert(USER_1, manual);
+            int derivedId = accountRepository.insert(USER_1, derived);
+
+            // assert & verify
+            Account insertedManual = accountRepository.findById((long) manualId).orElseThrow();
+            assertEquals(BalanceMode.MANUAL, insertedManual.getBalanceMode());
+            assertTrue(insertedManual.isManualBalance());
+            assertEquals(BalanceMode.DERIVED, accountRepository.findById((long) derivedId).orElseThrow().getBalanceMode());
+
+            // act: flip the derived one to manual, then update again without a mode (keeps it)
+            Account before = accountRepository.findById((long) derivedId).orElseThrow();
+            AccountUpdateRequest flip = AccountUpdateRequest.builder()
+                    .id((long) derivedId).name("Plain").type(TYPE_INVESTMENT).currencyCode(CURRENCY_USD)
+                    .balanceMode(MODE_MANUAL).version(before.getVersion()).build();
+            assertEquals(1, accountRepository.update(USER_1, flip));
+            Account flipped = accountRepository.findById((long) derivedId).orElseThrow();
+            assertEquals(BalanceMode.MANUAL, flipped.getBalanceMode());
+            AccountUpdateRequest keep = flip.toBuilder().balanceMode(null).version(flipped.getVersion()).build();
+            assertEquals(1, accountRepository.update(USER_1, keep));
+            assertEquals(BalanceMode.MANUAL, accountRepository.findById((long) derivedId).orElseThrow().getBalanceMode());
+        }
+
+        @Test
+        @DisplayName("should compute moneyIn in the list query from contributions less transfers out and expenses")
+        void shouldComputeMoneyIn() {
+            // arrange
+            int manualId = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("Brokerage").type(TYPE_INVESTMENT).startingBalance(new BigDecimal("1000.00"))
+                    .startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode(MODE_MANUAL).build());
+            insertTransaction(manualId, "CONTRIBUTION", "500.00", false);
+            insertTransaction(manualId, "CONTRIBUTION", "500.00", false);
+            insertTransaction(manualId, "EMPLOYER_CONTRIBUTION", "300.00", false);
+            insertTransaction(manualId, "EARNINGS", "4.00", false);
+            insertTransaction(manualId, "TRANSFER_OUT", "200.00", false);
+            insertTransaction(manualId, "CONTRIBUTION", "9999.00", true);
+            int emptyId = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("Empty").type(TYPE_INVESTMENT).startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode(MODE_MANUAL).build());
+
+            // act
+            List<Account> accounts = accountRepository.findAllByUserId(USER_1);
+
+            // assert & verify
+            Account manual = accounts.stream().filter(a -> a.getId() == manualId).findFirst().orElseThrow();
+            assertEquals(0, new BigDecimal("800.00").compareTo(manual.getMoneyIn()));
+            Account empty = accounts.stream().filter(a -> a.getId() == emptyId).findFirst().orElseThrow();
+            assertEquals(0, BigDecimal.ZERO.compareTo(empty.getMoneyIn()));
+        }
+
+        @Test
+        @DisplayName("should leave moneyIn null for a derived account")
+        void shouldLeaveMoneyInNullForDerived() {
+            // act
+            List<Account> accounts = accountRepository.findAllByUserId(USER_1);
+
+            // assert & verify
+            assertTrue(accounts.stream().noneMatch(Account::isManualBalance));
+            assertTrue(accounts.stream().allMatch(a -> a.getMoneyIn() == null));
+        }
+
+        @Test
+        @DisplayName("should load the latest recorded balance in the list query, null when there is none")
+        void shouldLoadLatestRecordedBalance() {
+            // arrange
+            int withHistory = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("History").type(TYPE_INVESTMENT).startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode(MODE_MANUAL).build());
+            int withoutHistory = accountRepository.insert(USER_1, AccountCreateRequest.builder()
+                    .name("None").type(TYPE_INVESTMENT).startingBalance(BigDecimal.ZERO).currencyCode(CURRENCY_USD).balanceMode(MODE_MANUAL).build());
+            jdbcClient.sql("insert into account_snapshots (account_id, snapshot_date, balance) values (:a, :d, :b)")
+                    .param("a", withHistory).param("d", java.time.LocalDate.of(2026, 1, 1)).param("b", new BigDecimal("900.00")).update();
+            jdbcClient.sql("insert into account_snapshots (account_id, snapshot_date, balance) values (:a, :d, :b)")
+                    .param("a", withHistory).param("d", java.time.LocalDate.of(2026, 2, 1)).param("b", new BigDecimal("1000.00")).update();
+
+            // act
+            List<Account> accounts = accountRepository.findAllByUserId(USER_1);
+
+            // assert & verify
+            Account with = accounts.stream().filter(a -> a.getId() == withHistory).findFirst().orElseThrow();
+            assertEquals(0, new BigDecimal("1000.00").compareTo(with.getLatestRecordedBalance()));
+            Account without = accounts.stream().filter(a -> a.getId() == withoutHistory).findFirst().orElseThrow();
+            assertNull(without.getLatestRecordedBalance());
+        }
+
+        private void insertTransaction(int accountId, String type, String amount, boolean deleted) {
+            jdbcClient.sql("""
+                            insert into transactions (account_id, amount, date, description, type, deleted_at)
+                            values (:a, :amt, now(), 'seed', :t, case when :del then now() else null end)
+                            """)
+                    .param("a", accountId).param("amt", new BigDecimal(amount))
+                    .param("t", type).param("del", deleted).update();
         }
 
         @Test

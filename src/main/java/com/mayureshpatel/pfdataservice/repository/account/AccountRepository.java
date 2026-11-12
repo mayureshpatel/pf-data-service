@@ -16,6 +16,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.sql.Types;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,6 +89,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .param("currentBalance", request.getStartingBalance())
                 .param("currencyCode", request.getCurrencyCode())
                 .param("bankName", request.getBankName())
+                .param("balanceMode", request.getBalanceMode(), Types.VARCHAR)
                 .param(SqlParams.USER_ID, userId)
                 .param("createdBy", userId)
                 .param("updatedBy", userId)
@@ -112,6 +114,7 @@ public class AccountRepository implements JdbcRepository<Account, Long>, SoftDel
                 .param("type", request.getType())
                 .param("currencyCode", request.getCurrencyCode())
                 .param("bankName", request.getBankName())
+                .param("balanceMode", request.getBalanceMode(), Types.VARCHAR)
                 .param("updatedBy", userId)
                 .param("id", request.getId())
                 .param("version", request.getVersion())

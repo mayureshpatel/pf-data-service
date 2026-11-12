@@ -45,7 +45,7 @@ public class TransactionCreateRequest {
     private final String description;
 
     @NotBlank(message = "Type cannot be blank.")
-    @Size(max = 20, message = "Type must be less than 20 characters.")
+    @Size(max = 30, message = "Type must be less than 30 characters.")
     private final String type;
 
     private final OffsetDateTime postDate;
@@ -55,7 +55,7 @@ public class TransactionCreateRequest {
 
     /**
      * Calculates the net change this transaction applies to an account balance.
-     * INCOME/TRANSFER_IN is positive, EXPENSE/TRANSFER_OUT is negative.
+     * INCOME/TRANSFER_IN/CONTRIBUTION/EMPLOYER_CONTRIBUTION/EARNINGS is positive, EXPENSE/TRANSFER_OUT is negative.
      *
      * @return the net change
      */
@@ -68,7 +68,10 @@ public class TransactionCreateRequest {
             return amount;
         }
 
-        if (TransactionType.INCOME.name().equals(type) || TransactionType.TRANSFER_IN.name().equals(type)) {
+        if (TransactionType.INCOME.name().equals(type) || TransactionType.TRANSFER_IN.name().equals(type)
+                || TransactionType.CONTRIBUTION.name().equals(type)
+                || TransactionType.EMPLOYER_CONTRIBUTION.name().equals(type)
+                || TransactionType.EARNINGS.name().equals(type)) {
             return amount.abs();
         }
 

@@ -29,6 +29,9 @@ import com.mayureshpatel.pfdataservice.service.categorization.RuleMatcher;
 import com.mayureshpatel.pfdataservice.service.categorization.TransactionCategorizer;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParser;
 import com.mayureshpatel.pfdataservice.service.parser.TransactionParserFactory;
+import java.nio.charset.StandardCharsets;
+import com.mayureshpatel.pfdataservice.service.parser.AllySavingsCsvParser;
+import com.mayureshpatel.pfdataservice.service.parser.FidelityBrokerageCsvParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -246,6 +249,63 @@ class TransactionImportServiceTest {
 
             // act & assert & verify
             assertThrows(CsvParsingException.class, () -> importService.previewTransactions(USER_ID, ACCOUNT_ID, bankName, null, TEST_CSV_FILENAME));
+        }
+
+        @Test
+        @DisplayName("should rethrow a parser's CsvParsingException unchanged so its row-level message reaches the owner")
+        void shouldRethrowCsvParsingExceptionUnchanged() {
+            // arrange
+            TransactionParser parser = mock(TransactionParser.class);
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            CsvParsingException original = new CsvParsingException("Unsupported thing 'X' at row 7.");
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(parserFactory.getTransactionParser(BANK_STANDARD)).thenReturn(parser);
+            when(parser.parse(anyLong(), any())).thenThrow(original);
+
+            // act
+            CsvParsingException thrown = assertThrows(CsvParsingException.class,
+                    () -> importService.previewTransactions(USER_ID, ACCOUNT_ID, BANK_STANDARD, null, TEST_CSV_FILENAME));
+
+            // assert & verify
+            assertSame(original, thrown);
+        }
+
+        @Test
+        @DisplayName("should surface the row-level message of a real Fidelity parser for an unrecognized action")
+        void shouldSurfaceFidelityUnrecognizedAction() {
+            // arrange
+            String csv = "\n\nRun Date,Action,Symbol,Description,Type,Price ($),Quantity,Commission ($),"
+                    + "Fees ($),Accrued Interest ($),Amount ($),Cash Balance ($),Settlement Date\n"
+                    + "10/19/2026,SOMETHING NEW (Cash),\"\",No Description,Cash,\"\",0,\"\",\"\",\"\",500,500.02,\"\"\n";
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(parserFactory.getTransactionParser("FIDELITY_BROKERAGE")).thenReturn(new FidelityBrokerageCsvParser());
+
+            // act
+            CsvParsingException thrown = assertThrows(CsvParsingException.class, () -> importService.previewTransactions(
+                    USER_ID, ACCOUNT_ID, "FIDELITY_BROKERAGE", new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)), "f.csv"));
+
+            // assert & verify
+            assertTrue(thrown.getMessage().contains("SOMETHING NEW"), thrown.getMessage());
+            assertTrue(thrown.getMessage().contains("row"), thrown.getMessage());
+        }
+
+        @Test
+        @DisplayName("should surface the row-level message of a real Ally parser for an unrecognized type")
+        void shouldSurfaceAllyUnrecognizedType() {
+            // arrange
+            String csv = "Date,Time,Amount,Type,Description\n2026-06-02,10:00:00,5.00,Fee,Monthly fee\n";
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(parserFactory.getTransactionParser("ALLY_SAVINGS")).thenReturn(new AllySavingsCsvParser());
+
+            // act
+            CsvParsingException thrown = assertThrows(CsvParsingException.class, () -> importService.previewTransactions(
+                    USER_ID, ACCOUNT_ID, "ALLY_SAVINGS", new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)), "a.csv"));
+
+            // assert & verify
+            assertTrue(thrown.getMessage().contains("Fee"), thrown.getMessage());
+            assertTrue(thrown.getMessage().contains("row"), thrown.getMessage());
         }
 
         @Test

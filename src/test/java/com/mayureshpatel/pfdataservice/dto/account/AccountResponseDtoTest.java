@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.dto.account;
 
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.domain.bank.BankName;
 import com.mayureshpatel.pfdataservice.dto.currency.CurrencyDto;
 import com.mayureshpatel.pfdataservice.dto.user.UserDto;
@@ -27,7 +28,7 @@ class AccountResponseDtoTest {
         BankName bank = BankName.CAPITAL_ONE;
         BigDecimal balance = new BigDecimal("100.50");
 
-        AccountDto dto = new AccountDto(1L, user, "My Savings", type, balance, currency, bank, 1L);
+        AccountDto dto = new AccountDto(1L, user, "My Savings", type, balance, currency, bank, 1L, BalanceMode.DERIVED, null, null);
 
         assertEquals(1L, dto.id());
         assertEquals(user, dto.user());
@@ -67,7 +68,7 @@ class AccountResponseDtoTest {
     @Test
     @DisplayName("AccountSnapshotDto: should correctly map all fields")
     void accountSnapshotDtoShouldPopulateFields() {
-        AccountDto account = new AccountDto(1L, null, TYPE_LABEL, null, null, null, null, 1L);
+        AccountDto account = new AccountDto(1L, null, TYPE_LABEL, null, null, null, null, 1L, BalanceMode.DERIVED, null, null);
         LocalDate date = LocalDate.now();
         BigDecimal balance = new BigDecimal("1000.00");
 

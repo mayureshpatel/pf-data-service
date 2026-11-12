@@ -171,6 +171,10 @@ public class TransactionImportService {
 
             log.info("Generated {} transaction previews successfully", previews.size());
             return previews;
+        } catch (CsvParsingException e) {
+            // a parser's own message names the offending value and row: rethrow it so it reaches the owner
+            log.warn("Transaction file rejected by the parser for Account ID: {}: {}", accountId, e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Failed to process transaction preview for Account ID: {}", accountId, e);
             throw new CsvParsingException("Error processing transaction file", e);

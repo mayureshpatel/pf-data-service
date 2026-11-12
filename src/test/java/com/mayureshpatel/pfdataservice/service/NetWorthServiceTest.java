@@ -187,9 +187,9 @@ class NetWorthServiceTest {
     }
 
     @Test
-    @DisplayName("should count a negative credit card as a positive debt and an overpaid one as a negative debt")
-    void shouldCountANegativeCreditCardAsAPositiveDebtAndAnOverpaidOneAsANegativeDebt() {
-        // arrange -- the card is now overpaid: +50
+    @DisplayName("should count a liability as abs(balance) of debt, so a card stored as +50 owes 50 like one stored as -50")
+    void shouldCountALiabilityAsItsAbsoluteBalanceOfDebt() {
+        // arrange -- one sign rule for liabilities (PF-873): a card stored as +50 owes 50, same as -50
         Account overpaid = account(CARD_ID, "Visa", CREDIT_CARD, false, "50", LONG_AGO);
         when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(overpaid));
         when(netWorthRepository.findMonthlyNetFlow(eq(USER_ID), any())).thenReturn(Map.of());
@@ -198,8 +198,8 @@ class NetWorthServiceTest {
         NetWorthBreakdownDto dto = run();
 
         // assert & verify
-        assertMoney("-50", dto.summary().debts());
-        assertMoney("50", dto.summary().netWorth());
+        assertMoney("50", dto.summary().debts());
+        assertMoney("-50", dto.summary().netWorth());
     }
 
     @Test

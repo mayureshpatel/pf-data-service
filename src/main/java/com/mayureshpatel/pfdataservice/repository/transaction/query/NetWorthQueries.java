@@ -5,8 +5,9 @@ import lombok.NoArgsConstructor;
 /**
  * SQL query constants for {@code NetWorthRepository}. Every query joins {@code accounts}, filters
  * {@code accounts.user_id = :userId} and leaves soft-deleted transactions out. The signed flow
- * expression mirrors the balance math in {@code TransactionQueries.GET_NET_FLOW_FROM_DATE}: income and
+ * expression mirrors the balance math in {@code TransactionQueries.GET_NET_FLOW_FROM_DATE}: income, contributions, earnings and
  * transfers in add, expenses and transfers out subtract, an adjustment adds as it is, anything else subtracts (as Transaction.getNetChange does).
+ * {@code FIND_MONTHLY_NET_FLOW} leaves out MANUAL-balance accounts: their transactions never move the balance.
  */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class NetWorthQueries {
@@ -19,13 +20,14 @@ public final class NetWorthQueries {
             select transactions.account_id,
                    to_char(date_trunc('month', transactions.date at time zone 'UTC'), 'YYYY-MM') as flow_month,
                    sum(case
-                           when transactions.type in ('INCOME', 'TRANSFER_IN') then abs(transactions.amount)
+                           when transactions.type in ('INCOME', 'TRANSFER_IN', 'CONTRIBUTION', 'EMPLOYER_CONTRIBUTION', 'EARNINGS') then abs(transactions.amount)
                            when transactions.type = 'ADJUSTMENT' then transactions.amount
                            else -abs(transactions.amount)
                        end) as net_flow
             from transactions
                      join accounts on accounts.id = transactions.account_id
             where accounts.user_id = :userId
+              and accounts.balance_mode = 'DERIVED'
               and transactions.deleted_at is null
               and transactions.date >= :from
             group by transactions.account_id, flow_month

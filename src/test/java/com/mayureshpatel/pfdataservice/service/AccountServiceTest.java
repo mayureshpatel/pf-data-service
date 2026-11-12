@@ -1,14 +1,19 @@
 package com.mayureshpatel.pfdataservice.service;
 
 import com.mayureshpatel.pfdataservice.domain.account.Account;
+import com.mayureshpatel.pfdataservice.domain.account.AccountSnapshot;
+import com.mayureshpatel.pfdataservice.domain.account.BalanceMode;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.account.AccountCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountDto;
 import com.mayureshpatel.pfdataservice.dto.account.AccountReconcileRequest;
+import com.mayureshpatel.pfdataservice.dto.account.AccountSnapshotDto;
+import com.mayureshpatel.pfdataservice.dto.account.BalanceEntryRequest;
 import com.mayureshpatel.pfdataservice.dto.account.AccountUpdateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.account.AccountRepository;
+import com.mayureshpatel.pfdataservice.repository.account.AccountSnapshotRepository;
 import com.mayureshpatel.pfdataservice.repository.recurring_history.RecurringTransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
@@ -23,6 +28,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,11 +40,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AccountService Unit Tests")
 class AccountServiceTest {
+    private static final String MONEY_IN = "800.00";
+    private static final String RECORDED_BALANCE = "1000.00";
 
     @Mock private AccountRepository accountRepository;
     @Mock private UserRepository userRepository;
     @Mock private TransactionRepository transactionRepository;
     @Mock private RecurringTransactionRepository recurringTransactionRepository;
+    @Mock private AccountSnapshotRepository snapshotRepository;
 
     @InjectMocks private AccountService accountService;
 
@@ -62,6 +71,65 @@ class AccountServiceTest {
             // assert & verify
             assertEquals(1, result.size());
             assertEquals("Checking", result.get(0).name());
+            assertEquals(BalanceMode.DERIVED, result.get(0).balanceMode());
+            assertNull(result.get(0).moneyIn());
+            assertNull(result.get(0).gain());
+        }
+
+        @Test
+        @DisplayName("should expose moneyIn and a gain of latest balance minus moneyIn for a manual account")
+        void shouldExposeMoneyInAndGain() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Brokerage")
+                    .balanceMode(BalanceMode.MANUAL)
+                    .moneyIn(new BigDecimal(MONEY_IN))
+                    .latestRecordedBalance(new BigDecimal(RECORDED_BALANCE))
+                    .build();
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
+
+            // act
+            AccountDto result = accountService.getAllAccountsByUserId(USER_ID).get(0);
+
+            // assert & verify
+            assertEquals(BalanceMode.MANUAL, result.balanceMode());
+            assertEquals(0, new BigDecimal(MONEY_IN).compareTo(result.moneyIn()));
+            assertEquals(0, new BigDecimal("200.00").compareTo(result.gain()));
+        }
+
+        @Test
+        @DisplayName("should have a null gain when a manual account has no balance entry yet")
+        void shouldHaveNullGainWithoutBalanceEntry() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Brokerage")
+                    .balanceMode(BalanceMode.MANUAL)
+                    .moneyIn(new BigDecimal(MONEY_IN))
+                    .build();
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
+
+            // act
+            AccountDto result = accountService.getAllAccountsByUserId(USER_ID).get(0);
+
+            // assert & verify
+            assertEquals(0, new BigDecimal(MONEY_IN).compareTo(result.moneyIn()));
+            assertNull(result.gain());
+        }
+
+        @Test
+        @DisplayName("should ignore money-in figures on a derived account")
+        void shouldNullMoneyInForDerived() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Checking")
+                    .moneyIn(new BigDecimal(MONEY_IN))
+                    .latestRecordedBalance(new BigDecimal(RECORDED_BALANCE))
+                    .build();
+            when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
+
+            // act
+            AccountDto result = accountService.getAllAccountsByUserId(USER_ID).get(0);
+
+            // assert & verify
+            assertNull(result.moneyIn());
+            assertNull(result.gain());
         }
     }
 
@@ -84,6 +152,56 @@ class AccountServiceTest {
             // assert & verify
             assertEquals(1, result);
             verify(accountRepository).insert(USER_ID, request);
+        }
+
+        @Test
+        @DisplayName("should pass a MANUAL balanceMode to the repository and write a balance entry dated today")
+        void shouldWriteHistoryRowForManualStartingBalance() {
+            // arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            when(accountRepository.insert(eq(USER_ID), any())).thenReturn(5);
+            AccountCreateRequest request = AccountCreateRequest.builder().name("Brokerage")
+                    .balanceMode("MANUAL").startingBalance(new BigDecimal("500.00")).build();
+
+            // act
+            int result = accountService.createAccount(USER_ID, request);
+
+            // assert & verify
+            assertEquals(5, result);
+            verify(accountRepository).insert(USER_ID, request);
+            verify(snapshotRepository).upsert(5L, LocalDate.now(), new BigDecimal("500.00"));
+        }
+
+        @Test
+        @DisplayName("should not write a balance entry for a MANUAL account with a zero or missing starting balance")
+        void shouldNotWriteHistoryRowForZeroManualBalance() {
+            // arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            when(accountRepository.insert(eq(USER_ID), any())).thenReturn(5);
+
+            // act
+            accountService.createAccount(USER_ID, AccountCreateRequest.builder().name("A")
+                    .balanceMode("MANUAL").startingBalance(BigDecimal.ZERO).build());
+            accountService.createAccount(USER_ID, AccountCreateRequest.builder().name("B")
+                    .balanceMode("MANUAL").build());
+
+            // assert & verify
+            verifyNoInteractions(snapshotRepository);
+        }
+
+        @Test
+        @DisplayName("should not write a balance entry for a DERIVED account")
+        void shouldNotWriteHistoryRowForDerived() {
+            // arrange
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().id(USER_ID).build()));
+            when(accountRepository.insert(eq(USER_ID), any())).thenReturn(5);
+
+            // act
+            accountService.createAccount(USER_ID, AccountCreateRequest.builder().name("C")
+                    .startingBalance(new BigDecimal("500.00")).build());
+
+            // assert & verify
+            verifyNoInteractions(snapshotRepository);
         }
 
         @Test
@@ -156,7 +274,7 @@ class AccountServiceTest {
                 + "to be 1)")
         void shouldReconcile() {
             // arrange
-            BigDecimal target = new BigDecimal("1000.00");
+            BigDecimal target = new BigDecimal(RECORDED_BALANCE);
             Long version = 1L;
             Long realAdjustmentTransactionId = 555L;
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
@@ -178,7 +296,7 @@ class AccountServiceTest {
         @DisplayName("should return 0 if target balance matches current balance")
         void shouldReturnZeroIfBalancesMatch() {
             // arrange
-            BigDecimal target = new BigDecimal("1000.00");
+            BigDecimal target = new BigDecimal(RECORDED_BALANCE);
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, 1L);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(target).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
@@ -209,7 +327,7 @@ class AccountServiceTest {
                 + "transactionRepository.insert(...) actually having been called")
         void shouldNotCommitAdjustmentTransactionWhenReconcileConflicts() {
             // arrange
-            BigDecimal target = new BigDecimal("1000.00");
+            BigDecimal target = new BigDecimal(RECORDED_BALANCE);
             Long version = 1L;
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("900.00")).version(version).build();
@@ -220,6 +338,172 @@ class AccountServiceTest {
             // act & assert & verify
             assertThrows(OptimisticLockingFailureException.class, () -> accountService.reconcileAccount(USER_ID, request));
             verify(transactionRepository, never()).insert(any(TransactionCreateRequest.class));
+        }
+    }
+
+    /**
+     * {@code recordBalance} upserts the snapshot for the entered date, only moves {@code
+     * current_balance} when that date is the newest snapshot, rejects derived accounts and stale
+     * versions, and never creates an adjustment transaction. {@code reconcileAccount} on a manual
+     * account delegates to it with today's date.
+     */
+    @Nested
+    @DisplayName("recordBalance")
+    class RecordBalanceTests {
+        private final LocalDate today = LocalDate.of(2026, 11, 11);
+
+        private Account manualAccount() {
+            return Account.builder().id(ACCOUNT_ID).userId(USER_ID).balanceMode(BalanceMode.MANUAL)
+                    .currentBalance(new BigDecimal("12000.00")).version(3L).build();
+        }
+
+        @Test
+        @DisplayName("should upsert the snapshot and set the current balance when the date is the latest")
+        void shouldSetCurrentBalanceWhenLatest() {
+            // arrange
+            LocalDate date = LocalDate.of(2026, 11, 10);
+            BigDecimal balance = new BigDecimal("12500.00");
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(manualAccount()));
+            when(snapshotRepository.upsert(ACCOUNT_ID, date, balance)).thenReturn(77);
+            when(snapshotRepository.findLatestSnapshotDate(ACCOUNT_ID)).thenReturn(Optional.of(date));
+
+            // act
+            int result = accountService.recordBalance(USER_ID, new BalanceEntryRequest(ACCOUNT_ID, balance, date, 3L));
+
+            // assert & verify
+            assertEquals(77, result);
+            verify(snapshotRepository).upsert(ACCOUNT_ID, date, balance);
+            verify(accountRepository).reconcile(USER_ID, ACCOUNT_ID, balance, 3L);
+            verify(transactionRepository, never()).insert(any(TransactionCreateRequest.class));
+        }
+
+        @Test
+        @DisplayName("should leave the current balance alone when an earlier date than the latest is entered")
+        void shouldNotTouchCurrentBalanceWhenEarlier() {
+            // arrange
+            LocalDate date = LocalDate.of(2026, 10, 1);
+            BigDecimal balance = new BigDecimal("11000.00");
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(manualAccount()));
+            when(snapshotRepository.upsert(ACCOUNT_ID, date, balance)).thenReturn(5);
+            when(snapshotRepository.findLatestSnapshotDate(ACCOUNT_ID)).thenReturn(Optional.of(LocalDate.of(2026, 11, 10)));
+
+            // act
+            accountService.recordBalance(USER_ID, new BalanceEntryRequest(ACCOUNT_ID, balance, date, 3L));
+
+            // assert & verify
+            verify(snapshotRepository).upsert(ACCOUNT_ID, date, balance);
+            verify(accountRepository, never()).reconcile(any(), any(), any(), any());
+            verify(transactionRepository, never()).insert(any(TransactionCreateRequest.class));
+        }
+
+        @Test
+        @DisplayName("should reject a derived account")
+        void shouldRejectDerivedAccount() {
+            // arrange
+            Account derived = Account.builder().id(ACCOUNT_ID).userId(USER_ID).balanceMode(BalanceMode.DERIVED).version(3L).build();
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(derived));
+
+            // act & assert & verify
+            assertThrows(IllegalArgumentException.class, () -> accountService.recordBalance(USER_ID,
+                    new BalanceEntryRequest(ACCOUNT_ID, BigDecimal.TEN, today, 3L)));
+            verify(snapshotRepository, never()).upsert(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("should throw the optimistic-locking conflict when the version is stale")
+        void shouldThrowOnStaleVersion() {
+            // arrange
+            LocalDate date = LocalDate.of(2026, 11, 10);
+            BigDecimal balance = new BigDecimal("12500.00");
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(manualAccount()));
+            lenient().when(snapshotRepository.findLatestSnapshotDate(ACCOUNT_ID)).thenReturn(Optional.of(date));
+            lenient().doThrow(new OptimisticLockingFailureException("conflict"))
+                    .when(accountRepository).reconcile(USER_ID, ACCOUNT_ID, balance, 2L);
+
+            // act & assert & verify
+            assertThrows(OptimisticLockingFailureException.class, () -> accountService.recordBalance(USER_ID,
+                    new BalanceEntryRequest(ACCOUNT_ID, balance, date, 2L)));
+            verify(snapshotRepository, never()).upsert(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException when the account is not the user's")
+        void shouldThrowWhenAccountMissing() {
+            // arrange
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> accountService.recordBalance(USER_ID,
+                    new BalanceEntryRequest(ACCOUNT_ID, BigDecimal.TEN, today, 3L)));
+        }
+
+        @Test
+        @DisplayName("reconcileAccount on a manual account records a balance for today and creates no adjustment")
+        void reconcileOnManualAccountDelegatesToRecordBalance() {
+            // arrange
+            BigDecimal target = new BigDecimal("13000.00");
+            LocalDate date = LocalDate.now();
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(manualAccount()));
+            when(snapshotRepository.upsert(ACCOUNT_ID, date, target)).thenReturn(42);
+            when(snapshotRepository.findLatestSnapshotDate(ACCOUNT_ID)).thenReturn(Optional.of(date));
+
+            // act
+            int result = accountService.reconcileAccount(USER_ID, new AccountReconcileRequest(ACCOUNT_ID, target, 3L));
+
+            // assert & verify
+            assertEquals(42, result);
+            verify(snapshotRepository).upsert(ACCOUNT_ID, date, target);
+            verify(accountRepository).reconcile(USER_ID, ACCOUNT_ID, target, 3L);
+            verify(transactionRepository, never()).insert(any(TransactionCreateRequest.class));
+        }
+    }
+
+    /** {@code getBalanceHistory} returns the account's snapshots newest first, and an empty list (not an error) when there are none. */
+    @Nested
+    @DisplayName("getBalanceHistory")
+    class GetBalanceHistoryTests {
+        @Test
+        @DisplayName("should return snapshots newest first as dtos")
+        void shouldReturnHistory() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).balanceMode(BalanceMode.MANUAL).build();
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            when(snapshotRepository.findAllByAccountIdNewestFirst(ACCOUNT_ID)).thenReturn(List.of(
+                    AccountSnapshot.builder().id(2L).accountId(ACCOUNT_ID).snapshotDate(LocalDate.of(2026, 11, 10)).balance(new BigDecimal("12500.00")).build(),
+                    AccountSnapshot.builder().id(1L).accountId(ACCOUNT_ID).snapshotDate(LocalDate.of(2026, 10, 10)).balance(new BigDecimal("12000.00")).build()));
+
+            // act
+            List<AccountSnapshotDto> result = accountService.getBalanceHistory(USER_ID, ACCOUNT_ID);
+
+            // assert & verify
+            assertEquals(2, result.size());
+            assertEquals(LocalDate.of(2026, 11, 10), result.get(0).snapshotDate());
+            assertEquals(new BigDecimal("12000.00"), result.get(1).balance());
+        }
+
+        @Test
+        @DisplayName("should return an empty list for an account with no history")
+        void shouldReturnEmptyList() {
+            // arrange
+            Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).build();
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
+            when(snapshotRepository.findAllByAccountIdNewestFirst(ACCOUNT_ID)).thenReturn(List.of());
+
+            // act
+            List<AccountSnapshotDto> result = accountService.getBalanceHistory(USER_ID, ACCOUNT_ID);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should throw ResourceNotFoundException when the account is not the user's")
+        void shouldThrowWhenMissing() {
+            // arrange
+            when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> accountService.getBalanceHistory(USER_ID, ACCOUNT_ID));
         }
     }
 
