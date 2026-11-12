@@ -35,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("AccountController Unit Tests")
 @WithCustomMockUser()
 class AccountControllerTest extends BaseControllerTest {
+    private static final String BALANCE_PATH = "/balance";
 
     private static final Long ACCOUNT_ID = 101L;
     private static final String BASE_URL = "/api/v1/accounts";
@@ -350,7 +351,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(accountService.recordBalance(eq(USER_ID), any(BalanceEntryRequest.class))).thenReturn(9);
 
             // act & assert & verify
-            mockMvc.perform(post(BASE_URL + "/balance")
+            mockMvc.perform(post(BASE_URL + BALANCE_PATH)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -366,7 +367,7 @@ class AccountControllerTest extends BaseControllerTest {
             BalanceEntryRequest request = new BalanceEntryRequest(ACCOUNT_ID, new BigDecimal("12500.00"), null, 1L);
 
             // act & assert & verify
-            mockMvc.perform(post(BASE_URL + "/balance")
+            mockMvc.perform(post(BASE_URL + BALANCE_PATH)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -383,7 +384,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .thenThrow(new IllegalArgumentException("Balance can only be entered on a manual-balance account."));
 
             // act & assert & verify
-            mockMvc.perform(post(BASE_URL + "/balance")
+            mockMvc.perform(post(BASE_URL + BALANCE_PATH)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
@@ -398,7 +399,7 @@ class AccountControllerTest extends BaseControllerTest {
             when(securityService.isAccountOwner(eq(ACCOUNT_ID), any())).thenReturn(false);
 
             // act & assert & verify
-            mockMvc.perform(post(BASE_URL + "/balance")
+            mockMvc.perform(post(BASE_URL + BALANCE_PATH)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))

@@ -40,6 +40,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AccountService Unit Tests")
 class AccountServiceTest {
+    private static final String MONEY_IN = "800.00";
+    private static final String RECORDED_BALANCE = "1000.00";
 
     @Mock private AccountRepository accountRepository;
     @Mock private UserRepository userRepository;
@@ -80,8 +82,8 @@ class AccountServiceTest {
             // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Brokerage")
                     .balanceMode(BalanceMode.MANUAL)
-                    .moneyIn(new BigDecimal("800.00"))
-                    .latestRecordedBalance(new BigDecimal("1000.00"))
+                    .moneyIn(new BigDecimal(MONEY_IN))
+                    .latestRecordedBalance(new BigDecimal(RECORDED_BALANCE))
                     .build();
             when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
 
@@ -90,7 +92,7 @@ class AccountServiceTest {
 
             // assert & verify
             assertEquals(BalanceMode.MANUAL, result.balanceMode());
-            assertEquals(0, new BigDecimal("800.00").compareTo(result.moneyIn()));
+            assertEquals(0, new BigDecimal(MONEY_IN).compareTo(result.moneyIn()));
             assertEquals(0, new BigDecimal("200.00").compareTo(result.gain()));
         }
 
@@ -100,7 +102,7 @@ class AccountServiceTest {
             // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Brokerage")
                     .balanceMode(BalanceMode.MANUAL)
-                    .moneyIn(new BigDecimal("800.00"))
+                    .moneyIn(new BigDecimal(MONEY_IN))
                     .build();
             when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
 
@@ -108,7 +110,7 @@ class AccountServiceTest {
             AccountDto result = accountService.getAllAccountsByUserId(USER_ID).get(0);
 
             // assert & verify
-            assertEquals(0, new BigDecimal("800.00").compareTo(result.moneyIn()));
+            assertEquals(0, new BigDecimal(MONEY_IN).compareTo(result.moneyIn()));
             assertNull(result.gain());
         }
 
@@ -117,8 +119,8 @@ class AccountServiceTest {
         void shouldNullMoneyInForDerived() {
             // arrange
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).name("Checking")
-                    .moneyIn(new BigDecimal("800.00"))
-                    .latestRecordedBalance(new BigDecimal("1000.00"))
+                    .moneyIn(new BigDecimal(MONEY_IN))
+                    .latestRecordedBalance(new BigDecimal(RECORDED_BALANCE))
                     .build();
             when(accountRepository.findAllByUserId(USER_ID)).thenReturn(List.of(account));
 
@@ -272,7 +274,7 @@ class AccountServiceTest {
                 + "to be 1)")
         void shouldReconcile() {
             // arrange
-            BigDecimal target = new BigDecimal("1000.00");
+            BigDecimal target = new BigDecimal(RECORDED_BALANCE);
             Long version = 1L;
             Long realAdjustmentTransactionId = 555L;
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
@@ -294,7 +296,7 @@ class AccountServiceTest {
         @DisplayName("should return 0 if target balance matches current balance")
         void shouldReturnZeroIfBalancesMatch() {
             // arrange
-            BigDecimal target = new BigDecimal("1000.00");
+            BigDecimal target = new BigDecimal(RECORDED_BALANCE);
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, 1L);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(target).build();
             when(accountRepository.findByIdAndUserId(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
@@ -325,7 +327,7 @@ class AccountServiceTest {
                 + "transactionRepository.insert(...) actually having been called")
         void shouldNotCommitAdjustmentTransactionWhenReconcileConflicts() {
             // arrange
-            BigDecimal target = new BigDecimal("1000.00");
+            BigDecimal target = new BigDecimal(RECORDED_BALANCE);
             Long version = 1L;
             AccountReconcileRequest request = new AccountReconcileRequest(ACCOUNT_ID, target, version);
             Account account = Account.builder().id(ACCOUNT_ID).userId(USER_ID).currentBalance(new BigDecimal("900.00")).version(version).build();

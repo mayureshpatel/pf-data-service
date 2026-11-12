@@ -20,6 +20,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot, Long> {
 
+    private static final String ACCOUNT_ID_PARAM = "accountId";
+
     private final JdbcClient jdbcClient;
     private final AccountSnapshotRowMapper rowMapper;
 
@@ -32,7 +34,7 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
      */
     public Optional<AccountSnapshot> findByAccountIdAndSnapshotDate(Long accountId, LocalDate snapshotDate) {
         return jdbcClient.sql(AccountSnapshotQueries.FIND_BY_ACCOUNT_ID_AND_SNAPSHOT_DATE)
-                .param("accountId", accountId)
+                .param(ACCOUNT_ID_PARAM, accountId)
                 .param("snapshotDate", snapshotDate)
                 .query(rowMapper)
                 .optional();
@@ -49,7 +51,7 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
      */
     public int upsert(Long accountId, LocalDate snapshotDate, BigDecimal balance) {
         return jdbcClient.sql(AccountSnapshotQueries.UPSERT)
-                .param("accountId", accountId)
+                .param(ACCOUNT_ID_PARAM, accountId)
                 .param("snapshotDate", snapshotDate)
                 .param("balance", balance)
                 .query(Long.class)
@@ -65,7 +67,7 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
      */
     public List<AccountSnapshot> findAllByAccountIdNewestFirst(Long accountId) {
         return jdbcClient.sql(AccountSnapshotQueries.FIND_ALL_BY_ACCOUNT_ID_NEWEST_FIRST)
-                .param("accountId", accountId)
+                .param(ACCOUNT_ID_PARAM, accountId)
                 .query(rowMapper)
                 .list();
     }
@@ -78,7 +80,7 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
      */
     public Optional<LocalDate> findLatestSnapshotDate(Long accountId) {
         return jdbcClient.sql(AccountSnapshotQueries.FIND_LATEST_SNAPSHOT_DATE)
-                .param("accountId", accountId)
+                .param(ACCOUNT_ID_PARAM, accountId)
                 .query((rs, rowNum) -> rs.getObject(1, LocalDate.class))
                 .optional();
     }
@@ -100,7 +102,7 @@ public class AccountSnapshotRepository implements JdbcRepository<AccountSnapshot
         }
 
         jdbcClient.sql(AccountSnapshotQueries.INSERT)
-                .param("accountId", accId)
+                .param(ACCOUNT_ID_PARAM, accId)
                 .param("snapshotDate", entity.getSnapshotDate())
                 .param("balance", entity.getBalance())
                 .update(keyHolder);

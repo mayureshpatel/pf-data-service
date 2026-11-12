@@ -55,4 +55,16 @@ public enum TransactionType {
     public boolean isAdjustment() {
         return this == ADJUSTMENT;
     }
+
+    /**
+     * Returns true if the type is one that only a hand-balanced account records: a contribution,
+     * an employer contribution or earnings. These are never transfers. Null-safe, so a missing
+     * type is simply not one of them.
+     *
+     * @param type the type to test, possibly {@code null}
+     * @return true if the type is a contribution, employer contribution or earnings, false otherwise.
+     */
+    public static boolean isContributionOrEarnings(TransactionType type) {
+        return type == CONTRIBUTION || type == EMPLOYER_CONTRIBUTION || type == EARNINGS;
+    }
 }

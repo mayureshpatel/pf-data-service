@@ -31,31 +31,9 @@ public final class AccountDtoMapper {
         }
 
         UserDto user = null;
-        AccountTypeDto type = null;
-        CurrencyDto currency = null;
         BankName bankName = null;
         if (account.getUserId() != null) {
             user = new UserDto(account.getUserId(), null, null);
-        }
-
-        if (account.getType() != null) {
-            type = new AccountTypeDto(
-                    account.getType().getCode(),
-                    account.getType().getLabel(),
-                    account.getType().isAsset(),
-                    account.getType().getSortOrder(),
-                    account.getType().isActive(),
-                    account.getType().getIcon(),
-                    account.getType().getColor()
-            );
-        }
-
-        if (account.getCurrency() != null) {
-            currency = new CurrencyDto(
-                    account.getCurrency().getCode(),
-                    account.getCurrency().getName(),
-                    account.getCurrency().getSymbol(),
-                    account.getCurrency().isActive());
         }
 
         if (account.getBankCode() != null && !account.getBankCode().isBlank()) {
@@ -63,27 +41,57 @@ public final class AccountDtoMapper {
         }
 
         // money in and gain only mean something on a hand-entered balance
-        BigDecimal moneyIn = null;
-        BigDecimal gain = null;
-        if (account.isManualBalance()) {
-            moneyIn = account.getMoneyIn();
-            if (moneyIn != null && account.getLatestRecordedBalance() != null) {
-                gain = account.getLatestRecordedBalance().subtract(moneyIn);
-            }
-        }
+        BigDecimal moneyIn = account.isManualBalance() ? account.getMoneyIn() : null;
+        BigDecimal gain = account.isManualBalance() ? gainOver(moneyIn, account.getLatestRecordedBalance()) : null;
 
         return new AccountDto(
                 account.getId(),
                 user,
                 account.getName(),
-                type,
+                toTypeDto(account),
                 account.getCurrentBalance(),
-                currency,
+                toCurrencyDto(account),
                 bankName,
                 account.getVersion(),
                 account.getBalanceMode(),
                 moneyIn,
                 gain
         );
+    }
+
+    /** Converts the account's type, or returns {@code null} when it has none. */
+    private static AccountTypeDto toTypeDto(Account account) {
+        if (account.getType() == null) {
+            return null;
+        }
+        return new AccountTypeDto(
+                account.getType().getCode(),
+                account.getType().getLabel(),
+                account.getType().isAsset(),
+                account.getType().getSortOrder(),
+                account.getType().isActive(),
+                account.getType().getIcon(),
+                account.getType().getColor()
+        );
+    }
+
+    /** Converts the account's currency, or returns {@code null} when it has none. */
+    private static CurrencyDto toCurrencyDto(Account account) {
+        if (account.getCurrency() == null) {
+            return null;
+        }
+        return new CurrencyDto(
+                account.getCurrency().getCode(),
+                account.getCurrency().getName(),
+                account.getCurrency().getSymbol(),
+                account.getCurrency().isActive());
+    }
+
+    /** The gain of the latest recorded balance over money in, or {@code null} when either is unknown. */
+    private static BigDecimal gainOver(BigDecimal moneyIn, BigDecimal latestRecordedBalance) {
+        if (moneyIn == null || latestRecordedBalance == null) {
+            return null;
+        }
+        return latestRecordedBalance.subtract(moneyIn);
     }
 }

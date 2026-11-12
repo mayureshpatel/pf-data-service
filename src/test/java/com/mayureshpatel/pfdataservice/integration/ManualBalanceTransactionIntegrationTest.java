@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * transaction's nested account silently read as DERIVED -- invisible to any hand-built mock.
  */
 class ManualBalanceTransactionIntegrationTest extends BaseIntegrationTest {
+    private static final String MANUAL_BALANCE = "12500.00";
 
     private static final long USER_ID = 710L;
     private static final long MANUAL_ID = 710L;
@@ -65,7 +66,7 @@ class ManualBalanceTransactionIntegrationTest extends BaseIntegrationTest {
         transactionService.deleteTransaction(USER_ID, TX_ID);
 
         // assert & verify
-        assertEquals(0, new BigDecimal("12500.00").compareTo(balanceOf(MANUAL_ID)));
+        assertEquals(0, new BigDecimal(MANUAL_BALANCE).compareTo(balanceOf(MANUAL_ID)));
     }
 
     @Test
@@ -75,7 +76,7 @@ class ManualBalanceTransactionIntegrationTest extends BaseIntegrationTest {
         transactionService.updateTransaction(USER_ID, update(MANUAL_ID, "600.00", "CONTRIBUTION").build());
 
         // assert & verify
-        assertEquals(0, new BigDecimal("12500.00").compareTo(balanceOf(MANUAL_ID)));
+        assertEquals(0, new BigDecimal(MANUAL_BALANCE).compareTo(balanceOf(MANUAL_ID)));
     }
 
     @Test
@@ -85,7 +86,7 @@ class ManualBalanceTransactionIntegrationTest extends BaseIntegrationTest {
         transactionService.updateTransactionsBulk(USER_ID, List.of(update(MANUAL_ID, "600.00", "CONTRIBUTION").build()));
 
         // assert & verify
-        assertEquals(0, new BigDecimal("12500.00").compareTo(balanceOf(MANUAL_ID)));
+        assertEquals(0, new BigDecimal(MANUAL_BALANCE).compareTo(balanceOf(MANUAL_ID)));
     }
 
     @Test
@@ -95,9 +96,9 @@ class ManualBalanceTransactionIntegrationTest extends BaseIntegrationTest {
         transactionService.updateTransaction(USER_ID, update(DERIVED_ID, "500.00", "EXPENSE").build());
 
         // assert & verify
-        assertEquals(0, new BigDecimal("12500.00").compareTo(balanceOf(MANUAL_ID)));
+        assertEquals(0, new BigDecimal(MANUAL_BALANCE).compareTo(balanceOf(MANUAL_ID)));
         assertEquals(0, new BigDecimal("500.00").compareTo(balanceOf(DERIVED_ID)));
-        assertTrue(jdbc.queryForObject("SELECT account_id FROM transactions WHERE id = ?", Long.class, TX_ID) == DERIVED_ID);
+        assertEquals(DERIVED_ID, jdbc.queryForObject("SELECT account_id FROM transactions WHERE id = ?", Long.class, TX_ID).longValue());
     }
 
     @Test

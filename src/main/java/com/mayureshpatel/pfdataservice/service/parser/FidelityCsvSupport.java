@@ -42,10 +42,7 @@ final class FidelityCsvSupport {
     static <T> List<T> readRows(InputStream inputStream, String headerPrefix, String label,
                                 Function<CSVRecord, T> mapper) {
         try {
-            String text = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            if (!text.isEmpty() && text.charAt(0) == BOM) {
-                text = text.substring(1);
-            }
+            String text = stripBom(new String(inputStream.readAllBytes(), StandardCharsets.UTF_8));
             int headerStart = findHeaderStart(text, headerPrefix);
             if (headerStart < 0) {
                 if (text.isBlank()) {
@@ -54,29 +51,39 @@ final class FidelityCsvSupport {
                 throw new CsvParsingException("Fidelity " + label + " CSV has no header row starting with '"
                         + headerPrefix + "'.");
             }
-            try (CSVParser csvParser = CSVFormat.DEFAULT.builder()
-                    .setHeader()
-                    .setSkipHeaderRecord(true)
-                    .setIgnoreEmptyLines(true)
-                    .setTrim(true)
-                    .get()
-                    .parse(new StringReader(text.substring(headerStart)))) {
-                List<T> rows = new ArrayList<>();
-                for (CSVRecord csvRecord : csvParser) {
-                    if (isDisclaimer(csvRecord)) {
-                        continue;
-                    }
-                    T row = mapper.apply(csvRecord);
-                    if (row != null) {
-                        rows.add(row);
-                    }
-                }
-                return rows;
-            }
+            return parseRows(text.substring(headerStart), mapper);
         } catch (CsvParsingException e) {
             throw e;
         } catch (IOException | RuntimeException e) {
             throw new CsvParsingException("Failed to parse Fidelity " + label + " CSV", e);
+        }
+    }
+
+    /** Drops the leading byte order mark, if the export has one. */
+    private static String stripBom(String text) {
+        return !text.isEmpty() && text.charAt(0) == BOM ? text.substring(1) : text;
+    }
+
+    /** Parses the CSV text that starts at the header row, skipping disclaimers and null-mapped rows. */
+    private static <T> List<T> parseRows(String csvText, Function<CSVRecord, T> mapper) throws IOException {
+        try (CSVParser csvParser = CSVFormat.DEFAULT.builder()
+                .setHeader()
+                .setSkipHeaderRecord(true)
+                .setIgnoreEmptyLines(true)
+                .setTrim(true)
+                .get()
+                .parse(new StringReader(csvText))) {
+            List<T> rows = new ArrayList<>();
+            for (CSVRecord csvRecord : csvParser) {
+                if (isDisclaimer(csvRecord)) {
+                    continue;
+                }
+                T row = mapper.apply(csvRecord);
+                if (row != null) {
+                    rows.add(row);
+                }
+            }
+            return rows;
         }
     }
 

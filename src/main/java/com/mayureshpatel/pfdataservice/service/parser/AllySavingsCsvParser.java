@@ -30,6 +30,10 @@ import java.util.stream.Stream;
  */
 @Component
 public class AllySavingsCsvParser implements TransactionParser {
+    private static final String KIND_WITHDRAWAL = "Withdrawal";
+    private static final String KIND_DEPOSIT = "Deposit";
+    private static final String INTEREST_PAID = "Interest Paid";
+
     /**
      * {@inheritDoc}
      */
@@ -80,14 +84,14 @@ public class AllySavingsCsvParser implements TransactionParser {
     private TransactionType resolveType(String kind, String description, long recordNumber) {
         String normalizedKind = kind == null ? "" : kind.trim();
         // unverified: no real withdrawal sample was available, confirm against an actual export
-        if ("Withdrawal".equalsIgnoreCase(normalizedKind)) {
+        if (KIND_WITHDRAWAL.equalsIgnoreCase(normalizedKind)) {
             return TransactionType.TRANSFER_OUT;
         }
-        if (!"Deposit".equalsIgnoreCase(normalizedKind)) {
+        if (!KIND_DEPOSIT.equalsIgnoreCase(normalizedKind)) {
             throw new CsvParsingException("Unsupported Ally transaction type '" + normalizedKind
                     + "' at row " + recordNumber + "; expected Deposit or Withdrawal.");
         }
-        if (description.trim().equalsIgnoreCase("Interest Paid")) {
+        if (INTEREST_PAID.equalsIgnoreCase(description.trim())) {
             return TransactionType.EARNINGS;
         }
         if (description.toLowerCase(Locale.ROOT).contains("transfer")) {

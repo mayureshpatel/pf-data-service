@@ -63,9 +63,16 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
 
     /**
      * Every column besides {@code id} and the audit trail, each independently optional
-     * (PF-809: extracted from {@link #mapRow(ResultSet, String)}).
+     * (PF-809: extracted from {@link #mapRow(ResultSet, String)}); split into identity columns
+     * and balance columns to keep each half small.
      */
     private static void mapOptionalFields(Account.AccountBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
+        mapIdentityFields(builder, rs, safePrefix, availableColumns);
+        mapBalanceFields(builder, rs, safePrefix, availableColumns);
+    }
+
+    /** The owner, name, type, current balance, currency and bank columns, each independently optional. */
+    private static void mapIdentityFields(Account.AccountBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (hasColumn(safePrefix + "user_id", availableColumns)) {
             builder.userId(getLongOrNull(rs, safePrefix + "user_id"));
         }
@@ -84,6 +91,10 @@ public class AccountRowMapper extends JdbcMapperUtils implements RowMapper<Accou
         if (hasColumn(safePrefix + "bank_name", availableColumns)) {
             builder.bankCode(rs.getString(safePrefix + "bank_name"));
         }
+    }
+
+    /** The balance mode, money-in, latest recorded balance and version columns, each independently optional. */
+    private static void mapBalanceFields(Account.AccountBuilder builder, ResultSet rs, String safePrefix, Set<String> availableColumns) throws SQLException {
         if (hasColumn(safePrefix + "balance_mode", availableColumns)) {
             String mode = rs.getString(safePrefix + "balance_mode");
             if (mode != null) {

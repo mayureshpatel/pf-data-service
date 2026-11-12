@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /** Verifies the net-change sign rule for the contribution and earnings types, on both the persisted {@link Transaction} and the {@link TransactionCreateRequest}. */
 @DisplayName("TransactionType net-change rules")
 class TransactionTypeTest {
+    private static final String FORTY = "40.00";
 
     @ParameterizedTest
     @EnumSource(value = TransactionType.class, names = {"CONTRIBUTION", "EMPLOYER_CONTRIBUTION", "EARNINGS"})
@@ -19,11 +20,11 @@ class TransactionTypeTest {
     void transactionNetChange_shouldBePositiveAbs(TransactionType type) {
         // arrange
         Transaction negative = Transaction.builder().type(type).amount(new BigDecimal("-40.00")).build();
-        Transaction positive = Transaction.builder().type(type).amount(new BigDecimal("40.00")).build();
+        Transaction positive = Transaction.builder().type(type).amount(new BigDecimal(FORTY)).build();
 
         // act & assert & verify
-        assertEquals(new BigDecimal("40.00"), negative.getNetChange());
-        assertEquals(new BigDecimal("40.00"), positive.getNetChange());
+        assertEquals(new BigDecimal(FORTY), negative.getNetChange());
+        assertEquals(new BigDecimal(FORTY), positive.getNetChange());
     }
 
     @ParameterizedTest
@@ -35,6 +36,6 @@ class TransactionTypeTest {
                 .type(type.name()).amount(new BigDecimal("-40.00")).build();
 
         // act & assert & verify
-        assertEquals(new BigDecimal("40.00"), request.getNetChange());
+        assertEquals(new BigDecimal(FORTY), request.getNetChange());
     }
 }

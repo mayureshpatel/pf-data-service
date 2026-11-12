@@ -39,6 +39,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 @Import({TransactionRepository.class, TransactionReportRepository.class})
 @DisplayName("TransactionRepository Integration Tests (PostgreSQL)")
 class TransactionRepositoryTest extends BaseRepositoryTest {
+    private static final String PARAM_ACCOUNT_ID = "accountId";
 
     @Autowired
     private TransactionRepository transactionRepository;
@@ -1030,7 +1031,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     insert into transactions (account_id, amount, date, description, type)
                     values (:accountId, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
                     """)
-                    .param("accountId", accountId)
+                    .param(PARAM_ACCOUNT_ID, accountId)
                     .param(PARAM_DESCRIPTION, description)
                     .update();
         }
@@ -1216,7 +1217,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     values (:accountId, 2, 1, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
                     returning id
                     """)
-                    .param("accountId", accountId)
+                    .param(PARAM_ACCOUNT_ID, accountId)
                     .param(PARAM_DESCRIPTION, description)
                     .query(Long.class)
                     .single();
@@ -1377,7 +1378,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                     values (:accountId, 2, :merchantId, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
                     returning id
                     """)
-                    .param("accountId", accountId)
+                    .param(PARAM_ACCOUNT_ID, accountId)
                     .param("merchantId", merchantId)
                     .param(PARAM_DESCRIPTION, description)
                     .query(Long.class)
@@ -1471,7 +1472,7 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
                             insert into transactions (account_id, amount, date, description, type)
                             values (:accountId, :amount, :date, 'net flow test', :type)
                             """)
-                    .param("accountId", accountId)
+                    .param(PARAM_ACCOUNT_ID, accountId)
                     .param("amount", new BigDecimal(amount))
                     .param("date", OffsetDateTime.parse("2041-05-10T12:00:00Z"))
                     .param("type", type)

@@ -17,15 +17,18 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Verifies {@link AccountUpdateRequest}'s jakarta bean-validation constraints, its {@code toDomain()} mapping, and per-field validation failures, one {@code @Nested} class per field below. */
 @DisplayName("AccountUpdateRequest Unit Tests")
 class AccountUpdateRequestTest extends ValidatorTestBase {
+    private static final String NAME = "Savings";
+    private static final String TYPE = "SAVINGS";
+    private static final String CURRENCY = "USD";
 
     @Test
     @DisplayName("should pass when all fields are valid")
     void shouldPassWithValidData() {
         AccountUpdateRequest request = AccountUpdateRequest.builder()
                 .id(1L)
-                .name("Savings")
-                .type("SAVINGS")
-                .currencyCode("USD")
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
                 .bankName("Test Bank")
                 .version(1L)
                 .build();
@@ -39,9 +42,9 @@ class AccountUpdateRequestTest extends ValidatorTestBase {
     void shouldConvertToDomain() {
         AccountUpdateRequest request = AccountUpdateRequest.builder()
                 .id(1L)
-                .name("Savings")
-                .type("SAVINGS")
-                .currencyCode("USD")
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
                 .bankName("Test Bank")
                 .version(2L)
                 .build();
@@ -61,9 +64,9 @@ class AccountUpdateRequestTest extends ValidatorTestBase {
     void shouldKeepDefaultBalanceModeWhenAbsent() {
         AccountUpdateRequest request = AccountUpdateRequest.builder()
                 .id(1L)
-                .name("Savings")
-                .type("SAVINGS")
-                .currencyCode("USD")
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
                 .version(1L)
                 .build();
 
@@ -75,9 +78,9 @@ class AccountUpdateRequestTest extends ValidatorTestBase {
     void shouldMapExplicitBalanceMode() {
         AccountUpdateRequest request = AccountUpdateRequest.builder()
                 .id(1L)
-                .name("Savings")
-                .type("SAVINGS")
-                .currencyCode("USD")
+                .name(NAME)
+                .type(TYPE)
+                .currencyCode(CURRENCY)
                 .version(1L)
                 .balanceMode("MANUAL")
                 .build();

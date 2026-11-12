@@ -36,6 +36,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountService {
 
+    private static final String ACCOUNT_NOT_FOUND = "Account not found";
+
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -126,7 +128,7 @@ public class AccountService {
     @Transactional
     public int reconcileAccount(Long userId, AccountReconcileRequest request) {
         Account account = accountRepository.findByIdAndUserId(request.getAccountId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
         // a hand-entered balance has no transactions to adjust: record it as today's balance instead
         if (account.isManualBalance()) {
@@ -164,7 +166,7 @@ public class AccountService {
     @Transactional
     public int recordBalance(Long userId, BalanceEntryRequest request) {
         Account account = accountRepository.findByIdAndUserId(request.accountId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
         if (!account.isManualBalance()) {
             throw new IllegalArgumentException("Balance can only be entered on a manual-balance account.");
@@ -196,7 +198,7 @@ public class AccountService {
     @Transactional(readOnly = true)
     public List<AccountSnapshotDto> getBalanceHistory(Long userId, Long accountId) {
         Account account = accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
         AccountDto accountDto = AccountDtoMapper.toDto(account);
 
         return snapshotRepository.findAllByAccountIdNewestFirst(accountId).stream()
@@ -239,7 +241,7 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
         if (!account.getUserId().equals(userId)) {
             throw new AccessDeniedException("Access denied");

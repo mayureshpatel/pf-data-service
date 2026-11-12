@@ -24,6 +24,8 @@ import java.util.stream.Stream;
  */
 @Component
 public class FidelityRetirementCsvParser implements TransactionParser {
+    private static final String KIND_CONTRIBUTIONS = "contributions";
+    private static final String KIND_REVENUE_CREDIT = "revenue credit";
     private static final Set<String> SKIPPED_TYPES = Set.of("exchange in", "exchange out", "investment gain/loss");
 
     /**
@@ -62,10 +64,10 @@ public class FidelityRetirementCsvParser implements TransactionParser {
     /** Returns the mapped type, or null for an explicitly skipped internal type. */
     private TransactionType resolveType(String kind, long recordNumber) {
         String normalized = kind.trim().toLowerCase(Locale.ROOT);
-        if ("contributions".equals(normalized)) {
+        if (KIND_CONTRIBUTIONS.equals(normalized)) {
             return TransactionType.CONTRIBUTION;
         }
-        if ("revenue credit".equals(normalized)) {
+        if (KIND_REVENUE_CREDIT.equals(normalized)) {
             return TransactionType.EARNINGS;
         }
         if (SKIPPED_TYPES.contains(normalized)) {

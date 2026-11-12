@@ -24,6 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 @DisplayName("NetWorthBooks Unit Tests")
 class NetWorthBooksTest {
+    private static final String CREDIT_CARD = "CREDIT_CARD";
+    private static final String FIVE_HUNDRED = "500.00";
+    private static final String MINUS_FIVE_HUNDRED = "-500.00";
 
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 25);
     private static final OffsetDateTime LONG_AGO = OffsetDateTime.of(2020, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
@@ -46,19 +49,19 @@ class NetWorthBooksTest {
     @Test
     @DisplayName("should contribute -500 to net worth for a liability stored as +500")
     void position_liabilityStoredPositive() {
-        NetWorthBooks.Position position = position(account(1, "CREDIT_CARD", false, "500.00"));
+        NetWorthBooks.Position position = position(account(1, CREDIT_CARD, false, FIVE_HUNDRED));
 
-        assertEquals(0, new BigDecimal("500.00").compareTo(position.debts()));
-        assertEquals(0, new BigDecimal("-500.00").compareTo(position.netWorth()));
+        assertEquals(0, new BigDecimal(FIVE_HUNDRED).compareTo(position.debts()));
+        assertEquals(0, new BigDecimal(MINUS_FIVE_HUNDRED).compareTo(position.netWorth()));
     }
 
     @Test
     @DisplayName("should contribute -500 to net worth for a liability stored as -500")
     void position_liabilityStoredNegative() {
-        NetWorthBooks.Position position = position(account(1, "CREDIT_CARD", false, "-500.00"));
+        NetWorthBooks.Position position = position(account(1, CREDIT_CARD, false, MINUS_FIVE_HUNDRED));
 
-        assertEquals(0, new BigDecimal("500.00").compareTo(position.debts()));
-        assertEquals(0, new BigDecimal("-500.00").compareTo(position.netWorth()));
+        assertEquals(0, new BigDecimal(FIVE_HUNDRED).compareTo(position.debts()));
+        assertEquals(0, new BigDecimal(MINUS_FIVE_HUNDRED).compareTo(position.netWorth()));
     }
 
     @Test
@@ -74,12 +77,12 @@ class NetWorthBooksTest {
     @Test
     @DisplayName("should sum a liability stored as +500 and one stored as -500 to the same -500")
     void sum_liabilityStoredEitherWay() {
-        BigDecimal positive = books.sum(List.of(account(1, "CREDIT_CARD", false, "500.00")), TODAY);
-        BigDecimal negative = books.sum(List.of(account(2, "CREDIT_CARD", false, "-500.00")), TODAY);
+        BigDecimal positive = books.sum(List.of(account(1, CREDIT_CARD, false, FIVE_HUNDRED)), TODAY);
+        BigDecimal negative = books.sum(List.of(account(2, CREDIT_CARD, false, MINUS_FIVE_HUNDRED)), TODAY);
 
-        assertEquals(0, new BigDecimal("-500.00").compareTo(positive));
-        assertEquals(0, new BigDecimal("-500.00").compareTo(negative));
-        assertEquals(0, new BigDecimal("-500.00").compareTo(books.sumOrNull(List.of(account(1, "LOAN", false, "500.00")), TODAY)));
+        assertEquals(0, new BigDecimal(MINUS_FIVE_HUNDRED).compareTo(positive));
+        assertEquals(0, new BigDecimal(MINUS_FIVE_HUNDRED).compareTo(negative));
+        assertEquals(0, new BigDecimal(MINUS_FIVE_HUNDRED).compareTo(books.sumOrNull(List.of(account(1, "LOAN", false, FIVE_HUNDRED)), TODAY)));
     }
 
     @Test
@@ -94,10 +97,10 @@ class NetWorthBooksTest {
         LocalDate monthEnd = LocalDate.of(2026, 10, 31);
         NetWorthGroupBuilder.Context context = new NetWorthGroupBuilder.Context(List.of(TODAY, monthEnd), TODAY, TODAY, TODAY);
 
-        NetWorthGroupDto positive = NetWorthGroupBuilder.build(NetWorthGroupBy.TYPE, List.of(account(1, "CREDIT_CARD", false, "500.00")), books, context, Map.of()).get(0);
-        NetWorthGroupDto negative = NetWorthGroupBuilder.build(NetWorthGroupBy.TYPE, List.of(account(2, "CREDIT_CARD", false, "-500.00")), books, context, Map.of()).get(0);
+        NetWorthGroupDto positive = NetWorthGroupBuilder.build(NetWorthGroupBy.TYPE, List.of(account(1, CREDIT_CARD, false, FIVE_HUNDRED)), books, context, Map.of()).get(0);
+        NetWorthGroupDto negative = NetWorthGroupBuilder.build(NetWorthGroupBy.TYPE, List.of(account(2, CREDIT_CARD, false, MINUS_FIVE_HUNDRED)), books, context, Map.of()).get(0);
 
-        assertEquals(0, new BigDecimal("-500.00").compareTo(positive.balance()));
+        assertEquals(0, new BigDecimal(MINUS_FIVE_HUNDRED).compareTo(positive.balance()));
         assertEquals(0, positive.balance().compareTo(negative.balance()));
         assertEquals(0, positive.previousBalance().compareTo(negative.previousBalance()));
         assertEquals(0, positive.comparisonBalance().compareTo(negative.comparisonBalance()));
