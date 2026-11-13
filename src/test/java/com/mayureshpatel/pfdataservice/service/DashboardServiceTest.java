@@ -248,6 +248,92 @@ class DashboardServiceTest {
         }
 
         @Test
+        @DisplayName("should compare a year-to-date range against the same dates the prior year")
+        void shouldCompareYearToDateAgainstSameDatesPriorYear() {
+            // arrange -- This Year, mid-year: Jan 1 to Nov 12, 2026 vs Jan 1 to Nov 12, 2025, not
+            // the 316 days before (Feb 19 to Dec 31, 2025), which splits last year arbitrarily
+            OffsetDateTime startDate = OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime endDate = OffsetDateTime.of(2026, 11, 12, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2025, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2025, 11, 12, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // act
+            dashboardService.getPulse(USER_ID, startDate, endDate);
+
+            // assert & verify
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should compare a full calendar year against the whole prior year")
+        void shouldCompareFullYearAgainstWholePriorYear() {
+            // arrange -- Last Year: Jan 1 to Dec 31, 2025 vs all of 2024
+            OffsetDateTime startDate = OffsetDateTime.of(2025, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime endDate = OffsetDateTime.of(2025, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2024, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // act
+            dashboardService.getPulse(USER_ID, startDate, endDate);
+
+            // assert & verify
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should clamp Feb 29 to Feb 28 when the prior year is not a leap year")
+        void shouldClampLeapDayWhenPriorYearIsNotLeap() {
+            // arrange -- Jan 1 to Feb 29, 2028 (leap) vs Jan 1 to Feb 28, 2027
+            OffsetDateTime startDate = OffsetDateTime.of(2028, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime endDate = OffsetDateTime.of(2028, 2, 29, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2027, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2027, 2, 28, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // act
+            dashboardService.getPulse(USER_ID, startDate, endDate);
+
+            // assert & verify
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should keep the same-length rule for a range that does not start on January 1")
+        void shouldKeepSameLengthRuleForNonJanuaryRange() {
+            // arrange -- Oct 1 to Oct 13, 2026 (13 days) vs the 13 days before
+            OffsetDateTime startDate = OffsetDateTime.of(2026, 10, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime endDate = OffsetDateTime.of(2026, 10, 13, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2026, 9, 18, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2026, 9, 30, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // act
+            dashboardService.getPulse(USER_ID, startDate, endDate);
+
+            // assert & verify
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
+        @DisplayName("should keep the same-length rule for whole January, which already lands on December")
+        void shouldKeepSameLengthRuleForWholeJanuary() {
+            // arrange -- Jan 1 to Jan 31, 2026 vs Dec 1 to Dec 31, 2025
+            OffsetDateTime startDate = OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime endDate = OffsetDateTime.of(2026, 1, 31, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedStartPrevious = OffsetDateTime.of(2025, 12, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+            OffsetDateTime expectedEndPrevious = OffsetDateTime.of(2025, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC);
+
+            // act
+            dashboardService.getPulse(USER_ID, startDate, endDate);
+
+            // assert & verify
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.INCOME));
+            verify(transactionReportRepository).getSumByDateRange(eq(USER_ID), eq(expectedStartPrevious), eq(expectedEndPrevious), eq(TransactionType.EXPENSE));
+        }
+
+        @Test
         @DisplayName("should query the current period through the end of the month's last day, not midnight (PF-196)")
         void shouldQueryCurrentPeriodThroughEndOfMonth() {
             // arrange
