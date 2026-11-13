@@ -141,8 +141,10 @@ public class DashboardService {
     }
 
     /**
-     * Income/expense pulse for an explicit date range, compared against the immediately
-     * preceding period of the same length.
+     * Income/expense pulse for an explicit date range. A range that starts on January 1 and ends in
+     * the same year (This Year, Last Year) is compared against the same dates one year earlier, with
+     * Feb 29 clamped to Feb 28. Any other range is compared against the immediately preceding period
+     * of the same length.
      *
      * @param userId    the user id
      * @param startDate the range start (inclusive)
@@ -150,6 +152,13 @@ public class DashboardService {
      * @return current vs. previous period income, expense, and savings rate
      */
     public DashboardPulseDto getPulse(Long userId, OffsetDateTime startDate, OffsetDateTime endDate) {
+        if (isYearToDateOrFullYear(startDate, endDate)) {
+            OffsetDateTime startPrevious = startDate.minusYears(1);
+            // minusYears clamps Feb 29 to Feb 28; end-of-day, not midnight -- same PF-827 reasoning
+            OffsetDateTime endPrevious = endOfDay(endDate.truncatedTo(ChronoUnit.DAYS).minusYears(1));
+            return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
+        }
+
         // calculate duration to find equivalent previous period
         long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         OffsetDateTime startPrevious = startDate.minusDays(days);
@@ -157,6 +166,17 @@ public class DashboardService {
         OffsetDateTime endPrevious = endOfDay(startDate.minusDays(1));
 
         return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
+    }
+
+    /**
+     * Whether a range starts on January 1 and ends in that same year, other than whole January
+     * (whose same-length window is already the prior calendar month).
+     */
+    private boolean isYearToDateOrFullYear(OffsetDateTime startDate, OffsetDateTime endDate) {
+        boolean startsJanuaryFirst = startDate.getMonthValue() == 1 && startDate.getDayOfMonth() == 1;
+        boolean sameYear = endDate.getYear() == startDate.getYear();
+        boolean wholeJanuary = endDate.getMonthValue() == 1 && endDate.getDayOfMonth() == 31;
+        return startsJanuaryFirst && sameYear && !wholeJanuary;
     }
 
     /**
