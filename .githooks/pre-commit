@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Refuses a commit that stages a local-only file, even when it was added with `git add -f`.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+#
+# .gitignore already keeps these files out of `git add -A` and `git add src`; this hook is the
+# second layer for a forced add. Blocked:
+#   - real bank and card statements under src/test/resources/sample-imports (only .gitkeep is allowed)
+#   - scripts/reset_personal_account.py, which wipes the personal test account on the live database
+#   - .env files that hold credentials (.env.example and .env.template are fine)
+
+blocked=()
+while IFS= read -r file; do
+    case "$file" in
+        src/test/resources/sample-imports/.gitkeep) ;;
+        src/test/resources/sample-imports/*) blocked+=("$file") ;;
+        scripts/reset_personal_account.py) blocked+=("$file") ;;
+        .env.example|*/.env.example|.env.template|*/.env.template) ;;
+        .env|.env.*|*/.env|*/.env.*) blocked+=("$file") ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "${#blocked[@]}" -gt 0 ]; then
+    echo "❌ Commit blocked: local-only files are staged:" >&2
+    printf '     %s\n' "${blocked[@]}" >&2
+    echo "   These hold personal data or can wipe the live database. Unstage them with:" >&2
+    echo "     git restore --staged -- <path>" >&2
+    exit 1
+fi

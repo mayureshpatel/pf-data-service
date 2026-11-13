@@ -101,3 +101,10 @@ __pycache__/
 
 ### Claude Code skill binaries (PF-134 originally added this to root's .gitignore only) ###
 *.skill
+
+### Local-only files (never commit) ###
+# real bank and card statements dropped in for parser work; .gitkeep keeps the folder
+src/test/resources/sample-imports/*
+!src/test/resources/sample-imports/.gitkeep
+# wipes the personal test account on the live database
+scripts/reset_personal_account.py
