@@ -224,5 +224,21 @@ class RegistrationRequestValidationTest {
                     FIELD_PASSWORD.equals(v.getPropertyPath().toString()) &&
                             v.getMessage().contains("special character"));
         }
+
+        @org.junit.jupiter.params.ParameterizedTest
+        @org.junit.jupiter.params.provider.ValueSource(strings = {"Passw0rd#x", "Passw0rd-x", "Passw0rd_x", "Passw0rd.x"})
+        @DisplayName("should accept any non-alphanumeric, non-space symbol as the special character")
+        void validate_passwordWithOtherSymbols_passes(String password) {
+            assertThat(validator.validate(validRequest().password(password).build())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should fail when password contains whitespace")
+        void validate_passwordWithWhitespace_hasViolation() {
+            Set<ConstraintViolation<RegistrationRequest>> violations =
+                    validator.validate(validRequest().password("P@ss word1").build());
+
+            assertThat(violations).anyMatch(v -> FIELD_PASSWORD.equals(v.getPropertyPath().toString()));
+        }
     }
 }
