@@ -100,6 +100,34 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
             assertTrue(result.getContent().stream().allMatch(t -> t.getType() == TransactionType.INCOME));
         }
 
+        /** PF-961: a category id matches that category exactly, and a parent's id also matches its subcategories. */
+        @Test
+        @DisplayName("PF-961: should filter by category id, including a parent's subcategories")
+        void shouldFilterByCategoryId() {
+            // arrange
+            TransactionSpecification.TransactionFilter rent = new TransactionSpecification.TransactionFilter(
+                    null, null, null, null, null, null, null, null, null, null, 6L
+            );
+            TransactionSpecification.TransactionFilter housing = new TransactionSpecification.TransactionFilter(
+                    null, null, null, null, null, null, null, null, null, null, 1L
+            );
+
+            // act
+            Page<Transaction> rentResult = transactionRepository.findAll(
+                    TransactionSpecification.withFilter(USER_ID, rent), PageRequest.of(0, 500)
+            );
+            Page<Transaction> housingResult = transactionRepository.findAll(
+                    TransactionSpecification.withFilter(USER_ID, housing), PageRequest.of(0, 500)
+            );
+
+            // assert & verify
+            assertFalse(rentResult.isEmpty());
+            assertTrue(rentResult.getContent().stream().allMatch(t -> Long.valueOf(6L).equals(t.getCategory().getId())));
+            assertEquals(rentResult.getTotalElements(), housingResult.getTotalElements(),
+                    "housing has no transactions of its own, so its group is rent's transactions");
+            assertTrue(housingResult.getContent().stream().noneMatch(t -> Long.valueOf(7L).equals(t.getCategory().getId())));
+        }
+
         @Test
         @DisplayName("should filter by amount range")
         void shouldFilterByAmount() {

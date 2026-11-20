@@ -98,6 +98,14 @@ public final class TransactionSpecification {
             parameters.put("description", "%" + escapeLike(filter.description().toLowerCase(Locale.ROOT)) + "%");
         }
 
+        // PF-961: an exact category by id, including its subcategories (a parent's count in the
+        // category tree is its group total); the name search below cannot tell two categories with
+        // the same name apart, and also matches any name that merely contains the text
+        if (filter.categoryId() != null) {
+            conditions.add("(transactions.category_id = :categoryId OR categories.parent_id = :categoryId)");
+            parameters.put("categoryId", filter.categoryId());
+        }
+
         if (filter.categoryName() != null && !filter.categoryName().isBlank()) {
             if (UNCATEGORIZED_SENTINEL.equalsIgnoreCase(filter.categoryName())) {
                 conditions.add("transactions.category_id IS NULL");
@@ -189,7 +197,18 @@ public final class TransactionSpecification {
             BigDecimal maxAmount,
             LocalDate startDate,
             LocalDate endDate,
-            Long tagId
+            Long tagId,
+            Long categoryId
     ) {
+
+        /**
+         * The filter without a category id, for callers that predate it (PF-961): the same ten
+         * components in the same order.
+         */
+        public TransactionFilter(Long accountId, TransactionType type, String description, String categoryName,
+                                 String vendorName, BigDecimal minAmount, BigDecimal maxAmount,
+                                 LocalDate startDate, LocalDate endDate, Long tagId) {
+            this(accountId, type, description, categoryName, vendorName, minAmount, maxAmount, startDate, endDate, tagId, null);
+        }
     }
 }
