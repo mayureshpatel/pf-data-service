@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +19,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -27,6 +30,7 @@ import java.util.List;
  * {@link #getBudgetStatus} for tracking allocated vs. actual spending against them.
  */
 @Tag(name = "Budgets", description = "The authenticated user's budgets and their status")
+@Validated
 @RestController
 @RequestMapping("/api/v1/budgets")
 @RequiredArgsConstructor
@@ -47,8 +51,8 @@ public class BudgetController {
     @GetMapping
     public ResponseEntity<List<BudgetDto>> getBudgets(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year) {
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month,
+            @RequestParam(required = false) @Min(2000) Integer year) {
 
         int monthValue = (month != null) ? month : LocalDate.now().getMonthValue();
         int yearValue = (year != null) ? year : LocalDate.now().getYear();
@@ -70,8 +74,8 @@ public class BudgetController {
     @GetMapping("/status")
     public ResponseEntity<List<BudgetStatusDto>> getBudgetStatus(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year) {
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month,
+            @RequestParam(required = false) @Min(2000) Integer year) {
 
         int monthValue = (month != null) ? month : LocalDate.now().getMonthValue();
         int yearValue = (year != null) ? year : LocalDate.now().getYear();
