@@ -143,7 +143,9 @@ public class DashboardService {
     /**
      * Income/expense pulse for an explicit date range. A range that starts on January 1 and ends in
      * the same year (This Year, Last Year) is compared against the same dates one year earlier, with
-     * Feb 29 clamped to Feb 28. Any other range is compared against the immediately preceding period
+     * Feb 29 clamped to Feb 28. A range that starts on the 1st of a month and stays in it (a whole
+     * month, or month to date) is compared against the previous calendar month over the same days,
+     * clamped to its length. Any other range is compared against the immediately preceding period
      * of the same length.
      *
      * @param userId    the user id
@@ -159,6 +161,21 @@ public class DashboardService {
             return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
         }
 
+        // a whole month or month to date is compared with the calendar month before, over the same
+        // days clamped to its length, not a sliding window that drags in the day before the month
+        if (startsMonthAndStaysInIt(startDate, endDate)) {
+            OffsetDateTime startPrevious = startDate.minusMonths(1);
+            int lastDayPrevious = startPrevious.toLocalDate().lengthOfMonth();
+            // a whole month takes the whole prior month, even a longer one; month to date takes
+            // the same days, clamped to the prior month's length
+            boolean wholeMonth = endDate.getDayOfMonth() == endDate.toLocalDate().lengthOfMonth();
+            int endDay = wholeMonth ? lastDayPrevious : Math.min(endDate.getDayOfMonth(), lastDayPrevious);
+            OffsetDateTime endPrevious = endOfDay(startPrevious
+                    .truncatedTo(ChronoUnit.DAYS)
+                    .withDayOfMonth(endDay));
+            return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
+        }
+
         // calculate duration to find equivalent previous period
         long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         OffsetDateTime startPrevious = startDate.minusDays(days);
@@ -166,6 +183,14 @@ public class DashboardService {
         OffsetDateTime endPrevious = endOfDay(startDate.minusDays(1));
 
         return calculatePulse(userId, startDate, endDate, startPrevious, endPrevious);
+    }
+
+    /** Whether a range of more than one day starts on the 1st of a month and ends in that same month. */
+    private boolean startsMonthAndStaysInIt(OffsetDateTime startDate, OffsetDateTime endDate) {
+        return startDate.getDayOfMonth() == 1
+                && endDate.isAfter(startDate)
+                && endDate.getYear() == startDate.getYear()
+                && endDate.getMonth() == startDate.getMonth();
     }
 
     /**
