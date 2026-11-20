@@ -30,6 +30,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
 
     private static final Long USER_1 = 1L;
     private static final Long CAT_RENT = 6L; // From baseline
+    private static final Long CAT_HOUSING = 1L; // parent of rent, from baseline
 
     /** {@code insert} returns the real database-generated id (checked against a fresh lookup, not just {@code update}'s rows-affected count), {@code update}/{@code delete} (soft) round-trip correctly, and both delete paths return 0 for a budget with no id or an id that doesn't exist rather than erroring. */
     @Nested
@@ -267,6 +268,51 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
             assertEquals(0, new BigDecimal("1500.00").compareTo(rentStatus.spentAmount()));
             assertEquals(0, new BigDecimal("500.00").compareTo(rentStatus.remainingAmount()));
             assertEquals(75.0, rentStatus.percentageUsed());
+        }
+
+        /** PF-959: a subcategory with no limit of its own counts toward its budgeted parent, and no longer shows as a separate unbudgeted row. */
+        @Test
+        @DisplayName("PF-959: should roll a limitless subcategory's spending into its budgeted parent")
+        void shouldRollSubcategorySpendingIntoBudgetedParent() {
+            // arrange
+            budgetRepository.insert(BudgetCreateRequest.builder()
+                    .userId(USER_1).categoryId(CAT_HOUSING).amount(new BigDecimal("3000.00")).month(9).year(2025).build());
+
+            // act
+            List<BudgetStatusDto> status = budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(USER_1, 9, 2025);
+
+            // assert & verify
+            BudgetStatusDto housing = status.stream()
+                    .filter(s -> CAT_HOUSING.equals(s.category().id()))
+                    .findFirst().orElseThrow();
+            assertEquals(0, new BigDecimal("1500.00").compareTo(housing.spentAmount()));
+            assertEquals(0, new BigDecimal("1500.00").compareTo(housing.remainingAmount()));
+            assertTrue(status.stream().noneMatch(s -> CAT_RENT.equals(s.category().id())),
+                    "rent's spending is inside housing, so it must not also be listed as unbudgeted");
+        }
+
+        /** PF-959: a subcategory with its own limit keeps its spending, so the parent is not double counted. */
+        @Test
+        @DisplayName("PF-959: should keep a subcategory's spending when it has its own limit")
+        void shouldKeepSpendingOfSubcategoryWithOwnLimit() {
+            // arrange
+            budgetRepository.insert(BudgetCreateRequest.builder()
+                    .userId(USER_1).categoryId(CAT_HOUSING).amount(new BigDecimal("3000.00")).month(9).year(2025).build());
+            budgetRepository.insert(BudgetCreateRequest.builder()
+                    .userId(USER_1).categoryId(CAT_RENT).amount(new BigDecimal("2000.00")).month(9).year(2025).build());
+
+            // act
+            List<BudgetStatusDto> status = budgetRepository.findBudgetStatusByUserIdAndMonthAndYear(USER_1, 9, 2025);
+
+            // assert & verify
+            BudgetStatusDto housing = status.stream()
+                    .filter(s -> CAT_HOUSING.equals(s.category().id()))
+                    .findFirst().orElseThrow();
+            BudgetStatusDto rent = status.stream()
+                    .filter(s -> CAT_RENT.equals(s.category().id()))
+                    .findFirst().orElseThrow();
+            assertEquals(0, BigDecimal.ZERO.compareTo(housing.spentAmount()));
+            assertEquals(0, new BigDecimal("1500.00").compareTo(rent.spentAmount()));
         }
 
         @Test

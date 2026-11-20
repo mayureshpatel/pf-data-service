@@ -22,6 +22,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -69,6 +70,19 @@ class BudgetControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$[0].id").value(BUDGET_ID));
 
             verify(budgetService).getBudgets(USER_ID, month, year);
+        }
+
+        /** PF-959: a month outside 1-12 is a client error, not a query against a nonexistent month. */
+        @Test
+        @DisplayName("GET should return 400 when the month is outside 1 to 12")
+        void getBudgets_shouldRejectMonthOutOfRange() throws Exception {
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL).param(PARAM_MONTH, "13").param("year", "2026"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get(BASE_URL + "/status").param(PARAM_MONTH, "0").param("year", "2026"))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(budgetService);
         }
 
         @Test

@@ -123,7 +123,7 @@ public class BudgetQueries {
 
     // language=SQL
     public static final String FIND_BUDGET_STATUS_BY_USER_ID_AND_MONTH_AND_YEAR = """
-            WITH spending AS (
+            WITH spending_by_category AS (
                 SELECT
                     t.category_id,
                     SUM(t.amount) AS total_spent
@@ -136,6 +136,31 @@ public class BudgetQueries {
                   AND t.date        >= :startDate
                   AND t.date        <  :endDate
                 GROUP BY t.category_id
+            ),
+
+            -- A subcategory with no limit of its own counts toward its parent's limit when the
+            -- parent has one this month (PF-959); a subcategory with its own limit keeps its spend.
+            spending AS (
+                SELECT
+                    CASE
+                        WHEN own.id IS NULL AND parent_budget.id IS NOT NULL THEN c.parent_id
+                        ELSE sc.category_id
+                        END                  AS category_id,
+                    SUM(sc.total_spent)      AS total_spent
+                FROM spending_by_category sc
+                         JOIN categories c ON c.id = sc.category_id
+                         LEFT JOIN budgets own
+                                   ON own.category_id = sc.category_id
+                                       AND own.user_id = :userId AND own.month = :month
+                                       AND own.year = :year AND own.deleted_at IS NULL
+                         LEFT JOIN budgets parent_budget
+                                   ON parent_budget.category_id = c.parent_id
+                                       AND parent_budget.user_id = :userId AND parent_budget.month = :month
+                                       AND parent_budget.year = :year AND parent_budget.deleted_at IS NULL
+                GROUP BY CASE
+                             WHEN own.id IS NULL AND parent_budget.id IS NOT NULL THEN c.parent_id
+                             ELSE sc.category_id
+                             END
             )
             
             -- 1. Budgeted categories (spending may or may not exist)
