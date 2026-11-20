@@ -67,7 +67,7 @@ class AccountDtoMapperTest {
                     .id(1L)
                     .userId(100L)
                     .name("Checking")
-                    .type(AccountType.builder().code("CHECKING").build())
+                    .type(AccountType.builder().code("CHECKING").asset(true).build())
                     .currentBalance(new BigDecimal("1500.00"))
                     .currency(Currency.builder().code("USD").build())
                     .bankCode("CAPITAL_ONE")
@@ -143,6 +143,30 @@ class AccountDtoMapperTest {
             assertNotNull(dto);
             assertNull(dto.bank());
             assertNull(dto.bank());
+        }
+
+        @Test
+        @DisplayName("should show a liability's balance as a negative number whichever sign it is stored with")
+        void toDto_shouldShowLiabilityBalanceAsNegative() {
+            Account loan = Account.builder().id(1L).name("Car loan")
+                    .type(AccountType.builder().code("LOAN").asset(false).build())
+                    .currentBalance(new BigDecimal("25358.00")).build();
+            Account card = Account.builder().id(2L).name("Card")
+                    .type(AccountType.builder().code("CREDIT_CARD").asset(false).build())
+                    .currentBalance(new BigDecimal("-1750.76")).build();
+
+            assertEquals(new BigDecimal("-25358.00"), AccountDtoMapper.toDto(loan).currentBalance());
+            assertEquals(new BigDecimal("-1750.76"), AccountDtoMapper.toDto(card).currentBalance());
+        }
+
+        @Test
+        @DisplayName("should leave an asset's balance as it is")
+        void toDto_shouldKeepAssetBalance() {
+            Account savings = Account.builder().id(1L).name("Savings")
+                    .type(AccountType.builder().code("SAVINGS").asset(true).build())
+                    .currentBalance(new BigDecimal("-5.00")).build();
+
+            assertEquals(new BigDecimal("-5.00"), AccountDtoMapper.toDto(savings).currentBalance());
         }
     }
 }
