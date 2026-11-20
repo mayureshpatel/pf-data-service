@@ -49,7 +49,7 @@ public final class AccountDtoMapper {
                 user,
                 account.getName(),
                 toTypeDto(account),
-                account.getCurrentBalance(),
+                displayBalance(account),
                 toCurrencyDto(account),
                 bankName,
                 account.getVersion(),
@@ -57,6 +57,18 @@ public final class AccountDtoMapper {
                 moneyIn,
                 gain
         );
+    }
+
+    /**
+     * The balance as shown to the user: an asset shows its balance, a liability shows what it owes as a
+     * negative number (loans are stored positive, cards negative), the same rule the net worth view uses.
+     */
+    private static BigDecimal displayBalance(Account account) {
+        BigDecimal balance = account.getCurrentBalance();
+        if (balance == null || account.getType() == null || account.getType().isAsset()) {
+            return balance;
+        }
+        return balance.abs().negate();
     }
 
     /** Converts the account's type, or returns {@code null} when it has none. */
