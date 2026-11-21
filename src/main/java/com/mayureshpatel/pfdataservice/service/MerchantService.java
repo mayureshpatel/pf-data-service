@@ -263,6 +263,21 @@ public class MerchantService {
     }
 
     /**
+     * Batch form of {@link #recordDescriptionLink}: links every description to the merchant in one
+     * transaction, so the whole selection lands or none of it does. Each description is upserted
+     * (last-write-wins), so a description already linked elsewhere is moved, and a description
+     * repeated in the list is simply linked once.
+     *
+     * @param userId       the user id
+     * @param merchantId   the merchant to link the descriptions to
+     * @param descriptions the raw descriptions to link
+     */
+    @Transactional
+    public void recordDescriptionLinks(Long userId, Long merchantId, List<String> descriptions) {
+        descriptions.forEach(description -> recordDescriptionLink(userId, merchantId, description));
+    }
+
+    /**
      * Returns every description linked to a merchant the user owns -- backs the merchant's own
      * description-links management screen.
      *
