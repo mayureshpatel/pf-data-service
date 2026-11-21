@@ -172,7 +172,8 @@ class TransactionCrudControllerTest extends BaseControllerTest {
                             .param("maxAmount", "50.00")
                             .param("startDate", "2026-01-01")
                             .param("endDate", "2026-01-31")
-                            .param("tagId", "3"))
+                            .param("tagId", "3")
+                            .param("categoryId", "9"))
                     .andExpect(status().isOk());
 
             verify(transactionService).getTransactions(
@@ -187,7 +188,8 @@ class TransactionCrudControllerTest extends BaseControllerTest {
                                     && filter.maxAmount().compareTo(new BigDecimal("50.00")) == 0
                                     && filter.startDate().equals(java.time.LocalDate.of(2026, 1, 1))
                                     && filter.endDate().equals(java.time.LocalDate.of(2026, 1, 31))
-                                    && filter.tagId().equals(3L)),
+                                    && filter.tagId().equals(3L)
+                                    && filter.categoryId().equals(9L)),
                     any(Pageable.class));
         }
     }

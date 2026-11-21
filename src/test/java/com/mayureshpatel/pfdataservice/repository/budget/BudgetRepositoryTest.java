@@ -29,6 +29,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
     private BudgetRepository budgetRepository;
 
     private static final Long USER_1 = 1L;
+    private static final BigDecimal RENT_AMOUNT = new BigDecimal("1500.00");
     private static final Long CAT_RENT = 6L; // From baseline
     private static final Long CAT_HOUSING = 1L; // parent of rent, from baseline
 
@@ -43,7 +44,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
             BudgetCreateRequest request = BudgetCreateRequest.builder()
                     .userId(USER_1)
                     .categoryId(CAT_RENT)
-                    .amount(new BigDecimal("1500.00"))
+                    .amount(RENT_AMOUNT)
                     .month(3)
                     .year(2026)
                     .build();
@@ -54,7 +55,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify -- must be the real generated id, not update()'s rows-affected count
             assertTrue(budget.isPresent());
-            assertEquals(0, new BigDecimal("1500.00").compareTo(budget.get().getAmount()));
+            assertEquals(0, RENT_AMOUNT.compareTo(budget.get().getAmount()));
             assertEquals(budget.get().getId(), (long) newId);
         }
 
@@ -265,7 +266,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
                     .orElseThrow();
 
             assertEquals(0, new BigDecimal("2000.00").compareTo(rentStatus.budgetedAmount()));
-            assertEquals(0, new BigDecimal("1500.00").compareTo(rentStatus.spentAmount()));
+            assertEquals(0, RENT_AMOUNT.compareTo(rentStatus.spentAmount()));
             assertEquals(0, new BigDecimal("500.00").compareTo(rentStatus.remainingAmount()));
             assertEquals(75.0, rentStatus.percentageUsed());
         }
@@ -285,8 +286,8 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
             BudgetStatusDto housing = status.stream()
                     .filter(s -> CAT_HOUSING.equals(s.category().id()))
                     .findFirst().orElseThrow();
-            assertEquals(0, new BigDecimal("1500.00").compareTo(housing.spentAmount()));
-            assertEquals(0, new BigDecimal("1500.00").compareTo(housing.remainingAmount()));
+            assertEquals(0, RENT_AMOUNT.compareTo(housing.spentAmount()));
+            assertEquals(0, RENT_AMOUNT.compareTo(housing.remainingAmount()));
             assertTrue(status.stream().noneMatch(s -> CAT_RENT.equals(s.category().id())),
                     "rent's spending is inside housing, so it must not also be listed as unbudgeted");
         }
@@ -312,7 +313,7 @@ class BudgetRepositoryTest extends BaseRepositoryTest {
                     .filter(s -> CAT_RENT.equals(s.category().id()))
                     .findFirst().orElseThrow();
             assertEquals(0, BigDecimal.ZERO.compareTo(housing.spentAmount()));
-            assertEquals(0, new BigDecimal("1500.00").compareTo(rent.spentAmount()));
+            assertEquals(0, RENT_AMOUNT.compareTo(rent.spentAmount()));
         }
 
         @Test
