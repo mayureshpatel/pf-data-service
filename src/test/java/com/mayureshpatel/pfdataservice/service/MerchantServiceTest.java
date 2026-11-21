@@ -58,6 +58,7 @@ class MerchantServiceTest {
 
     private static final Long USER_ID = 1L;
     private static final String NORMALIZED_STARBUCKS = "starbucks #1";
+    private static final String RAW_STARBUCKS_PADDED = "  STARBUCKS   #1  ";
     private static final String DISPLAY_STARBUCKS = "STARBUCKS #1";
 
     /** {@code getAllMerchants} maps every repository row to a {@link MerchantDto}, passing the optional search term (PF-320) and {@link Pageable} straight through unmodified. */
@@ -353,10 +354,27 @@ class MerchantServiceTest {
         @DisplayName("should upsert with the light-normalized description as the lookup key")
         void shouldUpsertWithNormalizedKey() {
             // act
-            merchantService.recordDescriptionLink(USER_ID, 7L, "  STARBUCKS   #1  ");
+            merchantService.recordDescriptionLink(USER_ID, 7L, RAW_STARBUCKS_PADDED);
 
             // assert & verify
-            verify(descriptionLinkRepository).upsert(USER_ID, 7L, "  STARBUCKS   #1  ", NORMALIZED_STARBUCKS);
+            verify(descriptionLinkRepository).upsert(USER_ID, 7L, RAW_STARBUCKS_PADDED, NORMALIZED_STARBUCKS);
+        }
+    }
+
+    /** {@code recordDescriptionLinks} upserts every description in the list, each with its own light-normalized key. */
+    @Nested
+    @DisplayName("recordDescriptionLinks")
+    class RecordDescriptionLinksTests {
+
+        @Test
+        @DisplayName("should upsert every description with its normalized key")
+        void shouldUpsertEveryDescription() {
+            // act
+            merchantService.recordDescriptionLinks(USER_ID, 7L, List.of(RAW_STARBUCKS_PADDED, "STARBUCKS #1"));
+
+            // assert & verify
+            verify(descriptionLinkRepository).upsert(USER_ID, 7L, RAW_STARBUCKS_PADDED, NORMALIZED_STARBUCKS);
+            verify(descriptionLinkRepository).upsert(USER_ID, 7L, "STARBUCKS #1", NORMALIZED_STARBUCKS);
         }
     }
 

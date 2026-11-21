@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkBulkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
@@ -20,6 +21,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -323,6 +325,79 @@ class MerchantControllerTest extends BaseControllerTest {
                     .andExpect(status().isForbidden());
 
             verify(merchantService, never()).recordDescriptionLink(anyLong(), anyLong(), anyString());
+        }
+    }
+
+    /** {@code POST /api/v1/merchants/{id}/description-links/bulk} records every description and returns 204, returns a 400 (and never calls the service) for an empty list or a blank entry, and a real {@code @PreAuthorize}-enforced 403 when {@code securityService.isMerchantOwner} is stubbed false. */
+    @Nested
+    @DisplayName("addDescriptionLinks")
+    class AddDescriptionLinksTests {
+
+        private static final String BULK_URL = DESCRIPTION_LINKS_URL + "/bulk";
+
+        @Test
+        @DisplayName("POST /{id}/description-links/bulk should record every link and return 204")
+        void addDescriptionLinks_shouldRecord() throws Exception {
+            // arrange
+            MerchantDescriptionLinkBulkCreateRequest request = new MerchantDescriptionLinkBulkCreateRequest(List.of(DESCRIPTION_STARBUCKS, "SHELL OIL"));
+
+            // act & assert & verify
+            mockMvc.perform(post(BULK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNoContent());
+
+            verify(merchantService).recordDescriptionLinks(USER_ID, MERCHANT_ID, List.of(DESCRIPTION_STARBUCKS, "SHELL OIL"));
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/bulk should return 400 Bad Request for an empty list")
+        void addDescriptionLinks_shouldReturn400WhenEmpty() throws Exception {
+            // arrange
+            MerchantDescriptionLinkBulkCreateRequest request = new MerchantDescriptionLinkBulkCreateRequest(List.of());
+
+            // act & assert & verify
+            mockMvc.perform(post(BULK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+
+            verify(merchantService, never()).recordDescriptionLinks(anyLong(), anyLong(), anyList());
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/bulk should return 400 Bad Request when an entry is blank")
+        void addDescriptionLinks_shouldReturn400WhenEntryBlank() throws Exception {
+            // arrange
+            MerchantDescriptionLinkBulkCreateRequest request = new MerchantDescriptionLinkBulkCreateRequest(List.of(DESCRIPTION_STARBUCKS, " "));
+
+            // act & assert & verify
+            mockMvc.perform(post(BULK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+
+            verify(merchantService, never()).recordDescriptionLinks(anyLong(), anyLong(), anyList());
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/bulk should return 403 Forbidden when not owner")
+        void addDescriptionLinks_shouldReturn403WhenNotOwner() throws Exception {
+            // arrange
+            when(securityService.isMerchantOwner(eq(MERCHANT_ID), any())).thenReturn(false);
+            MerchantDescriptionLinkBulkCreateRequest request = new MerchantDescriptionLinkBulkCreateRequest(List.of(DESCRIPTION_STARBUCKS));
+
+            // act & assert & verify
+            mockMvc.perform(post(BULK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+
+            verify(merchantService, never()).recordDescriptionLinks(anyLong(), anyLong(), anyList());
         }
     }
 

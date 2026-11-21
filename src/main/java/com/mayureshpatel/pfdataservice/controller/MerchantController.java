@@ -1,6 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkBulkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
@@ -167,6 +168,31 @@ public class MerchantController {
             @RequestBody @Valid MerchantDescriptionLinkCreateRequest request
     ) {
         merchantService.recordDescriptionLink(userDetails.getId(), id, request.description());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Links many raw descriptions to a merchant owned by the authenticated user in one call --
+     * the batch form of {@link #addDescriptionLink}, with the same last-write-wins behavior for a
+     * description already linked elsewhere. All-or-nothing: one transaction.
+     *
+     * @param userDetails the authenticated user
+     * @param id          the merchant id to link the descriptions to
+     * @param request     the raw descriptions to link (1 to 500)
+     * @return 204 once every link is recorded
+     */
+    @Operation(summary = "Link many descriptions to a merchant", description = "Creates or overwrites the links from up to 500 raw descriptions to a merchant owned by the authenticated user, in one transaction")
+    @ApiResponse(responseCode = "204", description = "Description links recorded")
+    @ApiResponse(responseCode = "400", description = "No descriptions, more than 500, or a blank or too-long description")
+    @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this merchant")
+    @PostMapping("/{id}/description-links/bulk")
+    @PreAuthorize("@ss.isMerchantOwner(#id, principal)")
+    public ResponseEntity<Void> addDescriptionLinks(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody @Valid MerchantDescriptionLinkBulkCreateRequest request
+    ) {
+        merchantService.recordDescriptionLinks(userDetails.getId(), id, request.descriptions());
         return ResponseEntity.noContent().build();
     }
 
