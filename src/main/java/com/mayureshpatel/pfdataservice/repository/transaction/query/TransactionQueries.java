@@ -574,4 +574,9 @@ public final class TransactionQueries {
     // language=SQL
     public static final String DESCRIPTIONS_ORDER_PAGE =
             " order by grouped.transaction_count desc, grouped.description limit :limit offset :offset";
+
+    // language=SQL
+    // the whole list in usage order, for grouping in memory (see DescriptionGrouper)
+    public static final String DESCRIPTIONS_ORDER_ALL =
+            " order by grouped.transaction_count desc, grouped.description";
 }

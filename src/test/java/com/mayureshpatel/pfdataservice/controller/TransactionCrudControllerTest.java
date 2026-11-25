@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionGroupDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionGroupPageDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.web.PagedModel;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
@@ -419,6 +422,62 @@ class TransactionCrudControllerTest extends BaseControllerTest {
         void getDescriptions_requiresAuthentication() throws Exception {
             // act & assert & verify -- no custom authentication entry point, so spring security answers 403
             mockMvc.perform(get(BASE_URL + "/descriptions")).andExpect(status().isForbidden());
+
+            verifyNoInteractions(transactionService);
+        }
+    }
+
+    /** {@code GET /api/v1/transactions/description-groups} returns grouped descriptions, passing search, unlinkedOnly (default true) and paging to the service. */
+    @Nested
+    @DisplayName("getDescriptionGroups")
+    class GetDescriptionGroupsTests {
+        @Test
+        @DisplayName("GET /description-groups should return the groups, page metadata and unlinked count")
+        void getDescriptionGroups_shouldReturnPage() throws Exception {
+            // arrange
+            TransactionDescriptionDto variant = new TransactionDescriptionDto("KROGER #431", 105L, null, null);
+            DescriptionGroupPageDto page = new DescriptionGroupPageDto(
+                    List.of(new DescriptionGroupDto("kroger", "KROGER", 1, 105L, List.of(variant), List.of("kroger fuel ctr"))),
+                    new PagedModel.PageMetadata(5, 1, 6, 2),
+                    661L);
+            when(transactionService.getDescriptionGroups(eq(USER_ID), eq("kroger -fuel"), eq(false), any(Pageable.class))).thenReturn(page);
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/description-groups")
+                            .param("search", "kroger -fuel").param("unlinkedOnly", "false")
+                            .param("page", "1").param("size", "5"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].key").value("kroger"))
+                    .andExpect(jsonPath("$.content[0].displayName").value("KROGER"))
+                    .andExpect(jsonPath("$.content[0].variantCount").value(1))
+                    .andExpect(jsonPath("$.content[0].transactionCount").value(105))
+                    .andExpect(jsonPath("$.content[0].variants[0].description").value("KROGER #431"))
+                    .andExpect(jsonPath("$.content[0].similarKeys[0]").value("kroger fuel ctr"))
+                    .andExpect(jsonPath("$.page.totalElements").value(6))
+                    .andExpect(jsonPath("$.page.number").value(1))
+                    .andExpect(jsonPath("$.unlinkedDescriptionCount").value(661));
+            verify(transactionService).getDescriptionGroups(eq(USER_ID), eq("kroger -fuel"), eq(false),
+                    argThat((Pageable p) -> p.getPageNumber() == 1 && p.getPageSize() == 5));
+        }
+
+        @Test
+        @DisplayName("GET /description-groups should default unlinkedOnly to true")
+        void getDescriptionGroups_shouldDefaultUnlinkedOnly() throws Exception {
+            // arrange
+            when(transactionService.getDescriptionGroups(eq(USER_ID), isNull(), eq(true), any(Pageable.class)))
+                    .thenReturn(new DescriptionGroupPageDto(List.of(), new PagedModel.PageMetadata(20, 0, 0, 0), 0L));
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL + "/description-groups")).andExpect(status().isOk());
+            verify(transactionService).getDescriptionGroups(eq(USER_ID), isNull(), eq(true), any(Pageable.class));
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("GET /description-groups should reject an unauthenticated caller")
+        void getDescriptionGroups_requiresAuthentication() throws Exception {
+            // act & assert & verify -- no custom authentication entry point, so spring security answers 403
+            mockMvc.perform(get(BASE_URL + "/description-groups")).andExpect(status().isForbidden());
 
             verifyNoInteractions(transactionService);
         }

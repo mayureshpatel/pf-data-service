@@ -791,6 +791,29 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
         return new PageImpl<>(content, pageable, total);
     }
 
+    /**
+     * Lists every one of the user's distinct transaction descriptions, in usage order, with the
+     * merchant each is linked to. Same rows as {@link #findDescriptions} without search or paging:
+     * the merchants page's Unlinked tab groups them in memory by a key sql cannot page by.
+     *
+     * @param userId       the user id
+     * @param unlinkedOnly when true, only descriptions with no merchant link
+     * @return all matching descriptions, most used first
+     */
+    public List<TransactionDescriptionDto> findAllDescriptions(Long userId, boolean unlinkedOnly) {
+        return jdbcClient.sql(TransactionQueries.DESCRIPTIONS_GROUPED
+                        + TransactionQueries.DESCRIPTIONS_SELECT + TransactionQueries.DESCRIPTIONS_JOINED
+                        + (unlinkedOnly ? TransactionQueries.DESCRIPTIONS_UNLINKED_ONLY : "")
+                        + TransactionQueries.DESCRIPTIONS_ORDER_ALL)
+                .param(SqlParams.USER_ID, userId)
+                .query((rs, rowNum) -> new TransactionDescriptionDto(
+                        rs.getString("description"),
+                        rs.getLong("transaction_count"),
+                        rs.getObject("merchant_id", Long.class),
+                        rs.getString("merchant_name")))
+                .list();
+    }
+
     private static String escapeLike(String value) {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
