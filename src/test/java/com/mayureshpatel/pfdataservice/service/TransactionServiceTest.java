@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionGroupDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionGroupPageDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.domain.account.Account;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
@@ -1349,6 +1351,66 @@ class TransactionServiceTest {
             // assert & verify
             assertSame(page, result);
             verify(transactionRepository).findDescriptions(USER_ID, "cos", true, pageable);
+        }
+    }
+
+    /** {@code getDescriptionGroups} groups the repository's full description list, pages the groups and counts unlinked descriptions. */
+    @Nested
+    @DisplayName("getDescriptionGroups")
+    class GetDescriptionGroupsTests {
+        private final List<TransactionDescriptionDto> rows = List.of(
+                new TransactionDescriptionDto("KROGER #431 ROSWELL GA", 105L, null, null),
+                new TransactionDescriptionDto("KROGER #512", 100L, null, null),
+                new TransactionDescriptionDto("PUBLIX #1201", 60L, 9L, "Publix"),
+                new TransactionDescriptionDto("KROGER FUEL CTR #1431", 38L, null, null));
+
+        @Test
+        @DisplayName("should group, page and count unlinked descriptions")
+        void shouldGroupAndPage() {
+            // arrange
+            when(transactionRepository.findAllDescriptions(USER_ID, false)).thenReturn(rows);
+
+            // act
+            DescriptionGroupPageDto result = transactionService.getDescriptionGroups(USER_ID, null, false, PageRequest.of(0, 2));
+
+            // assert & verify
+            assertEquals(List.of("kroger", "kroger fuel ctr"), result.content().stream().map(DescriptionGroupDto::key).toList());
+            assertEquals(3L, result.page().totalElements());
+            assertEquals(2L, result.page().totalPages());
+            assertEquals(0L, result.page().number());
+            assertEquals(3L, result.unlinkedDescriptionCount());
+            verify(transactionRepository).findAllDescriptions(USER_ID, false);
+        }
+
+        @Test
+        @DisplayName("should return the last partial page and an empty page past the end")
+        void shouldPageToTheEnd() {
+            // arrange
+            when(transactionRepository.findAllDescriptions(USER_ID, true)).thenReturn(rows);
+
+            // act
+            DescriptionGroupPageDto last = transactionService.getDescriptionGroups(USER_ID, null, true, PageRequest.of(1, 2));
+            DescriptionGroupPageDto past = transactionService.getDescriptionGroups(USER_ID, null, true, PageRequest.of(5, 2));
+
+            // assert & verify
+            assertEquals(List.of("publix"), last.content().stream().map(DescriptionGroupDto::key).toList());
+            assertEquals(List.of(), past.content());
+            assertEquals(3L, past.page().totalElements());
+        }
+
+        @Test
+        @DisplayName("should apply the search to the groups but not to the unlinked count")
+        void shouldSearchWithoutChangingCount() {
+            // arrange
+            when(transactionRepository.findAllDescriptions(USER_ID, true)).thenReturn(rows);
+
+            // act
+            DescriptionGroupPageDto result = transactionService.getDescriptionGroups(USER_ID, "kroger -fuel", true, PageRequest.of(0, 20));
+
+            // assert & verify
+            assertEquals(List.of("kroger"), result.content().stream().map(DescriptionGroupDto::key).toList());
+            assertEquals(List.of("kroger fuel ctr"), result.content().get(0).similarKeys());
+            assertEquals(3L, result.unlinkedDescriptionCount());
         }
     }
 }

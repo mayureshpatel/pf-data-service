@@ -24,6 +24,7 @@ import com.mayureshpatel.pfdataservice.service.transfer.TransferMatcher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedModel;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -519,6 +520,34 @@ public class TransactionService {
      */
     public Page<TransactionDescriptionDto> getDescriptions(Long userId, String search, boolean unlinkedOnly, Pageable pageable) {
         return transactionRepository.findDescriptions(userId, search, unlinkedOnly, pageable);
+    }
+
+    /**
+     * Lists the user's descriptions folded into groups that share the same merchant text (store
+     * numbers and a trailing location stripped), for the merchants page's Unlinked tab, so the user
+     * links once per group. Look-alike groups (kroger, kroger fuel ctr) are marked similar and kept
+     * apart. The search takes an include phrase plus {@code -exclude} terms; see
+     * {@link DescriptionGrouper#group}.
+     *
+     * @param userId       the user id
+     * @param search       an optional search, such as {@code kroger -fuel}
+     * @param unlinkedOnly when true, only descriptions with no merchant link are grouped
+     * @param pageable     the requested page and size of groups (ordering is fixed)
+     * @return the page of groups and the user's total unlinked description count
+     */
+    public DescriptionGroupPageDto getDescriptionGroups(Long userId, String search, boolean unlinkedOnly, Pageable pageable) {
+        List<TransactionDescriptionDto> descriptions = transactionRepository.findAllDescriptions(userId, unlinkedOnly);
+        long unlinkedCount = descriptions.stream().filter(d -> d.merchantId() == null).count();
+        List<DescriptionGroupDto> groups = DescriptionGrouper.group(descriptions, search);
+
+        int from = (int) Math.min(pageable.getOffset(), groups.size());
+        int to = Math.min(from + pageable.getPageSize(), groups.size());
+        int size = pageable.getPageSize();
+        long totalPages = size == 0 ? 0 : (groups.size() + size - 1) / size;
+        return new DescriptionGroupPageDto(
+                groups.subList(from, to),
+                new PagedModel.PageMetadata(size, pageable.getPageNumber(), groups.size(), totalPages),
+                unlinkedCount);
     }
 
     /**

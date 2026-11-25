@@ -1041,6 +1041,64 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    /** {@code findAllDescriptions} returns the same rows as {@code findDescriptions} unpaged and unsearched, most used first, for in-memory grouping. */
+    @Nested
+    @DisplayName("findAllDescriptions")
+    class FindAllDescriptionsTests {
+
+        private void insertTransaction(long accountId, String description, int times) {
+            for (int i = 0; i < times; i++) {
+                jdbcClient.sql("""
+                        insert into transactions (account_id, amount, date, description, type)
+                        values (:accountId, 10.00, '2030-01-01T00:00:00Z', :description, 'EXPENSE')
+                        """)
+                        .param(PARAM_ACCOUNT_ID, accountId)
+                        .param(PARAM_DESCRIPTION, description)
+                        .update();
+            }
+        }
+
+        @Test
+        @DisplayName("should return every description most used first, folded and linked like findDescriptions")
+        void shouldReturnAllInUsageOrder() {
+            // arrange
+            insertTransaction(1L, "ZZG KROGER #431", 3);
+            insertTransaction(1L, "zzg kroger  #431", 1);
+            insertTransaction(1L, "ZZG KROGER FUEL #1696", 2);
+            jdbcClient.sql("""
+                    insert into merchant_description_links (user_id, merchant_id, description, normalized_description)
+                    values (:userId, 2, 'ZZG KROGER FUEL #1696', 'zzg kroger fuel #1696')
+                    """).param("userId", USER_ID).update();
+
+            // act
+            List<TransactionDescriptionDto> all = transactionRepository.findAllDescriptions(USER_ID, false).stream()
+                    .filter(d -> d.description().toLowerCase().startsWith("zzg")).toList();
+            List<TransactionDescriptionDto> unlinked = transactionRepository.findAllDescriptions(USER_ID, true).stream()
+                    .filter(d -> d.description().toLowerCase().startsWith("zzg")).toList();
+
+            // assert & verify
+            assertEquals(2, all.size());
+            assertEquals("ZZG KROGER #431", all.get(0).description());
+            assertEquals(4L, all.get(0).transactionCount());
+            assertEquals(2L, all.get(1).merchantId());
+            assertEquals(1, unlinked.size());
+            assertEquals("ZZG KROGER #431", unlinked.get(0).description());
+        }
+
+        @Test
+        @DisplayName("should not return another user's descriptions")
+        void shouldScopeToUser() {
+            // arrange
+            insertTransaction(1L, "ZZG Only Mine #1", 1);
+
+            // act
+            List<TransactionDescriptionDto> other = transactionRepository.findAllDescriptions(2L, false);
+
+            // assert & verify
+            assertTrue(other.stream().noneMatch(d -> d.description().startsWith("ZZG")));
+        }
+    }
+
     /** {@code findDescriptions} lists the user's distinct transaction descriptions (grouped by their light-normalized form, the same key description links match on) with how many live transactions use each and which merchant, if any, each is linked to. */
     @Nested
     @DisplayName("findDescriptions")

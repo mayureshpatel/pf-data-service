@@ -296,4 +296,29 @@ public class TransactionCrudController {
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(transactionService.getDescriptions(userDetails.getId(), search, unlinkedOnly, pageable));
     }
+
+    /**
+     * Lists the user's transaction descriptions folded into groups that share the same merchant
+     * text ("KROGER #431 ROSWELL GA" and "KROGER #512" are one "kroger" group), for the merchants
+     * page's Unlinked tab. Groups that differ by a whole word ("kroger" and "kroger fuel ctr") are
+     * never merged and are marked as similar so look-alike merchants are checked before linking.
+     *
+     * @param userDetails  the authenticated user
+     * @param search       an optional include phrase with {@code -exclude} terms, such as
+     *                     {@code kroger -fuel}
+     * @param unlinkedOnly when true (the default), only descriptions with no merchant link
+     * @param pageable     page number and size of groups (ordering is fixed: families of similar
+     *                     groups by combined usage, then usage within a family)
+     * @return the page of groups plus the total number of unlinked descriptions
+     */
+    @Operation(summary = "List description groups", description = "Transaction descriptions grouped by merchant text with store numbers and location stripped; look-alike groups are marked similar, never merged")
+    @ApiResponse(responseCode = "200", description = "Page of description groups returned")
+    @GetMapping("/description-groups")
+    public ResponseEntity<DescriptionGroupPageDto> getDescriptionGroups(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "true") boolean unlinkedOnly,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(transactionService.getDescriptionGroups(userDetails.getId(), search, unlinkedOnly, pageable));
+    }
 }

@@ -23,7 +23,19 @@ public final class DescriptionKeys {
      * @return the folded key, or {@code ""} for a null input
      */
     public static String fold(String raw) {
-        return raw == null ? "" : raw.replaceAll(GAP, " ").strip().toLowerCase(Locale.ROOT);
+        return collapse(raw).toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Collapses every whitespace run (unicode spaces included) to one ascii space and trims, keeping
+     * the original case. {@link #fold} is this plus lowercasing; group display names
+     * ({@link DescriptionGroupKeys}) need the case kept.
+     *
+     * @param raw the raw description, may be {@code null}
+     * @return the collapsed description, or an empty string for {@code null}
+     */
+    public static String collapse(String raw) {
+        return raw == null ? "" : raw.replaceAll(GAP, " ").strip();
     }
 
     /**
