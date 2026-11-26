@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,9 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
 
     @Autowired
     private MerchantRepository merchantRepository;
+
+    @Autowired
+    private JdbcClient jdbcClient;
 
     private static final Long USER_1 = 1L;
     private static final String DESCRIPTION_ORIGINAL = "LOCAL CAFE";
@@ -255,6 +259,80 @@ class MerchantDescriptionLinkRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertTrue(result.isEmpty());
+        }
+    }
+
+    /** PF-980 undo: {@code repointIfCurrent} and {@code deleteIfCurrent} change a link only while it still points at the merchant the link request set, and repoint only to a merchant the user still owns. */
+    @Nested
+    @DisplayName("undo guards (PF-980)")
+    class UndoGuardTests {
+
+        private static final Long MERCHANT_SHELL = 3L; // baseline, owned by user 1
+
+        private Long linkedMerchant(Long userId) {
+            return repository.findMerchantIdsByNormalizedDescriptions(userId, List.of(DESCRIPTION_NORMALIZED)).get(DESCRIPTION_NORMALIZED);
+        }
+
+        @Test
+        @DisplayName("repointIfCurrent should move a link back while it still points at the applied merchant")
+        void repoint_shouldMoveBack() {
+            // arrange
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
+
+            // act
+            int changed = repository.repointIfCurrent(USER_1, DESCRIPTION_NORMALIZED, MERCHANT_CAFE, MERCHANT_SHELL);
+
+            // assert & verify
+            assertEquals(1, changed);
+            assertEquals(MERCHANT_SHELL, linkedMerchant(USER_1));
+        }
+
+        @Test
+        @DisplayName("repointIfCurrent should leave a link that now points elsewhere")
+        void repoint_shouldSkipChangedLink() {
+            // arrange
+            repository.upsert(USER_1, 2L, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
+
+            // act
+            int changed = repository.repointIfCurrent(USER_1, DESCRIPTION_NORMALIZED, MERCHANT_CAFE, MERCHANT_SHELL);
+
+            // assert & verify
+            assertEquals(0, changed);
+            assertEquals(2L, linkedMerchant(USER_1));
+        }
+
+        @Test
+        @DisplayName("repointIfCurrent should not point a link at another user's merchant")
+        void repoint_shouldRejectForeignPrevious() {
+            // arrange
+            Long foreign = jdbcClient.sql("insert into merchants (user_id, name) values (2, 'Not Yours') returning id")
+                    .query(Long.class).single();
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
+
+            // act
+            int changed = repository.repointIfCurrent(USER_1, DESCRIPTION_NORMALIZED, MERCHANT_CAFE, foreign);
+
+            // assert & verify
+            assertEquals(0, changed);
+            assertEquals(MERCHANT_CAFE, linkedMerchant(USER_1));
+        }
+
+        @Test
+        @DisplayName("deleteIfCurrent should remove only a link still pointing at the applied merchant, for that user")
+        void delete_shouldBeGuarded() {
+            // arrange
+            repository.upsert(USER_1, MERCHANT_CAFE, DESCRIPTION_ORIGINAL, DESCRIPTION_NORMALIZED);
+
+            // act
+            int wrongMerchant = repository.deleteIfCurrent(USER_1, DESCRIPTION_NORMALIZED, MERCHANT_SHELL);
+            int wrongUser = repository.deleteIfCurrent(USER_2, DESCRIPTION_NORMALIZED, MERCHANT_CAFE);
+            int removed = repository.deleteIfCurrent(USER_1, DESCRIPTION_NORMALIZED, MERCHANT_CAFE);
+
+            // assert & verify
+            assertEquals(0, wrongMerchant);
+            assertEquals(0, wrongUser);
+            assertEquals(1, removed);
+            assertNull(linkedMerchant(USER_1));
         }
     }
 }

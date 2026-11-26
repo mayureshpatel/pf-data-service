@@ -95,6 +95,9 @@ public abstract class BaseControllerTest {
     protected CurrencyService currencyService;
     @MockitoBean
     protected MerchantService merchantService;
+
+    @MockitoBean
+    protected DescriptionLinkService descriptionLinkService;
     @MockitoBean
     protected TagService tagService;
 

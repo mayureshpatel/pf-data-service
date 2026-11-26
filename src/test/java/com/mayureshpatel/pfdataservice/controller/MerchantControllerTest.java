@@ -1,5 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkChangeDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkResultDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkUndoResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkBulkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkCreateRequest;
@@ -47,6 +50,11 @@ class MerchantControllerTest extends BaseControllerTest {
     private static final String BASE_URL = "/api/v1/merchants";
     private static final String DESCRIPTION_LINKS_URL = "/api/v1/merchants/{id}/description-links";
     private static final String DESCRIPTION_STARBUCKS = "STARBUCKS #1";
+
+    private static DescriptionLinkResultDto linkResult() {
+        return new DescriptionLinkResultDto(MERCHANT_ID, 1, 1, 2,
+                List.of(new DescriptionLinkChangeDto("starbucks #1", 55L)), List.of(9L, 10L));
+    }
 
     /** {@code GET /api/v1/merchants} returns a {@link Page} of the caller's merchants, and -- a PF-320 case -- passes an optional {@code search} query param straight through to the service. */
     @Nested
@@ -273,25 +281,31 @@ class MerchantControllerTest extends BaseControllerTest {
         }
     }
 
-    /** {@code POST /api/v1/merchants/{id}/description-links} records the link and returns 204, returns a 400 (and never calls the service) for a blank description, and a real {@code @PreAuthorize}-enforced 403 (service never invoked) when {@code securityService.isMerchantOwner} is stubbed false. */
+    /** {@code POST /api/v1/merchants/{id}/description-links} records the link and returns 200 with the undo-ready result, returns a 400 (and never calls the service) for a blank description, and a real {@code @PreAuthorize}-enforced 403 (service never invoked) when {@code securityService.isMerchantOwner} is stubbed false. */
     @Nested
     @DisplayName("addDescriptionLink")
     class AddDescriptionLinkTests {
 
         @Test
-        @DisplayName("POST /{id}/description-links should record the link and return 204")
+        @DisplayName("POST /{id}/description-links should link, fill and return 200 with the result")
         void addDescriptionLink_shouldRecord() throws Exception {
             // arrange
             MerchantDescriptionLinkCreateRequest request = new MerchantDescriptionLinkCreateRequest(DESCRIPTION_STARBUCKS);
+            when(descriptionLinkService.linkDescriptions(USER_ID, MERCHANT_ID, List.of(DESCRIPTION_STARBUCKS))).thenReturn(linkResult());
 
             // act & assert & verify
             mockMvc.perform(post(DESCRIPTION_LINKS_URL, MERCHANT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isNoContent());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.merchantId").value(MERCHANT_ID))
+                    .andExpect(jsonPath("$.movedCount").value(1))
+                    .andExpect(jsonPath("$.transactionsFilled").value(2))
+                    .andExpect(jsonPath("$.linkChanges[0].previousMerchantId").value(55))
+                    .andExpect(jsonPath("$.filledTransactionIds", hasSize(2)));
 
-            verify(merchantService).recordDescriptionLink(USER_ID, MERCHANT_ID, DESCRIPTION_STARBUCKS);
+            verify(descriptionLinkService).linkDescriptions(USER_ID, MERCHANT_ID, List.of(DESCRIPTION_STARBUCKS));
         }
 
         @Test
@@ -307,7 +321,7 @@ class MerchantControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
 
-            verify(merchantService, never()).recordDescriptionLink(anyLong(), anyLong(), anyString());
+            verify(descriptionLinkService, never()).linkDescriptions(anyLong(), anyLong(), anyList());
         }
 
         @Test
@@ -324,11 +338,11 @@ class MerchantControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isForbidden());
 
-            verify(merchantService, never()).recordDescriptionLink(anyLong(), anyLong(), anyString());
+            verify(descriptionLinkService, never()).linkDescriptions(anyLong(), anyLong(), anyList());
         }
     }
 
-    /** {@code POST /api/v1/merchants/{id}/description-links/bulk} records every description and returns 204, returns a 400 (and never calls the service) for an empty list or a blank entry, and a real {@code @PreAuthorize}-enforced 403 when {@code securityService.isMerchantOwner} is stubbed false. */
+    /** {@code POST /api/v1/merchants/{id}/description-links/bulk} records every description and returns 200 with the result, returns a 400 (and never calls the service) for an empty list or a blank entry, and a real {@code @PreAuthorize}-enforced 403 when {@code securityService.isMerchantOwner} is stubbed false. */
     @Nested
     @DisplayName("addDescriptionLinks")
     class AddDescriptionLinksTests {
@@ -336,19 +350,21 @@ class MerchantControllerTest extends BaseControllerTest {
         private static final String BULK_URL = DESCRIPTION_LINKS_URL + "/bulk";
 
         @Test
-        @DisplayName("POST /{id}/description-links/bulk should record every link and return 204")
+        @DisplayName("POST /{id}/description-links/bulk should link every description and return 200 with the result")
         void addDescriptionLinks_shouldRecord() throws Exception {
             // arrange
             MerchantDescriptionLinkBulkCreateRequest request = new MerchantDescriptionLinkBulkCreateRequest(List.of(DESCRIPTION_STARBUCKS, "SHELL OIL"));
+            when(descriptionLinkService.linkDescriptions(USER_ID, MERCHANT_ID, List.of(DESCRIPTION_STARBUCKS, "SHELL OIL"))).thenReturn(linkResult());
 
             // act & assert & verify
             mockMvc.perform(post(BULK_URL, MERCHANT_ID)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isNoContent());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.linkedCount").value(1));
 
-            verify(merchantService).recordDescriptionLinks(USER_ID, MERCHANT_ID, List.of(DESCRIPTION_STARBUCKS, "SHELL OIL"));
+            verify(descriptionLinkService).linkDescriptions(USER_ID, MERCHANT_ID, List.of(DESCRIPTION_STARBUCKS, "SHELL OIL"));
         }
 
         @Test
@@ -364,7 +380,7 @@ class MerchantControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
 
-            verify(merchantService, never()).recordDescriptionLinks(anyLong(), anyLong(), anyList());
+            verify(descriptionLinkService, never()).linkDescriptions(anyLong(), anyLong(), anyList());
         }
 
         @Test
@@ -380,7 +396,7 @@ class MerchantControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
 
-            verify(merchantService, never()).recordDescriptionLinks(anyLong(), anyLong(), anyList());
+            verify(descriptionLinkService, never()).linkDescriptions(anyLong(), anyLong(), anyList());
         }
 
         @Test
@@ -397,7 +413,83 @@ class MerchantControllerTest extends BaseControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isForbidden());
 
-            verify(merchantService, never()).recordDescriptionLinks(anyLong(), anyLong(), anyList());
+            verify(descriptionLinkService, never()).linkDescriptions(anyLong(), anyLong(), anyList());
+        }
+    }
+
+    /** {@code POST /api/v1/merchants/{id}/description-links/undo} takes a link result back and returns what was restored, rejects a result for another merchant or a malformed one with 400, and returns a real {@code @PreAuthorize}-enforced 403 when not owner. */
+    @Nested
+    @DisplayName("undoDescriptionLinks")
+    class UndoDescriptionLinksTests {
+
+        private static final String UNDO_URL = DESCRIPTION_LINKS_URL + "/undo";
+
+        @Test
+        @DisplayName("POST /{id}/description-links/undo should undo and return 200 with the undo result")
+        void undo_shouldReturnResult() throws Exception {
+            // arrange
+            DescriptionLinkResultDto result = linkResult();
+            when(descriptionLinkService.undoLink(USER_ID, result)).thenReturn(new DescriptionLinkUndoResultDto(1, 0, 1, List.of(10L)));
+
+            // act & assert & verify
+            mockMvc.perform(post(UNDO_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(result)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.linksRestored").value(1))
+                    .andExpect(jsonPath("$.transactionsRestored").value(1))
+                    .andExpect(jsonPath("$.skippedTransactionIds[0]").value(10));
+
+            verify(descriptionLinkService).undoLink(USER_ID, result);
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/undo should return 400 when the result is for another merchant")
+        void undo_shouldReturn400ForOtherMerchant() throws Exception {
+            // arrange
+            DescriptionLinkResultDto result = new DescriptionLinkResultDto(999L, 0, 0, 0, List.of(), List.of());
+
+            // act & assert & verify
+            mockMvc.perform(post(UNDO_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(result)))
+                    .andExpect(status().isBadRequest());
+
+            verify(descriptionLinkService, never()).undoLink(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/undo should return 400 when the lists are missing")
+        void undo_shouldReturn400WhenMalformed() throws Exception {
+            // arrange
+            String body = "{\"merchantId\":" + MERCHANT_ID + "}";
+
+            // act & assert & verify
+            mockMvc.perform(post(UNDO_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+
+            verify(descriptionLinkService, never()).undoLink(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/undo should return 403 Forbidden when not owner")
+        void undo_shouldReturn403WhenNotOwner() throws Exception {
+            // arrange
+            when(securityService.isMerchantOwner(eq(MERCHANT_ID), any())).thenReturn(false);
+
+            // act & assert & verify
+            mockMvc.perform(post(UNDO_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(linkResult())))
+                    .andExpect(status().isForbidden());
+
+            verify(descriptionLinkService, never()).undoLink(anyLong(), any());
         }
     }
 

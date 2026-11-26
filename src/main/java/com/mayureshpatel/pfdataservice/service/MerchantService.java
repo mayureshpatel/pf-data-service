@@ -33,8 +33,9 @@ import java.util.stream.Collectors;
  * nothing here ever auto-creates a merchant from transaction text -- {@link #findMatchingMerchantId}/
  * {@link #findMatchingMerchantIds} are lookup-only, and a description with no existing link simply
  * resolves to nothing. A link itself is created two ways: automatically, as a side effect whenever
- * a human assigns a merchant to a transaction ({@code TransactionService}), or explicitly via
- * {@link #recordDescriptionLink}'s other caller, the description-links management endpoint.
+ * a human assigns a merchant to a transaction ({@code TransactionService}), or explicitly via the
+ * description-links endpoints ({@code DescriptionLinkService}, which also fills
+ * existing transactions that have no merchant).
  */
 @Service
 @RequiredArgsConstructor
@@ -249,8 +250,9 @@ public class MerchantService {
 
     /**
      * Creates or overwrites the link from a description to a merchant (last-write-wins) -- called
-     * both as a side effect whenever a human assigns a merchant to a transaction
-     * ({@code TransactionService}) and directly from the explicit add-link endpoint. Import never
+     * as a side effect whenever a human assigns a merchant to a transaction
+     * ({@code TransactionService}); the explicit link endpoints use {@code DescriptionLinkService},
+     * which also fills existing transactions. Import never
      * calls this: it consumes existing links, it never creates new ones.
      *
      * @param userId      the user id
@@ -260,21 +262,6 @@ public class MerchantService {
     @Transactional
     public void recordDescriptionLink(Long userId, Long merchantId, String description) {
         descriptionLinkRepository.upsert(userId, merchantId, description, lightNormalize(description));
-    }
-
-    /**
-     * Batch form of {@link #recordDescriptionLink}: links every description to the merchant in one
-     * transaction, so the whole selection lands or none of it does. Each description is upserted
-     * (last-write-wins), so a description already linked elsewhere is moved, and a description
-     * repeated in the list is simply linked once.
-     *
-     * @param userId       the user id
-     * @param merchantId   the merchant to link the descriptions to
-     * @param descriptions the raw descriptions to link
-     */
-    @Transactional
-    public void recordDescriptionLinks(Long userId, Long merchantId, List<String> descriptions) {
-        descriptions.forEach(description -> recordDescriptionLink(userId, merchantId, description));
     }
 
     /**
