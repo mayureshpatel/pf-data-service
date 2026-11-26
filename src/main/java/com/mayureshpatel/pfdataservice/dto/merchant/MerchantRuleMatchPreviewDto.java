@@ -17,6 +17,8 @@ import java.util.List;
  * @param willAssignIds        the ids of every transaction the draft would give a merchant, not only those in
  *                            {@code rows} (newest first, at most {@value #MAX_WILL_ASSIGN_IDS}), so the ledger
  *                            can apply the rule to all of them when more match than the rows list
+ * @param overlaps             where the draft meets another merchant (PF-981), most transactions first,
+ *                            other-merchant wins before this rule's; empty when no target merchant is given
  */
 public record MerchantRuleMatchPreviewDto(
         String targetMerchantName,
@@ -27,7 +29,8 @@ public record MerchantRuleMatchPreviewDto(
         int linkedCount,
         boolean truncated,
         List<MerchantRuleMatchRowDto> rows,
-        List<Long> willAssignIds
+        List<Long> willAssignIds,
+        List<MerchantRuleOverlapDto> overlaps
 ) {
 
     /** The most ids {@code willAssignIds} carries, the same cap one create-and-apply call accepts. */
@@ -38,6 +41,6 @@ public record MerchantRuleMatchPreviewDto(
      * @return a preview with no matches, used when the draft has no usable keyword
      */
     public static MerchantRuleMatchPreviewDto empty(String targetMerchantName) {
-        return new MerchantRuleMatchPreviewDto(targetMerchantName, 0, 0, 0, 0, 0, false, List.of(), List.of());
+        return new MerchantRuleMatchPreviewDto(targetMerchantName, 0, 0, 0, 0, 0, false, List.of(), List.of(), List.of());
     }
 }

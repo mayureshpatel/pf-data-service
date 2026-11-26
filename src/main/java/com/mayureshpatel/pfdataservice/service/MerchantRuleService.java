@@ -4,19 +4,20 @@ import com.mayureshpatel.pfdataservice.domain.TableAudit;
 import com.mayureshpatel.pfdataservice.domain.category.MatchType;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.domain.merchant.MerchantRule;
+import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.merchant.AppliedMerchantChangeDto;
-import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
-import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRequest;
-import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRule;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyResultDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleApplyRule;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionAmountDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.MerchantRuleDtoMapper;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * CRUD for keyword-based merchant rules (PF-904): keywords that point at one of the user's
@@ -42,6 +44,7 @@ public class MerchantRuleService {
     private final UserRepository userRepository;
     private final MerchantService merchantService;
     private final TransactionRepository transactionRepository;
+    private final MerchantRuleMatchCounter matchCounter;
 
     /**
      * Get all merchant rules for a user, in rule priority order
@@ -52,6 +55,40 @@ public class MerchantRuleService {
     public List<MerchantRuleDto> getRules(Long userId) {
         return merchantRuleRepository.findByUserId(userId).stream()
                 .map(MerchantRuleDtoMapper::toDto)
+                .toList();
+    }
+
+    /**
+     * Lists one merchant's rules, in rule priority order, each with how many of the user's
+     * descriptions and live transactions it matches (PF-981), so a broad rule shows up before it
+     * quietly takes another merchant's descriptions. A match is counted whether or not the rule
+     * wins it.
+     *
+     * @param userId     the user id
+     * @param merchantId the merchant whose rules to list
+     * @return the merchant's rules with their match counts, possibly empty
+     * @throws ResourceNotFoundException if the merchant doesn't exist or isn't the user's
+     */
+    @Transactional(readOnly = true)
+    public List<MerchantRuleDto> getRulesForMerchant(Long userId, Long merchantId) {
+        merchantService.requireOwnedMerchant(userId, merchantId);
+        List<MerchantRule> rules = merchantRuleRepository.findByUserId(userId).stream()
+                .filter(rule -> rule.getMerchant() != null && merchantId.equals(rule.getMerchant().getId()))
+                .toList();
+        if (rules.isEmpty()) {
+            return List.of();
+        }
+        List<DescriptionAmountDto> ledger = transactionRepository.findDescriptionAmounts(userId);
+        Map<Long, MerchantRuleMatchCounter.Counts> counts = matchCounter.count(rules, ledger);
+        return rules.stream()
+                .map(rule -> {
+                    MerchantRuleDto dto = MerchantRuleDtoMapper.toDto(rule);
+                    MerchantRuleMatchCounter.Counts ruleCounts = counts.get(rule.getId());
+                    return dto.toBuilder()
+                            .matchedDescriptionCount(ruleCounts.descriptionCount())
+                            .matchedTransactionCount(ruleCounts.transactionCount())
+                            .build();
+                })
                 .toList();
     }
 

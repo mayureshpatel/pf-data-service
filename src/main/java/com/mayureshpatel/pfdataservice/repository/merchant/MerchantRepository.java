@@ -20,6 +20,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,26 @@ public class MerchantRepository implements JdbcRepository<Merchant, Long> {
                 .param("id", aLong)
                 .query(rowMapper)
                 .optional();
+    }
+
+    /**
+     * Loads the user's merchants with the given ids in one query (PF-981), so resolving many
+     * description links to merchants is not one lookup per merchant. Ids the user does not own
+     * are simply absent from the result.
+     *
+     * @param ids    the merchant ids to load; an empty collection returns an empty list
+     * @param userId the owning user's id
+     * @return the user's merchants among {@code ids}, in no particular order
+     */
+    public List<Merchant> findByIdsAndUserId(Collection<Long> ids, Long userId) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return jdbcClient.sql(MerchantQueries.FIND_BY_IDS_AND_USER_ID)
+                .param("ids", List.copyOf(ids))
+                .param(SqlParams.USER_ID, userId)
+                .query(rowMapper)
+                .list();
     }
 
     /**

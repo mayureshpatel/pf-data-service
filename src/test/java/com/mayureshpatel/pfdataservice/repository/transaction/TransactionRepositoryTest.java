@@ -1,5 +1,6 @@
 package com.mayureshpatel.pfdataservice.repository.transaction;
 
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionAmountDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.domain.category.Category;
 import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
@@ -1096,6 +1097,56 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
 
             // assert & verify
             assertTrue(other.stream().noneMatch(d -> d.description().startsWith("ZZG")));
+        }
+    }
+
+    /** {@code findDescriptionAmounts} (PF-981) returns one row per live transaction of the user, with its raw description and amount, for counting rule matches. */
+    @Nested
+    @DisplayName("findDescriptionAmounts")
+    class FindDescriptionAmountsTests {
+
+        private void insertTransaction(long accountId, String description, String amount, boolean deleted) {
+            jdbcClient.sql("""
+                    insert into transactions (account_id, amount, date, description, type, deleted_at)
+                    values (:accountId, cast(:amount as numeric), '2030-01-01T00:00:00Z', :description, 'EXPENSE',
+                            case when :deleted then now() end)
+                    """)
+                    .param(PARAM_ACCOUNT_ID, accountId)
+                    .param(PARAM_DESCRIPTION, description)
+                    .param("amount", amount)
+                    .param("deleted", deleted)
+                    .update();
+        }
+
+        @Test
+        @DisplayName("should return each live transaction's raw description and amount, skipping deleted ones")
+        void shouldReturnLiveRows() {
+            // arrange
+            insertTransaction(1L, "ZZA KROGER #1", "12.50", false);
+            insertTransaction(1L, "ZZA KROGER #1", "3.00", false);
+            insertTransaction(1L, "ZZA DELETED", "9.00", true);
+
+            // act
+            List<DescriptionAmountDto> rows = transactionRepository.findDescriptionAmounts(USER_ID).stream()
+                    .filter(r -> r.description().startsWith("ZZA")).toList();
+
+            // assert & verify
+            assertEquals(2, rows.size());
+            assertTrue(rows.stream().allMatch(r -> r.description().equals("ZZA KROGER #1")));
+            assertTrue(rows.stream().anyMatch(r -> r.amount().compareTo(new BigDecimal("12.50")) == 0));
+        }
+
+        @Test
+        @DisplayName("should not return another user's transactions")
+        void shouldScopeToUser() {
+            // arrange
+            insertTransaction(1L, "ZZA Only Mine", "1.00", false);
+
+            // act
+            List<DescriptionAmountDto> other = transactionRepository.findDescriptionAmounts(2L);
+
+            // assert & verify
+            assertTrue(other.stream().noneMatch(r -> r.description().startsWith("ZZA")));
         }
     }
 

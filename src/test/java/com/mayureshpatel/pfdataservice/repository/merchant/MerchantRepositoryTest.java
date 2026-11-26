@@ -67,6 +67,23 @@ class MerchantRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("PF-981: should load the user's merchants by id in one call, skipping another user's ids")
+        void shouldFindByIdsAndUserId() {
+            // arrange
+            Long otherUsersMerchant = jdbcClient.sql("select id from merchants where user_id = :userId limit 1")
+                    .param("userId", USER_2).query(Long.class).optional().orElse(-1L);
+
+            // act
+            List<Merchant> result = repository.findByIdsAndUserId(List.of(MERCHANT_WHOLE_FOODS, MERCHANT_AMAZON, otherUsersMerchant), USER_1);
+            List<Merchant> none = repository.findByIdsAndUserId(List.of(), USER_1);
+
+            // assert & verify
+            assertEquals(2, result.size());
+            assertTrue(result.stream().allMatch(m -> USER_1.equals(m.getUserId())));
+            assertTrue(none.isEmpty());
+        }
+
+        @Test
         @DisplayName("should find all merchants for a user")
         void shouldFindAllByUserId() {
             // act -- baseline seeds 4 merchants for USER_1 (Whole Foods, Amazon, Shell, My Favorite Cafe)

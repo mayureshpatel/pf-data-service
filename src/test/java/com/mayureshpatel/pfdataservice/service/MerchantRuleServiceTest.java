@@ -7,8 +7,10 @@ import com.mayureshpatel.pfdataservice.domain.user.User;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleUpdateRequest;
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionAmountDto;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
+import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.repository.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,14 +24,17 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /** Verifies {@code MerchantRuleService}'s CRUD, its defaults for a null match type and priority, and that a foreign or missing merchant or rule is rejected before anything is written. */
@@ -43,6 +48,10 @@ class MerchantRuleServiceTest {
     private UserRepository userRepository;
     @Mock
     private MerchantService merchantService;
+    @Mock
+    private TransactionRepository transactionRepository;
+    @Mock
+    private MerchantRuleMatchCounter matchCounter;
 
     @InjectMocks
     private MerchantRuleService service;
@@ -286,6 +295,65 @@ class MerchantRuleServiceTest {
             // act & assert & verify
             assertThrows(AccessDeniedException.class, () -> service.deleteRule(USER_ID, RULE_ID));
             verify(merchantRuleRepository, never()).deleteById(any(), any());
+        }
+    }
+
+    /**
+     * {@code getRulesForMerchant} (PF-981) checks the merchant is the user's, keeps only that
+     * merchant's rules, and fills each with its match counts over the user's ledger.
+     */
+    @Nested
+    @DisplayName("getRulesForMerchant")
+    class GetRulesForMerchantTests {
+
+        @Test
+        @DisplayName("should return only the merchant's rules with their match counts")
+        void shouldReturnRulesWithCounts() {
+            // arrange
+            MerchantRule own = savedRule(USER_ID);
+            MerchantRule other = MerchantRule.builder().id(101L).user(User.builder().id(USER_ID).build())
+                    .keywords(List.of("FUEL")).matchType(MatchType.OR).priority(0)
+                    .merchant(Merchant.builder().id(77L).build()).build();
+            List<DescriptionAmountDto> ledger = List.of(new DescriptionAmountDto("OLD STORE", new BigDecimal("-3.00")));
+            when(merchantRuleRepository.findByUserId(USER_ID)).thenReturn(List.of(own, other));
+            when(transactionRepository.findDescriptionAmounts(USER_ID)).thenReturn(ledger);
+            when(matchCounter.count(List.of(own), ledger)).thenReturn(Map.of(RULE_ID, new MerchantRuleMatchCounter.Counts(2, 9)));
+
+            // act
+            List<MerchantRuleDto> result = service.getRulesForMerchant(USER_ID, MERCHANT_ID);
+
+            // assert & verify
+            assertEquals(1, result.size());
+            assertEquals(RULE_ID, result.get(0).id());
+            assertEquals(2, result.get(0).matchedDescriptionCount());
+            assertEquals(9, result.get(0).matchedTransactionCount());
+            verify(merchantService).requireOwnedMerchant(USER_ID, MERCHANT_ID);
+        }
+
+        @Test
+        @DisplayName("should return an empty list without reading the ledger when the merchant has no rules")
+        void shouldSkipLedgerWithoutRules() {
+            // arrange
+            when(merchantRuleRepository.findByUserId(USER_ID)).thenReturn(List.of());
+
+            // act
+            List<MerchantRuleDto> result = service.getRulesForMerchant(USER_ID, MERCHANT_ID);
+
+            // assert & verify
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(transactionRepository, matchCounter);
+        }
+
+        @Test
+        @DisplayName("should propagate not found for a merchant the user does not own")
+        void shouldRejectForeignMerchant() {
+            // arrange
+            when(merchantService.requireOwnedMerchant(USER_ID, MERCHANT_ID))
+                    .thenThrow(new ResourceNotFoundException("Merchant not found"));
+
+            // act & assert & verify
+            assertThrows(ResourceNotFoundException.class, () -> service.getRulesForMerchant(USER_ID, MERCHANT_ID));
+            verifyNoInteractions(merchantRuleRepository, transactionRepository, matchCounter);
         }
     }
 }

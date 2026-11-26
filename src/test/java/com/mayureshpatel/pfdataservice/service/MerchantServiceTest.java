@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -437,7 +439,7 @@ class MerchantServiceTest {
             // arrange
             Merchant merchant = Merchant.builder().id(5L).name("Coffee").build();
             when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(eq(USER_ID), anyList())).thenReturn(Map.of("coffee", 5L));
-            when(merchantRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(merchant));
+            when(merchantRepository.findByIdsAndUserId(Set.of(5L), USER_ID)).thenReturn(List.of(merchant));
 
             // act
             Map<String, Merchant> result = merchantService.findMatchingMerchants(USER_ID, List.of("COFFEE", "OTHER"));
@@ -445,6 +447,24 @@ class MerchantServiceTest {
             // assert & verify
             assertEquals(Map.of("COFFEE", merchant), result);
             assertTrue(merchantService.findMatchingMerchants(USER_ID, List.of()).isEmpty());
+        }
+
+        @Test
+        @DisplayName("should load every linked merchant in one query, not one per merchant")
+        void findMatchingMerchants_loadsMerchantsOnce() {
+            // arrange
+            Merchant coffee = Merchant.builder().id(5L).name("Coffee").build();
+            Merchant tea = Merchant.builder().id(6L).name("Tea").build();
+            when(descriptionLinkRepository.findMerchantIdsByNormalizedDescriptions(eq(USER_ID), anyList()))
+                    .thenReturn(Map.of("coffee", 5L, "tea", 6L, "coffee 2", 5L));
+            when(merchantRepository.findByIdsAndUserId(Set.of(5L, 6L), USER_ID)).thenReturn(List.of(coffee, tea));
+
+            // act
+            Map<String, Merchant> result = merchantService.findMatchingMerchants(USER_ID, List.of("COFFEE", "TEA", "COFFEE 2"));
+
+            // assert & verify
+            assertEquals(Map.of("COFFEE", coffee, "TEA", tea, "COFFEE 2", coffee), result);
+            verify(merchantRepository, never()).findByIdAndUserId(anyLong(), anyLong());
         }
     }
 

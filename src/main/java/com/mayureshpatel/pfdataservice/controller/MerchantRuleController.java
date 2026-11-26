@@ -41,15 +41,23 @@ public class MerchantRuleController {
     private final MerchantRuleApplyService merchantRuleApplyService;
 
     /**
-     * Returns the authenticated user's merchant rules, in rule priority order.
+     * Returns the authenticated user's merchant rules, in rule priority order. With
+     * {@code merchantId}, only that merchant's rules, each with its match counts (PF-981).
      *
      * @param userDetails the authenticated user
+     * @param merchantId  optional merchant to list the rules of, with match counts
      * @return the user's rules
      */
-    @Operation(operationId = "getMerchantRules", summary = "List merchant rules", description = "Returns the authenticated user's merchant rules in priority order")
+    @Operation(operationId = "getMerchantRules", summary = "List merchant rules", description = "Returns the authenticated user's merchant rules in priority order; with merchantId, only that merchant's rules, each with matchedDescriptionCount and matchedTransactionCount")
     @ApiResponse(responseCode = "200", description = "Rules returned (possibly empty)")
+    @ApiResponse(responseCode = "404", description = "merchantId is not the authenticated user's")
     @GetMapping
-    public ResponseEntity<List<MerchantRuleDto>> getRules(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<List<MerchantRuleDto>> getRules(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) Long merchantId) {
+        if (merchantId != null) {
+            return ResponseEntity.ok(merchantRuleService.getRulesForMerchant(userDetails.getId(), merchantId));
+        }
         return ResponseEntity.ok(merchantRuleService.getRules(userDetails.getId()));
     }
 

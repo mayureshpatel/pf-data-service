@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -205,8 +206,9 @@ public class MerchantService {
         }
         Map<String, Long> idsByDescription = findMatchingMerchantIds(userId, List.copyOf(descriptions));
         Map<Long, Merchant> merchantsById = new HashMap<>();
-        idsByDescription.values().stream().distinct().forEach(id ->
-                merchantRepository.findByIdAndUserId(id, userId).ifPresent(m -> merchantsById.put(id, m)));
+        // one query for every linked merchant, not one per merchant (pf-981: this runs on each live preview)
+        merchantRepository.findByIdsAndUserId(Set.copyOf(idsByDescription.values()), userId)
+                .forEach(merchant -> merchantsById.put(merchant.getId(), merchant));
 
         Map<String, Merchant> result = new HashMap<>();
         idsByDescription.forEach((desc, id) -> {
