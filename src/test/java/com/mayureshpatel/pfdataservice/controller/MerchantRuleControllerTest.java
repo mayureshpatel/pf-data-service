@@ -66,6 +66,42 @@ class MerchantRuleControllerTest extends BaseControllerTest {
         return MerchantRuleUpdateRequest.builder().id(RULE_ID).merchantId(MERCHANT_ID).keywords(List.of(KEYWORD));
     }
 
+    /** {@code GET /api/v1/merchant-rules?merchantId=} (PF-981) returns one merchant's rules with match counts. */
+    @Nested
+    @DisplayName("getRules by merchant")
+    class GetRulesByMerchantTests {
+
+        @Test
+        @DisplayName("GET with merchantId should return that merchant's rules with counts")
+        void shouldReturnMerchantRules() throws Exception {
+            // arrange
+            MerchantRuleDto ruleDto = MerchantRuleDto.builder().id(RULE_ID).keywords(List.of(KEYWORD))
+                    .matchedDescriptionCount(3).matchedTransactionCount(12).build();
+            when(merchantRuleService.getRulesForMerchant(USER_ID, MERCHANT_ID)).thenReturn(List.of(ruleDto));
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL).param("merchantId", MERCHANT_ID.toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].matchedDescriptionCount").value(3))
+                    .andExpect(jsonPath("$[0].matchedTransactionCount").value(12));
+            verify(merchantRuleService).getRulesForMerchant(USER_ID, MERCHANT_ID);
+            verify(merchantRuleService, times(0)).getRules(anyLong());
+        }
+
+        @Test
+        @DisplayName("GET with another user's merchantId should return 404")
+        void shouldReturnNotFound() throws Exception {
+            // arrange
+            when(merchantRuleService.getRulesForMerchant(USER_ID, MERCHANT_ID))
+                    .thenThrow(new ResourceNotFoundException("Merchant not found"));
+
+            // act & assert & verify
+            mockMvc.perform(get(BASE_URL).param("merchantId", MERCHANT_ID.toString()))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
     /** {@code GET /api/v1/merchant-rules} returns the user's rules, or an empty list when there are none. */
     @Nested
     @DisplayName("getRules")
@@ -370,7 +406,7 @@ class MerchantRuleControllerTest extends BaseControllerTest {
             MerchantRuleMatchRowDto row = new MerchantRuleMatchRowDto(5L, OffsetDateTime.parse("2026-10-01T00:00:00Z"),
                     "KROGER #1", new BigDecimal("-25.00"), "Checking", null,
                     MerchantRuleVerdict.WILL_ASSIGN, List.of(), null);
-            MerchantRuleMatchPreviewDto preview = new MerchantRuleMatchPreviewDto(MERCHANT_NAME, 1, 1, 0, 0, 0, false, List.of(row), List.of(row.transactionId()));
+            MerchantRuleMatchPreviewDto preview = new MerchantRuleMatchPreviewDto(MERCHANT_NAME, 1, 1, 0, 0, 0, false, List.of(row), List.of(row.transactionId()), List.of());
             when(merchantRuleMatchPreviewService.preview(eq(USER_ID), any(MerchantRuleMatchPreviewRequest.class))).thenReturn(preview);
 
             // act & assert & verify

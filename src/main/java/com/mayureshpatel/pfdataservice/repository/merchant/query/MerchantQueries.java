@@ -59,6 +59,14 @@ public final class MerchantQueries {
             """;
 
     // language=SQL
+    public static final String FIND_BY_IDS_AND_USER_ID = """
+            select *
+            from merchants
+            where id in (:ids)
+              and user_id = :userId
+            """;
+
+    // language=SQL
     public static final String FIND_BY_ID_AND_USER_ID = """
             select *
             from merchants

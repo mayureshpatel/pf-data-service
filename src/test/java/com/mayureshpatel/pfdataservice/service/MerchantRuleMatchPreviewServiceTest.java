@@ -8,14 +8,19 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchRowDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleOverlapDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleOverlapOutcome;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleOverlapReason;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleRefDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleVerdict;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRuleRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import com.mayureshpatel.pfdataservice.service.categorization.RuleMatcher;
+import com.mayureshpatel.pfdataservice.service.categorization.RuleOrdering;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -76,7 +81,8 @@ class MerchantRuleMatchPreviewServiceTest {
     @BeforeEach
     void setUp() {
         service = new MerchantRuleMatchPreviewService(
-                merchantRuleRepository, transactionRepository, merchantService, new RuleMatcher());
+                merchantRuleRepository, transactionRepository, merchantService, new RuleMatcher(),
+                new ImportMerchantResolver(merchantService, merchantRuleRepository, new RuleMatcher()));
     }
 
     private static Transaction tx(long id, String description, String amount, int day, Merchant merchant) {
@@ -538,7 +544,6 @@ class MerchantRuleMatchPreviewServiceTest {
         // arrange
         givenRules();
         givenCandidates(List.of(bare(1L, KROGER_STORE, 1)));
-        givenLinks(Map.of());
         when(merchantService.requireOwnedMerchant(USER_ID, TARGET_ID)).thenReturn(Merchant.builder().id(TARGET_ID).name(KROGER_NAME).build());
         MerchantRuleMatchPreviewRequest withTarget = new MerchantRuleMatchPreviewRequest(
                 null, List.of(KROGER), null, null, null, null, TARGET_ID);
@@ -566,5 +571,176 @@ class MerchantRuleMatchPreviewServiceTest {
                 .hasMessage("Merchant not found.");
         verifyNoInteractions(transactionRepository);
         verify(merchantService, never()).findMatchingMerchantIds(eq(USER_ID), anyList());
+    }
+
+    /**
+     * PF-981 overlaps: descriptions the draft matches that another merchant takes (by link or a
+     * rule ranked ahead), or that the draft takes from another merchant's rule, grouped with the
+     * reason in the rule order's own terms. Winners come from the real import resolver.
+     */
+    @Nested
+    @DisplayName("overlaps (PF-981)")
+    class Overlaps {
+
+        private final Merchant kroger = Merchant.builder().id(TARGET_ID).name(KROGER_NAME).build();
+        private final Merchant fuel = Merchant.builder().id(21L).name("Kroger Fuel Center").build();
+        private final Merchant pharmacy = Merchant.builder().id(31L).name("Kroger Pharmacy").build();
+        private final Merchant grocer = Merchant.builder().id(41L).name("Grocer").build();
+        private final Merchant linkedMerchant = Merchant.builder().id(51L).name("Linked Store").build();
+
+        private MerchantRule ruleFor(long id, int priority, Merchant merchant, String... keywords) {
+            return MerchantRule.builder().id(id).keywords(List.of(keywords)).matchType(MatchType.OR)
+                    .priority(priority).merchant(merchant).build();
+        }
+
+        private MerchantRuleMatchPreviewRequest draft(int priority) {
+            return new MerchantRuleMatchPreviewRequest(null, List.of("kroger"), MatchType.OR, priority, null, null, TARGET_ID);
+        }
+
+        @Test
+        @DisplayName("should group other-merchant wins by link, higher priority and longer keywords, biggest first")
+        void shouldGroupOtherMerchantWins() {
+            // arrange
+            MerchantRule fuelRule = ruleFor(20L, 0, fuel, "kroger fuel");
+            MerchantRule pharmacyRule = ruleFor(30L, 5, pharmacy, "kroger rx");
+            givenRules(fuelRule, pharmacyRule);
+            givenCandidates(List.of(
+                    bare(1L, "KROGER #1", 1),
+                    bare(2L, "KROGER FUEL #2", 2),
+                    bare(3L, "Kroger Fuel #2", 3),
+                    bare(4L, "KROGER FUEL #3", 4),
+                    bare(5L, "KROGER RX 77", 5),
+                    bare(6L, "KROGER LINKED", 6)));
+            when(merchantService.requireOwnedMerchant(USER_ID, TARGET_ID)).thenReturn(kroger);
+            when(merchantService.findMatchingMerchants(eq(USER_ID), anyList())).thenReturn(Map.of("KROGER LINKED", linkedMerchant));
+
+            // act
+            List<MerchantRuleOverlapDto> overlaps = service.preview(USER_ID, draft(0)).overlaps();
+
+            // assert & verify
+            assertThat(overlaps).extracting(MerchantRuleOverlapDto::outcome, MerchantRuleOverlapDto::reason,
+                            MerchantRuleOverlapDto::merchantName, MerchantRuleOverlapDto::descriptionCount,
+                            MerchantRuleOverlapDto::transactionCount)
+                    .containsExactly(
+                            tuple(MerchantRuleOverlapOutcome.OTHER_WINS, MerchantRuleOverlapReason.LONGER_KEYWORDS, "Kroger Fuel Center", 2, 3),
+                            tuple(MerchantRuleOverlapOutcome.OTHER_WINS, MerchantRuleOverlapReason.HIGHER_PRIORITY, "Kroger Pharmacy", 1, 1),
+                            tuple(MerchantRuleOverlapOutcome.OTHER_WINS, MerchantRuleOverlapReason.LINK, "Linked Store", 1, 1));
+            assertThat(overlaps.get(0).descriptions()).containsExactly("KROGER FUEL #2", "KROGER FUEL #3");
+            assertThat(overlaps.get(0).rule().id()).isEqualTo(20L);
+            assertThat(overlaps.get(2).rule()).isNull();
+        }
+
+        @Test
+        @DisplayName("should report this rule winning by priority, and losing a full tie to the lower id")
+        void shouldReportThisRuleWinsAndLowerId() {
+            // arrange
+            givenRules(ruleFor(40L, 0, grocer, "kroger"));
+            givenCandidates(List.of(bare(1L, "KROGER #1", 1)));
+            when(merchantService.requireOwnedMerchant(USER_ID, TARGET_ID)).thenReturn(kroger);
+
+            // act
+            List<MerchantRuleOverlapDto> winning = service.preview(USER_ID, draft(5)).overlaps();
+            List<MerchantRuleOverlapDto> tied = service.preview(USER_ID, draft(0)).overlaps();
+
+            // assert & verify
+            assertThat(winning).extracting(MerchantRuleOverlapDto::outcome, MerchantRuleOverlapDto::reason, MerchantRuleOverlapDto::merchantName)
+                    .containsExactly(tuple(MerchantRuleOverlapOutcome.THIS_RULE_WINS, MerchantRuleOverlapReason.HIGHER_PRIORITY, "Grocer"));
+            assertThat(tied).extracting(MerchantRuleOverlapDto::outcome, MerchantRuleOverlapDto::reason)
+                    .containsExactly(tuple(MerchantRuleOverlapOutcome.OTHER_WINS, MerchantRuleOverlapReason.LOWER_ID));
+        }
+
+        @Test
+        @DisplayName("should name the same winner import picks, with a reason that agrees with the rule order")
+        void shouldAgreeWithImportAndRuleOrdering() {
+            // arrange
+            List<MerchantRule> saved = new ArrayList<>();
+            Merchant[] others = {fuel, pharmacy, grocer};
+            Random random = new Random(981);
+            for (int i = 0; i < 30; i++) {
+                String keyword = random.nextBoolean() ? "kroger" : "kroger " + (char) ('a' + random.nextInt(3));
+                saved.add(ruleFor(100L + i, random.nextInt(3), others[i % 3], keyword));
+            }
+            givenRules(saved.toArray(MerchantRule[]::new));
+            List<Transaction> candidates = new ArrayList<>();
+            for (int i = 0; i < 20; i++) {
+                candidates.add(bare(i + 1L, "KROGER " + (char) ('a' + random.nextInt(4)) + " #" + i, i));
+            }
+            givenCandidates(candidates);
+            when(merchantService.requireOwnedMerchant(USER_ID, TARGET_ID)).thenReturn(kroger);
+            ImportMerchantResolver resolver = new ImportMerchantResolver(merchantService, merchantRuleRepository, new RuleMatcher());
+            MerchantRule draftRule = MerchantRule.builder().id(Long.MAX_VALUE).keywords(List.of("kroger"))
+                    .matchType(MatchType.OR).priority(1).merchant(kroger).build();
+            List<MerchantRule> ranked = RuleOrdering.rank(saved, draftRule, null);
+
+            // act
+            List<MerchantRuleOverlapDto> overlaps = service.preview(USER_ID, draft(1)).overlaps();
+
+            // assert & verify
+            assertThat(overlaps).isNotEmpty();
+            for (MerchantRuleOverlapDto overlap : overlaps) {
+                String sample = overlap.descriptions().get(0);
+                MerchantRule importWinner = resolver.firstMatchingRule(ranked, new ImportMerchantResolver.ImportRow(sample, new BigDecimal(AMOUNT)));
+                if (overlap.outcome() == MerchantRuleOverlapOutcome.OTHER_WINS) {
+                    assertThat(importWinner.getId()).isEqualTo(overlap.rule().id());
+                    MerchantRule rule = saved.stream().filter(r -> r.getId().equals(overlap.rule().id())).findFirst().orElseThrow();
+                    assertThat(RuleOrdering.compare(rule, draftRule)).isNegative();
+                } else {
+                    assertThat(importWinner.getId()).isEqualTo(Long.MAX_VALUE);
+                }
+            }
+        }
+
+        @Test
+        @DisplayName("should ignore links and rules that point at the target, and an edited draft's own saved copy")
+        void shouldIgnoreTargetAndSavedCopy() {
+            // arrange
+            MerchantRule savedCopy = ruleFor(EDITED_RULE_ID, 0, grocer, "kroger");
+            MerchantRule targetRule = ruleFor(70L, 9, kroger, "kroger");
+            givenRules(savedCopy, targetRule);
+            givenCandidates(List.of(bare(1L, "KROGER #1", 1), bare(2L, "KROGER OWN LINK", 2)));
+            when(merchantService.requireOwnedMerchant(USER_ID, TARGET_ID)).thenReturn(kroger);
+            when(merchantService.findMatchingMerchants(eq(USER_ID), anyList())).thenReturn(Map.of("KROGER OWN LINK", kroger));
+            MerchantRuleMatchPreviewRequest edited = new MerchantRuleMatchPreviewRequest(
+                    EDITED_RULE_ID, List.of("kroger"), MatchType.OR, 0, null, null, TARGET_ID);
+
+            // act
+            MerchantRuleMatchPreviewDto result = service.preview(USER_ID, edited);
+
+            // assert & verify
+            assertThat(result.overlaps()).isEmpty();
+            verify(merchantService, never()).findMatchingMerchantIds(eq(USER_ID), anyList());
+        }
+
+        @Test
+        @DisplayName("should report only the strongest rival when rules for two other merchants match")
+        void shouldReportStrongestRival() {
+            // arrange
+            givenRules(ruleFor(40L, 1, grocer, "kroger"), ruleFor(41L, 2, pharmacy, "kroger"));
+            givenCandidates(List.of(bare(1L, "KROGER #1", 1)));
+            when(merchantService.requireOwnedMerchant(USER_ID, TARGET_ID)).thenReturn(kroger);
+
+            // act
+            List<MerchantRuleOverlapDto> overlaps = service.preview(USER_ID, draft(5)).overlaps();
+
+            // assert & verify
+            assertThat(overlaps).extracting(MerchantRuleOverlapDto::outcome, MerchantRuleOverlapDto::merchantName)
+                    .containsExactly(tuple(MerchantRuleOverlapOutcome.THIS_RULE_WINS, "Kroger Pharmacy"));
+        }
+
+        @Test
+        @DisplayName("should return no overlaps without a target merchant")
+        void shouldBeEmptyWithoutTarget() {
+            // arrange
+            givenRules(ruleFor(20L, 0, fuel, "kroger fuel"));
+            givenCandidates(List.of(bare(1L, "KROGER FUEL #2", 1)));
+            givenLinks(Map.of());
+
+            // act
+            MerchantRuleMatchPreviewDto result = service.preview(USER_ID, request(null, 0, "kroger"));
+
+            // assert & verify
+            assertThat(result.overlaps()).isEmpty();
+            verify(merchantService, never()).findMatchingMerchants(eq(USER_ID), anyList());
+        }
     }
 }

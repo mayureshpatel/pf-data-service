@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.rule.MatchableRule;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Reproduces, in Java, the rule order that {@code CategoryRuleQueries.FIND_ALL_BY_USER_ID} gives
@@ -50,6 +51,45 @@ public final class RuleOrdering {
         ranked.add(draft);
         ranked.sort(ORDER);
         return ranked;
+    }
+
+    /** The step of the rule order that decides between two rules, in the order the steps apply. */
+    public enum Criterion {
+        /** the rules have different priorities; the higher one wins (a null priority counts highest) */
+        PRIORITY,
+        /** same priority; the rule with the longer summed keyword length wins */
+        KEYWORD_LENGTH,
+        /** same priority and keyword length; the rule with the lower id wins */
+        ID
+    }
+
+    /**
+     * Says which step of the rule order puts one rule ahead of another, so a caller can explain a
+     * winner in the same terms the ordering itself uses (PF-981 overlaps).
+     *
+     * @param ahead  the rule that ranks first
+     * @param behind the rule that ranks after it
+     * @return the first step at which the two differ, or {@link Criterion#ID} when only the ids do
+     */
+    public static Criterion decidingCriterion(MatchableRule ahead, MatchableRule behind) {
+        if (!Objects.equals(ahead.getPriority(), behind.getPriority())) {
+            return Criterion.PRIORITY;
+        }
+        if (keywordLength(ahead) != keywordLength(behind)) {
+            return Criterion.KEYWORD_LENGTH;
+        }
+        return Criterion.ID;
+    }
+
+    /**
+     * Compares two rules in the effective rule order.
+     *
+     * @param a one rule
+     * @param b another rule
+     * @return negative when {@code a} ranks first, positive when {@code b} does, zero for a full tie
+     */
+    public static int compare(MatchableRule a, MatchableRule b) {
+        return ORDER.compare(a, b);
     }
 
     /**

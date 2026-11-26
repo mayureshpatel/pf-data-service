@@ -191,6 +191,16 @@ public final class TransactionQueries {
             returning id
             """;
 
+    // language=SQL
+    // pf-981: every live transaction's description and amount, for counting rule matches
+    public static final String FIND_DESCRIPTION_AMOUNTS = """
+            select t.description, t.amount
+            from transactions t
+            join accounts a on a.id = t.account_id
+            where a.user_id = :userId
+              and t.deleted_at is null
+            """;
+
     /** Name prefix of the generated transaction id parameters of the merchant batch update. */
     public static final String ASSIGN_ID_PARAM_PREFIX = "tx";
 

@@ -23,7 +23,9 @@ public final class MerchantRuleDtoMapper {
                 rule.getPriority(),
                 MerchantDtoMapper.toDto(rule.getMerchant()),
                 rule.getMinAmount(),
-                rule.getMaxAmount()
+                rule.getMaxAmount(),
+                null,
+                null
         );
     }
 }

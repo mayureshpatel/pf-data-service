@@ -7,6 +7,9 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchPreviewRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleMatchRowDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleOverlapDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleOverlapOutcome;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleOverlapReason;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleRefDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantRuleVerdict;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +41,12 @@ import java.util.Map;
  * among the saved rules by {@link RuleOrdering} and matched by the shared {@link RuleMatcher}, and
  * links are looked up through {@link MerchantService#findMatchingMerchantIds} (the same key import
  * uses), so the preview and reality cannot drift.
+ *
+ * <p>PF-981 adds overlaps: where the draft meets another merchant. For every matched transaction,
+ * whatever merchant it has today, the description is resolved the way import would resolve it (an
+ * exact link first, then {@link ImportMerchantResolver#firstMatchingRule} over the ranked rules);
+ * when another merchant takes it, or the draft takes it from a rule pointing at another merchant,
+ * the description joins a group that says who wins and why, in {@link RuleOrdering}'s own terms.
  */
 @Service
 @RequiredArgsConstructor
@@ -48,6 +59,12 @@ public class MerchantRuleMatchPreviewService {
     /** The id a new draft ranks with, so it sorts after saved rules it fully ties with. */
     private static final long NEW_DRAFT_ID = Long.MAX_VALUE;
 
+    /** Other-merchant wins first, then the biggest groups, then by merchant name for stability. */
+    private static final Comparator<MerchantRuleOverlapDto> OVERLAP_ORDER = Comparator
+            .comparing((MerchantRuleOverlapDto overlap) -> overlap.outcome() != MerchantRuleOverlapOutcome.OTHER_WINS)
+            .thenComparing(MerchantRuleOverlapDto::transactionCount, Comparator.reverseOrder())
+            .thenComparing(MerchantRuleOverlapDto::merchantName, Comparator.nullsLast(Comparator.<String>naturalOrder()));
+
     /** Verdict order (will-assign first), then newest first, then highest id for stability. */
     private static final Comparator<MerchantRuleMatchRowDto> ROW_ORDER = Comparator
             .comparing(MerchantRuleMatchRowDto::verdict)
@@ -58,6 +75,7 @@ public class MerchantRuleMatchPreviewService {
     private final TransactionRepository transactionRepository;
     private final MerchantService merchantService;
     private final RuleMatcher ruleMatcher;
+    private final ImportMerchantResolver importMerchantResolver;
 
     /**
      * Previews a draft rule against the calling user's whole ledger. A draft with no non-blank
@@ -93,7 +111,9 @@ public class MerchantRuleMatchPreviewService {
                 .stream()
                 .filter(transaction -> matches(transaction, draft))
                 .toList();
-        Map<String, Long> linked = linkedDescriptions(userId, matched);
+        // with a target, one lookup resolves links to merchants for both the verdicts and the overlaps
+        Map<String, Merchant> links = target != null ? linkedMerchants(userId, matched) : null;
+        Map<String, Long> linked = links != null ? unassignedLinkIds(matched, links) : linkedDescriptions(userId, matched);
 
         List<MerchantRuleMatchRowDto> rows = matched.stream()
                 .map(transaction -> toRow(transaction, ranked, draft, linked))
@@ -109,7 +129,191 @@ public class MerchantRuleMatchPreviewService {
                 count(rows, MerchantRuleVerdict.LINKED),
                 rows.size() > MAX_ROWS,
                 rows.stream().limit(MAX_ROWS).toList(),
-                willAssignIds(rows));
+                willAssignIds(rows),
+                overlaps(matched, ranked, draft, target, links));
+    }
+
+    /**
+     * Resolves every matched description's exact link to its merchant in one lookup (PF-981). All
+     * matched transactions are looked up, not only merchant-less ones, because overlaps report
+     * where import would put each description whatever merchant it has today.
+     *
+     * @param userId  the calling user's id
+     * @param matched the transactions the draft matches
+     * @return each linked raw description mapped to its merchant
+     */
+    private Map<String, Merchant> linkedMerchants(Long userId, List<Transaction> matched) {
+        List<String> descriptions = matched.stream().map(Transaction::getDescription).distinct().toList();
+        return merchantService.findMatchingMerchants(userId, descriptions);
+    }
+
+    /**
+     * Narrows resolved links to the merchant-less transactions' descriptions, as merchant ids: the
+     * same map {@link #linkedDescriptions} builds, without a second lookup.
+     *
+     * @param matched the transactions the draft matches
+     * @param links   every matched description's link, from {@link #linkedMerchants}
+     * @return each merchant-less linked description mapped to its merchant id
+     */
+    private static Map<String, Long> unassignedLinkIds(List<Transaction> matched, Map<String, Merchant> links) {
+        Map<String, Long> ids = new HashMap<>();
+        for (Transaction transaction : matched) {
+            Merchant merchant = links.get(transaction.getDescription());
+            if (transaction.getMerchant() == null && merchant != null) {
+                ids.put(transaction.getDescription(), merchant.getId());
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Groups the matched transactions where the draft meets another merchant (PF-981). Needs a
+     * target merchant: without one there is no "other" merchant to compare with, so it is empty.
+     * Each transaction is placed the way import would place it: an exact link first, then the
+     * first matching rule in {@code ranked}. Groups are per merchant and deciding rule, because
+     * the reason belongs to a rule; a merchant reached through two rules appears twice.
+     *
+     * @param matched the transactions the draft matches, whatever merchant each has today
+     * @param ranked  the saved rules with the draft ranked among them
+     * @param draft   the draft rule
+     * @param target  the merchant the draft points at, or null
+     * @param links   every matched description's link, or null when there is no target
+     * @return the overlap groups, other-merchant wins first, then by transaction count
+     */
+    private List<MerchantRuleOverlapDto> overlaps(List<Transaction> matched, List<MerchantRule> ranked,
+                                                  MerchantRule draft, Merchant target, Map<String, Merchant> links) {
+        if (target == null || links == null || matched.isEmpty()) {
+            return List.of();
+        }
+
+        Map<OverlapKey, OverlapGroup> groups = new LinkedHashMap<>();
+        for (Transaction transaction : matched) {
+            String description = transaction.getDescription();
+            Merchant linked = links.get(description);
+            if (linked != null) {
+                // an exact link beats every rule, the draft included
+                if (!target.getId().equals(linked.getId())) {
+                    group(groups, MerchantRuleOverlapOutcome.OTHER_WINS, MerchantRuleOverlapReason.LINK, linked, null, description);
+                }
+                continue;
+            }
+            MerchantRule winner = importMerchantResolver.firstMatchingRule(ranked,
+                    new ImportMerchantResolver.ImportRow(description, transaction.getAmount()));
+            if (winner == null) {
+                continue;
+            }
+            if (draft.equals(winner)) {
+                MerchantRule rival = strongestRival(ranked, draft, target, transaction);
+                if (rival != null) {
+                    group(groups, MerchantRuleOverlapOutcome.THIS_RULE_WINS, reason(draft, rival), rival.getMerchant(), rival, description);
+                }
+            } else if (!target.getId().equals(winner.getMerchant().getId())) {
+                group(groups, MerchantRuleOverlapOutcome.OTHER_WINS, reason(winner, draft), winner.getMerchant(), winner, description);
+            }
+        }
+        return groups.values().stream()
+                .map(OverlapGroup::toDto)
+                .sorted(OVERLAP_ORDER)
+                .toList();
+    }
+
+    /**
+     * The highest-ranked rule, other than the draft, that matches the transaction and points at a
+     * merchant other than the target: the rule the draft beats there. Only the strongest rival is
+     * reported, even when rules for several other merchants match.
+     *
+     * @param ranked      the saved rules with the draft ranked among them
+     * @param draft       the draft rule, which won the transaction
+     * @param target      the merchant the draft points at
+     * @param transaction the transaction the draft won
+     * @return the strongest other-merchant rule matching the transaction, or null if none does
+     */
+    private MerchantRule strongestRival(List<MerchantRule> ranked, MerchantRule draft, Merchant target, Transaction transaction) {
+        for (MerchantRule rule : ranked) {
+            Merchant merchant = rule.getMerchant();
+            if (!draft.equals(rule) && merchant != null && merchant.getId() != null
+                    && !target.getId().equals(merchant.getId()) && matches(transaction, rule)) {
+                return rule;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Translates the ordering step that puts {@code winner} ahead of {@code loser} into a reason.
+     *
+     * @param winner the rule ranked ahead
+     * @param loser  the rule ranked behind it
+     * @return the first rule-order key that separates them, as an overlap reason
+     */
+    static MerchantRuleOverlapReason reason(MerchantRule winner, MerchantRule loser) {
+        return switch (RuleOrdering.decidingCriterion(winner, loser)) {
+            case PRIORITY -> MerchantRuleOverlapReason.HIGHER_PRIORITY;
+            case KEYWORD_LENGTH -> MerchantRuleOverlapReason.LONGER_KEYWORDS;
+            case ID -> MerchantRuleOverlapReason.LOWER_ID;
+        };
+    }
+
+    /**
+     * Adds one transaction's description to its overlap group, creating the group on first use.
+     *
+     * @param groups      the groups built so far, in first-seen order
+     * @param outcome     whether the draft or the other merchant takes the transaction
+     * @param reason      why the winner wins
+     * @param merchant    the other merchant
+     * @param rule        the other merchant's deciding rule, or null for a link
+     * @param description the transaction's raw description
+     */
+    private static void group(Map<OverlapKey, OverlapGroup> groups, MerchantRuleOverlapOutcome outcome,
+                              MerchantRuleOverlapReason reason, Merchant merchant, MerchantRule rule, String description) {
+        OverlapKey key = new OverlapKey(outcome, reason, merchant.getId(), rule != null ? rule.getId() : null);
+        groups.computeIfAbsent(key, k -> new OverlapGroup(outcome, reason, merchant, rule)).add(description);
+    }
+
+    /**
+     * What an overlap group is keyed on: one group per outcome, reason, merchant and rule.
+     *
+     * @param outcome    whether the draft or the other merchant wins
+     * @param reason     why the winner wins
+     * @param merchantId the other merchant's id
+     * @param ruleId     the other merchant's deciding rule id, or null for a link
+     */
+    private record OverlapKey(MerchantRuleOverlapOutcome outcome, MerchantRuleOverlapReason reason, Long merchantId, Long ruleId) {
+    }
+
+    /** Collects one overlap group's descriptions, counted by folded key, keeping the first spelling seen. */
+    private static final class OverlapGroup {
+        private final MerchantRuleOverlapOutcome outcome;
+        private final MerchantRuleOverlapReason reason;
+        private final Merchant merchant;
+        private final MerchantRule rule;
+        private final Map<String, Integer> countByKey = new LinkedHashMap<>();
+        private final Map<String, String> spellingByKey = new LinkedHashMap<>();
+        private int transactions;
+
+        private OverlapGroup(MerchantRuleOverlapOutcome outcome, MerchantRuleOverlapReason reason, Merchant merchant, MerchantRule rule) {
+            this.outcome = outcome;
+            this.reason = reason;
+            this.merchant = merchant;
+            this.rule = rule;
+        }
+
+        private void add(String description) {
+            String key = DescriptionKeys.fold(description);
+            countByKey.merge(key, 1, Integer::sum);
+            spellingByKey.putIfAbsent(key, description);
+            transactions++;
+        }
+
+        private MerchantRuleOverlapDto toDto() {
+            List<String> samples = countByKey.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
+                    .limit(MerchantRuleOverlapDto.MAX_DESCRIPTIONS)
+                    .map(entry -> spellingByKey.get(entry.getKey()))
+                    .toList();
+            return new MerchantRuleOverlapDto(outcome, reason, merchant.getId(), merchant.getName(),
+                    rule != null ? toRef(rule) : null, countByKey.size(), transactions, samples);
+        }
     }
 
     /**
@@ -210,7 +414,6 @@ public class MerchantRuleMatchPreviewService {
                 .toList();
     }
 
-    /** Counts the rows with the given verdict. */
     /**
      * The ids of every match the draft would give a merchant, in the rows' order (newest first),
      * capped at {@link MerchantRuleMatchPreviewDto#MAX_WILL_ASSIGN_IDS}. The ledger uses it to apply
@@ -224,6 +427,7 @@ public class MerchantRuleMatchPreviewService {
                 .toList();
     }
 
+    /** Counts the rows with the given verdict. */
     private static int count(List<MerchantRuleMatchRowDto> rows, MerchantRuleVerdict verdict) {
         return (int) rows.stream().filter(row -> row.verdict() == verdict).count();
     }

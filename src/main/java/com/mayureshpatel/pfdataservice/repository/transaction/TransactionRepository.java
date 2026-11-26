@@ -6,6 +6,7 @@ import com.mayureshpatel.pfdataservice.domain.transaction.Tag;
 import com.mayureshpatel.pfdataservice.domain.transaction.Transaction;
 import com.mayureshpatel.pfdataservice.domain.transaction.TransactionType;
 import com.mayureshpatel.pfdataservice.dto.transaction.CategoryTransactionsDto;
+import com.mayureshpatel.pfdataservice.dto.transaction.DescriptionAmountDto;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.transaction.TransactionDescriptionDto;
 import com.mayureshpatel.pfdataservice.repository.JdbcRepository;
@@ -790,6 +791,20 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                         rs.getString("merchant_name")))
                 .list();
         return new PageImpl<>(content, pageable, total);
+    }
+
+    /**
+     * Reads every live transaction of the user as just its description and amount, the two things a
+     * rule matches on, for counting rule matches over the whole ledger (PF-981).
+     *
+     * @param userId the user id
+     * @return one row per live transaction, in no particular order
+     */
+    public List<DescriptionAmountDto> findDescriptionAmounts(Long userId) {
+        return jdbcClient.sql(TransactionQueries.FIND_DESCRIPTION_AMOUNTS)
+                .param(SqlParams.USER_ID, userId)
+                .query((rs, rowNum) -> new DescriptionAmountDto(rs.getString("description"), rs.getBigDecimal("amount")))
+                .list();
     }
 
     /**

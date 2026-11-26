@@ -18,8 +18,13 @@ import java.util.List;
  * @param merchant  the merchant the rule points at
  * @param minAmount optional lower bound on the absolute amount
  * @param maxAmount optional upper bound on the absolute amount
+ * @param matchedDescriptionCount  how many distinct descriptions (case and spacing folded) of the
+ *                                 user's live transactions the rule matches, whether or not it wins
+ *                                 them; only filled when the rules are listed for one merchant
+ *                                 (PF-981), otherwise {@code null}
+ * @param matchedTransactionCount  how many of the user's live transactions it matches, same terms
  */
-@Builder
+@Builder(toBuilder = true)
 public record MerchantRuleDto(
         Long id,
         Long userId,
@@ -28,6 +33,8 @@ public record MerchantRuleDto(
         Integer priority,
         MerchantDto merchant,
         BigDecimal minAmount,
-        BigDecimal maxAmount
+        BigDecimal maxAmount,
+        Integer matchedDescriptionCount,
+        Integer matchedTransactionCount
 ) {
 }
