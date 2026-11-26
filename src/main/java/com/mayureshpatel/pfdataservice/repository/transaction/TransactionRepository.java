@@ -32,6 +32,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -789,6 +790,53 @@ public class TransactionRepository implements JdbcRepository<Transaction, Long>,
                         rs.getString("merchant_name")))
                 .list();
         return new PageImpl<>(content, pageable, total);
+    }
+
+    /**
+     * Gives a merchant to the user's live transactions that have no merchant and whose folded
+     * description is one of the given description-link keys (PF-980: linking also fills the past).
+     * Never overwrites a merchant already set.
+     *
+     * @param userId                 the user id
+     * @param merchantId             the merchant to fill in
+     * @param normalizedDescriptions the folded descriptions just linked
+     * @return the ids of the transactions it changed
+     */
+    public List<Long> fillMerchantByNormalizedDescriptions(Long userId, Long merchantId, List<String> normalizedDescriptions) {
+        if (normalizedDescriptions == null || normalizedDescriptions.isEmpty()) {
+            return List.of();
+        }
+        return jdbcClient.sql(TransactionQueries.FILL_MERCHANT_BY_NORMALIZED_DESCRIPTIONS)
+                .param(SqlParams.USER_ID, userId)
+                .param("merchantId", merchantId)
+                .param("normalizedDescriptions", normalizedDescriptions)
+                .query(Long.class)
+                .list();
+    }
+
+    /**
+     * Clears the merchant on the given transactions, but only those that still carry
+     * {@code merchantId}, are live and belong to the user (PF-980 undo of a fill). Runs in chunks so
+     * a large undo stays under the database's bind-parameter limit.
+     *
+     * @param userId         the user id
+     * @param merchantId     the merchant the link request filled in
+     * @param transactionIds the transactions it filled
+     * @return the ids it cleared
+     */
+    public List<Long> clearMerchantIfCurrent(Long userId, Long merchantId, List<Long> transactionIds) {
+        List<Long> cleared = new ArrayList<>();
+        int chunkSize = 5000;
+        for (int from = 0; from < transactionIds.size(); from += chunkSize) {
+            List<Long> chunk = transactionIds.subList(from, Math.min(from + chunkSize, transactionIds.size()));
+            cleared.addAll(jdbcClient.sql(TransactionQueries.CLEAR_MERCHANT_IF_CURRENT)
+                    .param(SqlParams.USER_ID, userId)
+                    .param("merchantId", merchantId)
+                    .param(PARAM_IDS, chunk)
+                    .query(Long.class)
+                    .list());
+        }
+        return cleared;
     }
 
     /**

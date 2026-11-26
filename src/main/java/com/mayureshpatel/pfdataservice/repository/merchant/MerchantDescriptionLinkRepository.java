@@ -81,6 +81,42 @@ public class MerchantDescriptionLinkRepository {
     }
 
     /**
+     * Points a link back at the merchant it had before a link request (PF-980 undo), but only while
+     * it still points at {@code merchantId} and {@code previousMerchantId} still belongs to the user.
+     *
+     * @param userId                the user id
+     * @param normalizedDescription the link's lookup key
+     * @param merchantId            the merchant the link request set
+     * @param previousMerchantId    the merchant to point it back at
+     * @return 1 when the link was moved back, 0 when it changed since or the previous merchant is gone
+     */
+    public int repointIfCurrent(Long userId, String normalizedDescription, Long merchantId, Long previousMerchantId) {
+        return jdbcClient.sql(MerchantDescriptionLinkQueries.REPOINT_IF_CURRENT)
+                .param(SqlParams.USER_ID, userId)
+                .param("normalizedDescription", normalizedDescription)
+                .param("merchantId", merchantId)
+                .param("previousMerchantId", previousMerchantId)
+                .update();
+    }
+
+    /**
+     * Removes a link a link request created (PF-980 undo), but only while it still points at
+     * {@code merchantId}.
+     *
+     * @param userId                the user id
+     * @param normalizedDescription the link's lookup key
+     * @param merchantId            the merchant the link request set
+     * @return 1 when the link was removed, 0 when it changed since
+     */
+    public int deleteIfCurrent(Long userId, String normalizedDescription, Long merchantId) {
+        return jdbcClient.sql(MerchantDescriptionLinkQueries.DELETE_IF_CURRENT)
+                .param(SqlParams.USER_ID, userId)
+                .param("normalizedDescription", normalizedDescription)
+                .param("merchantId", merchantId)
+                .update();
+    }
+
+    /**
      * Returns every description linked to one merchant, oldest first -- backs the merchant's own
      * description-links management screen.
      *

@@ -54,6 +54,26 @@ public final class MerchantDescriptionLinkQueries {
               and user_id = :userId
             """;
 
+    // language=SQL -- PF-980 undo: point a link back at its previous merchant, only while it still
+    // points at the merchant the link request set and the previous merchant is still the user's.
+    public static final String REPOINT_IF_CURRENT = """
+            update merchant_description_links
+            set merchant_id = :previousMerchantId, updated_at = now()
+            where user_id = :userId
+              and normalized_description = :normalizedDescription
+              and merchant_id = :merchantId
+              and exists (select 1 from merchants where merchants.id = :previousMerchantId and merchants.user_id = :userId)
+            """;
+
+    // language=SQL -- PF-980 undo: remove a link the request created, only while it still points
+    // at the merchant the request set.
+    public static final String DELETE_IF_CURRENT = """
+            delete from merchant_description_links
+            where user_id = :userId
+              and normalized_description = :normalizedDescription
+              and merchant_id = :merchantId
+            """;
+
     // language=SQL -- PF-884: the descriptions already tied to a set of merchants, so recurring
     // detection can skip a pattern whose text belongs to a merchant that is already tracked.
     public static final String FIND_NORMALIZED_DESCRIPTIONS_BY_MERCHANT_IDS = """

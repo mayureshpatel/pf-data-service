@@ -1540,6 +1540,51 @@ class TransactionRepositoryTest extends BaseRepositoryTest {
         }
 
         @Test
+        @DisplayName("fillByDescriptions_fillsOnlyMerchantlessLiveRowsOfTheUserWithAMatchingFoldedDescription")
+        void fillByDescriptions_fillsOnlyMatchingMerchantlessRows() {
+            // arrange
+            long open = insert(1L, null, "  ZZM   Fill #1 ");
+            long nbsp = insert(1L, null, "ZZM\u00A0FILL #1");
+            long other = insert(1L, null, "ZZM Fill #2");
+            long taken = insert(1L, 2L, "ZZM Fill #1");
+            long theirs = insert(4L, null, "ZZM Fill #1");
+            long gone = insert(1L, null, "ZZM Fill #1");
+            jdbcClient.sql("update transactions set deleted_at = now() where id = :id").param("id", gone).update();
+
+            // act
+            List<Long> filled = transactionRepository.fillMerchantByNormalizedDescriptions(USER_ID, 3L, List.of("zzm fill #1"));
+
+            // assert & verify
+            assertEquals(List.of(open, nbsp), filled.stream().sorted().toList());
+            assertEquals(3L, merchantOf(open));
+            assertEquals(3L, merchantOf(nbsp));
+            assertNull(merchantOf(other));
+            assertEquals(2L, merchantOf(taken));
+            assertNull(merchantOf(theirs));
+            assertNull(merchantOf(gone));
+            assertTrue(transactionRepository.fillMerchantByNormalizedDescriptions(USER_ID, 3L, List.of()).isEmpty());
+        }
+
+        @Test
+        @DisplayName("clearIfCurrent_clearsOnlyRowsOfTheUserStillCarryingTheMerchant")
+        void clearIfCurrent_clearsOnlyRowsStillCarryingTheMerchant() {
+            // arrange
+            long kept = insert(1L, 3L, "ZZM Clear A");
+            long changed = insert(1L, 2L, "ZZM Clear B");
+            long theirs = insert(4L, 3L, "ZZM Clear C");
+
+            // act
+            List<Long> cleared = transactionRepository.clearMerchantIfCurrent(USER_ID, 3L, List.of(kept, changed, theirs));
+
+            // assert & verify
+            assertEquals(List.of(kept), cleared);
+            assertNull(merchantOf(kept));
+            assertEquals(2L, merchantOf(changed));
+            assertEquals(3L, merchantOf(theirs));
+            assertTrue(transactionRepository.clearMerchantIfCurrent(USER_ID, 3L, List.of()).isEmpty());
+        }
+
+        @Test
         @DisplayName("assignMerchants_emptyInput_returnsZero")
         void assignMerchants_emptyInput_returnsZero() {
             // act & assert & verify

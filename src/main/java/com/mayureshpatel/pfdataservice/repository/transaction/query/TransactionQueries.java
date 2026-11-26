@@ -165,6 +165,32 @@ public final class TransactionQueries {
             "   and transactions.merchant_id is null" +
             " order by transactions.date desc, transactions.id desc";
 
+    // language=SQL
+    // pf-980: give a merchant to the user's live transactions that have none and whose folded
+    // description is one of the given link keys; returns the ids it changed so the link can be undone.
+    public static final String FILL_MERCHANT_BY_NORMALIZED_DESCRIPTIONS = """
+            update transactions
+            set merchant_id = :merchantId, updated_at = CURRENT_TIMESTAMP
+            where merchant_id is null
+              and deleted_at is null
+              and account_id in (select id from accounts where user_id = :userId)
+              and ${descriptionKey} in (:normalizedDescriptions)
+            returning id
+            """.replace("${descriptionKey}", DescriptionKeys.sqlFold("transactions.description"));
+
+    // language=SQL
+    // pf-980 undo: clear the merchant a link request filled, only on rows that still carry it;
+    // returns the ids it cleared.
+    public static final String CLEAR_MERCHANT_IF_CURRENT = """
+            update transactions
+            set merchant_id = null, updated_at = CURRENT_TIMESTAMP
+            where id in (:ids)
+              and merchant_id = :merchantId
+              and deleted_at is null
+              and account_id in (select id from accounts where user_id = :userId)
+            returning id
+            """;
+
     /** Name prefix of the generated transaction id parameters of the merchant batch update. */
     public static final String ASSIGN_ID_PARAM_PREFIX = "tx";
 

@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkResultDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkUndoResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkBulkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkCreateRequest;
@@ -7,6 +9,7 @@ import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
+import com.mayureshpatel.pfdataservice.service.DescriptionLinkService;
 import com.mayureshpatel.pfdataservice.service.MerchantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -46,6 +49,7 @@ import java.util.List;
 public class MerchantController {
 
     private final MerchantService merchantService;
+    private final DescriptionLinkService descriptionLinkService;
 
     /**
      * Returns a page of merchants for the authenticated user (PF-320), optionally narrowed by a
@@ -147,53 +151,81 @@ public class MerchantController {
 
     /**
      * Explicitly links a raw description to a merchant owned by the authenticated user --
-     * overwrites any existing link for that description (last-write-wins). The explicit half of
-     * the auto-capture + explicit management design: this is the same operation
-     * {@code TransactionService} performs automatically on merchant assignment, exposed directly
-     * for pre-seeding matches before an import or fixing a bad auto-captured one.
+     * overwrites any existing link for that description (last-write-wins), and gives the merchant
+     * to the user's existing transactions with that description that have no merchant yet (PF-980;
+     * a merchant already set is never overwritten). The explicit half of the auto-capture +
+     * explicit management design.
      *
      * @param userDetails the authenticated user
      * @param id          the merchant id to link the description to
      * @param request     the raw description to link
-     * @return 204 once the link is recorded
+     * @return 200 with what changed, which {@link #undoDescriptionLinks} takes back to reverse it
      */
-    @Operation(summary = "Link a description to a merchant", description = "Creates or overwrites the link from a raw description to a merchant owned by the authenticated user")
-    @ApiResponse(responseCode = "204", description = "Description link recorded")
+    @Operation(summary = "Link a description to a merchant", description = "Creates or overwrites the link from a raw description to a merchant owned by the authenticated user, and fills that merchant in on existing transactions with the description and no merchant")
+    @ApiResponse(responseCode = "200", description = "Description link recorded; the body lists what changed for undo")
     @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this merchant")
     @PostMapping("/{id}/description-links")
     @PreAuthorize("@ss.isMerchantOwner(#id, principal)")
-    public ResponseEntity<Void> addDescriptionLink(
+    public ResponseEntity<DescriptionLinkResultDto> addDescriptionLink(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
             @RequestBody @Valid MerchantDescriptionLinkCreateRequest request
     ) {
-        merchantService.recordDescriptionLink(userDetails.getId(), id, request.description());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(descriptionLinkService.linkDescriptions(userDetails.getId(), id, List.of(request.description())));
     }
 
     /**
      * Links many raw descriptions to a merchant owned by the authenticated user in one call --
      * the batch form of {@link #addDescriptionLink}, with the same last-write-wins behavior for a
-     * description already linked elsewhere. All-or-nothing: one transaction.
+     * description already linked elsewhere and the same fill of transactions with no merchant.
+     * All-or-nothing: one transaction.
      *
      * @param userDetails the authenticated user
      * @param id          the merchant id to link the descriptions to
      * @param request     the raw descriptions to link (1 to 500)
-     * @return 204 once every link is recorded
+     * @return 200 with what changed, which {@link #undoDescriptionLinks} takes back to reverse it
      */
-    @Operation(summary = "Link many descriptions to a merchant", description = "Creates or overwrites the links from up to 500 raw descriptions to a merchant owned by the authenticated user, in one transaction")
-    @ApiResponse(responseCode = "204", description = "Description links recorded")
+    @Operation(summary = "Link many descriptions to a merchant", description = "Creates or overwrites the links from up to 500 raw descriptions to a merchant owned by the authenticated user, and fills that merchant in on existing transactions with those descriptions and no merchant, in one transaction")
+    @ApiResponse(responseCode = "200", description = "Description links recorded; the body lists what changed for undo")
     @ApiResponse(responseCode = "400", description = "No descriptions, more than 500, or a blank or too-long description")
     @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this merchant")
     @PostMapping("/{id}/description-links/bulk")
     @PreAuthorize("@ss.isMerchantOwner(#id, principal)")
-    public ResponseEntity<Void> addDescriptionLinks(
+    public ResponseEntity<DescriptionLinkResultDto> addDescriptionLinks(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
             @RequestBody @Valid MerchantDescriptionLinkBulkCreateRequest request
     ) {
-        merchantService.recordDescriptionLinks(userDetails.getId(), id, request.descriptions());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(descriptionLinkService.linkDescriptions(userDetails.getId(), id, request.descriptions()));
+    }
+
+    /**
+     * Reverses a link request from the result it returned (stateless, like the rule-application
+     * undo): removes the links it created, moves the links it moved back to their previous merchant,
+     * and clears the merchant again on the transactions it filled -- only where nothing has changed
+     * since; everything else is reported as skipped.
+     *
+     * @param userDetails the authenticated user
+     * @param id          the merchant id the descriptions were linked to
+     * @param result      the link result, as returned by either link endpoint
+     * @return 200 with what was put back and what was skipped
+     * @throws IllegalArgumentException when the result belongs to a different merchant than the path
+     */
+    @Operation(summary = "Undo a description link", description = "Reverses a link request from the result it returned, leaving anything changed since")
+    @ApiResponse(responseCode = "200", description = "Undo applied; the body says what was restored and what was skipped")
+    @ApiResponse(responseCode = "400", description = "The result is malformed, too large, or for a different merchant")
+    @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this merchant")
+    @PostMapping("/{id}/description-links/undo")
+    @PreAuthorize("@ss.isMerchantOwner(#id, principal)")
+    public ResponseEntity<DescriptionLinkUndoResultDto> undoDescriptionLinks(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody @Valid DescriptionLinkResultDto result
+    ) {
+        if (!id.equals(result.merchantId())) {
+            throw new IllegalArgumentException("The link result is for a different merchant.");
+        }
+        return ResponseEntity.ok(descriptionLinkService.undoLink(userDetails.getId(), result));
     }
 
     /**

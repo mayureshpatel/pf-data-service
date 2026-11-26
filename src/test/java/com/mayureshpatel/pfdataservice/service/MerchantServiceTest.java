@@ -361,23 +361,6 @@ class MerchantServiceTest {
         }
     }
 
-    /** {@code recordDescriptionLinks} upserts every description in the list, each with its own light-normalized key. */
-    @Nested
-    @DisplayName("recordDescriptionLinks")
-    class RecordDescriptionLinksTests {
-
-        @Test
-        @DisplayName("should upsert every description with its normalized key")
-        void shouldUpsertEveryDescription() {
-            // act
-            merchantService.recordDescriptionLinks(USER_ID, 7L, List.of(RAW_STARBUCKS_PADDED, "STARBUCKS #1"));
-
-            // assert & verify
-            verify(descriptionLinkRepository).upsert(USER_ID, 7L, RAW_STARBUCKS_PADDED, NORMALIZED_STARBUCKS);
-            verify(descriptionLinkRepository).upsert(USER_ID, 7L, "STARBUCKS #1", NORMALIZED_STARBUCKS);
-        }
-    }
-
     /** {@code getDescriptionLinks} requires the merchant to be owned by the caller ({@link ResourceNotFoundException} otherwise) before mapping every linked description to a {@link MerchantDescriptionLinkDto}. */
     @Nested
     @DisplayName("getDescriptionLinks")
