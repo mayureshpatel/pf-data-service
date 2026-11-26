@@ -8,6 +8,8 @@ import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkBulkC
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantSuggestionRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.security.WithCustomMockUser;
@@ -21,9 +23,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -97,6 +101,74 @@ class MerchantControllerTest extends BaseControllerTest {
     }
 
     /** {@code POST /api/v1/merchants} creates the merchant and returns its new id, and returns a 400 with field-level {@code validationErrors} for a blank {@code name}. */
+    /** {@code POST /api/v1/merchants/suggestions} (PF-982) passes the names and limit (default 5) to the service and validates the body. */
+    @Nested
+    @DisplayName("suggestMerchants")
+    class SuggestMerchantsTests {
+
+        private static final String URL = BASE_URL + "/suggestions";
+
+        @Test
+        @DisplayName("POST should return suggestions per name, defaulting the limit to 5")
+        void suggestMerchants_shouldReturnSuggestions() throws Exception {
+            // arrange
+            MerchantDto kroger = new MerchantDto(MERCHANT_ID, USER_ID, "Kroger", null, null, null, null, 0);
+            when(merchantService.suggestMerchants(USER_ID, List.of("KROGER, INC"), 5))
+                    .thenReturn(List.of(new MerchantSuggestionDto("KROGER, INC", List.of(kroger))));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new MerchantSuggestionRequest(List.of("KROGER, INC"), null))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].name").value("KROGER, INC"))
+                    .andExpect(jsonPath("$[0].merchants[0].id").value(MERCHANT_ID));
+            verify(merchantService).suggestMerchants(USER_ID, List.of("KROGER, INC"), 5);
+        }
+
+        @Test
+        @DisplayName("POST should return 400 for a limit over 20 or more than 100 names")
+        void suggestMerchants_shouldValidate() throws Exception {
+            // arrange
+            List<String> tooMany = IntStream.range(0, 101).mapToObj(i -> "N" + i).toList();
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new MerchantSuggestionRequest(List.of("A"), 21))))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new MerchantSuggestionRequest(tooMany, 5))))
+                    .andExpect(status().isBadRequest());
+            verify(merchantService, never()).suggestMerchants(anyLong(), anyList(), anyInt());
+        }
+
+        @Test
+        @DisplayName("POST should return 400 for a null name or a name over 255 characters")
+        void suggestMerchants_shouldValidateEachName() throws Exception {
+            // arrange
+            String nullName = "{\"names\":[\"KROGER\",null],\"limit\":5}";
+            String longName = objectMapper.writeValueAsString(new MerchantSuggestionRequest(List.of("K".repeat(256)), 5));
+
+            // act & assert & verify
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(nullName))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post(URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(longName))
+                    .andExpect(status().isBadRequest());
+            verify(merchantService, never()).suggestMerchants(anyLong(), anyList(), anyInt());
+        }
+    }
+
     @Nested
     @DisplayName("createMerchant")
     class CreateMerchantTests {

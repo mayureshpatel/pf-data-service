@@ -4,6 +4,7 @@ import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.mapper.MerchantDescriptionLinkDtoMapper;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +45,11 @@ import java.util.stream.Collectors;
 public class MerchantService {
 
     private static final String MERCHANT_NOT_FOUND = "Merchant not found.";
+    /**
+     * the lowest similarity worth suggesting: below it a merchant shares no more than an
+     * abbreviation-like word with a longer name (e.g. "ctr" in "city of centerville").
+     */
+    private static final double MIN_SUGGESTION_SCORE = 0.25;
 
     private final MerchantRepository merchantRepository;
     private final MerchantDescriptionLinkRepository descriptionLinkRepository;
@@ -74,6 +81,49 @@ public class MerchantService {
     public Page<MerchantDto> getAllMerchants(Long userId, String search, Pageable pageable) {
         return merchantRepository.findAllByUserId(userId, search, pageable)
                 .map(MerchantDtoMapper::toDto);
+    }
+
+    /**
+     * Suggests, for each description group name, the user's merchants whose names fit it best
+     * (PF-982, the Unlinked tab's merchant box). The user's merchants are read once for every
+     * name, then scored in memory with {@link MerchantNameSimilarity}; only merchants scoring at
+     * least {@value #MIN_SUGGESTION_SCORE} are suggested, so a merchant sharing just an
+     * abbreviation-like word with a long name is left out, best score first and then by name.
+     *
+     * @param userId the user id
+     * @param names  the group names, in the order the answer keeps
+     * @param limit  the most merchants per name
+     * @return one entry per name, in order, each with up to {@code limit} merchants
+     */
+    public List<MerchantSuggestionDto> suggestMerchants(Long userId, List<String> names, int limit) {
+        if (names.isEmpty()) {
+            return List.of();
+        }
+        List<Merchant> merchants = merchantRepository.findAllByUserId(userId);
+        return names.stream()
+                .map(name -> new MerchantSuggestionDto(name, rank(name, merchants, limit)))
+                .toList();
+    }
+
+    /**
+     * Ranks the merchants against one group name.
+     *
+     * @param name      the group name
+     * @param merchants every merchant the user has
+     * @param limit     the most merchants to return
+     * @return the merchants scoring at least the minimum, best first, then by name, at most {@code limit}
+     */
+    private static List<MerchantDto> rank(String name, List<Merchant> merchants, int limit) {
+        record Scored(Merchant merchant, double score) {
+        }
+        return merchants.stream()
+                .map(merchant -> new Scored(merchant, MerchantNameSimilarity.score(name, merchant.getName())))
+                .filter(scored -> scored.score() >= MIN_SUGGESTION_SCORE)
+                .sorted(Comparator.comparingDouble(Scored::score).reversed()
+                        .thenComparing(scored -> scored.merchant().getName(), String.CASE_INSENSITIVE_ORDER))
+                .limit(limit)
+                .map(scored -> MerchantDtoMapper.toDto(scored.merchant()))
+                .toList();
     }
 
     /**
