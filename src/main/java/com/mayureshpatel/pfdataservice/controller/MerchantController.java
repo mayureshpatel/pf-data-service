@@ -7,6 +7,8 @@ import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkBulkC
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantSuggestionDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantSuggestionRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.security.CustomUserDetails;
 import com.mayureshpatel.pfdataservice.service.DescriptionLinkService;
@@ -48,6 +50,9 @@ import java.util.List;
 @Validated
 public class MerchantController {
 
+    /** How many merchants a suggestion request gets per name when it does not say. */
+    private static final int DEFAULT_SUGGESTION_LIMIT = 5;
+
     private final MerchantService merchantService;
     private final DescriptionLinkService descriptionLinkService;
 
@@ -69,6 +74,28 @@ public class MerchantController {
             @RequestParam(required = false) String search
     ) {
         return ResponseEntity.ok(merchantService.getAllMerchants(userDetails.getId(), search, pageable));
+    }
+
+    /**
+     * Suggests, for each description group name, the authenticated user's merchants whose names
+     * fit it best (PF-982): the Unlinked tab sends a page of group names in one call so moving to
+     * the next group never waits on a request. Read-only despite the POST; see
+     * {@link MerchantSuggestionRequest} for why it takes a body.
+     *
+     * @param userDetails the authenticated user
+     * @param request     the group names and the most merchants per name
+     * @return one entry per name, in order, each with up to {@code limit} merchants, best first
+     */
+    @Operation(summary = "Suggest merchants for group names", description = "Read-only. For each description group name, the authenticated user's merchants whose names share a word with it, best fit first")
+    @ApiResponse(responseCode = "200", description = "Suggestions returned, one entry per name in order")
+    @ApiResponse(responseCode = "400", description = "More than 100 names, a null or too-long name, or a limit outside 1 to 20")
+    @PostMapping("/suggestions")
+    public ResponseEntity<List<MerchantSuggestionDto>> suggestMerchants(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid MerchantSuggestionRequest request
+    ) {
+        int limit = request.limit() != null ? request.limit() : DEFAULT_SUGGESTION_LIMIT;
+        return ResponseEntity.ok(merchantService.suggestMerchants(userDetails.getId(), request.names(), limit));
     }
 
     /**

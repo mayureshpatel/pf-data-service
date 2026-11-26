@@ -5,6 +5,7 @@ import com.mayureshpatel.pfdataservice.domain.merchant.MerchantDescriptionLink;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDescriptionLinkDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantSuggestionDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantUpdateRequest;
 import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantDescriptionLinkRepository;
@@ -426,6 +427,64 @@ class MerchantServiceTest {
             // act & assert & verify
             assertThrows(ResourceNotFoundException.class, () -> merchantService.deleteDescriptionLink(USER_ID, 1L));
             verify(descriptionLinkRepository, never()).deleteByIdAndUserId(any(), any());
+        }
+    }
+
+    /** {@code suggestMerchants} (PF-982) reads the user's merchants once and ranks them per name, best fit first, dropping merchants with nothing in common. */
+    @Nested
+    @DisplayName("suggestMerchants")
+    class SuggestMerchantsTests {
+        @Test
+        @DisplayName("should rank per name in request order, cap at the limit and omit unrelated merchants")
+        void suggestMerchants_ranksPerName() {
+            // arrange
+            Merchant kroger = Merchant.builder().id(1L).name("Kroger").build();
+            Merchant fuel = Merchant.builder().id(2L).name("Kroger Fuel Center").build();
+            Merchant publix = Merchant.builder().id(3L).name("Publix").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(publix, fuel, kroger));
+
+            // act
+            List<MerchantSuggestionDto> result = merchantService.suggestMerchants(USER_ID, List.of("KROGER FUEL CTR", "KROGER", "SHELL"), 1);
+
+            // assert & verify
+            assertEquals(List.of("KROGER FUEL CTR", "KROGER", "SHELL"), result.stream().map(MerchantSuggestionDto::name).toList());
+            assertEquals(List.of(2L), result.get(0).merchants().stream().map(MerchantDto::id).toList());
+            assertEquals(List.of(1L), result.get(1).merchants().stream().map(MerchantDto::id).toList());
+            assertTrue(result.get(2).merchants().isEmpty());
+            verify(merchantRepository, times(1)).findAllByUserId(USER_ID);
+        }
+
+        @Test
+        @DisplayName("should leave out merchants that share only an abbreviation-like word")
+        void suggestMerchants_dropsWeakMatches() {
+            // arrange
+            Merchant kroger = Merchant.builder().id(1L).name("Kroger").build();
+            Merchant city = Merchant.builder().id(2L).name("City of Centerville").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(city, kroger));
+
+            // act
+            List<MerchantSuggestionDto> result = merchantService.suggestMerchants(USER_ID, List.of("KROGER FUEL CTR"), 5);
+
+            // assert & verify
+            assertEquals(List.of(1L), result.get(0).merchants().stream().map(MerchantDto::id).toList());
+        }
+
+        @Test
+        @DisplayName("should break score ties by name and skip the merchant read for no names")
+        void suggestMerchants_tiesByName() {
+            // arrange
+            Merchant zeta = Merchant.builder().id(1L).name("Shell Zeta").build();
+            Merchant alpha = Merchant.builder().id(2L).name("Shell Alpha").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(zeta, alpha));
+
+            // act
+            List<MerchantSuggestionDto> result = merchantService.suggestMerchants(USER_ID, List.of("SHELL"), 5);
+            List<MerchantSuggestionDto> none = merchantService.suggestMerchants(USER_ID, List.of(), 5);
+
+            // assert & verify
+            assertEquals(List.of("Shell Alpha", "Shell Zeta"), result.get(0).merchants().stream().map(MerchantDto::name).toList());
+            assertTrue(none.isEmpty());
+            verify(merchantRepository, times(1)).findAllByUserId(USER_ID);
         }
     }
 
