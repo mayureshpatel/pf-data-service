@@ -1,9 +1,13 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkChangeDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkCheckDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkUndoResultDto;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantDescriptionLinkRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +45,7 @@ public class DescriptionLinkService {
 
     private final MerchantDescriptionLinkRepository descriptionLinkRepository;
     private final TransactionRepository transactionRepository;
+    private final MerchantRepository merchantRepository;
 
     /**
      * Links every description to the merchant (last-write-wins, so a description linked elsewhere
@@ -122,5 +127,27 @@ public class DescriptionLinkService {
         log.info("undid description link to merchant {} for user {}: {} links restored, {} skipped, {} transactions cleared, {} skipped",
                 merchantId, userId, linksRestored, linksSkipped, cleared.size(), skipped.size());
         return new DescriptionLinkUndoResultDto(linksRestored, linksSkipped, cleared.size(), skipped);
+    }
+
+    /**
+     * Checks descriptions about to be linked to a merchant for look-alikes (PF-983): groups that
+     * carry words the merchant's name lacks while another merchant, or another selected group,
+     * claims them. Read-only; the user's merchants are read once and checked in memory by
+     * {@link LookAlikeGuard}.
+     *
+     * @param userId       the user id
+     * @param merchantId   the merchant the descriptions would be linked to; ownership is checked
+     *                     by the caller
+     * @param descriptions the raw descriptions about to be linked
+     * @return the warnings, empty when nothing looks out of place
+     * @throws ResourceNotFoundException if the merchant isn't one of the user's
+     */
+    public DescriptionLinkCheckDto checkDescriptionLinks(Long userId, Long merchantId, List<String> descriptions) {
+        List<Merchant> merchants = merchantRepository.findAllByUserId(userId);
+        Merchant target = merchants.stream()
+                .filter(merchant -> merchant.getId().equals(merchantId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Merchant not found."));
+        return new DescriptionLinkCheckDto(merchantId, LookAlikeGuard.check(target, merchants, descriptions));
     }
 }

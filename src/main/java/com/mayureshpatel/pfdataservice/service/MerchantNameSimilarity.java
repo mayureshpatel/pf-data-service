@@ -86,6 +86,18 @@ public final class MerchantNameSimilarity {
     }
 
     /**
+     * Whether two words fit each other at all: the same word, a prefix or an abbreviation, the
+     * same pairings {@link #score} counts.
+     *
+     * @param first  a lowercase word
+     * @param second another lowercase word
+     * @return true when the pair would score above 0
+     */
+    static boolean fits(String first, String second) {
+        return weight(first, second) > 0;
+    }
+
+    /**
      * The weight of pairing one group word with one merchant word.
      *
      * @param group    a group word

@@ -1,5 +1,7 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkCheckDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkCheckRequest;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkUndoResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.MerchantCreateRequest;
@@ -224,6 +226,30 @@ public class MerchantController {
             @RequestBody @Valid MerchantDescriptionLinkBulkCreateRequest request
     ) {
         return ResponseEntity.ok(descriptionLinkService.linkDescriptions(userDetails.getId(), id, request.descriptions()));
+    }
+
+    /**
+     * Checks descriptions about to be linked to a merchant for look-alikes before the link is made
+     * (PF-983): groups carrying words the merchant's name lacks while another merchant, or another
+     * selected group, claims them. Read-only.
+     *
+     * @param userDetails the authenticated user
+     * @param id          the merchant the descriptions would be linked to
+     * @param request     the descriptions, at most 5,000
+     * @return the warnings, empty when every description fits or nothing else claims it
+     */
+    @Operation(summary = "Check descriptions for look-alikes before linking", description = "Flags selected descriptions with words the merchant's name lacks when another merchant or selected group claims those words")
+    @ApiResponse(responseCode = "200", description = "Check done; the warnings may be empty")
+    @ApiResponse(responseCode = "400", description = "No descriptions, more than 5000, or a null or too-long description")
+    @ApiResponse(responseCode = "403", description = "Forbidden -- the authenticated user does not own this merchant")
+    @PostMapping("/{id}/description-links/check")
+    @PreAuthorize("@ss.isMerchantOwner(#id, principal)")
+    public ResponseEntity<DescriptionLinkCheckDto> checkDescriptionLinks(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @RequestBody @Valid DescriptionLinkCheckRequest request
+    ) {
+        return ResponseEntity.ok(descriptionLinkService.checkDescriptionLinks(userDetails.getId(), id, request.descriptions()));
     }
 
     /**
