@@ -1,9 +1,14 @@
 package com.mayureshpatel.pfdataservice.service;
 
+import com.mayureshpatel.pfdataservice.domain.merchant.Merchant;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkChangeDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkCheckDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkUndoResultDto;
+import com.mayureshpatel.pfdataservice.exception.ResourceNotFoundException;
+import com.mayureshpatel.pfdataservice.dto.merchant.MerchantDto;
 import com.mayureshpatel.pfdataservice.repository.merchant.MerchantDescriptionLinkRepository;
+import com.mayureshpatel.pfdataservice.repository.merchant.MerchantRepository;
 import com.mayureshpatel.pfdataservice.repository.transaction.TransactionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,6 +49,9 @@ class DescriptionLinkServiceTest {
 
     @Mock
     private TransactionRepository transactionRepository;
+
+    @Mock
+    private MerchantRepository merchantRepository;
 
     @InjectMocks
     private DescriptionLinkService service;
@@ -143,6 +151,41 @@ class DescriptionLinkServiceTest {
             assertThat(undo.linksRestored()).isEqualTo(1);
             assertThat(undo.linksSkipped()).isZero();
             assertThat(undo.skippedTransactionIds()).isEmpty();
+        }
+    }
+
+    /** {@code checkDescriptionLinks} (PF-983) reads the user's merchants once and checks the target against them. */
+    @Nested
+    @DisplayName("checkDescriptionLinks")
+    class CheckDescriptionLinksTests {
+        @Test
+        @DisplayName("should check descriptions against the target merchant and the user's other merchants")
+        void checkDescriptionLinks_flagsLookAlikes() {
+            // arrange
+            Merchant kroger = Merchant.builder().id(MERCHANT_ID).name("Kroger").build();
+            Merchant fuel = Merchant.builder().id(OTHER_MERCHANT).name("Kroger Fuel Center").build();
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(kroger, fuel));
+
+            // act
+            DescriptionLinkCheckDto result = service.checkDescriptionLinks(
+                    USER_ID, MERCHANT_ID, List.of("KROGER #431", "KROGER FUEL CTR #1"));
+
+            // assert & verify
+            assertThat(result.merchantId()).isEqualTo(MERCHANT_ID);
+            assertThat(result.warnings().get(0).words()).containsExactly("FUEL", "CTR");
+            assertThat(result.warnings().get(0).merchants()).extracting(MerchantDto::id).containsExactly(OTHER_MERCHANT);
+            verify(merchantRepository, times(1)).findAllByUserId(USER_ID);
+        }
+
+        @Test
+        @DisplayName("should throw when the target merchant is not the user's")
+        void checkDescriptionLinks_unknownMerchant() {
+            // arrange
+            when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of());
+
+            // act & assert & verify
+            assertThatThrownBy(() -> service.checkDescriptionLinks(USER_ID, MERCHANT_ID, List.of("KROGER #12")))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
     }
 }

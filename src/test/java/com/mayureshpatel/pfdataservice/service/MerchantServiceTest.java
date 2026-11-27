@@ -63,6 +63,7 @@ class MerchantServiceTest {
     private static final String NORMALIZED_STARBUCKS = "starbucks #1";
     private static final String RAW_STARBUCKS_PADDED = "  STARBUCKS   #1  ";
     private static final String DISPLAY_STARBUCKS = "STARBUCKS #1";
+    private static final String KROGER = "Kroger";
 
     /** {@code getAllMerchants} maps every repository row to a {@link MerchantDto}, passing the optional search term (PF-320) and {@link Pageable} straight through unmodified. */
     @Nested
@@ -438,7 +439,7 @@ class MerchantServiceTest {
         @DisplayName("should rank per name in request order, cap at the limit and omit unrelated merchants")
         void suggestMerchants_ranksPerName() {
             // arrange
-            Merchant kroger = Merchant.builder().id(1L).name("Kroger").build();
+            Merchant kroger = Merchant.builder().id(1L).name(KROGER).build();
             Merchant fuel = Merchant.builder().id(2L).name("Kroger Fuel Center").build();
             Merchant publix = Merchant.builder().id(3L).name("Publix").build();
             when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(publix, fuel, kroger));
@@ -458,7 +459,7 @@ class MerchantServiceTest {
         @DisplayName("should leave out merchants that share only an abbreviation-like word")
         void suggestMerchants_dropsWeakMatches() {
             // arrange
-            Merchant kroger = Merchant.builder().id(1L).name("Kroger").build();
+            Merchant kroger = Merchant.builder().id(1L).name(KROGER).build();
             Merchant city = Merchant.builder().id(2L).name("City of Centerville").build();
             when(merchantRepository.findAllByUserId(USER_ID)).thenReturn(List.of(city, kroger));
 
@@ -564,7 +565,7 @@ class MerchantServiceTest {
         @DisplayName("should return the merchant when it is owned")
         void shouldReturnWhenOwned() {
             // arrange
-            Merchant merchant = Merchant.builder().id(5L).name("Kroger").build();
+            Merchant merchant = Merchant.builder().id(5L).name(KROGER).build();
             when(merchantRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(merchant));
 
             // act

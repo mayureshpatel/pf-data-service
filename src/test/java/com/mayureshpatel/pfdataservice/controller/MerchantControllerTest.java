@@ -1,5 +1,8 @@
 package com.mayureshpatel.pfdataservice.controller;
 
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkCheckDto;
+import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkCheckRequest;
+import com.mayureshpatel.pfdataservice.dto.merchant.LookAlikeWarningDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkChangeDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkResultDto;
 import com.mayureshpatel.pfdataservice.dto.merchant.DescriptionLinkUndoResultDto;
@@ -486,6 +489,75 @@ class MerchantControllerTest extends BaseControllerTest {
                     .andExpect(status().isForbidden());
 
             verify(descriptionLinkService, never()).linkDescriptions(anyLong(), anyLong(), anyList());
+        }
+    }
+
+    /** {@code POST /api/v1/merchants/{id}/description-links/check} (PF-983) returns the look-alike warnings, validates the body, and returns a real {@code @PreAuthorize}-enforced 403 when not owner. */
+    @Nested
+    @DisplayName("checkDescriptionLinks")
+    class CheckDescriptionLinksTests {
+
+        private static final String CHECK_URL = DESCRIPTION_LINKS_URL + "/check";
+        private static final String STORE = "KROGER #1";
+        private static final String FUEL = "KROGER FUEL CTR #1";
+
+        @Test
+        @DisplayName("POST /{id}/description-links/check should return the warnings")
+        void checkDescriptionLinks_shouldReturnWarnings() throws Exception {
+            // arrange
+            MerchantDto fuel = new MerchantDto(2L, USER_ID, "Kroger Fuel Center", null, null, null, null, 0);
+            LookAlikeWarningDto warning = new LookAlikeWarningDto(
+                    "KROGER FUEL CTR", List.of("FUEL", "CTR"), List.of(FUEL), List.of(fuel), "KROGER");
+            when(descriptionLinkService.checkDescriptionLinks(USER_ID, MERCHANT_ID, List.of(STORE, FUEL)))
+                    .thenReturn(new DescriptionLinkCheckDto(MERCHANT_ID, List.of(warning)));
+
+            // act & assert & verify
+            mockMvc.perform(post(CHECK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(
+                                    new DescriptionLinkCheckRequest(List.of(STORE, FUEL)))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.merchantId").value(MERCHANT_ID))
+                    .andExpect(jsonPath("$.warnings[0].words[0]").value("FUEL"))
+                    .andExpect(jsonPath("$.warnings[0].merchants[0].name").value("Kroger Fuel Center"))
+                    .andExpect(jsonPath("$.warnings[0].nextToGroup").value("KROGER"));
+            verify(descriptionLinkService).checkDescriptionLinks(USER_ID, MERCHANT_ID, List.of(STORE, FUEL));
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/check should return 400 for no descriptions or more than 5000")
+        void checkDescriptionLinks_shouldValidate() throws Exception {
+            // arrange
+            List<String> tooMany = IntStream.range(0, 5001).mapToObj(i -> "D" + i).toList();
+
+            // act & assert & verify
+            mockMvc.perform(post(CHECK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new DescriptionLinkCheckRequest(List.of()))))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post(CHECK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new DescriptionLinkCheckRequest(tooMany))))
+                    .andExpect(status().isBadRequest());
+            verify(descriptionLinkService, never()).checkDescriptionLinks(anyLong(), anyLong(), anyList());
+        }
+
+        @Test
+        @DisplayName("POST /{id}/description-links/check should return 403 Forbidden when not owner")
+        void checkDescriptionLinks_shouldReturn403WhenNotOwner() throws Exception {
+            // arrange
+            when(securityService.isMerchantOwner(eq(MERCHANT_ID), any())).thenReturn(false);
+
+            // act & assert & verify
+            mockMvc.perform(post(CHECK_URL, MERCHANT_ID)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new DescriptionLinkCheckRequest(List.of(STORE)))))
+                    .andExpect(status().isForbidden());
+            verify(descriptionLinkService, never()).checkDescriptionLinks(anyLong(), anyLong(), anyList());
         }
     }
 
